@@ -103,9 +103,7 @@ class DBNDataset(torch.utils.data.Dataset):
 
 	def __trainscalers__(self, data):
 		self.scalers = []
-		print(len(data))
 		for r in range(len(data)):
-			print(r, data[r].shape, self.chan_dim)
 			for n in range(data[r].shape[self.chan_dim]):
 				if r == 0:
 					self.scalers.append(StandardScaler())

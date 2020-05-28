@@ -1,33 +1,30 @@
-
 data:
-	chunk_size: 4
-	number_channels: 73
-	fill_value: 0.0
-	valid_min: 0.05
-	valid_max:
-	reader_type: "numpy"
-	chan_dim: 0
-	delete_chans: [66]
-
-output:
-	out_dir: "output/Learnergy/DBN_MISR_MODIS_1/"
-	training_output: "output.data"
-	training_mse: "rec_mse.data"
-	testing_output: "output_test.data"
-	testing_mse: "rec_mse_test.data"
-	model: "dbn.pth"
-
+ chan_dim: 0
+ chunk_size: 4
+ delete_chans: [66]
+ fill_value: 0.0
+ number_channels: 73
+ reader_type: numpy
+ valid_max: ~
+ valid_min: 0.05
 dbn:
-	params:
-		model_type: "variance_gaussian"
-		dbn_arch: [2000]
-		gibbs_steps: [10]
-		learning_rate: [0.01]
-		momentum: [0.95]
-		decay: [0.0001]
-		temp: [0.5]
+ params:
+  dbn_arch: [2000]
+  decay: [0.0001]
+  gibbs_steps: [10]
+  learning_rate: [0.01]
+  model_type: variance_gaussian
+  momentum: [0.95]
+  temp: [0.5]
+ training:
+  batch_size: 10
+  epochs: [100]
+  use_gpu: true
+output:
+ model: dbn.pth
+ out_dir: output/Learnergy/DBN_MISR_MODIS_1/
+ testing_mse: rec_mse_test.data
+ testing_output: output_test.data
+ training_mse: rec_mse.data
+ training_output: output.data
 
-	training:
-		use_gpu: True
-		batch_size: 10
-		epochs: [100]

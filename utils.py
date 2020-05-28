@@ -1,4 +1,5 @@
 import torch
+import yaml
 import numpy as np
 
 def torch_to_numpy(trch):
@@ -10,13 +11,13 @@ def numpy_to_torch(npy):
 
 def read_yaml(fpath_yaml):
     yml_conf = None
-    with open(path_yaml) as f_yaml:
+    with open(fpath_yaml) as f_yaml:
         yml_conf = yaml.load(f_yaml)
     return yml_conf
 
 
 def get_read_func(data_reader):
-	if data_reader == "numpy"
+	if data_reader == "numpy":
 		return np.load
 	#TODO return BCDP reader
 	return None

@@ -12,18 +12,18 @@ from learnergy.models import dbn
  
 #Data
 from MISR_MODIS_FUSE_DATA_FIREX_9CAM_9 import data_fn3, data_fn3_test, NUMBER_CHANNELS, CHUNK_SIZE
-from dbnDatasets import DBNDataset
+from dbn_datasets import DBNDataset
 from utils import numpy_to_torch, read_yaml, get_read_func
 
 #Input Parsing
-import pyyaml
+import yaml
 import argparse
 
 def run_dbn(yml_conf, data_train, data_test):
 
     #Get config values 
     chunk_size = yml_conf["data"]["chunk_size"]
-    number_channel = yml_conf["data"]["number_channel"]
+    number_channel = yml_conf["data"]["number_channels"]
     data_reader =  yml_conf["data"]["reader_type"]
     fill = yml_conf["data"]["fill_value"]
     chan_dim = yml_conf["data"]["chan_dim"]
@@ -102,9 +102,9 @@ def run_dbn(yml_conf, data_train, data_test):
 def main(yml_fpath, data_train, data_test):
    
     #Translate config to dictionary 
-    yml_conf = read_yaml(yaml_fpath)
+    yml_conf = read_yaml(yml_fpath)
     #Run 
-    test_misr(yml_conf, data_train, data_test)
+    run_dbn(yml_conf, data_train, data_test)
 
 
 if __name__ == '__main__':
