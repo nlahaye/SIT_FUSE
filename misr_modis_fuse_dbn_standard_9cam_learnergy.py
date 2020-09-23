@@ -12,7 +12,7 @@ from learnergy.models import dbn
  
 #Data
 from MISR_MODIS_FUSE_DATA_FIREX_9CAM_9 import data_fn3, data_fn3_test, NUMBER_CHANNELS, CHUNK_SIZE
-from dbn_datasets import DBNDataset
+from dbnDatasets import DBNDataset
 from utils import numpy_to_torch, read_yaml, get_read_func
 
 #Input Parsing
@@ -22,7 +22,7 @@ import argparse
 def run_dbn(yml_conf, data_train, data_test):
 
     #Get config values 
-    chunk_size = yml_conf["data"]["chunk_size"]
+    pixel_padding = yml_conf["data"]["pixel_padding"]
     number_channel = yml_conf["data"]["number_channels"]
     data_reader =  yml_conf["data"]["reader_type"]
     fill = yml_conf["data"]["fill_value"]
@@ -30,6 +30,9 @@ def run_dbn(yml_conf, data_train, data_test):
     valid_min = yml_conf["data"]["valid_min"]
     valid_max = yml_conf["data"]["valid_max"]
     delete_chans = yml_conf["data"]["delete_chans"]
+
+    transform_chans = yml_conf["data"]["transform_default"]["chans"]
+    transform_values = 	yml_conf["data"]["transform_default"]["transform"]
 
     out_dir = yml_conf["output"]["out_dir"]
     os.makedirs(out_dir, exist_ok=True)
@@ -56,9 +59,10 @@ def run_dbn(yml_conf, data_train, data_test):
 
     #Generate training dataset object
     #Unsupervised, so targets are not used. Currently, I use this to store original image indices for each point 
-    x2 = DBNDataset(data_train, read_func, chunk_size, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, scalers = None, transform=numpy_to_torch)
+    x2 = DBNDataset(data_train, read_func, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scalers = None, transform=numpy_to_torch)
 
     #Generate model
+    chunk_size = 2*pixel_padding + 1
     new_dbn = dbn.DBN(model=model_type, n_visible=chunk_size*chunk_size*number_channel, n_hidden=dbn_arch, steps=gibbs_steps, learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=use_gpu)
 
     #Train model
@@ -79,7 +83,7 @@ def run_dbn(yml_conf, data_train, data_test):
     torch.save(rec_mse, os.path.join(out_dir, training_mse))
 
     #Generate test dataset object
-    x3 = DBNDataset(data_test, read_func, chunk_size, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, fill_value = fill, chan_dim = chan_dim, scalers=x2.scalers, transform=numpy_to_torch)
+    x3 = DBNDataset(data_test, read_func, chunk_size, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scalers=x2.scalers, transform=numpy_to_torch)
  
     #Generate test data output
     if torch.cuda.is_available() and use_gpu:
