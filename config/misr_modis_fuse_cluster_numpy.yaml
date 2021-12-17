@@ -1,0 +1,18 @@
+
+files_train: "/home/nlahaye/newCode/output/Learnergy/DBN_MISR_MODIS_1/output.data"
+files_test: "/home/nlahaye/newCode/output/Learnergy/DBN_MISR_MODIS_1/output_test.data"
+ 
+
+output:
+ out_dir: "output/Learnergy/DBN_MISR_MODIS_1/"
+
+
+clustering:
+        n_clusters: 500
+        branch: 5
+        thresh: 1e-31
+        pixel_padding: 1
+        train_sample_size: 1000
+        number_train_epochs: 75
+        predict_data_chunk: 10000
+

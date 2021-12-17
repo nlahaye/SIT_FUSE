@@ -2,15 +2,22 @@
 data:
  pixel_padding: 1
  number_channels: 73
- fill_value: 0.0
- valid_min: -10.0
- valid_max:
+ fill_value: -9999.0
+ valid_min: -100.0
+ valid_max: 100000000
  reader_type: "numpy"
  chan_dim: 0
  delete_chans: [66]
  transform_default:
   chans: [36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 60, 71, 72, 73]
   transform: [-2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0]
+ files_train: ["/data/nlahaye/remotesensing/data/MisrModisFuse/Fuse1_9Cam.npy",
+"/data/nlahaye/remotesensing/data/MisrModisFuse/Fuse3_9Cam.npy",
+"/data/nlahaye/remotesensing/data/MisrModisFuse/Fuse4_9Cam.npy"]
+ files_test: ["/data/nlahaye/remotesensing/data/MisrModisFuse/Fuse2_9Cam.npy",
+"/data/nlahaye/remotesensing/data/MisrModisFuse/Fuse5_9Cam.npy",
+"/data/nlahaye/remotesensing/data/MisrModisFuse/Fuse9_9Cam.npy"] 
+
 
 output:
  out_dir: "output/Learnergy/DBN_MISR_MODIS_1/"
@@ -21,6 +28,7 @@ output:
  model: "dbn.pth"
 
 dbn:
+ overwrite_model: True
  params:
   model_type: "variance_gaussian"
   dbn_arch: [2000]
@@ -31,6 +39,10 @@ dbn:
   temp: [0.5]
 
  training:
-  use_gpu: False
+  use_gpu: True
+  world_size: 1
+  rank: 0
+  device_ids: [0,1,2,3,4]
+  #,5,6,7]
   batch_size: 10
-  epochs: [1]
+  epochs: [15]
