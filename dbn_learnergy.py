@@ -57,6 +57,7 @@ def run_dbn(yml_conf):
     valid_min = yml_conf["data"]["valid_min"]
     valid_max = yml_conf["data"]["valid_max"]
     delete_chans = yml_conf["data"]["delete_chans"]
+    subset_count = yml_conf["data"]["subset_count"]
 
     transform_chans = yml_conf["data"]["transform_default"]["chans"]
     transform_values = 	yml_conf["data"]["transform_default"]["transform"]
@@ -95,20 +96,14 @@ def run_dbn(yml_conf):
     chunk_size = 1
     for i in range(1,pixel_padding+1):
         chunk_size = chunk_size + (8*i)
-    print(chunk_size)
 
     #Generate training dataset object
     #Unsupervised, so targets are not used. Currently, I use this to store original image indices for each point 
-    x2 = DBNDataset(data_train, read_func, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scalers = None, scale = True, transform=numpy_to_torch)
-    print("HERE X2", x2.data.shape, x2.targets.shape)
+    x2 = DBNDataset(data_train, read_func, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scalers = None, scale = True, transform=numpy_to_torch, subset=subset_count)
  
     model_file = os.path.join(out_dir, model_fname)
     if(not os.path.exists(model_file) or overwrite_model):
         new_dbn = DBN(model=model_type, n_visible=chunk_size*number_channel, n_hidden=dbn_arch, steps=gibbs_steps, learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=use_gpu)
-
-        #new_dbn.ddp_model = DDP(new_dbn, device_ids=device_ids).cuda()
-        #print(new_dbn.parameters())
-        #print(new_dbn.ddp_model.parameters())
 
         for i in range(len(new_dbn.models)):
             new_dbn.models[i].ddp_model = DDP(new_dbn.models[i], device_ids=device_ids).cuda()
@@ -116,7 +111,14 @@ def run_dbn(yml_conf):
                                                  lr=learning_rate[i], momentum=momentum[i], weight_decay=decay[i])
 
         #Train model
-        new_dbn.fit(x2, batch_size=batch_size, epochs=epochs)	
+        count = 0
+        while(count == 0 or x2.has_next_subset()):
+            new_dbn.fit(x2, batch_size=batch_size, epochs=epochs)
+            count = count + 1
+            x2.next_subset()            	
+        #reset to first subset for output generation
+        x2.next_subset()
+
     else:
         print("Loading pre-existing model")
         new_dbn = torch.load(model_file)   
@@ -128,7 +130,6 @@ def run_dbn(yml_conf):
 
     generate_output(x3, new_dbn, use_gpu, out_dir, testing_output, testing_mse)
 
-    print(new_dbn.history.keys(), new_dbn._history.keys()) 
     converge.plot(new_dbn.history['mse'], new_dbn.history['pl'], 
         new_dbn.history['time'], labels=['MSE', 'log-PL', 'time (s)'],
         title='convergence over MNIST dataset', subtitle='Model: Restricted Boltzmann Machine')
@@ -140,22 +141,34 @@ def run_dbn(yml_conf):
     cleanup_ddp()
 
 def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle):
-    if torch.cuda.is_available() and use_gpu:
-        output = mdl.models[0].ddp_model(dat.data.cuda()).cpu()
-        for i in range(1, len(mdl.models)):
-            output = mdl.models[i].ddp_model(output)
-        output = output.cpu()
-        dat.transform = None
-        rec_mse, v = mdl.reconstruct(dat)
-    else:
-        output = mdl.forward(dat.data)
-        dat.transform = None
-        rec_mse, v = mdl.reconstruct(dat)
+ 
+    output_full = None
+    count = 0
+    while(count == 0 or dat.has_next_subset()):
+        if torch.cuda.is_available() and use_gpu:
+            output = mdl.models[0].ddp_model(dat.data.cuda()).cpu()
+            for i in range(1, len(mdl.models)):
+                output = mdl.models[i].ddp_model(output)
+            output = output.cpu()
+            dat.transform = None
+            rec_mse, v = mdl.reconstruct(dat)
+        else:
+            output = mdl.forward(dat.data)
+            dat.transform = None
+            rec_mse, v = mdl.reconstruct(dat)
+        
+        if output_full is None:
+            output_full = output
+        else:
+            np.concatenate(output_full,output)
+        del output
+        count = count + 1
+        dat.next_subset()
 
     #Save training output
-    torch.save(output, os.path.join(out_dir, output_fle))
-    torch.save(dat.targets, os.path.join(out_dir, output_fle + ".indices"))
-    torch.save(dat.data, os.path.join(out_dir, output_fle + ".input"))
+    torch.save(output_full, os.path.join(out_dir, output_fle))
+    torch.save(dat.targets_full, os.path.join(out_dir, output_fle + ".indices"))
+    torch.save(dat.data_full, os.path.join(out_dir, output_fle + ".input"))
     torch.save(rec_mse, os.path.join(out_dir, mse_fle))
 
 

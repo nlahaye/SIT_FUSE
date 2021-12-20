@@ -11,7 +11,7 @@ from sklearn.preprocessing import StandardScaler
 
 class DBNDataset(torch.utils.data.Dataset):
 
-	def __init__(self, filenames, read_func, pixel_padding, delete_chans, valid_min, valid_max, fill_value = -9999, chan_dim = 0, transform_chans = [], transform_values = [], scalers = None, scale=False, transform=None):
+	def __init__(self, filenames, read_func, pixel_padding, delete_chans, valid_min, valid_max, fill_value = -9999, chan_dim = 0, transform_chans = [], transform_values = [], scalers = None, scale=False, transform=None, subset=None):
 
 		self.filenames = filenames
 		self.transform = transform
@@ -26,7 +26,9 @@ class DBNDataset(torch.utils.data.Dataset):
 		self.scalers = scalers
 		self.scale = scale
 		self.transform = transform
-		self.read_func = read_func		
+		self.read_func = read_func	
+		self.subset = subset		
+		self.current_subset = -1
 
 
 		self.__loaddata__()
@@ -37,7 +39,7 @@ class DBNDataset(torch.utils.data.Dataset):
 		for i in range(0, len(self.filenames)):
 			if os.path.exists(self.filenames[i]):
 				print(self.filenames[i])
-				dat = self.read_func(self.filenames[i]).astype(np.float64)
+				dat = self.read_func(self.filenames[i]).astype(np.float32)
 				for t in range(len(self.transform_chans)):
 					slc = [slice(None)] * dat.ndim
 					slc[self.chan_dim] = slice(self.transform_chans[t], self.transform_chans[t]+1)
@@ -60,7 +62,9 @@ class DBNDataset(torch.utils.data.Dataset):
 					dat[np.where(dat == self.fill_value)] = -9999
 				data_local.append(dat)
 
-
+		del dat
+		del slc
+		del tmp
 		if self.scale:
 			if self.scalers is None:
 				self.__train_scalers__(data_local)
@@ -70,7 +74,6 @@ class DBNDataset(torch.utils.data.Dataset):
 					slc = [slice(None)] * data_local[r].ndim
 					slc[self.chan_dim] = slice(n, n+1)
 					subd = data_local[r][tuple(slc)]
-					print("HERE SUBD SCALING SIZE", subd[np.where(subd > -9999)].shape, subd.shape)	
 					subd[np.where(subd > -9999)] = self.scalers[n].transform(subd[np.where(subd > -9999)].reshape(-1, 1)).reshape(-1)
 					data_local[r][tuple(slc)] = subd
 
@@ -109,16 +112,45 @@ class DBNDataset(torch.utils.data.Dataset):
 		c = list(zip(self.data, self.targets))
 		random.shuffle(c)
 		self.data, self.targets = zip(*c)
-		self.data = torch.from_numpy(np.array(self.data).astype(np.float32))
-		self.targets = torch.from_numpy(np.array(self.targets).astype(np.float32))
+		self.data_full = np.array(self.data).astype(np.float32)
+		self.targets_full = np.array(self.targets).astype(np.float32)
+ 
+		self.next_subset()
+ 
 
+	def next_subset():
+		self.__set_subset__(1)
+
+	def prev_subset():
+		self.__set_subset__(-1)
+
+	def has_next_subset():
+		return self.current_subset < self.subset-2
+
+	def has_prev_subset():
+		return self.current_subset > 0
+
+	def __set_subset__(increment):
+		#TODO: optimize to minimize data duplication - lazy loading & Dask
+		if self.subset is not None:
+			if (increment < 0 and self.current_subset >= -1*increment) or \
+				 (increment > 0 and self.current_subset <= self.subset-increment-1):
+					self.current_subset = int(self.current_subset + increment)
+			else:
+				self.current_subset = 0
+			self.subset_inds = sorted([self.current_subset*int(self.data_full.shape[0]/self.subset), \
+				(self.current_subset+1)*int(self.data_full.shape[0]/self.subset)])   
+		else:
+			self.subset_inds = [0,self.data_full.shape[0]]		
+
+		self.data = torch.from_numpy(self.data_full[self.subset_inds[0]:self.subset_inds[1],:])
+		self.targets = torch.from_numpy(self.targets_full[self.subset_inds[0]:self.subset_inds[1],:])		
+	
 
 
 	def __train_scalers__(self, data):
 		self.scalers = []
-		print(len(data))
 		for r in range(len(data)):
-			print(r, data[r].shape, self.chan_dim)
 			for n in range(data[r].shape[self.chan_dim]):
 				if r == 0:
 					self.scalers.append(StandardScaler())
