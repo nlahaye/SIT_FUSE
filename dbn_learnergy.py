@@ -14,7 +14,13 @@ import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 #from torch.nn import DataParallel as DDP
 from learnergy.models.deep import DBN
- 
+
+#Visualization
+import learnergy.visual.convergence as converge
+import matplotlib 
+matplotlib.use("Agg")
+import  matplotlib.pyplot as plt
+
 #Data
 from dbnDatasets import DBNDataset
 from utils import numpy_to_torch, read_yaml, get_read_func
@@ -24,7 +30,8 @@ import yaml
 import argparse
 from datetime import timedelta
 
-import learnergy.visual.convergence as converge
+#Serialization
+import pickle
 
 def setup_ddp(rank, world_size, use_gpu=True):
     os.environ['MASTER_ADDR'] = 'localhost'
@@ -113,7 +120,7 @@ def run_dbn(yml_conf):
         #Train model
         count = 0
         while(count == 0 or x2.has_next_subset()):
-            new_dbn.fit(x2, batch_size=batch_size, epochs=epochs)
+            mse, pl = new_dbn.fit(x2, batch_size=batch_size, epochs=epochs)
             count = count + 1
             x2.next_subset()            	
         #reset to first subset for output generation
@@ -126,13 +133,16 @@ def run_dbn(yml_conf):
     generate_output(x2, new_dbn, use_gpu, out_dir, training_output, training_mse)
 
     #Generate test dataset object
-    x3 = DBNDataset(data_test, read_func, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scalers=x2.scalers, scale = True, transform=numpy_to_torch)
+    x3 = DBNDataset(data_test, read_func, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scalers=x2.scalers, scale = True, transform=numpy_to_torch, subset=subset_count)
+    del x2
 
     generate_output(x3, new_dbn, use_gpu, out_dir, testing_output, testing_mse)
 
-    converge.plot(new_dbn.history['mse'], new_dbn.history['pl'], 
-        new_dbn.history['time'], labels=['MSE', 'log-PL', 'time (s)'],
-        title='convergence over MNIST dataset', subtitle='Model: Restricted Boltzmann Machine')
+    for i in range(len(new_dbn.models)):
+        converge.plot(new_dbn.models[i]._history['mse'], new_dbn.models[i]._history['pl'], 
+            new_dbn.models[i]._history['time'], labels=['MSE', 'log-PL', 'time (s)'],
+            title='convergence over MNIST dataset', subtitle='Model: Restricted Boltzmann Machine')
+        plt.savefig(os.path.join(out_dir, "covergence_plot_layer" + str(i) + ".png"))
 
     if not os.path.exists(model_file) or overwrite_model:
         #Save model
@@ -141,10 +151,9 @@ def run_dbn(yml_conf):
     cleanup_ddp()
 
 def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle):
- 
     output_full = None
     count = 0
-    while(count == 0 or dat.has_next_subset()):
+    while(count == 0 or dat.has_next_subset() or dat.current_subset > (dat.subset-2)):
         if torch.cuda.is_available() and use_gpu:
             output = mdl.models[0].ddp_model(dat.data.cuda()).cpu()
             for i in range(1, len(mdl.models)):
@@ -156,20 +165,23 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle):
             output = mdl.forward(dat.data)
             dat.transform = None
             rec_mse, v = mdl.reconstruct(dat)
-        
+       
         if output_full is None:
             output_full = output
         else:
-            np.concatenate(output_full,output)
+            output_full = torch.cat((output_full,output))
         del output
         count = count + 1
-        dat.next_subset()
+        if dat.has_next_subset():
+            dat.next_subset()
+        else:
+            break 
 
     #Save training output
-    torch.save(output_full, os.path.join(out_dir, output_fle))
-    torch.save(dat.targets_full, os.path.join(out_dir, output_fle + ".indices"))
-    torch.save(dat.data_full, os.path.join(out_dir, output_fle + ".input"))
-    torch.save(rec_mse, os.path.join(out_dir, mse_fle))
+    torch.save(output_full, os.path.join(out_dir, output_fle), pickle_protocol=pickle.HIGHEST_PROTOCOL)
+    torch.save(dat.targets_full, os.path.join(out_dir, output_fle + ".indices"), pickle_protocol=pickle.HIGHEST_PROTOCOL)
+    torch.save(dat.data_full, os.path.join(out_dir, output_fle + ".input"), pickle_protocol=pickle.HIGHEST_PROTOCOL)
+    torch.save(rec_mse, os.path.join(out_dir, mse_fle), pickle_protocol=pickle.HIGHEST_PROTOCOL)
 
 
 def main(yml_fpath):

@@ -23,16 +23,18 @@ from utils import numpy_to_torch, read_yaml, get_read_func
 import yaml
 import argparse
 
+#Plotting
 from matplotlib.colors import ListedColormap
 from CMAP import CMAP, CMAP_COLORS
 
-
+#Serialization
+import pickle
 
 class RSClustering(object):
   
     def __init__(self, pixel_padding = 1, branch = 5, thresh = 1e-5, 
         train_sample_size = 1000, number_train_epochs = 75, n_clusters = 500, predict_data_chunk = 10000,
-        pkl_file = None, clustering = None, min_clust = None, max_clust = None):
+        clustering = None, min_clust = None, max_clust = None, out_dir = "", train = True, reset_n_clusters = True):
 
         self.pixel_padding = pixel_padding
         self.branch = branch
@@ -41,14 +43,18 @@ class RSClustering(object):
         self.number_train_epochs = number_train_epochs
         self.predict_data_chunk = predict_data_chunk
         self.n_clusters = n_clusters
-        self.pkl_file = pkl_file
         self.clustering = clustering
         self.min_clust = min_clust
         self.max_clust = max_clust 
+        self.out_dir = out_dir
+        self.train = train
+        self.reset_n_clusters = reset_n_clusters
 
         if self.clustering is None:
             self.clustering = Birch(branching_factor=self.branch, threshold=self.thresh, n_clusters=None)
- 
+        elif isinstance(self.clustering, str) and os.path.exists(self.clustering):
+            with open(self.clustering, "rb") as f:
+                self.clustering = pickle.load(f)
 
     def __plot_clusters__(self, coord, labels, output_basename):
 
@@ -59,7 +65,6 @@ class RSClustering(object):
         max_dim2 = max(coord[:,2])
         strt_dim1 = 0
         strt_dim2 = 0
-        print("DIMS", max_dim1, max_dim2, coord.shape, len(labels))		
 
         #1 subtracted to seperate No Data from areas that have cluster value 0.
         data = np.zeros(((int)(max_dim1-strt_dim1)+self.pixel_padding, (int)(max_dim2-strt_dim2)+self.pixel_padding)) - 1
@@ -101,8 +106,6 @@ class RSClustering(object):
                 fnl_ind = data.shape[0]
             subd = data[n:fnl_ind].numpy()
             self.clustering.partial_fit(subd)
-        self.min_clust = min(self.clustering.labels_)
-        self.max_clust = max(self.clustering.labels_)
        
  
     def __train_scalers__(self, data):
@@ -122,27 +125,28 @@ class RSClustering(object):
                 data[:,c] = torch.from_numpy(self.scalers[c].transform(subd.reshape(-1,1)).reshape(-1))
 
         labels = self.__predict_cluster__(data)
-        for i in range(0, int(max(indices[:,0].numpy()))+1):
+        for i in range(0, int(max(indices[:,0]))+1):
             inds = np.where(indices[:,0] == i)
             self.__plot_clusters__(indices[inds[0],:], labels[inds[0]], fname + ".clustering." + str(i))
 
     def run_clustering(self, train_data, test_data):
-    
-        train = torch.load(train_data)
-        train_indices = torch.load(train_data + ".indices")
-        self.__train_scalers__(train.data)
 
-        print(train.shape, train_indices.shape, "HERE FIRST")
+        if self.train:    
+            train = torch.load(train_data)
+            train_indices = torch.load(train_data + ".indices")
+            self.__train_scalers__(train.data)
 
-        for c in range(train.data.shape[1]):
-            subd = train.data[:,c].numpy()
-            train.data[:,c] = torch.from_numpy(self.scalers[c].transform(subd.reshape(-1,1)).reshape(-1))
-        self.__train_partial__(train.data)          
+            for c in range(train.data.shape[1]):
+                subd = train.data[:,c].numpy()
+                train.data[:,c] = torch.from_numpy(self.scalers[c].transform(subd.reshape(-1,1)).reshape(-1))
+            self.__train_partial__(train.data)          
 
-        print(self.n_clusters)
-        if self.n_clusters is not None:
-            self.clustering.set_params(n_clusters=self.n_clusters)
-            self.clustering.partial_fit()
+            if self.n_clusters is not None and self.reset_n_clusters == True:
+                self.clustering.set_params(n_clusters=self.n_clusters)
+                self.clustering.partial_fit(None)
+            self.min_clust = 0
+            self.max_clust = self.n_clusters
+
 
         self.__cluster_data__(train.data, train_indices, train_data, False)
 
@@ -150,6 +154,11 @@ class RSClustering(object):
         test_indices = torch.load(test_data + ".indices")
         
         self.__cluster_data__(test.data, test_indices, test_data, True) 
+
+    def save_clustering(self):
+        os.makedirs(self.out_dir, exist_ok = True)
+        with open(os.path.join(self.out_dir, "clustering.pkl"), "wb") as f:
+            pickle.dump(self.clustering, f, pickle.HIGHEST_PROTOCOL)
 
 def main(yml_fpath):
 
@@ -163,13 +172,21 @@ def main(yml_fpath):
     number_train_epochs = yml_conf["clustering"]["number_train_epochs"]
     n_clusters = yml_conf["clustering"]["n_clusters"]
     predict_data_chunk = yml_conf["clustering"]["predict_data_chunk"]
+    train = yml_conf["clustering"]["train"]
+    reset_n_clusters = yml_conf["clustering"]["reset_n_clusters"]
+    out_dir = yml_conf["output"]["out_dir"]
+    model = yml_conf["clustering"]["model"]
     clustering = RSClustering(pixel_padding = pixel_padding, branch = branch,
         thresh = thresh, train_sample_size = train_sample_size, number_train_epochs = number_train_epochs,
-        n_clusters = n_clusters, predict_data_chunk = predict_data_chunk)
+        n_clusters = n_clusters, predict_data_chunk = predict_data_chunk, out_dir = out_dir, clustering = model,
+        train = train, reset_n_clusters = reset_n_clusters)
+
+
 
     train_data = yml_conf["files_train"]
     test_data = yml_conf["files_test"]
     clustering.run_clustering(train_data, test_data)
+    clustering.save_clustering()
 
 
 if __name__ == '__main__':

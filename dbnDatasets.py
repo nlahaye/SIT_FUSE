@@ -27,7 +27,9 @@ class DBNDataset(torch.utils.data.Dataset):
 		self.scale = scale
 		self.transform = transform
 		self.read_func = read_func	
-		self.subset = subset		
+		self.subset = subset
+		if self.subset is None:
+			self.subset = 1		
 		self.current_subset = -1
 
 
@@ -118,19 +120,19 @@ class DBNDataset(torch.utils.data.Dataset):
 		self.next_subset()
  
 
-	def next_subset():
+	def next_subset(self):
 		self.__set_subset__(1)
 
-	def prev_subset():
+	def prev_subset(self):
 		self.__set_subset__(-1)
 
-	def has_next_subset():
-		return self.current_subset < self.subset-2
+	def has_next_subset(self):
+		return self.current_subset <= self.subset-2
 
-	def has_prev_subset():
+	def has_prev_subset(self):
 		return self.current_subset > 0
 
-	def __set_subset__(increment):
+	def __set_subset__(self,increment):
 		#TODO: optimize to minimize data duplication - lazy loading & Dask
 		if self.subset is not None:
 			if (increment < 0 and self.current_subset >= -1*increment) or \
@@ -140,6 +142,8 @@ class DBNDataset(torch.utils.data.Dataset):
 				self.current_subset = 0
 			self.subset_inds = sorted([self.current_subset*int(self.data_full.shape[0]/self.subset), \
 				(self.current_subset+1)*int(self.data_full.shape[0]/self.subset)])   
+			if self.current_subset == self.subset-1:
+				self.subset_inds[1] = self.data_full.shape[0]
 		else:
 			self.subset_inds = [0,self.data_full.shape[0]]		
 

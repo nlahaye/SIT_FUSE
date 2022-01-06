@@ -5,6 +5,7 @@ data:
  fill_value: -9999.0
  valid_min: -100.0
  valid_max: 100000000
+ subset_count: 10
  reader_type: "numpy"
  chan_dim: 0
  delete_chans: [66]
@@ -42,7 +43,6 @@ dbn:
   use_gpu: True
   world_size: 1
   rank: 0
-  device_ids: [0,1,2,3,4]
-  #,5,6,7]
+  device_ids: [0,1,2,3,4,5,6,7]
   batch_size: 10
   epochs: [15]
