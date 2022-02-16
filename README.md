@@ -1,2 +1,2 @@
 # MultiModalObj
-Multi Modal Object Detection and Tracking using Unsupervised Deep Learning
+Multi Modal Segmentation and Instance Tracking using Unsupervised Deep Learning
