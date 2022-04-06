@@ -13,7 +13,7 @@ import torch.optim as opt
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 #from torch.nn import DataParallel as DDP
-from learnergy.models.deep import DBN
+from learnergy.models.deep import ResidualDBN
 
 #Visualization
 import learnergy.visual.convergence as converge
@@ -59,6 +59,7 @@ def run_dbn(yml_conf):
     pixel_padding = yml_conf["data"]["pixel_padding"]
     number_channel = yml_conf["data"]["number_channels"]
     data_reader =  yml_conf["data"]["reader_type"]
+    data_reader_kwargs = yml_conf["data"]["reader_kwargs"]
     fill = yml_conf["data"]["fill_value"]
     chan_dim = yml_conf["data"]["chan_dim"]
     valid_min = yml_conf["data"]["valid_min"]
@@ -85,7 +86,10 @@ def run_dbn(yml_conf):
     momentum = tuple(yml_conf["dbn"]["params"]["momentum"])
     decay = tuple(yml_conf["dbn"]["params"]["decay"])
     temp = tuple(yml_conf["dbn"]["params"]["temp"])
-    
+    nesterov_accel = tuple(yml_conf["dbn"]["params"]["nesterov_accel"])
+    normalize_learnergy = tuple(yml_conf["dbn"]["params"]["nesterov_accel"])
+    batch_normalize = tuple(yml_conf["dbn"]["params"]["batch_normalize"])    
+
     use_gpu = yml_conf["dbn"]["training"]["use_gpu"]
     world_size = yml_conf["dbn"]["training"]["world_size"]
     rank = yml_conf["dbn"]["training"]["rank"]
@@ -106,23 +110,37 @@ def run_dbn(yml_conf):
 
     #Generate training dataset object
     #Unsupervised, so targets are not used. Currently, I use this to store original image indices for each point 
-    x2 = DBNDataset(data_train, read_func, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scalers = None, scale = True, transform=numpy_to_torch, subset=subset_count)
+    x2 = DBNDataset(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scalers = None, scale = True, transform=numpy_to_torch, subset=subset_count)
  
     model_file = os.path.join(out_dir, model_fname)
     if(not os.path.exists(model_file) or overwrite_model):
-        new_dbn = DBN(model=model_type, n_visible=chunk_size*number_channel, n_hidden=dbn_arch, steps=gibbs_steps, learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=use_gpu)
+        new_dbn = ResidualDBN(model=model_type, n_visible=chunk_size*number_channel, n_hidden=dbn_arch, steps=gibbs_steps, learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=use_gpu)
 
         for i in range(len(new_dbn.models)):
+            print("HERE LAYER", i)
             new_dbn.models[i].ddp_model = DDP(new_dbn.models[i], device_ids=device_ids).cuda()
-            new_dbn.models[i].optimizer_ = opt.SGD(new_dbn.models[i].ddp_model.parameters(),
-                                                 lr=learning_rate[i], momentum=momentum[i], weight_decay=decay[i])
-
+            new_dbn.models[i]._optimizer = opt.SGD(new_dbn.models[i].ddp_model.parameters(), lr=learning_rate[i], momentum=momentum[i], weight_decay=decay[i], nesterov=nesterov_accel[i])
+            new_dbn.models[i].normalize = normalize_learnergy[i]
+            new_dbn.models[i].batch_normalize = batch_normalize[i]
+ 
+            print(new_dbn.models[i]._optimizer.state_dict())
+            print("MODEL_PARAMS")
+            for p in new_dbn.models[i].parameters():
+                print(p.name, p.data)
+            print("DDP_MODEL_PARAMS")
+            for p in new_dbn.models[i].ddp_model.parameters():
+                print(p.name, p.data)
         #Train model
         count = 0
         while(count == 0 or x2.has_next_subset()):
             mse, pl = new_dbn.fit(x2, batch_size=batch_size, epochs=epochs)
             count = count + 1
             x2.next_subset()            	
+            converge.plot(new_dbn.models[i]._history['mse'], new_dbn.models[i]._history['pl'],
+                new_dbn.models[i]._history['time'], labels=['MSE', 'log-PL', 'time (s)'],
+                title='convergence over MNIST dataset', subtitle='Model: Restricted Boltzmann Machine')
+            plt.savefig(os.path.join(out_dir, "convergence_plot_layer" + str(i) + ".png"))
+
         #reset to first subset for output generation
         x2.next_subset()
 
@@ -130,29 +148,38 @@ def run_dbn(yml_conf):
         print("Loading pre-existing model")
         new_dbn = torch.load(model_file)   
 
-    generate_output(x2, new_dbn, use_gpu, out_dir, training_output, training_mse)
-
-    #Generate test dataset object
-    x3 = DBNDataset(data_test, read_func, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scalers=x2.scalers, scale = True, transform=numpy_to_torch, subset=subset_count)
-    del x2
-
-    generate_output(x3, new_dbn, use_gpu, out_dir, testing_output, testing_mse)
-
     for i in range(len(new_dbn.models)):
-        converge.plot(new_dbn.models[i]._history['mse'], new_dbn.models[i]._history['pl'], 
+        converge.plot(new_dbn.models[i]._history['mse'], new_dbn.models[i]._history['pl'],
             new_dbn.models[i]._history['time'], labels=['MSE', 'log-PL', 'time (s)'],
             title='convergence over MNIST dataset', subtitle='Model: Restricted Boltzmann Machine')
-        plt.savefig(os.path.join(out_dir, "covergence_plot_layer" + str(i) + ".png"))
+        plt.savefig(os.path.join(out_dir, "convergence_plot_layer" + str(i) + ".png"))
 
     if not os.path.exists(model_file) or overwrite_model:
         #Save model
         torch.save(new_dbn, os.path.join(out_dir, model_fname))
-    
+
+
+    generate_output(x2, new_dbn, use_gpu, out_dir, training_output, training_mse)
+
+    #Generate test dataset object
+    for t in range(0, len(data_test)):
+        if t == 0:
+            scaler = x2.scalers
+            del x2
+        else:
+            scaler = x3.scalers
+        x3 = DBNDataset([data_test[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scalers=scaler, scale = True, transform=numpy_to_torch, subset=subset_count)
+
+    generate_output(x3, new_dbn, use_gpu, out_dir, testing_output, testing_mse)
+
     cleanup_ddp()
 
 def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle):
     output_full = None
     count = 0
+    dat.subset = 10
+    dat.current_subset = -1
+    dat.next_subset()
     while(count == 0 or dat.has_next_subset() or dat.current_subset > (dat.subset-2)):
         if torch.cuda.is_available() and use_gpu:
             output = mdl.models[0].ddp_model(dat.data.cuda()).cpu()
@@ -170,6 +197,7 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle):
             output_full = output
         else:
             output_full = torch.cat((output_full,output))
+        print("HERE CONSTRUCTING OUTPUT", dat.data.shape, dat.data_full.shape, output.shape, output_full.shape)
         del output
         count = count + 1
         if dat.has_next_subset():

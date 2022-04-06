@@ -8,7 +8,7 @@ import numpy as np
 import random
 
 import sys
-sys.setrecursionlimit(4500)
+sys.setrecursionlimit(10**6)
 
 #ML imports
 import torch
@@ -65,9 +65,10 @@ class RSClustering(object):
         max_dim2 = max(coord[:,2])
         strt_dim1 = 0
         strt_dim2 = 0
+        print("DIMS", max_dim1, max_dim2, coord.shape, len(labels))		
 
         #1 subtracted to seperate No Data from areas that have cluster value 0.
-        data = np.zeros(((int)(max_dim1-strt_dim1)+self.pixel_padding, (int)(max_dim2-strt_dim2)+self.pixel_padding)) - 1
+        data = np.zeros(((int)(max_dim1-strt_dim1)+1+self.pixel_padding, (int)(max_dim2-strt_dim2)+self.pixel_padding+1)) - 1
         for i in range(len(labels)):
             data[int(coord[i,1]), int(coord[i,2])] = labels[i]
 
@@ -105,6 +106,7 @@ class RSClustering(object):
             if fnl_ind > data.shape[0]:
                 fnl_ind = data.shape[0]
             subd = data[n:fnl_ind].numpy()
+            print(subd.min(), subd.mean(), subd.max(), subd.std())
             self.clustering.partial_fit(subd)
        
  
@@ -125,22 +127,29 @@ class RSClustering(object):
                 data[:,c] = torch.from_numpy(self.scalers[c].transform(subd.reshape(-1,1)).reshape(-1))
 
         labels = self.__predict_cluster__(data)
+        print("HERE ISSUE 1", len(labels), indices.shape, data.shape)
         for i in range(0, int(max(indices[:,0]))+1):
             inds = np.where(indices[:,0] == i)
+            print("HERE ISSUE 2", len(inds[0]))
             self.__plot_clusters__(indices[inds[0],:], labels[inds[0]], fname + ".clustering." + str(i))
 
     def run_clustering(self, train_data, test_data):
 
         if self.train:    
             train = torch.load(train_data)
+            print("HERE TRAINING", train.min(), train.max(), train.mean(), train.std())
             train_indices = torch.load(train_data + ".indices")
             self.__train_scalers__(train.data)
+
+            print(train.shape, train_indices.shape, "HERE FIRST")
 
             for c in range(train.data.shape[1]):
                 subd = train.data[:,c].numpy()
                 train.data[:,c] = torch.from_numpy(self.scalers[c].transform(subd.reshape(-1,1)).reshape(-1))
+            print("POST_SCALE", train.min(), train.max(), train.mean(), train.std())
             self.__train_partial__(train.data)          
 
+            print(self.n_clusters, self.reset_n_clusters == True)
             if self.n_clusters is not None and self.reset_n_clusters == True:
                 self.clustering.set_params(n_clusters=self.n_clusters)
                 self.clustering.partial_fit(None)

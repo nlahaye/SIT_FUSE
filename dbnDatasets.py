@@ -2,16 +2,20 @@ import os
 import numpy as np
 import random
 
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+
 import sys
 sys.setrecursionlimit(4500)
 
 #ML imports
 import torch
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
 
 class DBNDataset(torch.utils.data.Dataset):
 
-	def __init__(self, filenames, read_func, pixel_padding, delete_chans, valid_min, valid_max, fill_value = -9999, chan_dim = 0, transform_chans = [], transform_values = [], scalers = None, scale=False, transform=None, subset=None):
+	def __init__(self, filenames, read_func, read_func_kwargs, pixel_padding, delete_chans, valid_min, valid_max, fill_value = -9999, chan_dim = 0, transform_chans = [], transform_values = [], scalers = None, scale=False, transform=None, subset=None):
 
 		self.filenames = filenames
 		self.transform = transform
@@ -26,7 +30,8 @@ class DBNDataset(torch.utils.data.Dataset):
 		self.scalers = scalers
 		self.scale = scale
 		self.transform = transform
-		self.read_func = read_func	
+		self.read_func = read_func
+		self.read_func_kwargs = read_func_kwargs
 		self.subset = subset
 		if self.subset is None:
 			self.subset = 1		
@@ -39,9 +44,9 @@ class DBNDataset(torch.utils.data.Dataset):
 		
 		data_local = []
 		for i in range(0, len(self.filenames)):
-			if os.path.exists(self.filenames[i]):
+			if (type(self.filenames[i]) == str and os.path.exists(self.filenames[i])) or (type(self.filenames[i]) is list and os.path.exists(self.filenames[i][0])):
 				print(self.filenames[i])
-				dat = self.read_func(self.filenames[i]).astype(np.float32)
+				dat = self.read_func(self.filenames[i], **self.read_func_kwargs).astype(np.float64)
 				for t in range(len(self.transform_chans)):
 					slc = [slice(None)] * dat.ndim
 					slc[self.chan_dim] = slice(self.transform_chans[t], self.transform_chans[t]+1)
@@ -53,7 +58,6 @@ class DBNDataset(torch.utils.data.Dataset):
 						inds = np.where(tmp > self.valid_max - 0.00000000005)
 						tmp[inds] = self.transform_value[t]
 									
-
 				dat = np.delete(dat, self.delete_chans, self.chan_dim)
 
 				if self.valid_min is not None:
@@ -78,7 +82,6 @@ class DBNDataset(torch.utils.data.Dataset):
 					subd = data_local[r][tuple(slc)]
 					subd[np.where(subd > -9999)] = self.scalers[n].transform(subd[np.where(subd > -9999)].reshape(-1, 1)).reshape(-1)
 					data_local[r][tuple(slc)] = subd
-
 		dim1 = 0
 		dim2 = 1
 		if self.chan_dim == 0:
@@ -115,8 +118,13 @@ class DBNDataset(torch.utils.data.Dataset):
 		random.shuffle(c)
 		self.data, self.targets = zip(*c)
 		self.data_full = np.array(self.data).astype(np.float32)
-		self.targets_full = np.array(self.targets).astype(np.float32)
- 
+		self.targets_full = np.array(self.targets).astype(np.int16)
+		del self.data
+		del self.targets
+
+		subd = self.data_full[np.where(self.data_full > -9999)]
+		print("STATS", subd.min(), subd.max(), subd.mean(), subd.std(), self.data_full.min(), self.data_full.max(), self.data_full.mean(), self.data_full.std())
+
 		self.next_subset()
  
 
@@ -158,23 +166,23 @@ class DBNDataset(torch.utils.data.Dataset):
 			for n in range(data[r].shape[self.chan_dim]):
 				if r == 0:
 					self.scalers.append(StandardScaler())
-					slc = [slice(None)] * data[r].ndim
-					slc[self.chan_dim] = slice(n, n+1)
-					subd = data[r][tuple(slc)]
-					self.scalers[n].partial_fit(subd[np.where(subd > -9999)].reshape(-1, 1))
+				slc = [slice(None)] * data[r].ndim
+				slc[self.chan_dim] = slice(n, n+1)
+				subd = data[r][tuple(slc)]
+				self.scalers[n].partial_fit(subd[np.where(subd > -9999)].reshape(-1, 1))
 
 	def __len__(self):
 		return len(self.data)
 
-	def __getitem__(self, idx):
-		if torch.is_tensor(idx):
-			idx = idx.tolist()
+	def __getitem__(self, index):
+		if torch.is_tensor(index):
+			index = index.tolist()
 
-		sample = self.data[idx]
+		sample = self.data[index]
 		if self.transform:
 			sample = self.transform(sample)
 
-		return sample, self.targets[idx]
+		return sample, self.targets[index]
 
 
 
