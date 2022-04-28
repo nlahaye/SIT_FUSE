@@ -1,11 +1,11 @@
 # MultiModalObj
 Multi Modal Segmentation and Instance Tracking using Unsupervised Deep Learning
 
-For now, use fork of learnergy repo:
-https://github.com/nlahaye/learnergy/
+Supports multi-GPU training via PyTorch's DDP class
 
-Changes have been made to support multi-GPU training via PyTorch's DDP class
-
-Once the pull request has been accepted,we will move back to using the original repo:
+Uses Learnergy for RBM-based models:
 https://github.com/gugarosa/learnergy/
+
+Scikit-Learn, Dask, and Dask-ML are used mostly
+  Currently transitioning from numpy to Dask and from Scikit-Learn to Dask-ML wherever possible
 
