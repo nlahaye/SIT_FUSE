@@ -64,11 +64,40 @@ def read_s3_netcdf(s3_dir, **kwargs):
 		dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
 	return dat
 
+
+def read_gtiff_multifile_generic(files, **kwargs):
+    data1 = []
+    for j in range(0, len(files)):
+        dat = gdal.Open(files[j]).ReadAsArray()
+        data1.append(dat)
+    dat = np.array(data1)
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+        dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+    return dat
+
+ 
+#TODO config for AVIRIS - scale 0.0001 valid_min = 0 and Fill = -9999
+def read_gtiff_generic(file, **kwargs): 
+	dat = gdal.Open(filenames[i], gdal.GA_ReadOnly).ReadAsArray()
+
+
+#TODO worldview
+
 def get_read_func(data_reader):
 	if data_reader == "goes_netcdf":
 		return read_goes_netcdf
 	if data_reader == "s3_netcdf":
-		return read_s3_netcdf        
+		return read_s3_netcdf     
+	if data_reader == "gtiff_multifile":
+		return read_gtiff_multifile_generic   
+	if data_reader == "landsat_gtiff":
+		return read_gtiff_multifile_generic
+	if data_reader == "s1_gtiff":
+		return read_gtiff_multifile_generic
+	if data_reader == "gtiff":
+		return read_gtiff_generic
+	if data_reader == "aviris_gtiff":
+		return read_gtiff_generic
 	if data_reader == "numpy":
 		return numpy_load
 	if data_reader == "torch":
