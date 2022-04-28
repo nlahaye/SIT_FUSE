@@ -1,0 +1,9 @@
+pytorch-CycleGAN-and-pix2pix
+ 
+python train.py --dataroot /—home/nlahaye/ name plumes_pix2pix --model pix2pix --direction AtoB
+
+
+clusters to other DBN clusters for multi-sensor tracking
+
+
+integrate via script
