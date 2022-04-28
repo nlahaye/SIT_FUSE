@@ -11,9 +11,7 @@ clustering:
         branch: 5
         thresh: 1e-5
         pixel_padding: 1
-        train_sample_size: 1000
-        number_train_epochs: 150
-        predict_data_chunk: 10000
+        train_sample_size: 1500000
         clustering:
         train: True
         reset_n_clusters: True
