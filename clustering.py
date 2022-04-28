@@ -129,7 +129,7 @@ class RSClustering(object):
             #shuffle data
             np.random.seed(42)
             index = np.random.choice(trn.shape[0], trn.shape[0], replace=False)
-            trn = shuffle_slice(trn, index)
+            trn = da.slicing.shuffle_slice(trn, index)
             trn = trn[:self.train_sample_size,:] #500000,:]
 
             self.__train_scaler__(trn)
