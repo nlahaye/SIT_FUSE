@@ -66,6 +66,7 @@ def run_dbn(yml_conf):
     valid_max = yml_conf["data"]["valid_max"]
     delete_chans = yml_conf["data"]["delete_chans"]
     subset_count = yml_conf["data"]["subset_count"]
+    output_subset_count = yml_conf["data"]["output_subset_count"]
 
     transform_chans = yml_conf["data"]["transform_default"]["chans"]
     transform_values = 	yml_conf["data"]["transform_default"]["transform"]
@@ -117,19 +118,11 @@ def run_dbn(yml_conf):
         new_dbn = ResidualDBN(model=model_type, n_visible=chunk_size*number_channel, n_hidden=dbn_arch, steps=gibbs_steps, learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=use_gpu)
 
         for i in range(len(new_dbn.models)):
-            print("HERE LAYER", i)
             new_dbn.models[i].ddp_model = DDP(new_dbn.models[i], device_ids=device_ids).cuda()
             new_dbn.models[i]._optimizer = opt.SGD(new_dbn.models[i].ddp_model.parameters(), lr=learning_rate[i], momentum=momentum[i], weight_decay=decay[i], nesterov=nesterov_accel[i])
             new_dbn.models[i].normalize = normalize_learnergy[i]
             new_dbn.models[i].batch_normalize = batch_normalize[i]
  
-            print(new_dbn.models[i]._optimizer.state_dict())
-            print("MODEL_PARAMS")
-            for p in new_dbn.models[i].parameters():
-                print(p.name, p.data)
-            print("DDP_MODEL_PARAMS")
-            for p in new_dbn.models[i].ddp_model.parameters():
-                print(p.name, p.data)
         #Train model
         count = 0
         while(count == 0 or x2.has_next_subset()):
@@ -159,9 +152,8 @@ def run_dbn(yml_conf):
         torch.save(new_dbn, os.path.join(out_dir, model_fname))
 
 
-    generate_output(x2, new_dbn, use_gpu, out_dir, training_output, training_mse)
-
-    #Generate test dataset object
+    #Generate test datasets
+    x3 = None
     for t in range(0, len(data_test)):
         if t == 0:
             scaler = x2.scalers
@@ -170,19 +162,31 @@ def run_dbn(yml_conf):
             scaler = x3.scalers
         x3 = DBNDataset([data_test[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scalers=scaler, scale = True, transform=numpy_to_torch, subset=subset_count)
 
-    generate_output(x3, new_dbn, use_gpu, out_dir, testing_output, testing_mse)
+        generate_output(x3, new_dbn, use_gpu, out_dir, "file" + str(t) + "_" +  testing_output, testing_mse, output_subset_count)
+    
+    #Generate test datasets. Doing it this way, because generating all at once creates memory issues
+    x2 = None
+    for t in range(0, len(data_train)):
+        if t == 0:
+            scaler = x3.scalers
+            del x3
+        else:
+            scaler = x2.scalers
+        x2 = DBNDataset([data_train[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scalers = scaler, scale = True, transform=numpy_to_torch, subset=subset_count)
+
+        generate_output(x2, new_dbn, use_gpu, out_dir, "file" + str(t) + "_" +  training_output, training_mse, output_subset_count)
 
     cleanup_ddp()
 
-def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle):
+def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, output_subset_count):
     output_full = None
     count = 0
-    dat.subset = 10
+    dat.subset = output_subset_count
     dat.current_subset = -1
     dat.next_subset()
     while(count == 0 or dat.has_next_subset() or dat.current_subset > (dat.subset-2)):
         if torch.cuda.is_available() and use_gpu:
-            output = mdl.models[0].ddp_model(dat.data.cuda()).cpu()
+            output = mdl.models[0].ddp_model(dat.data.cuda()) #.cpu()
             for i in range(1, len(mdl.models)):
                 output = mdl.models[i].ddp_model(output)
             output = output.cpu()
@@ -197,7 +201,7 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle):
             output_full = output
         else:
             output_full = torch.cat((output_full,output))
-        print("HERE CONSTRUCTING OUTPUT", dat.data.shape, dat.data_full.shape, output.shape, output_full.shape)
+        print("CONSTRUCTING OUTPUT", dat.data.shape, dat.data_full.shape, output.shape, output_full.shape)
         del output
         count = count + 1
         if dat.has_next_subset():

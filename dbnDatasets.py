@@ -57,7 +57,10 @@ class DBNDataset(torch.utils.data.Dataset):
 					if self.valid_max is not None:
 						inds = np.where(tmp > self.valid_max - 0.00000000005)
 						tmp[inds] = self.transform_value[t]
-									
+				if len(self.transform_chans) > 0:
+					del slc
+					del tmp
+										
 				dat = np.delete(dat, self.delete_chans, self.chan_dim)
 
 				if self.valid_min is not None:
@@ -69,8 +72,6 @@ class DBNDataset(torch.utils.data.Dataset):
 				data_local.append(dat)
 
 		del dat
-		del slc
-		del tmp
 		if self.scale:
 			if self.scalers is None:
 				self.__train_scalers__(data_local)
@@ -160,6 +161,8 @@ class DBNDataset(torch.utils.data.Dataset):
 	
 
 
+        #TODO transform to use of dask/dask_ml
+        #TODO - ensure that channel dimension is always last and only use one StandardScaler
 	def __train_scalers__(self, data):
 		self.scalers = []
 		for r in range(len(data)):
@@ -179,9 +182,8 @@ class DBNDataset(torch.utils.data.Dataset):
 			index = index.tolist()
 
 		sample = self.data[index]
-		if self.transform:
-			sample = self.transform(sample)
-
+                if self.transform:
+                       sample = self.transform(sample)
 		return sample, self.targets[index]
 
 

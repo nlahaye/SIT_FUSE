@@ -1,6 +1,6 @@
 
 output:
- out_dir: "output/Learnergy/DBN_S3_GERD/"
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_S3_GERD/"
  training_output: "output.data"
  training_mse: "rec_mse.data"
  testing_output: "output_test.data"
@@ -29,7 +29,7 @@ dbn:
   rank: 0
   device_ids: [0,1,2,3,4,5,6,7]
   batch_size: 1000
-  epochs: [100] #[8] #, 1, 1] #, 5] #, 10]
+  epochs: [40] #[8] #, 1, 1] #, 5] #, 10]
 
 data:
  pixel_padding: 1
@@ -38,6 +38,7 @@ data:
  valid_min: -100.0
  valid_max: 100000000
  subset_count: 1
+ output_subset_count: 200
  reader_type: "s3_netcdf"
  reader_kwargs:
   no_arg: "no_arg"

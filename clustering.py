@@ -5,6 +5,8 @@ matplotlib.use('agg')
 import os
 import matplotlib.pyplot as plt
 import numpy as np
+import dask
+import dask.array as da
 import random
 
 import sys
@@ -13,7 +15,8 @@ sys.setrecursionlimit(10**6)
 #ML imports
 import torch
 from sklearn.cluster import Birch
-from sklearn.preprocessing import StandardScaler
+from dask_ml.preprocessing import StandardScaler
+from dask_ml.wrappers import Incremental
 
 #Data
 from dbnDatasets import DBNDataset
@@ -30,18 +33,19 @@ from CMAP import CMAP, CMAP_COLORS
 #Serialization
 import pickle
 
+import warnings
+warnings.simplefilter("ignore") 
+
 class RSClustering(object):
   
     def __init__(self, pixel_padding = 1, branch = 5, thresh = 1e-5, 
-        train_sample_size = 1000, number_train_epochs = 75, n_clusters = 500, predict_data_chunk = 10000,
-        clustering = None, min_clust = None, max_clust = None, out_dir = "", train = True, reset_n_clusters = True):
+        train_sample_size = 1000, clustering = None, n_clusters = 500, min_clust = None,
+        max_clust = None, out_dir = "", train = True, reset_n_clusters = True):
 
         self.pixel_padding = pixel_padding
         self.branch = branch
         self.thresh = float(thresh)
         self.train_sample_size = train_sample_size
-        self.number_train_epochs = number_train_epochs
-        self.predict_data_chunk = predict_data_chunk
         self.n_clusters = n_clusters
         self.clustering = clustering
         self.min_clust = min_clust
@@ -51,7 +55,8 @@ class RSClustering(object):
         self.reset_n_clusters = reset_n_clusters
 
         if self.clustering is None:
-            self.clustering = Birch(branching_factor=self.branch, threshold=self.thresh, n_clusters=None)
+            self.estimator = Birch(branching_factor=self.branch, threshold=self.thresh, n_clusters=None)
+            self.clustering = Incremental(estimator=self.estimator)
         elif isinstance(self.clustering, str) and os.path.exists(self.clustering):
             with open(self.clustering, "rb") as f:
                 self.clustering = pickle.load(f)
@@ -65,14 +70,20 @@ class RSClustering(object):
         max_dim2 = max(coord[:,2])
         strt_dim1 = 0
         strt_dim2 = 0
-        print("DIMS", max_dim1, max_dim2, coord.shape, len(labels))		
+    
+        tmp = np.array(coord[:,1]*max_dim2 + coord[:,2]) 
+        coord_flat = da.from_array(tmp.reshape((1,tmp.shape[0])))
 
         #1 subtracted to seperate No Data from areas that have cluster value 0.
-        data = np.zeros(((int)(max_dim1-strt_dim1)+1+self.pixel_padding, (int)(max_dim2-strt_dim2)+self.pixel_padding+1)) - 1
-        for i in range(len(labels)):
-            data[int(coord[i,1]), int(coord[i,2])] = labels[i]
+        data = da.zeros((((int)(max_dim1-strt_dim1)+1+self.pixel_padding)*((int)(max_dim2-strt_dim2)+self.pixel_padding+1)), chunks=2000) - 1
+        da.slicing.setitem(data, labels, coord_flat)
 
-        np.save(output_basename + ".npy", data)
+        print("TO NUMPY...")
+        data_tmp = np.array(data.compute()).reshape(((int)(max_dim1-strt_dim1)+1+self.pixel_padding, (int)(max_dim2-strt_dim2)+self.pixel_padding+1))
+        print("BACK TO DASK")
+        data2 = da.from_array(data_tmp)
+
+        da.to_zarr(data2,output_basename + ".zarr")
         img = plt.imshow(data, vmin=self.min_clust, vmax=self.max_clust)
         cmap = ListedColormap(CMAP_COLORS[0:int(data.max() - data.min() + 1)])
         img.set_cmap(cmap)
@@ -84,85 +95,74 @@ class RSClustering(object):
 
 
     def __predict_cluster__(self, data):
-        
-        labels =  np.zeros(data.shape[0])
-        for i in range(0, data.shape[0], self.predict_data_chunk):
-            end_ind = i + self.predict_data_chunk
-            if end_ind > data.shape[0]:
-                end_ind = data.shape[0]-1
-            labels[i:end_ind+1] = self.clustering.predict(data[i:end_ind+1])
+        labels = self.clustering.predict(data)
         return labels
 
 
-    def __train_partial__(self, data):
-        
-        if data.shape[0] < self.train_sample_size:
-            self.train_sample_size = 100
-        elif int(self.number_train_epochs/self.train_sample_size) > int(data.shape[0]/self.train_sample_size):
-            self.number_train_epochs = int(data.shape[0]/self.train_sample_size)
-        indices = np.random.choice(data.shape[0], size=self.number_train_epochs, replace=False)
-        for n in indices:
-            fnl_ind = n + self.train_sample_size + 1
-            if fnl_ind > data.shape[0]:
-                fnl_ind = data.shape[0]
-            subd = data[n:fnl_ind].numpy()
-            print(subd.min(), subd.mean(), subd.max(), subd.std())
-            self.clustering.partial_fit(subd)
-       
+    def __train_clustering__(self, data):
+        print(data.shape, data.min(), data.max(), data.mean())
+        self.clustering.fit(data)
  
-    def __train_scalers__(self, data):
-        self.scalers = []
-        for n in range(data.shape[1]):
-            self.scalers.append(StandardScaler())
-            #slc = [slice(None)] * data.ndim
-            #slc[1] = slice(n, n+1)
-            subd = data[:,n]
-            self.scalers[n].partial_fit(subd[np.where(subd > -9999)].reshape(-1, 1))      
+    def __train_scaler__(self, data):
+        self.scaler = StandardScaler()
+        self.scaler.fit(data)
 
     def __cluster_data__(self, data, indices, fname, scale = True):
 
         if scale:
-            for c in range(data.shape[1]):
-                subd = data[:,c].numpy()
-                data[:,c] = torch.from_numpy(self.scalers[c].transform(subd.reshape(-1,1)).reshape(-1))
+            data = self.scaler.transform(data)
 
         labels = self.__predict_cluster__(data)
-        print("HERE ISSUE 1", len(labels), indices.shape, data.shape)
-        for i in range(0, int(max(indices[:,0]))+1):
-            inds = np.where(indices[:,0] == i)
-            print("HERE ISSUE 2", len(inds[0]))
-            self.__plot_clusters__(indices[inds[0],:], labels[inds[0]], fname + ".clustering." + str(i))
+        self.__plot_clusters__(indices, labels, fname + ".clustering")
 
+
+    #TODO make reader functionality generic - take in files, indices files, and reader type, like DBN
     def run_clustering(self, train_data, test_data):
 
-        if self.train:    
-            train = torch.load(train_data)
-            print("HERE TRAINING", train.min(), train.max(), train.mean(), train.std())
-            train_indices = torch.load(train_data + ".indices")
-            self.__train_scalers__(train.data)
+        trn = []
+        if self.train:
+            print("TRAINING SCALERS")
+            for i in range(len(train_data)):   
+                trn.append(da.from_array(torch.load(train_data[i]).detach().numpy(), chunks=2000))
+                #self.__train_scaler__(trn[i])
+            trn = da.concatenate(trn)
+            #shuffle data
+            np.random.seed(42)
+            index = np.random.choice(trn.shape[0], trn.shape[0], replace=False)
+            trn = da.slicing.shuffle_slice(trn, index)
+            trn = trn[:self.train_sample_size,:] #500000,:]
 
-            print(train.shape, train_indices.shape, "HERE FIRST")
+            self.__train_scaler__(trn)
+            print("INIT TRAINING CLUSTERING MODEL")
 
-            for c in range(train.data.shape[1]):
-                subd = train.data[:,c].numpy()
-                train.data[:,c] = torch.from_numpy(self.scalers[c].transform(subd.reshape(-1,1)).reshape(-1))
-            print("POST_SCALE", train.min(), train.max(), train.mean(), train.std())
-            self.__train_partial__(train.data)          
+            trn = self.scaler.transform(trn)
+            self.__train_clustering__(trn) 
 
-            print(self.n_clusters, self.reset_n_clusters == True)
+            print("FINAL CLUSTER TRAINING")
             if self.n_clusters is not None and self.reset_n_clusters == True:
-                self.clustering.set_params(n_clusters=self.n_clusters)
+                self.estimator = self.clustering.estimator.set_params(n_clusters=self.n_clusters)
                 self.clustering.partial_fit(None)
             self.min_clust = 0
             self.max_clust = self.n_clusters
 
+        train_indices = []
+        trn = []
+        print("RUNNING CLUSTERING")
+        for i in range(len(train_data)):
+            print("CLUSTERING", train_data[i])
+            trn = da.from_array(torch.load(train_data[i]).detach().numpy(), chunks=2000)
+            train_indices = torch.load(train_data[i] + ".indices")
+ 
+            self.__cluster_data__(trn, train_indices, train_data[i], True)
 
-        self.__cluster_data__(train.data, train_indices, train_data, False)
-
-        test = torch.load(test_data)
-        test_indices = torch.load(test_data + ".indices")
+        for i in range(len(test_data)):
+            print("CLUSTERING", test_data[i])
+            test = da.from_array(torch.load(test_data[i]).detach().numpy(), chunks=2000)
+            train_indices = torch.load(test_data[i] + ".indices")
         
-        self.__cluster_data__(test.data, test_indices, test_data, True) 
+            self.__cluster_data__(test, test_indices, test_data[i], True) 
+
+        print("CLUSTERING COMPLETE")
 
     def save_clustering(self):
         os.makedirs(self.out_dir, exist_ok = True)
@@ -178,16 +178,14 @@ def main(yml_fpath):
     branch = yml_conf["clustering"]["branch"]
     thresh = yml_conf["clustering"]["thresh"]
     train_sample_size = yml_conf["clustering"]["train_sample_size"]
-    number_train_epochs = yml_conf["clustering"]["number_train_epochs"]
     n_clusters = yml_conf["clustering"]["n_clusters"]
-    predict_data_chunk = yml_conf["clustering"]["predict_data_chunk"]
     train = yml_conf["clustering"]["train"]
     reset_n_clusters = yml_conf["clustering"]["reset_n_clusters"]
     out_dir = yml_conf["output"]["out_dir"]
     model = yml_conf["clustering"]["model"]
     clustering = RSClustering(pixel_padding = pixel_padding, branch = branch,
-        thresh = thresh, train_sample_size = train_sample_size, number_train_epochs = number_train_epochs,
-        n_clusters = n_clusters, predict_data_chunk = predict_data_chunk, out_dir = out_dir, clustering = model,
+        thresh = thresh, train_sample_size = train_sample_size,
+        n_clusters = n_clusters, out_dir = out_dir, clustering = model,
         train = train, reset_n_clusters = reset_n_clusters)
 
 

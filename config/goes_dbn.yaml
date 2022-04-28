@@ -36,6 +36,7 @@ data:
  valid_min: -100.0
  valid_max: 100000000
  subset_count: 1
+ output_subset_count: 10
  reader_type: "goes_netcdf"
  reader_kwargs:
   start_sample: 1850
