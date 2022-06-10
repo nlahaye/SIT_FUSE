@@ -3,6 +3,8 @@ from pyresample.geometry import AreaDefinition
 from pyresample import area_config, bilinear, geometry, data_reduce, create_area_def
 from utils import numpy_to_torch, read_yaml, get_read_func
 import argparse
+from osgeo import gdal, osr
+import os
 
 def fuse_data(yml_conf):
 
