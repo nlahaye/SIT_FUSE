@@ -109,7 +109,7 @@ def fuse_data(yml_conf):
         print("AFTER RESAMPLING2", lo_dat.shape, result2.shape)
 
         datFinal = []
-        print("MASKING", np.count_nonzero(datLowRes))
+        print("MASKING", np.count_nonzero(result2.mask))
         if len(hi_filenames) > 0:
             print("MASKING", np.count_nonzero(result.mask))
  
