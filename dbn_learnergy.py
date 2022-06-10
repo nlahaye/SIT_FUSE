@@ -67,6 +67,7 @@ def run_dbn(yml_conf):
     delete_chans = yml_conf["data"]["delete_chans"]
     subset_count = yml_conf["data"]["subset_count"]
     output_subset_count = yml_conf["data"]["output_subset_count"]
+    scale_data = yml_conf["data"]["scale_data"]
 
     transform_chans = yml_conf["data"]["transform_default"]["chans"]
     transform_values = 	yml_conf["data"]["transform_default"]["transform"]
@@ -111,7 +112,7 @@ def run_dbn(yml_conf):
 
     #Generate training dataset object
     #Unsupervised, so targets are not used. Currently, I use this to store original image indices for each point 
-    x2 = DBNDataset(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scalers = None, scale = True, transform=numpy_to_torch, subset=subset_count)
+    x2 = DBNDataset(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scalers = None, scale = scale_data, transform=numpy_to_torch, subset=subset_count)
  
     model_file = os.path.join(out_dir, model_fname)
     if(not os.path.exists(model_file) or overwrite_model):
@@ -129,10 +130,18 @@ def run_dbn(yml_conf):
             mse, pl = new_dbn.fit(x2, batch_size=batch_size, epochs=epochs)
             count = count + 1
             x2.next_subset()            	
-            converge.plot(new_dbn.models[i]._history['mse'], new_dbn.models[i]._history['pl'],
-                new_dbn.models[i]._history['time'], labels=['MSE', 'log-PL', 'time (s)'],
-                title='convergence over MNIST dataset', subtitle='Model: Restricted Boltzmann Machine')
-            plt.savefig(os.path.join(out_dir, "convergence_plot_layer" + str(i) + ".png"))
+            converge.plot(new_dbn.models[i]._history['mse'],
+                labels=['MSE'], title='convergence', subtitle='Model: Restricted Boltzmann Machine')
+            plt.savefig(os.path.join(out_dir, "mse_plot_layer" + str(i) + ".png"))
+            plt.clf()
+            converge.plot( new_dbn.models[i]._history['pl'],
+                labels=['log-PL'], title='Log-PL', subtitle='Model: Restricted Boltzmann Machine')
+            plt.savefig(os.path.join(out_dir, "log-pl_plot_layer" + str(i) + ".png"))
+            plt.clf()
+            converge.plot( new_dbn.models[i]._history['time'],
+                labels=['time (s)'], title='Training Time', subtitle='Model: Restricted Boltzmann Machine')
+            plt.savefig(os.path.join(out_dir, "time_plot_layer" + str(i) + ".png"))
+            plt.clf()
 
         #reset to first subset for output generation
         x2.next_subset()
@@ -160,7 +169,7 @@ def run_dbn(yml_conf):
             del x2
         else:
             scaler = x3.scalers
-        x3 = DBNDataset([data_test[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scalers=scaler, scale = True, transform=numpy_to_torch, subset=subset_count)
+        x3 = DBNDataset([data_test[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scalers=scaler, scale = scale_data, transform=numpy_to_torch, subset=subset_count)
 
         generate_output(x3, new_dbn, use_gpu, out_dir, "file" + str(t) + "_" +  testing_output, testing_mse, output_subset_count)
     
@@ -172,7 +181,7 @@ def run_dbn(yml_conf):
             del x3
         else:
             scaler = x2.scalers
-        x2 = DBNDataset([data_train[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scalers = scaler, scale = True, transform=numpy_to_torch, subset=subset_count)
+        x2 = DBNDataset([data_train[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scalers = scaler, scale = scale_data, transform=numpy_to_torch, subset=subset_count)
 
         generate_output(x2, new_dbn, use_gpu, out_dir, "file" + str(t) + "_" +  training_output, training_mse, output_subset_count)
 
