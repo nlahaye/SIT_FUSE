@@ -1,0 +1,73 @@
+
+output:
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_LARGE/"
+ training_output: "output.data"
+ training_mse: "rec_mse.data"
+ testing_output: "output_test.data"
+ testing_mse: "rec_mse_test.data"
+ model: "dbn.pth"
+
+dbn:
+ overwrite_model: True
+ params:
+  #model_type: 'gaussian_relu' "variance_gaussian"
+  model_type: ["gaussian_selu"] #, 'gaussian_relu_dropout', 'gaussian_relu_dropout'] #'variance_gaussian_dropout' "gaussian_dropout"
+  #model_type: "variance_gaussian"
+  dbn_arch: [2000] #[2000] [250, 500, 2000] #, 2000]
+  gibbs_steps: [2] #, 7, 7] #, 10] #, 25]
+  learning_rate: [0.0001] #, 0.0001, 0.0001] #, 0.01] #, 0.01]
+  momentum: [0.95] #, 0.95, 0.95] #, 0.95] #, 0.95]
+  decay: [0.0001] #, 0.0001, 0.0001] #, 0.0001] #, 0.0001]
+  temp: [1.0] #, 1.0, 1.0] [0.9, 0.75, 0.5] #, 1.0] #, 0.5] #, 0.5] 
+  nesterov_accel: [True]
+  normalize_learnergy: [False]
+  batch_normalize: [False]
+
+ training:
+  use_gpu: True
+  world_size: 1
+  rank: 0
+  device_ids: [0,1,2,3,4,5,6,7]
+  batch_size: 1000
+  epochs: [35] #[40] #[8] #, 1, 1] #, 5] #, 10]
+
+data:
+ scale_data: True
+ pixel_padding: 1
+ number_channels: 1
+ fill_value: -9999.0
+ valid_min: -100.0
+ valid_max: 64000
+ subset_count: 1
+ output_subset_count: 10
+ reader_type: "s6_netcdf"
+ reader_kwargs:
+  no_arg: "no_arg"
+ chan_dim: 0
+ delete_chans: []
+ transform_default:
+  chans: []
+  transform: []
+
+ files_train: [
+"/data/nlahaye/remoteSensing/S6/to_jpl/FFSAR/S6A_P4_1A_HR______20211212T015235_20211212T024852_20211213T084145_3377_040_070_035_EUM__OPE_ST_F04_l1b.nc",
+"/data/nlahaye/remoteSensing/S6/to_jpl/FFSAR/S6A_P4_1A_HR______20211221T235107_20211222T004724_20211222T153143_3377_041_070_035_EUM__OPE_ST_F04_l1b.nc",
+"/data/nlahaye/remoteSensing/S6/to_jpl/FFSAR/S6A_P4_1A_HR______20220321T053749_20220321T063406_20220322T094830_3377_050_070_035_EUM__OPE_ST_F05_l1b.nc",
+"/data/nlahaye/remoteSensing/S6/to_jpl/FFSAR/S6A_P4_1A_HR______20220331T033621_20220331T043238_20220401T082859_3377_051_070_035_EUM__OPE_ST_F05_l1b.nc"
+]
+
+ files_test: [
+"/data/nlahaye/remoteSensing/S6/to_jpl/FFSAR/S6A_P4_1A_HR______20220410T013452_20220410T023109_20220411T083327_3377_052_070_035_EUM__OPE_ST_F05_l1b.nc",
+"/data/nlahaye/remoteSensing/S6/to_jpl/FFSAR/S6A_P4_1A_HR______20220419T233324_20220420T002941_20220420T162252_3377_053_070_035_EUM__OPE_ST_F05_l1b.nc",
+"/data/nlahaye/remoteSensing/S6/to_jpl/FFSAR/S6A_P4_1A_HR______20220429T213156_20220429T222813_20220430T151359_3377_054_070_035_EUM__OPE_ST_F05_l1b.nc",
+"/data/nlahaye/remoteSensing/S6/to_jpl/FFSAR/S6A_P4_1A_HR______20211231T214939_20211231T224555_20220101T152901_3376_042_070_035_EUM__OPE_ST_F04_l1b.nc",
+"/data/nlahaye/remoteSensing/S6/to_jpl/FFSAR/S6A_P4_1A_HR______20220110T194810_20220110T204427_20220111T152301_3377_043_070_035_EUM__OPE_ST_F04_l1b.nc",
+"/data/nlahaye/remoteSensing/S6/to_jpl/FFSAR/S6A_P4_1A_HR______20220120T174642_20220120T184259_20220121T140845_3377_044_070_035_EUM__OPE_ST_F04_l1b.nc",
+"/data/nlahaye/remoteSensing/S6/to_jpl/FFSAR/S6A_P4_1A_HR______20220130T154513_20220130T164130_20220131T130716_3377_045_070_035_EUM__OPE_ST_F04_l1b.nc",
+"/data/nlahaye/remoteSensing/S6/to_jpl/FFSAR/S6A_P4_1A_HR______20220209T134344_20220209T144001_20220210T122920_3377_046_070_035_EUM__OPE_ST_F04_l1b.nc",
+"/data/nlahaye/remoteSensing/S6/to_jpl/FFSAR/S6A_P4_1A_HR______20220219T114215_20220219T123832_20220220T111102_3377_047_070_035_EUM__OPE_ST_F04_l1b.nc",
+"/data/nlahaye/remoteSensing/S6/to_jpl/FFSAR/S6A_P4_1A_HR______20220301T094046_20220301T103703_20220302T110907_3377_048_070_035_EUM__OPE_ST_F04_l1b.nc",
+"/data/nlahaye/remoteSensing/S6/to_jpl/FFSAR/S6A_P4_1A_HR______20220311T073917_20220311T083534_20220312T095519_3377_049_070_035_EUM__OPE_ST_F05_l1b.nc"
+
+]
+

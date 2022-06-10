@@ -1,5 +1,5 @@
 
-files_train: ["/data/nlahaye/output/Learnergy/DBN_VIIRS_MODIS/file0_output.data"] #, "/data/nlahaye/output/Learnergy/DBN_VIIRS_MODIS/file1_output.data"]
+files_train: ["/data/nlahaye/output/Learnergy/DBN_VIIRS_MODIS/file0_output.data", "/data/nlahaye/output/Learnergy/DBN_VIIRS_MODIS/file1_output.data"]
 files_test: ["/data/nlahaye/output/Learnergy/DBN_VIIRS_MODIS/file0_output_test.data", "/data/nlahaye/output/Learnergy/DBN_VIIRS_MODIS/file1_output.data"]
 
 output:
@@ -11,7 +11,7 @@ clustering:
         branch: 5
         thresh: 1e-5
         pixel_padding: 1
-        train_sample_size: 1500000
+        train_sample_size: 150000 #000
         clustering:
         train: True
         reset_n_clusters: True

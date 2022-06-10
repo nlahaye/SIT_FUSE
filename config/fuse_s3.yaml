@@ -1,0 +1,69 @@
+
+low_res:
+ data:
+  valid_min: -100.0
+  valid_max: 64000
+  reader_type: "s3_netcdf"
+  reader_kwargs:
+   bands: [7,5,3]
+  geo_reader_type: "s3_netcdf_geo"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: [
+"/data/nlahaye/remoteSensing/GERD_DAM/S3/S3A_OL_1_EFR____20220323T074508_20220323T074808_20220324T111728_0179_083_206_2700_LN1_O_NT_002.SEN3",
+"/data/nlahaye/remoteSensing/GERD_DAM/S3/S3B_OL_1_EFR____20220325T075420_20220325T075720_20220326T124051_0179_064_092_2700_LN1_O_NT_002.SEN3",
+"/data/nlahaye/remoteSensing/GERD_DAM/S3/S3A_OL_1_EFR____20220324T071858_20220324T072158_20220325T122353_0179_083_220_2700_LN1_O_NT_002.SEN3",
+"/data/nlahaye/remoteSensing/GERD_DAM/S3/S3B_OL_1_EFR____20220323T070542_20220323T070842_20220324T102706_0179_064_063_2700_LN1_O_NT_002.SEN3",
+"/data/nlahaye/remoteSensing/GERD_DAM/S3/S3B_OL_1_EFR____20220322T073153_20220322T073453_20220323T110528_0179_064_049_2700_LN1_O_NT_002.SEN3"
+]
+  geo_filenames: [
+"/data/nlahaye/remoteSensing/GERD_DAM/S3/S3A_OL_1_EFR____20220323T074508_20220323T074808_20220324T111728_0179_083_206_2700_LN1_O_NT_002.SEN3",
+"/data/nlahaye/remoteSensing/GERD_DAM/S3/S3B_OL_1_EFR____20220325T075420_20220325T075720_20220326T124051_0179_064_092_2700_LN1_O_NT_002.SEN3",
+"/data/nlahaye/remoteSensing/GERD_DAM/S3/S3A_OL_1_EFR____20220324T071858_20220324T072158_20220325T122353_0179_083_220_2700_LN1_O_NT_002.SEN3",
+"/data/nlahaye/remoteSensing/GERD_DAM/S3/S3B_OL_1_EFR____20220323T070542_20220323T070842_20220324T102706_0179_064_063_2700_LN1_O_NT_002.SEN3",
+"/data/nlahaye/remoteSensing/GERD_DAM/S3/S3B_OL_1_EFR____20220322T073153_20220322T073453_20220323T110528_0179_064_049_2700_LN1_O_NT_002.SEN3"
+]
+  chan_dim: 0
+  geo_coord_dim: 0
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+high_res:
+ data:
+  valid_min: 0.0
+  valid_max: 100000000
+  reader_type: "numpy"
+  reader_kwargs:
+   no_arg: "no_arg"
+  geo_reader_type: "numpy"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: []
+  geo_filenames: []
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+fusion:
+ projection_id: "WGS 84"
+ description: "Generating S3 GeoTiffs"
+ area_id: "GERD Dam"
+ projection_proj4:
+  proj: "longlat"
+  datum: "WGS84" 
+ final_resolution: 0.003
+ projection_units: "degrees"
+ resample_radius: 5000
+ resample_n_neighbors: 64
+ resample_n_procs: 10
+       
+output_files: ["/data/nlahaye/remoteSensing/GERD_DAM/S3/S3A_OL_1_EFR____20220323T074508_20220323T074808_20220324T111728_0179_083_206_2700_LN1_O_NT_002.SEN3/s3_20220323T074508_rgb.tif",
+"/data/nlahaye/remoteSensing/GERD_DAM/S3/S3B_OL_1_EFR____20220325T075420_20220325T075720_20220326T124051_0179_064_092_2700_LN1_O_NT_002.SEN3/s3_20220325T075420_rgb.tif",
+"/data/nlahaye/remoteSensing/GERD_DAM/S3/S3A_OL_1_EFR____20220324T071858_20220324T072158_20220325T122353_0179_083_220_2700_LN1_O_NT_002.SEN3/s3_20220324T071858_rgb.tif",
+"/data/nlahaye/remoteSensing/GERD_DAM/S3/S3B_OL_1_EFR____20220323T070542_20220323T070842_20220324T102706_0179_064_063_2700_LN1_O_NT_002.SEN3/s3_20220323T070542_rgb.tif",
+"/data/nlahaye/remoteSensing/GERD_DAM/S3/S3B_OL_1_EFR____20220322T073153_20220322T073453_20220323T110528_0179_064_049_2700_LN1_O_NT_002.SEN3/s3_20220322T073153_rgb.tif"]
+
+
+
+

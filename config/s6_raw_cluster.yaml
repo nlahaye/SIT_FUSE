@@ -1,0 +1,21 @@
+files_train: ["/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_LARGE/file0_output.data.input"] 
+
+files_test: ["/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_LARGE/file3_output_test.data.input", "/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_LARGE/file0_output_test.data.input", "/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_LARGE/file4_output_test.data.input", "/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_LARGE/file10_output_test.data.input", "/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_LARGE/file5_output_test.data.input", "/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_LARGE/file1_output.data.input", "/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_LARGE/file6_output_test.data.input", "/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_LARGE/file1_output_test.data.input", "/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_LARGE/file7_output_test.data.input", "/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_LARGE/file2_output.data.input", "/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_LARGE/file8_output_test.data.input", "/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_LARGE/file2_output_test.data.input", "/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_LARGE/file9_output_test.data.input", "/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_LARGE/file3_output.data.input"]
+
+
+output:
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/"
+
+
+clustering:
+        n_clusters: 150
+        branch: 5
+        thresh: 1e-15
+        pixel_padding: 1
+        train_sample_size: 150000
+        clustering:
+        train: True
+        reset_n_clusters: True
+        model:  
+
+

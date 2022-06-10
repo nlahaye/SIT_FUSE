@@ -14,7 +14,7 @@ dbn:
   model_type: ["gaussian_selu"] #, 'gaussian_relu_dropout', 'gaussian_relu_dropout'] #'variance_gaussian_dropout' "gaussian_dropout"
   #model_type: "variance_gaussian"
   dbn_arch: [2000] #[2000] [250, 500, 2000] #, 2000]
-  gibbs_steps: [3] #, 7, 7] #, 10] #, 25]
+  gibbs_steps: [1] #, 7, 7] #, 10] #, 25]
   learning_rate: [0.0001] #, 0.0001, 0.0001] #, 0.01] #, 0.01]
   momentum: [0.95] #, 0.95, 0.95] #, 0.95] #, 0.95]
   decay: [0.0001] #, 0.0001, 0.0001] #, 0.0001] #, 0.0001]
@@ -29,14 +29,15 @@ dbn:
   rank: 0
   device_ids: [0,1,2,3,4,5,6,7]
   batch_size: 1000
-  epochs: [40] #[8] #, 1, 1] #, 5] #, 10]
+  epochs: [35] #[40] #[8] #, 1, 1] #, 5] #, 10]
 
 data:
+ scale_data: True
  pixel_padding: 1
  number_channels: 21
  fill_value: -9999.0
  valid_min: -100.0
- valid_max: 100000000
+ valid_max: 64000
  subset_count: 1
  output_subset_count: 200
  reader_type: "s3_netcdf"
@@ -48,15 +49,14 @@ data:
   chans: []
   transform: []
 
- 
  files_train: [
 "/data/nlahaye/remoteSensing/GERD_DAM/S3/S3A_OL_1_EFR____20220323T074508_20220323T074808_20220324T111728_0179_083_206_2700_LN1_O_NT_002.SEN3",
-"/data/nlahaye/remoteSensing/GERD_DAM/S3/S3B_OL_1_EFR____20220322T073153_20220322T073453_20220323T110528_0179_064_049_2700_LN1_O_NT_002.SEN3"
+"/data/nlahaye/remoteSensing/GERD_DAM/S3/S3B_OL_1_EFR____20220325T075420_20220325T075720_20220326T124051_0179_064_092_2700_LN1_O_NT_002.SEN3"
 ]
 
  files_test: [
 "/data/nlahaye/remoteSensing/GERD_DAM/S3/S3A_OL_1_EFR____20220324T071858_20220324T072158_20220325T122353_0179_083_220_2700_LN1_O_NT_002.SEN3",
 "/data/nlahaye/remoteSensing/GERD_DAM/S3/S3B_OL_1_EFR____20220323T070542_20220323T070842_20220324T102706_0179_064_063_2700_LN1_O_NT_002.SEN3",
-"/data/nlahaye/remoteSensing/GERD_DAM/S3/S3B_OL_1_EFR____20220325T075420_20220325T075720_20220326T124051_0179_064_092_2700_LN1_O_NT_002.SEN3"
+"/data/nlahaye/remoteSensing/GERD_DAM/S3/S3B_OL_1_EFR____20220322T073153_20220322T073453_20220323T110528_0179_064_049_2700_LN1_O_NT_002.SEN3"
 ]
 
