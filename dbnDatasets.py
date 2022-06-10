@@ -119,6 +119,8 @@ class DBNDataset(torch.utils.data.Dataset):
 		random.shuffle(c)
 		self.data, self.targets = zip(*c)
 		self.data_full = np.array(self.data).astype(np.float32)
+		#self.data_full = self.data_full * 1e10
+		#self.data_full = self.data_full.astype(np.int32)
 		self.targets_full = np.array(self.targets).astype(np.int16)
 		del self.data
 		del self.targets
@@ -161,7 +163,6 @@ class DBNDataset(torch.utils.data.Dataset):
 	
 
 
-        #TODO transform to use of dask/dask_ml
         #TODO - ensure that channel dimension is always last and only use one StandardScaler
 	def __train_scalers__(self, data):
 		self.scalers = []
@@ -169,6 +170,8 @@ class DBNDataset(torch.utils.data.Dataset):
 			for n in range(data[r].shape[self.chan_dim]):
 				if r == 0:
 					self.scalers.append(StandardScaler())
+					#self.scalers.append(MaxAbsScaler())
+					#self.scalers.append(MinMaxScaler(feature_range=(0.1, 0.9)))
 				slc = [slice(None)] * data[r].ndim
 				slc[self.chan_dim] = slice(n, n+1)
 				subd = data[r][tuple(slc)]
@@ -182,8 +185,7 @@ class DBNDataset(torch.utils.data.Dataset):
 			index = index.tolist()
 
 		sample = self.data[index]
-                if self.transform:
-                       sample = self.transform(sample)
+
 		return sample, self.targets[index]
 
 
