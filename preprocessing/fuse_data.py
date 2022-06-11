@@ -2,8 +2,8 @@ import numpy as np
 from pyresample.geometry import AreaDefinition
 from pyresample import area_config, bilinear, geometry, data_reduce, create_area_def
 from utils import numpy_to_torch, read_yaml, get_read_func
-import argparse
 from osgeo import gdal, osr
+import argparse
 import os
 
 def fuse_data(yml_conf):
@@ -126,21 +126,21 @@ def fuse_data(yml_conf):
 
         print(datFinal.shape)
         if "tif" in os.path.splitext(output_files[i])[1]:
-            toGeotiff(datFinal, area_def, output_files[i])
+            toGeotiff(datFinal, area_def, output_files[i], proj_id)
         else:
             np.save(output_files[i], datFinal)
             locMapped = np.array([lonsa, latsa])
             locMapped = np.moveaxis(locMapped, 0, 2)
             np.save(output_files[i] + ".lonlat.npy", locMapped)
 
-def toGeotiff(outputImage, areaDef, outFname):
+def toGeotiff(outputImage, areaDef, outFname, proj_id):
  
   # create GDAL driver for writing Geotiff
   driver = gdal.GetDriverByName('GTiff')
  
  
   # create Geotiff destination dataset for output
-  dstds = driver.Create(outFname,outputImage.shape[1],outputImage.shape[0],1,gdal.GDT_Float32)
+  dstds = driver.Create(outFname,outputImage.shape[2],outputImage.shape[1],3,gdal.GDT_Float32)
   gt = [ areaDef.area_extent[0],areaDef.pixel_size_x,0,\
   areaDef.area_extent[3],0,-areaDef.pixel_size_y]
  
@@ -150,14 +150,23 @@ def toGeotiff(outputImage, areaDef, outFname):
   # set-up projection of output Geotiff
   srs = osr.SpatialReference()
   srs.ImportFromProj4(areaDef.proj4_string)
-  srs.SetProjCS(areaDef.proj_id)
+  srs.SetProjCS(proj_id)
   srs = srs.ExportToWkt()
   dstds.SetProjection(srs)
  
   # write array data (1 band) ... set NoData value at 0.0
   # in output Geotiff
-  dstds.GetRasterBand(1).WriteArray(outputImage)
-  dstds.GetRasterBand(1).SetNoDataValue(0.0)
+  print(outputImage.shape)
+
+  dstds.GetRasterBand(1).WriteArray(np.squeeze(outputImage[0]))
+  dstds.GetRasterBand(1).SetNoDataValue(-9999.0)
+
+  dstds.GetRasterBand(1).WriteArray(np.squeeze(outputImage[1]))
+  dstds.GetRasterBand(1).SetNoDataValue(-9999.0)
+
+  dstds.GetRasterBand(1).WriteArray(np.squeeze(outputImage[2]))
+  dstds.GetRasterBand(1).SetNoDataValue(-9999.0)
+ 
   dstds=None
 
  
