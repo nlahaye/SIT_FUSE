@@ -70,6 +70,7 @@ def fuse_data(yml_conf):
                 print(hi_dat.shape)
 
             hi_geo = read_func_geo_hi(hi_geoloc[i], **geo_data_reader_kwargs_hi).astype(np.float64)
+            print(hi_geo.shape, hi_geoloc[i])
 
             hi_dat = np.moveaxis(hi_dat, hi_channel_dim, 2)
             hi_geo = np.moveaxis(hi_geo, hi_coord_dim, 2)
@@ -96,6 +97,7 @@ def fuse_data(yml_conf):
 
         print(lo_dat.shape) 
         lo_geo = read_func_geo_lo(lo_geoloc[i], **geo_data_reader_kwargs_lo).astype(np.float64)
+        print(lo_geo.shape, lo_geoloc[i])
 
 
         print(lo_dat.shape, lo_geo.shape)
@@ -114,6 +116,7 @@ def fuse_data(yml_conf):
         slc_lat_lo[lo_coord_dim] = slice(lo_lat_index, lo_lat_index+1)
         slc_lon_lo = [slice(None)] * lo_geo.ndim
         slc_lon_lo[lo_coord_dim] = slice(lo_lon_index, lo_lon_index+1)
+        print(lo_geo[tuple(slc_lon_lo)].shape)
         source_def_lo = geometry.SwathDefinition(lons=np.squeeze(lo_geo[tuple(slc_lon_lo)]), lats=np.squeeze(lo_geo[tuple(slc_lat_lo)]))
 
 
@@ -124,11 +127,14 @@ def fuse_data(yml_conf):
             area_extent = (lo_geo[tuple(slc_lon_lo)].min(), lo_geo[tuple(slc_lat_lo)].min(),
                 lo_geo[tuple(slc_lon_lo)].max(), lo_geo[tuple(slc_lat_lo)].max())
 
+        print(area_extent, lo_dat.min(), lo_dat.max())
 
         area_def = create_area_def(area_id, projection, area_extent=area_extent, resolution = final_resolution, units = projection_units)
         lonsa, latsa = area_def.get_lonlats()
 
         #Assumes reader or preprocessor has defaulted bad values to -9999
+        print(np.where(lo_dat < valid_min_lo))
+        print(np.where(lo_dat > valid_max_lo))
         lo_dat = np.ma.masked_where((lo_dat < valid_min_lo) | (lo_dat > valid_max_lo), lo_dat)
         np.ma.set_fill_value(lo_dat, -9999.0)
 
