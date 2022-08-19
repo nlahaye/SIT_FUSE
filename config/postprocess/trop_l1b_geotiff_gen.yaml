@@ -1,0 +1,42 @@
+
+gen_from_geotiffs: False
+
+data:
+ clust_reader_type: "zarr_to_numpy"
+ reader_kwargs:
+   no_arg: "no_arg" 
+ subset_inds: [[],[],[],[],[],[]]
+ create_separate: True
+  
+ gtiff_data: [
+"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPOMI_L1B/S5P_OFFL_L1B_RA_BD5_20190801T172732_20190801T190901_09326_01_010000_20190802T083233.nc.tif",
+"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPOMI_L1B/S5P_OFFL_L1B_RA_BD5_20190802T170826_20190802T184956_09340_01_010000_20190802T203736.nc.tif",
+#"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPOMI_L1B/S5P_OFFL_L1B_RA_BD5_20190802T184956_20190802T203125_09341_01_010000_20190802T221749.nc.tif",
+"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPOMI_L1B/S5P_OFFL_L1B_RA_BD5_20190803T164920_20190803T183050_09354_01_010000_20190803T202056.nc.tif",
+"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPOMI_L1B/S5P_OFFL_L1B_RA_BD5_20190803T183050_20190803T201219_09355_01_010000_20190803T220107.nc.tif",
+"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPOMI_L1B/S5P_OFFL_L1B_RA_BD5_20190804T181144_20190804T195314_09369_01_010000_20190804T213500.nc.tif",
+"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPOMI_L1B/S5P_OFFL_L1B_RA_BD5_20190805T175238_20190805T193408_09383_01_010000_20190805T211939.nc.tif"]
+
+#"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPOMI_L1B/S5P_OFFL_L1B_RA_BD6_20190801T172732_20190801T190901_09326_01_010000_20190802T083233.nc.tif",
+#"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPOMI_L1B/S5P_OFFL_L1B_RA_BD6_20190802T170826_20190802T184956_09340_01_010000_20190802T203736.nc.tif",
+#"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPOMI_L1B/S5P_OFFL_L1B_RA_BD6_20190802T184956_20190802T203125_09341_01_010000_20190802T221749.nc.tif",
+#"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPOMI_L1B/S5P_OFFL_L1B_RA_BD6_20190803T164920_20190803T183050_09354_01_010000_20190803T202056.nc.tif",
+#"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPOMI_L1B/S5P_OFFL_L1B_RA_BD6_20190803T183050_20190803T201219_09355_01_010000_20190803T220107.nc.tif",
+#"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPOMI_L1B/S5P_OFFL_L1B_RA_BD6_20190804T181144_20190804T195314_09369_01_010000_20190804T213500.nc.tif",
+#"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPOMI_L1B/S5P_OFFL_L1B_RA_BD6_20190805T175238_20190805T193408_09383_01_010000_20190805T211939.nc.tif"]
+
+ cluster_fnames: ["/data/nlahaye/output/Learnergy/DBN_TROP_L1B/file0_output.data.clustering_500clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_TROP_L1B/file1_output.data.clustering_500clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_TROP_L1B/file2_output.data.clustering_500clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_TROP_L1B/file3_output.data.clustering_500clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_TROP_L1B/file4_output.data.clustering_500clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_TROP_L1B/file0_output_test.data.clustering_500clusters.zarr"]
+    
+
+context:
+ apply_context: False
+ clusters: [] #i.e. smoke clusters
+ name: "" #i.e. smoke
+ compare_truth: false
+
+

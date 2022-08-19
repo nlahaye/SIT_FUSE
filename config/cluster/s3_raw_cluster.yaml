@@ -1,0 +1,24 @@
+files_train: ["/data/nlahaye/output/Learnergy/DBN_S3_GERD/file1_output.data.input", "/data/nlahaye/output/Learnergy/DBN_S3_GERD/file0_output.data.input"]
+files_test: ["/data/nlahaye/output/Learnergy/DBN_S3_GERD/file0_output_test.data.input", "/data/nlahaye/output/Learnergy/DBN_S3_GERD/file1_output_test.data.input", "/data/nlahaye/output/Learnergy/DBN_S3_GERD/file2_output_test.data.input"]
+
+#, "/data/nlahaye/output/Learnergy/DBN_S3_GERD/file3_output_test.data.input", "/data/nlahaye/output/Learnergy/DBN_S3_GERD/file0_output.data.input"]
+ 
+
+output:
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_S3_GERD_INPUT/"
+
+
+clustering:
+        n_clusters: 50
+        branch: 5
+        thresh: 1e-5
+        pixel_padding: 1
+        train_sample_size: 20000
+        clustering:
+        train: True
+        reset_n_clusters: True
+        model:  
+
+scaler:
+ name: "standard_dask"
+ scale: True

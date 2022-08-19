@@ -1,0 +1,50 @@
+
+gen_from_geotiffs: true
+
+data:
+ clust_reader_type: "zarr_to_numpy"
+ reader_kwargs:
+   no_arg: "no_arg" 
+ subset_inds: [[],[],[]]
+ create_separate: false
+  
+ gtiff_data: ["/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file0_output.data.input.clustering_30clusters.zarr.tif",
+"/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file1_output.data.input.clustering_30clusters.zarr.tif",
+"/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file2_output.data.input.clustering_30clusters.zarr.tif",
+"/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file3_output.data.input.clustering_30clusters.zarr.tif",
+"/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file0_output_test.data.input.clustering_30clusters.zarr.tif",
+"/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file1_output_test.data.input.clustering_30clusters.zarr.tif",
+"/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file2_output_test.data.input.clustering_30clusters.zarr.tif",
+"/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file3_output_test.data.input.clustering_30clusters.zarr.tif",
+"/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file4_output_test.data.input.clustering_30clusters.zarr.tif",
+"/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file5_output_test.data.input.clustering_30clusters.zarr.tif",
+"/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file6_output_test.data.input.clustering_30clusters.zarr.tif",
+"/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file7_output_test.data.input.clustering_30clusters.zarr.tif",
+"/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file8_output_test.data.input.clustering_30clusters.zarr.tif",
+"/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file9_output_test.data.input.clustering_30clusters.zarr.tif",
+"/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file10_output_test.data.input.clustering_30clusters.zarr.tif"]
+ cluster_fnames: ["/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file0_output.data.input.clustering_30clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file1_output.data.input.clustering_30clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file2_output.data.input.clustering_30clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file3_output.data.input.clustering_30clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file0_output_test.data.input.clustering_30clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file1_output_test.data.input.clustering_30clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file2_output_test.data.input.clustering_30clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file3_output_test.data.input.clustering_30clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file4_output_test.data.input.clustering_30clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file5_output_test.data.input.clustering_30clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file6_output_test.data.input.clustering_30clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file7_output_test.data.input.clustering_30clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file8_output_test.data.input.clustering_30clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file9_output_test.data.input.clustering_30clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_INPUT/file10_output_test.data.input.clustering_30clusters.zarr"]
+
+
+context:
+ apply_context: true
+ clusters: [3, 5, 11, 13, 17,23,28] #22 i.e. smoke clusters
+ name: "water_sub1" #i.e. smoke
+ compare_truth: false
+
+
+

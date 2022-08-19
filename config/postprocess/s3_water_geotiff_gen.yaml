@@ -1,0 +1,28 @@
+
+gen_from_geotiffs: true
+
+data:
+ clust_reader_type: "zarr_to_numpy"
+ reader_kwargs:
+   no_arg: "no_arg" 
+ subset_inds: [[],[],[]]
+ create_separate: false
+ gtiff_data: ["/data/nlahaye/output/Learnergy/DBN_S3_GERD/file0_output.data.clustering.zarr.tif",
+"/data/nlahaye/output/Learnergy/DBN_S3_GERD/file0_output_test.data.clustering.zarr.tif",
+"/data/nlahaye/output/Learnergy/DBN_S3_GERD/file1_output.data.clustering.zarr.tif",
+"/data/nlahaye/output/Learnergy/DBN_S3_GERD/file1_output_test.data.clustering.zarr.tif",
+"/data/nlahaye/output/Learnergy/DBN_S3_GERD/file2_output_test.data.clustering.zarr.tif"]
+ cluster_fnames: [
+"/data/nlahaye/output/Learnergy/DBN_S3_GERD/file0_output.data.clustering.zarr",
+"/data/nlahaye/output/Learnergy/DBN_S3_GERD/file0_output_test.data.clustering.zarr",
+"/data/nlahaye/output/Learnergy/DBN_S3_GERD/file1_output.data.clustering.zarr",
+"/data/nlahaye/output/Learnergy/DBN_S3_GERD/file1_output_test.data.clustering.zarr",
+"/data/nlahaye/output/Learnergy/DBN_S3_GERD/file2_output_test.data.clustering.zarr"]
+
+context:
+ apply_context: true
+ clusters: [81] #[11, 17, 20, 32, 42, 56, 81, 82, 108, 160, 166, 171, 183, 207, 248, 264, 297, 299, 342, 386, 398, 401, 417, 422, 424, 430, 434, 449, 455, 468, 469, 476] #i.e. smoke clusters 48, 151, 124, 153, 156, 60
+ name: "turbid_water" #"water_full" #i.e. smoke
+ compare_truth: false
+
+

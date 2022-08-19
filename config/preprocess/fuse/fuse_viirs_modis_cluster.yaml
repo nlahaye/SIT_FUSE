@@ -1,0 +1,62 @@
+high_res:
+ data:
+  valid_min: 0.0
+  valid_max: 100000000
+  reader_type: "numpy"
+  reader_kwargs:
+   no_arg: "no_arg"
+  geo_reader_type: "numpy"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: []
+  geo_filenames: []
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+low_res:
+ data:
+  valid_min: -1.0
+  valid_max: 500
+  reader_type: "zarr_to_numpy"
+  reader_kwargs:
+   no_arg: "no_arg"
+  geo_reader_type: "numpy"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: ["/data/nlahaye/output/Learnergy/DBN_VIIRS_MODIS/file0_output.data.clustering.zarr",
+"/data/nlahaye/output/Learnergy/DBN_VIIRS_MODIS/file1_output.data.clustering.zarr",
+#"/data/nlahaye/remoteSensing/GERD_DAM/MODIS/aqua_modis_bt36_20220324_112500_wgs84_fit.tif.npy",
+"/data/nlahaye/output/Learnergy/DBN_VIIRS_MODIS/file0_output_test.data.clustering.zarr"]
+  geo_filenames: ["/data/nlahaye/remoteSensing/GERD_DAM/MODIS_VIIRS/viirs_modis_20220322_114800.npy.lonlat.npy",
+"/data/nlahaye/remoteSensing/GERD_DAM/MODIS_VIIRS/viirs_modis_20220323_113000.npy.lonlat.npy",
+#"/data/nlahaye/remoteSensing/GERD_DAM/MODIS/aqua_modis_bt36_20220324_112500_wgs84_fit.tif.lonlat.npy",
+"/data/nlahaye/remoteSensing/GERD_DAM/MODIS_VIIRS/viirs_modis_20220325_105400.npy.lonlat.npy"]
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+fusion:
+ projection_id: 4326
+ description: "resampling high res VIIRS channels to moderate resolution"
+ area_id: "GERD Dam"
+ projection_proj4:
+  proj: "longlat"
+  datum: "WGS84" 
+ final_resolution: 0.009
+ projection_units: "degrees"
+ resample_radius: 5000
+ resample_n_neighbors: 64
+ resample_n_procs: 10
+ resample_epsilon: 1.6
+ use_bilinear: False
+
+output_files: ["/data/nlahaye/output/Learnergy/DBN_VIIRS_MODIS/file0_output.data.clustering.zarr.tif",
+"/data/nlahaye/output/Learnergy/DBN_VIIRS_MODIS/file1_output.data.clustering.zarr.tif",
+"/data/nlahaye/output/Learnergy/DBN_VIIRS_MODIS/file0_output_test.data.clustering.zarr.tif"]
+
+
+
