@@ -1,5 +1,5 @@
 # MultiModalObj
-Multi Modal Segmentation and Instance Tracking using Unsupervised Deep Learning
+Multi-Sensor Segmentation and Instance Tracking using Unsupervised Deep Learning
 
 Supports multi-GPU training via PyTorch's DDP class
 
