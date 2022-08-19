@@ -27,6 +27,7 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 		print(len(imgData.shape), imgData.shape)
 		if len(imgData.shape) > 2:
 			imgData = np.squeeze(imgData[0,:,:])
+		print(p)
 		print(dbnDat1.shape, imgData.shape)
 		nx = imgData.shape[1]
 		ny = imgData.shape[0]
@@ -34,6 +35,7 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 		wkt = dat.GetProjection()
 			
 		classes = np.unique(dbnDat1)
+		print(int(classes.max() - classes.min() + 2))
 		outDat = np.zeros(imgData.shape, dtype=np.int32) - 1
 		if len(subset_inds[p]) > 0:
 			outDat[subset_inds[0]:subset_inds[1],subset_inds[2]:subset_inds[3]] = dbnDat1
@@ -42,6 +44,7 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 
 		file_ext = ".full_geo"
 		fname = cluster_data[p] + file_ext + ".tif"
+		print(fname, "HERE", nx, ny, outDat.shape)
 		out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
 		print(fname)
 		out_ds.SetGeoTransform(geoTransform)

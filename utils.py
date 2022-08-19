@@ -132,6 +132,7 @@ def read_s6_netcdf(filename, **kwargs):
 	if "log" in kwargs and kwargs["log"]:
 		data = np.log(data)
        
+	print("HERE", data.min(), data.max()) 
 	return data
 
 def read_s6_netcdf_geo(filename, **kwargs):
@@ -193,6 +194,8 @@ def read_trop_mod_xr(flename, **kwargs):
     if "vars" in  kwargs:
         vrs = kwargs["vars"] 
 
+
+    print("HERE ", vrs)
 
     data1  = []
     for i in range(len(vrs)):
