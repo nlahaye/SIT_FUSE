@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import random
-
+import copy
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -15,7 +15,7 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
 
 class DBNDataset(torch.utils.data.Dataset):
 
-	def __init__(self, filenames, read_func, read_func_kwargs, pixel_padding, delete_chans, valid_min, valid_max, fill_value = -9999, chan_dim = 0, transform_chans = [], transform_values = [], scalers = None, scale=False, transform=None, subset=None):
+	def __init__(self, filenames, read_func, read_func_kwargs, pixel_padding, delete_chans, valid_min, valid_max, fill_value = -9999, chan_dim = 0, transform_chans = [], transform_values = [], scalers = None, scale=False, transform=None, subset=None, train_scalers = False):
 
 		self.filenames = filenames
 		self.transform = transform
@@ -28,6 +28,7 @@ class DBNDataset(torch.utils.data.Dataset):
 		self.transform_chans = transform_chans
 		self.transform_value = transform_values
 		self.scalers = scalers
+		self.train_scalers = train_scalers
 		self.scale = scale
 		self.transform = transform
 		self.read_func = read_func
@@ -47,6 +48,7 @@ class DBNDataset(torch.utils.data.Dataset):
 			if (type(self.filenames[i]) == str and os.path.exists(self.filenames[i])) or (type(self.filenames[i]) is list and os.path.exists(self.filenames[i][0])):
 				print(self.filenames[i])
 				dat = self.read_func(self.filenames[i], **self.read_func_kwargs).astype(np.float64)
+				print(dat.shape, dat[np.where(dat > -99999)].min(), dat[np.where(dat > -99999)].max())
 				for t in range(len(self.transform_chans)):
 					slc = [slice(None)] * dat.ndim
 					slc[self.chan_dim] = slice(self.transform_chans[t], self.transform_chans[t]+1)
@@ -71,9 +73,9 @@ class DBNDataset(torch.utils.data.Dataset):
 					dat[np.where(dat == self.fill_value)] = -9999
 				data_local.append(dat)
 
-		del dat
+		#del dat
 		if self.scale:
-			if self.scalers is None:
+			if self.scalers is None or self.train_scalers:
 				self.__train_scalers__(data_local)
 
 			for r in range(len(data_local)):	
@@ -95,6 +97,7 @@ class DBNDataset(torch.utils.data.Dataset):
 		self.targets = []
 		for r in range(len(data_local)):
 			count = 0
+			last_count = len(self.data)
 			for j in range(self.pixel_padding, data_local[r].shape[dim1] - self.pixel_padding):
 				for k in range(self.pixel_padding, data_local[r].shape[dim2] - self.pixel_padding):
 					sub_data_total = []
@@ -114,11 +117,15 @@ class DBNDataset(torch.utils.data.Dataset):
 						continue
 					self.data.append(sub_data_total.ravel())
 					self.targets.append([r,j,k])
+			if last_count >= len(self.data):
+				print("ERROR NO DATA RECEIVED FROM", self.filenames[r]) 
 			print("SKIPPED", count, "SAMPLES OUT OF", len(self.data), data_local[r].shape, dim1, dim2, self.chan_dim)
 		c = list(zip(self.data, self.targets))
 		random.shuffle(c)
 		self.data, self.targets = zip(*c)
 		self.data_full = np.array(self.data).astype(np.float32)
+		#self.data_full = self.data_full * 1e10
+		#self.data_full = self.data_full.astype(np.int32)
 		self.targets_full = np.array(self.targets).astype(np.int16)
 		del self.data
 		del self.targets
@@ -161,17 +168,25 @@ class DBNDataset(torch.utils.data.Dataset):
 	
 
 
-        #TODO transform to use of dask/dask_ml
         #TODO - ensure that channel dimension is always last and only use one StandardScaler
 	def __train_scalers__(self, data):
-		self.scalers = []
+		copy_first_scaler = False
+		if self.scalers is None:
+			self.scalers = []
+		else:
+			copy_first_scaler = True
 		for r in range(len(data)):
 			for n in range(data[r].shape[self.chan_dim]):
 				if r == 0:
-					self.scalers.append(StandardScaler())
+					if n > 0 and copy_first_scaler:
+						self.scalers.append(copy.deepcopy(self.scalers[n-1]))
+					elif not copy_first_scaler:
+						self.scalers.append(StandardScaler())
+					#self.scalers.append(MaxAbsScaler())
 				slc = [slice(None)] * data[r].ndim
 				slc[self.chan_dim] = slice(n, n+1)
 				subd = data[r][tuple(slc)]
+				print("CHANNELS", n, r, self.filenames[r], subd.min(), subd.max(), np.where(subd > -9999)[0].shape)
 				self.scalers[n].partial_fit(subd[np.where(subd > -9999)].reshape(-1, 1))
 
 	def __len__(self):
@@ -182,8 +197,12 @@ class DBNDataset(torch.utils.data.Dataset):
 			index = index.tolist()
 
 		sample = self.data[index]
-                if self.transform:
-                       sample = self.transform(sample)
+		#if self.transform:
+		#	sample = self.transform(sample)
+
+		#sample = sample * 1e10
+		#sample = sample.astype(np.int32)
+
 		return sample, self.targets[index]
 
 
