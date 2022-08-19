@@ -19,4 +19,6 @@ clustering:
         reset_n_clusters: True
         model:  
 
-
+scaler:
+ name: "standard_dask"
+ scale: True

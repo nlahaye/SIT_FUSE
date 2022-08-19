@@ -9,7 +9,7 @@ output:
 
 
 clustering:
-        n_clusters: 50
+        n_clusters: 500
         branch: 5
         thresh: 1e-5
         pixel_padding: 1
@@ -20,3 +20,7 @@ clustering:
         model:  
 
 
+
+scaler:
+ name: "standard_dask"
+ scale: True

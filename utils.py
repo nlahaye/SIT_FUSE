@@ -3,9 +3,14 @@ import yaml
 import cv2
 import os
 import numpy as np
-from netCDF4 import Dataset
+import xarray as xr
 import dask.array as da
+from netCDF4 import Dataset
+from osgeo import osr, gdal
 
+
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
+from dask_ml.preprocessing import StandardScaler as DaskStandardScaler
 
 def torch_to_numpy(trch):
         return trch.numpy()
@@ -25,7 +30,18 @@ def torch_load(filename, **kwargs):
     return torch.load(filename)
 
 def numpy_load(filename, **kwargs):
-    return np.load(filename)
+
+    data = np.load(filename)
+
+    if "bands" in kwargs:
+        bands = kwargs["bands"]
+        chan_dim = kwargs["chan_dim"]        
+        
+        data = np.moveaxis(data, chan_dim, 2)
+        data = data[:,:,bands]
+        data = np.moveaxis(data, 2, chan_dim)
+
+    return data
 
 def zarr_load(filename, **kwargs):
     return da.from_zarr(filename)
@@ -112,28 +128,192 @@ def read_s6_netcdf(filename, **kwargs):
 	#data = data * scale + add_offset
 	data = data.reshape((1, data.shape[0], data.shape[1]))
 	if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
-		dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+		data = data[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+	if "log" in kwargs and kwargs["log"]:
+		data = np.log(data)
+       
+	print("HERE", data.min(), data.max()) 
 	return data
+
+def read_s6_netcdf_geo(filename, **kwargs):
+        data1 = []
+        f = Dataset(filename)
+        dat = f.variables["lat_ffsar"]
+        lat = dat[:]
+        data1.append(lat)
+        dat2 = f.variables["lon_ffsar"]
+        lon = dat2[:]
+        data1.append(lon)
+        dat = np.array(data1)
+        if "start_line" in kwargs and "end_line" in kwargs:
+                dat = dat[:, kwargs["start_line"]:kwargs["end_line"]]
+
+        return dat
 
 
 def read_gtiff_multifile_generic(files, **kwargs):
+    print(files)
     data1 = []
     for j in range(0, len(files)):
-        dat = gdal.Open(files[j]).ReadAsArray()
-        data1.append(dat)
+        dat1 = gdal.Open(files[j]).ReadAsArray()
+        if len(data1) == 0 or len(dat1.shape) == 2:
+            data1.append(dat1)
+        else:
+            data1[0] = np.concatenate((data1[0], dat1), axis=0)
     dat = np.array(data1)
+    if len(dat.shape) == 4:
+        dat = np.squeeze(dat)
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
         dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+    print(dat.shape)
     return dat
 
  
 #TODO config for AVIRIS - scale 0.0001 valid_min = 0 and Fill = -9999
-def read_gtiff_generic(file, **kwargs): 
-	dat = gdal.Open(filenames[i], gdal.GA_ReadOnly).ReadAsArray()
+def read_gtiff_generic(flename, **kwargs): 
+	dat = gdal.Open(flename, gdal.GA_ReadOnly).ReadAsArray()
+	if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+		dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+	return dat
+
+
+
+def read_trop_mod_xr(flename, **kwargs):
+
+    print(flename)
+    sif_raw = xr.open_dataset(flename, engine="netcdf4").sortby("time")
+ 
+    sif_temp = sif_raw
+    if "start_time" in  kwargs and "end_time" in kwargs:
+        sif_temp = sif_raw.sel(time=slice(kwargs["start_time"], kwargs["end_time"]))
+    if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs:
+        sif_temp = sif_temp.sel(**{'lon' : slice(kwargs["start_lon"], kwargs["end_lon"]), 'lat': slice(kwargs["start_lat"], kwargs["start_lat"])})
+ 
+    vrs = ['nflh', 'aot_869', 'angstrom', 'sif', 'chlor_a', 'chl_ocx'] 
+    print(kwargs.keys()) 
+    if "vars" in  kwargs:
+        vrs = kwargs["vars"] 
+
+
+    print("HERE ", vrs)
+
+    data1  = []
+    for i in range(len(vrs)):
+        var = vrs[i]
+        x = sif_temp.variables[var]
+        if var == "sif":
+           x = x.to_numpy()
+           x = np.moveaxis(x, 2, 0) 
+           x[np.where(np.isnan(x))] = -999999
+        else:
+            valid_min = x.attrs["valid_min"]
+            valid_max = x.attrs["valid_max"]
+            x = x.to_numpy()
+            x[np.where(np.isnan(x))] = -999999
+            inds = np.where(x < valid_min - 0.00000000005)
+            x[inds] = -999999
+            inds = np.where(x > valid_max - 0.00000000005)
+            x[inds] = -999999
+        data1.append(x)
+        print(x.min(), x.max(), var)
+        print(x.shape)
+    return np.array(data1)
+
+
+def read_trop_mod_xr_geo(flename, **kwargs):
+
+    print(flename)
+    sif_raw = xr.open_dataset(flename, engine="netcdf4").sortby("time")
+
+    sif_temp = sif_raw
+    if "start_time" in  kwargs and "end_time" in kwargs:
+        sif_temp = sif_raw.sel(time=slice(kwargs["start_time"], kwargs["end_time"]))
+    if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs:
+        sif_temp = sif_temp.sel(**{'lon' : slice(kwargs["start_lon"], kwargs["end_lon"]), 'lat': slice(kwargs["start_lat"], kwargs["start_lat"])})
+
+
+    vrs = ["lat", "lon"]
+    data1  = []
+    for i in range(len(vrs)):
+        var = vrs[i]
+        x = sif_temp.variables[var]
+        valid_min = x.attrs["valid_min"]
+        valid_max = x.attrs["valid_max"]
+        x = x.to_numpy()
+        x[np.where(np.isnan(x))] = -999999
+        inds = np.where(x < valid_min - 0.00000000005)
+        x[inds] = -999999
+        inds = np.where(x > valid_max - 0.00000000005)
+        x[inds] = -999999
+        data1.append(x)
+        print(x.min(), x.max(), var)
+        print(x.shape)
+    lat = data1[0]
+    lon = data1[1]
+    longr, latgr = np.meshgrid(lon, lat)
+    print(longr, latgr)
+    geo = np.array([latgr, longr])
+    print(geo.shape)
+    return geo
+
+
+
+def read_trop_l1b(filenames, **kwargs):
+    data1 = None
+    bands = kwargs["bands"]
+    for i in range(len(filenames)):
+        x = Dataset(filenames[i])
+        group_name = "BAND" + str(bands[i]) + "_RADIANCE"
+        if data1 is None:
+            data1 = x.groups[group_name].groups["STANDARD_MODE"].groups["OBSERVATIONS"].variables["radiance"][:] 
+        else:
+            np.concatenate((data1, x.groups[group_name].groups["STANDARD_MODE"].groups["OBSERVATIONS"].variables["radiance"][:]), axis=3)
+        del x
+    data1 = np.log(np.squeeze(data1[0,:,:,:]))
+    print(data1.min(), data1.max())
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+                data1 = data1[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+  
+    return data1
+
+ 
+#TODO HERE We are only using BD5 and BD6, which have same footprint, will need to collocate/resample if using other bands
+#Will hack to only use BD5 files here, for now
+def read_trop_l1b_geo(filename, **kwargs):
+    data1 = []
+    vrs = ["latitude", "longitude"]
+    print(filename)
+    x = Dataset(filename)
+    print("HERE")
+    for i in range(len(vrs)):
+        print(vrs[i])
+        dat = x.groups["BAND5_RADIANCE"].groups["STANDARD_MODE"].groups["GEODATA"].variables[vrs[i]][:]
+        dat = np.squeeze(dat[0,:,:])
+        data1.append(dat)
+    dat = np.array(data1)
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+                dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+
+    return dat
+ 
+
+def get_scaler(scaler_name):
+	if scaler_name == "standard":
+		return StandardScaler(), True
+	elif scaler_name == "standard_dask":
+		return DaskStandardScaler(), True
+	elif scaler_name == "maxabs":
+		return MaxAbsScaler(), True
+	elif scaler_name == "sparse_standard":
+		return StandardScaler(with_mean=False), True
+	elif scaler_name == "sparse_standard_dask":
+		return DaskStandardScaler(with_mean=False), True
+	else:
+		return None, True
 
 
 #TODO worldview
-
 def get_read_func(data_reader):
 	if data_reader == "goes_netcdf":
 		return read_goes_netcdf
@@ -159,6 +339,16 @@ def get_read_func(data_reader):
 		return torch_load
 	if data_reader == "s6_netcdf":
 		return read_s6_netcdf
+	if data_reader == "s6_netcdf_geo":
+		return read_s6_netcdf_geo
+	if data_reader == "trop_mod_xr":
+		return read_trop_mod_xr
+	if data_reader == "trop_mod_xr_geo":
+		return read_trop_mod_xr_geo
+	if data_reader == "trop_l1b":
+		return read_trop_l1b
+	if data_reader == "trop_l1b_geo":
+		return read_trop_l1b_geo
 	#TODO return BCDP reader
 	return None
 

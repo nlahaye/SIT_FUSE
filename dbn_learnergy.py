@@ -13,7 +13,7 @@ import torch.optim as opt
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 #from torch.nn import DataParallel as DDP
-from learnergy.models.deep import ResidualDBN
+from learnergy.models.deep import ResidualDBN, FCDBN
 
 #Visualization
 import learnergy.visual.convergence as converge
@@ -23,7 +23,7 @@ import  matplotlib.pyplot as plt
 
 #Data
 from dbnDatasets import DBNDataset
-from utils import numpy_to_torch, read_yaml, get_read_func
+from utils import numpy_to_torch, read_yaml, get_read_func, get_scaler
 
 #Input Parsing
 import yaml
@@ -87,10 +87,24 @@ def run_dbn(yml_conf):
     learning_rate = tuple(yml_conf["dbn"]["params"]["learning_rate"])
     momentum = tuple(yml_conf["dbn"]["params"]["momentum"])
     decay = tuple(yml_conf["dbn"]["params"]["decay"])
-    temp = tuple(yml_conf["dbn"]["params"]["temp"])
-    nesterov_accel = tuple(yml_conf["dbn"]["params"]["nesterov_accel"])
     normalize_learnergy = tuple(yml_conf["dbn"]["params"]["nesterov_accel"])
-    batch_normalize = tuple(yml_conf["dbn"]["params"]["batch_normalize"])    
+    batch_normalize = tuple(yml_conf["dbn"]["params"]["batch_normalize"])
+
+    temp = None
+    nesterov_accel = None
+
+    visible_shape = None
+    filter_shape = None
+    stride = None
+    n_filters = None
+    if "conv" in model_type[0]:
+        visible_shape = yml_conf["dbn"]["params"]["visible_shape"]
+        filter_shape = yml_conf["dbn"]["params"]["filter_shape"]
+        stride = yml_conf["dbn"]["params"]["stride"]
+        n_filters = yml_conf["dbn"]["params"]["n_filters"]
+    else:
+        temp = tuple(yml_conf["dbn"]["params"]["temp"])
+        nesterov_accel = tuple(yml_conf["dbn"]["params"]["nesterov_accel"])
 
     use_gpu = yml_conf["dbn"]["training"]["use_gpu"]
     world_size = yml_conf["dbn"]["training"]["world_size"]
@@ -100,6 +114,10 @@ def run_dbn(yml_conf):
     epochs = yml_conf["dbn"]["training"]["epochs"]
 
     overwrite_model = yml_conf["dbn"]["overwrite_model"]
+
+    scaler_type = yml_conf["scaler"]["name"]
+    scaler, scaler_train = get_scaler(scaler_type)
+
  
     setup_ddp(rank, world_size, use_gpu)
 
@@ -112,11 +130,17 @@ def run_dbn(yml_conf):
 
     #Generate training dataset object
     #Unsupervised, so targets are not used. Currently, I use this to store original image indices for each point 
-    x2 = DBNDataset(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scalers = None, scale = scale_data, transform=numpy_to_torch, subset=subset_count)
+    x2 = DBNDataset(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scalers = [scaler], train_scalers = scaler_train, scale = scale_data, transform=numpy_to_torch, subset=subset_count)
  
+    fcn = False ##TODO fix
+
     model_file = os.path.join(out_dir, model_fname)
-    if(not os.path.exists(model_file) or overwrite_model):
-        new_dbn = ResidualDBN(model=model_type, n_visible=chunk_size*number_channel, n_hidden=dbn_arch, steps=gibbs_steps, learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=use_gpu)
+    if not os.path.exists(model_file) or overwrite_model:
+        if not fcn:
+            new_dbn = ResidualDBN(model=model_type, n_visible=chunk_size*number_channel, n_hidden=dbn_arch, steps=gibbs_steps, learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=use_gpu)
+        else:
+            new_dbn = FCDBN(model=model_type,visible_shape=(chunk_size, chunk_size, number_channel), n_channels=number_channel, steps=gibbs_steps, learning_rate=learning_rate, momentum=momentum, decay=decay, use_gpu=use_gpu)
+
 
         for i in range(len(new_dbn.models)):
             new_dbn.models[i].ddp_model = DDP(new_dbn.models[i], device_ids=device_ids).cuda()

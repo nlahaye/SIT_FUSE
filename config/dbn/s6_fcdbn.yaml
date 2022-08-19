@@ -1,6 +1,6 @@
 
 output:
- out_dir: "/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_LARGE/"
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_FCN/"
  training_output: "output.data"
  training_mse: "rec_mse.data"
  testing_output: "output_test.data"
@@ -10,18 +10,20 @@ output:
 dbn:
  overwrite_model: True
  params:
-  #model_type: 'gaussian_relu' "variance_gaussian"
-  model_type: ["gaussian_selu"] #, 'gaussian_relu_dropout', 'gaussian_relu_dropout'] #'variance_gaussian_dropout' "gaussian_dropout"
-  #model_type: "variance_gaussian"
-  dbn_arch: [2000] #[2000] [250, 500, 2000] #, 2000]
-  gibbs_steps: [2] #, 7, 7] #, 10] #, 25]
-  learning_rate: [0.0001] #, 0.0001, 0.0001] #, 0.01] #, 0.01]
-  momentum: [0.95] #, 0.95, 0.95] #, 0.95] #, 0.95]
-  decay: [0.0001] #, 0.0001, 0.0001] #, 0.0001] #, 0.0001]
-  temp: [1.0] #, 1.0, 1.0] [0.9, 0.75, 0.5] #, 1.0] #, 0.5] #, 0.5] 
-  nesterov_accel: [True]
-  normalize_learnergy: [False]
-  batch_normalize: [False]
+  model_type: ["gaussian_conv", "gaussian_conv", "gaussian_conv", "gaussian_conv", "gaussian_conv", "gaussian_conv", "gaussian_conv", "gaussian_conv", "gaussian_conv", "gaussian_conv", "gaussian_conv", "gaussian_conv", "gaussian_conv", "gaussian_conv", "gaussian_conv", "gaussian_conv", "gaussian_conv_transpose"]
+  visible_shape: [96,96]
+
+#MISSING DAG Aspect & upscore8, score_pool3, score_pool4, upscore_pool4, & Max Pooling
+
+  gibbs_steps: [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+  filter_shape: [[3,3],[3,3],[3,3],[3,3],[3,3],[3,3],[3,3],[3,3],[3,3],[3,3],[3,3],[3,3],[3,3],[7,7],[1,1],[1,1],[4,4]]
+  stride: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2]
+  n_filters: [64, 64, 128, 128, 256, 256, 256, 512, 512, 512, 512, 512, 512, 4096, 4096, 500] #Last layer is equiv to n_classes - start w/ 500
+  learning_rate: [0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001]
+  momentum: [0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 0.95]
+  decay: [0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001]
+  normalize_learnergy: [True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True]
+  batch_normalize: [False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False]
 
  training:
   use_gpu: True
@@ -29,7 +31,7 @@ dbn:
   rank: 0
   device_ids: [0,1,2,3,4,5,6,7]
   batch_size: 1000
-  epochs: [35] #[40] #[8] #, 1, 1] #, 5] #, 10]
+  epochs: [35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35]
 
 data:
  scale_data: True

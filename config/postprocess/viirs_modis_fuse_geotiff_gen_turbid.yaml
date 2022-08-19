@@ -1,0 +1,25 @@
+
+gen_from_geotiffs: True
+
+data:
+ clust_reader_type: "zarr_to_numpy"
+ reader_kwargs:
+   no_arg: "no_arg" 
+ subset_inds: [[],[],[]]
+ create_separate: true
+  
+ gtiff_data: ["/data/nlahaye/output/Learnergy/DBN_VIIRS_MODIS/file0_output.data.clustering.zarr.full_geo.tif",
+"/data/nlahaye/output/Learnergy/DBN_VIIRS_MODIS/file1_output.data.clustering.zarr.full_geo.tif",
+"/data/nlahaye/output/Learnergy/DBN_VIIRS_MODIS/file0_output_test.data.clustering.zarr.full_geo.tif"]
+ cluster_fnames: ["/data/nlahaye/output/Learnergy/DBN_VIIRS_MODIS/file0_output.data.clustering.zarr",
+"/data/nlahaye/output/Learnergy/DBN_VIIRS_MODIS/file1_output.data.clustering.zarr",
+"/data/nlahaye/output/Learnergy/DBN_VIIRS_MODIS/file0_output_test.data.clustering.zarr"]
+ 
+
+context:
+ apply_context: True
+ clusters: [19, 88, 353, 215, 318] #i.e. smoke clusters
+ name: "turbid_water" #i.e. smoke
+ compare_truth: false
+
+

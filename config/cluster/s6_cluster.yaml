@@ -8,7 +8,7 @@ output:
 
 
 clustering:
-        n_clusters: 150
+        n_clusters: 15
         branch: 5
         thresh: 1e-15
         pixel_padding: 1
@@ -18,4 +18,7 @@ clustering:
         reset_n_clusters: True
         model:  
 
+scaler:
+ name: "maxabs"
+ scale: True
 
