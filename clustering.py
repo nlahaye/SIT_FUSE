@@ -276,7 +276,7 @@ class RSClustering(object):
             if ".data.input" in test_data[i]:
                 test = da.from_array(torch.load(test_data[i]), chunks=self.chunks)
             else:
-                tmp = da.from_array(torch.load(train_data[i]).detach().numpy(), chunks=self.chunks)
+                tmp = da.from_array(torch.load(test_data[i]).detach().numpy(), chunks=self.chunks)
                 if np.isnan(tmp.min().compute()) and np.isnan(tmp.min().compute()):
                             continue
                 test = tmp
