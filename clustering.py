@@ -33,6 +33,7 @@ from CMAP import CMAP, CMAP_COLORS
 
 #Serialization
 from joblib import dump, load
+import pickle
 
 import warnings
 warnings.simplefilter("ignore") 
