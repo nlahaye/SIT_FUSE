@@ -22,7 +22,7 @@ matplotlib.use("Agg")
 import  matplotlib.pyplot as plt
 
 #Data
-from dbnDatasets import DBNDataset
+from dbn_datasets import DBNDataset
 from utils import numpy_to_torch, read_yaml, get_read_func, get_scaler
 
 #Input Parsing
@@ -33,9 +33,9 @@ from datetime import timedelta
 #Serialization
 import pickle
 
-def setup_ddp(rank, world_size, use_gpu=True):
+def setup_ddp(rank, world_size, use_gpu=True, port=12355):
     os.environ['MASTER_ADDR'] = 'localhost'
-    os.environ['MASTER_PORT'] = '12355'
+    os.environ['MASTER_PORT'] = port
     os.environ['CUDA_VISIBLE_DEVICES'] = "0,1,2,3,4,5,6,7"
     os.environ['NCCL_SOCKET_IFNAME'] = "lo"
 
@@ -50,7 +50,7 @@ def cleanup_ddp():
     dist.destroy_process_group()
 
 
-def run_dbn(yml_conf):
+def run_dbn(yml_conf, ddp_port):
 
     #Get config values 
     data_test = yml_conf["data"]["files_test"]
@@ -119,7 +119,7 @@ def run_dbn(yml_conf):
     scaler, scaler_train = get_scaler(scaler_type)
 
  
-    setup_ddp(rank, world_size, use_gpu)
+    setup_ddp(rank, world_size, use_gpu, ddp_port)
 
     read_func = get_read_func(data_reader)
 
@@ -249,20 +249,21 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, output_subs
     torch.save(rec_mse, os.path.join(out_dir, mse_fle), pickle_protocol=pickle.HIGHEST_PROTOCOL)
 
 
-def main(yml_fpath):
+def main(yml_fpath, ddp_port):
    
     #Translate config to dictionary 
     yml_conf = read_yaml(yml_fpath)
     #Run 
-    run_dbn(yml_conf)
+    run_dbn(yml_conf, ddp_port)
 
 
 if __name__ == '__main__':
 	
     parser = argparse.ArgumentParser()
     parser.add_argument("-y", "--yaml", help="YAML file for DBN and output config.")
+    parser.add_argument("-p", "--port", required=False, default='12355')
     args = parser.parse_args()
-    main(args.yaml)
+    main(args.yaml, args.port)
 
 
 

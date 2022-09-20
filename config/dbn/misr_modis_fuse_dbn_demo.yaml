@@ -16,19 +16,15 @@ data:
  transform_default:
   chans: [36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 60, 71, 72, 73]
   transform: [-2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0]
- files_train: ["/data/nlahaye/remoteSensing//MisrModisFuse/Fuse1_9Cam.npy",
-"/data/nlahaye/remoteSensing//MisrModisFuse/Fuse3_9Cam.npy",
-"/data/nlahaye/remoteSensing//MisrModisFuse/Fuse4_9Cam.npy"]
- files_test: ["/data/nlahaye/remoteSensing//MisrModisFuse/Fuse2_9Cam.npy",
-"/data/nlahaye/remoteSensing//MisrModisFuse/Fuse5_9Cam.npy",
-"/data/nlahaye/remoteSensing//MisrModisFuse/Fuse9_9Cam.npy"]
+ files_train: ["/data/nlahaye/remoteSensing//MisrModisFuse/Fuse1_9Cam.npy"]
+ files_test: ["/data/nlahaye/remoteSensing//MisrModisFuse/Fuse9_9Cam.npy"]
 #"/data/nlahaye/remoteSensing//MisrModisFuse/Fuse4_9Cam.npy"] 
-
+ 
 scaler:
- name: "standard" 
+ name: "standard"
 
 output:
- out_dir: "/data/nlahaye/output/Learnergy/DBN_MISR_MODIS_1/"
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_MISR_MODIS_DEMO/"
  training_output: "output.data"
  training_mse: "rec_mse.data"
  testing_output: "output_test.data"

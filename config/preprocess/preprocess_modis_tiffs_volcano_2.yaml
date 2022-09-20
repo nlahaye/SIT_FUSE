@@ -1,0 +1,16 @@
+band_counts: [15, 15, 2, 5]
+fname_type1: [".EV_1KM_Emissive_", ".EV_1KM_RefSB_", ".EV_250_Aggr1km_RefSB_", ".EV_500_Aggr1km_RefSB_"]
+fname_type2: ["-EV_1KM_Emissive.tif", "-EV_1KM_RefSB.tif", "-EV_250_Aggr1km_RefSB.tif", "-EV_500_Aggr1km_RefSB.tif"]
+
+
+fname_heads: [
+"/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010123.1300.061.2017253123623.pssgrp_000501840459",
+"/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010125.1250.061.2017254220019.pssgrp_000501840459",
+"/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010127.1235.061.2017255001328.pssgrp_000501840459",
+"/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010132.1255.061.2017253164459.pssgrp_000501840459",
+"/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010136.1230.061.2017255014157.pssgrp_000501840459"]
+
+
+
+
+ 

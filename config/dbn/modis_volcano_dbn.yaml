@@ -56,12 +56,19 @@ data:
   transform: []
 
  files_train: [
-"/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010111.1235.061.2017255003423.EV_1KM_Emissive_1-EV_1KM_Emissive.tifFull_Bands.zarr"]
+"/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010105.1135.061.2017251212802.EV_1KM_Emissive_1-EV_1KM_Emissive.tifFull_Bands.zarr"]
 
  files_test: [
-"/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010105.1135.061.2017251212802.EV_1KM_Emissive_1-EV_1KM_Emissive.tifFull_Bands.zarr",
-"/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010105.1315.061.2017251212752.EV_1KM_Emissive_1-EV_1KM_Emissive.tifFull_Bands.zarr"]
-
+"/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010105.1315.061.2017251212752.EV_1KM_Emissive_1-EV_1KM_Emissive.tifFull_Bands.zarr",
+"/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010123.1300.061.2017253123623.pssgrp_000501840459.EV_1KM_Emissive_1-EV_1KM_Emissive.tifFull_Bands.zarr",
+"/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010125.1250.061.2017254220019.pssgrp_000501840459.EV_1KM_Emissive_1-EV_1KM_Emissive.tifFull_Bands.zarr",
+"/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010127.1235.061.2017255001328.pssgrp_000501840459.EV_1KM_Emissive_1-EV_1KM_Emissive.tifFull_Bands.zarr",
+"/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010132.1255.061.2017253164459.pssgrp_000501840459.EV_1KM_Emissive_1-EV_1KM_Emissive.tifFull_Bands.zarr",
+"/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010136.1230.061.2017255014157.pssgrp_000501840459.EV_1KM_Emissive_1-EV_1KM_EmissiveFull_Bands.zarr",
+"/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010109.1245.061.2017254173516.EV_1KM_Emissive_1-EV_1KM_Emissive.tifFull_Bands.zarr",
+"/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010109.1250.061.2017254173525.EV_1KM_Emissive_1-EV_1KM_Emissive.tifFull_Bands.zarr",
+"/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010111.1235.061.2017255003423.EV_1KM_Emissive_1-EV_1KM_Emissive.tifFull_Bands.zarr"]
+ 
 
 #"/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010106.1035.061.2017252022142.EV_1KM_Emissive_1-EV_1KM_Emissive.tifFull_Bands.zarr",
 #"/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010106.1215.061.2017252022631.EV_1KM_Emissive_1-EV_1KM_Emissive.tifFull_Bands.zarr",
