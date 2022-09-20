@@ -8,7 +8,7 @@ import numpy as np
 import dask
 import dask.array as da
 import random
-
+import pickle
 import sys
 sys.setrecursionlimit(10**6)
 
@@ -20,7 +20,7 @@ from dask_ml.preprocessing import StandardScaler
 #from sklearn.preprocessing import StandardScaler
 
 #Data
-from dbnDatasets import DBNDataset
+from dbn_datasets import DBNDataset
 from utils import numpy_to_torch, read_yaml, get_read_func, get_scaler
 
 #Input Parsing
@@ -33,7 +33,6 @@ from CMAP import CMAP, CMAP_COLORS
 
 #Serialization
 from joblib import dump, load
-import pickle
 
 import warnings
 warnings.simplefilter("ignore") 

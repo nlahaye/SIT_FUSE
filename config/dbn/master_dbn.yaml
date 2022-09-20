@@ -2,7 +2,7 @@
 data:
  scale_data: True
  pixel_padding: 1
- number_channels: 43
+ number_channels: 50
  fill_value: -9999.0
  valid_min: -100.0
  valid_max: 100000000
@@ -12,19 +12,27 @@ data:
  reader_kwargs:
   no_arg: "no_arg"
  chan_dim: 0
- delete_chans: [26, 44]
+ delete_chans: []
  transform_default:
   chans: []
   transform: []
- files_train: ["/data/nlahaye/remoteSensing/GERD_DAM/MODIS_VIIRS/viirs_modis_20220322_114800.npy", 
- "/data/nlahaye/remoteSensing/GERD_DAM/MODIS_VIIRS/viirs_modis_20220323_113000.npy"]
- files_test: ["/data/nlahaye/remoteSensing/GERD_DAM/MODIS_VIIRS/viirs_modis_20220325_105400.npy"]
+
+ files_train: ["/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981719_06_20190806_2153_2156_V01_georeferenced.tif.npy",
+"/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981720_07_20190808_0055_0103_V01_georeferenced.tif.npy",
+"/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981720_09_20190808_0237_0238_V01_georeferenced.tif.npy"]
+
+ files_test: ["/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981719_02_20190806_1851_1900_V01_georeferenced.tif.npy",
+"/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981719_08_20190806_2249_2259_V01_georeferenced.tif.npy",
+"/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981719_05_20190806_2033_2039_V01_georeferenced.tif.npy",
+"/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981721_05_20190809_0219_0226_V01_georeferenced.tif.npy",
+"/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981721_02_20190809_0120_0121_V01_georeferenced.tif.npy",
+"/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981721_01_20190809_0113_0117_V01_georeferenced.tif.npy"]
 
 scaler:
  name: "standard" 
 
 output:
- out_dir: "/data/nlahaye/output/Learnergy/DBN_VIIRS_MODIS/"
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_MASTER/"
  training_output: "output.data"
  training_mse: "rec_mse.data"
  testing_output: "output_test.data"

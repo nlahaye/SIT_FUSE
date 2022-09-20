@@ -1,0 +1,22 @@
+files_train: ["/data/nlahaye/output/Learnergy/DBN_MISR_MODIS_DEMO/file0_output.data"]
+files_test: ["/data/nlahaye/output/Learnergy/DBN_MISR_MODIS_DEMO/file0_output_test.data"]
+
+output:
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_MISR_MODIS_DEMO/"
+
+
+clustering:
+        n_clusters: 500
+        branch: 5
+        thresh: 1e-5
+        pixel_padding: 1
+        train_sample_size: 150
+        clustering:
+        train: True
+        reset_n_clusters: True
+        model:  
+
+
+scaler:
+ name: "standard_dask"
+ scale: True

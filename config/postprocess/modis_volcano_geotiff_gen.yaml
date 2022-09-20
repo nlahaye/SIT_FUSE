@@ -1,0 +1,27 @@
+
+gen_from_geotiffs: false
+
+data:
+ clust_reader_type: "zarr_to_numpy"
+ reader_kwargs:
+   no_arg: "no_arg" 
+ subset_inds: [[],[],[]]
+ create_separate: true
+  
+ gtiff_data: [ #"/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010111.1235.061.2017255003423.EV_1KM_Emissive_1-EV_1KM_Emissive.tif"
+
+#"/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010105.1135.061.2017251212802.EV_1KM_Emissive_1-EV_1KM_Emissive.tif"]
+"/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010105.1315.061.2017251212752.EV_1KM_Emissive_1-EV_1KM_Emissive.tif"]
+   
+ cluster_fnames: [
+#"/data/nlahaye/output/Learnergy/DBN_MODIS_VOLC/file0_output.data.clustering_500clusters.zarr"]
+#"/data/nlahaye/output/Learnergy/DBN_MODIS_VOLC/file0_output_test.data.clustering_500clusters.zarr"]
+"/data/nlahaye/output/Learnergy/DBN_MODIS_VOLC/file1_output_test.data.clustering_500clusters.zarr"]
+ 
+context:
+ apply_context: false
+ clusters: [] #i.e. smoke clusters
+ name: "" #i.e. smoke
+ compare_truth: false
+
+
