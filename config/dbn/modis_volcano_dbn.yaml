@@ -45,7 +45,7 @@ data:
  valid_min: -900.0
  valid_max: 65534.0
  subset_count: 1
- output_subset_count: 2000
+ output_subset_count: 8000
  reader_type: "zarr_to_numpy"
  reader_kwargs:
   no_arg: "no_arg"
@@ -64,7 +64,7 @@ data:
 "/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010125.1250.061.2017254220019.pssgrp_000501840459.EV_1KM_Emissive_1-EV_1KM_Emissive.tifFull_Bands.zarr",
 "/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010127.1235.061.2017255001328.pssgrp_000501840459.EV_1KM_Emissive_1-EV_1KM_Emissive.tifFull_Bands.zarr",
 "/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010132.1255.061.2017253164459.pssgrp_000501840459.EV_1KM_Emissive_1-EV_1KM_Emissive.tifFull_Bands.zarr",
-"/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010136.1230.061.2017255014157.pssgrp_000501840459.EV_1KM_Emissive_1-EV_1KM_EmissiveFull_Bands.zarr",
+"/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010136.1230.061.2017255014157.pssgrp_000501840459.EV_1KM_Emissive_1-EV_1KM_Emissive.tifFull_Bands.zarr",
 "/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010109.1245.061.2017254173516.EV_1KM_Emissive_1-EV_1KM_Emissive.tifFull_Bands.zarr",
 "/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010109.1250.061.2017254173525.EV_1KM_Emissive_1-EV_1KM_Emissive.tifFull_Bands.zarr",
 "/data/nlahaye/remoteSensing/MODIS_MISR_ICELAND_VOLC/MODIS_L1B/MOD021KM.A2010111.1235.061.2017255003423.EV_1KM_Emissive_1-EV_1KM_Emissive.tifFull_Bands.zarr"]

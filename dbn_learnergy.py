@@ -12,6 +12,8 @@ import torch.nn as nn
 import torch.optim as opt 
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.utils.data import DataLoader
+from torch.utils.data.distributed import DistributedSampler
 #from torch.nn import DataParallel as DDP
 from learnergy.models.deep import ResidualDBN, FCDBN
 
@@ -135,6 +137,7 @@ def run_dbn(yml_conf, ddp_port):
     fcn = False ##TODO fix
 
     model_file = os.path.join(out_dir, model_fname)
+    print(not os.path.exists(model_file) or overwrite_model)
     if not os.path.exists(model_file) or overwrite_model:
         if not fcn:
             new_dbn = ResidualDBN(model=model_type, n_visible=chunk_size*number_channel, n_hidden=dbn_arch, steps=gibbs_steps, learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=use_gpu)
@@ -151,7 +154,8 @@ def run_dbn(yml_conf, ddp_port):
         #Train model
         count = 0
         while(count == 0 or x2.has_next_subset()):
-            mse, pl = new_dbn.fit(x2, batch_size=batch_size, epochs=epochs)
+            mse, pl = new_dbn.fit(x2, batch_size=batch_size, epochs=epochs,
+                is_distributed = True, num_loader_workers = int(os.cpu_count() / 3))
             count = count + 1
             x2.next_subset()            	
             converge.plot(new_dbn.models[i]._history['mse'],
@@ -213,29 +217,40 @@ def run_dbn(yml_conf, ddp_port):
 
 def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, output_subset_count):
     output_full = None
+    rec_mse_full = []
     count = 0
     dat.subset = output_subset_count
     dat.current_subset = -1
     dat.next_subset()
     while(count == 0 or dat.has_next_subset() or dat.current_subset > (dat.subset-2)):
         if torch.cuda.is_available() and use_gpu:
-            output = mdl.models[0].ddp_model(dat.data.cuda()) #.cpu()
+            output = mdl.models[0].ddp_model(dat.data.cuda(non_blocking=True)) #.cpu()
             for i in range(1, len(mdl.models)):
                 output = mdl.models[i].ddp_model(output)
             output = output.cpu()
             dat.transform = None
-            rec_mse, v = mdl.reconstruct(dat)
+
+            sampler = DistributedSampler(dat)
+            loader = DataLoader(dat, batch_size=len(dat), shuffle=False,
+                    sampler=sampler, num_workers = int(os.cpu_count() / 3), pin_memory = True,
+                    drop_last=True) 
+            rec_mse, v = mdl.reconstruct(dat, loader)
         else:
             output = mdl.forward(dat.data)
             dat.transform = None
+            loader = DataLoader(
+                dataset, batch_size=batch_size, shuffle=False, num_workers=int(os.cpu_count() / 3)
+            )
             rec_mse, v = mdl.reconstruct(dat)
-       
+     
+        rec_mse_full.append(torch.unsqueeze(rec_mse, 0)) 
         if output_full is None:
             output_full = output
         else:
             output_full = torch.cat((output_full,output))
         print("CONSTRUCTING OUTPUT", dat.data.shape, dat.data_full.shape, output.shape, output_full.shape)
         del output
+        del rec_mse
         count = count + 1
         if dat.has_next_subset():
             dat.next_subset()
@@ -246,7 +261,10 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, output_subs
     torch.save(output_full, os.path.join(out_dir, output_fle), pickle_protocol=pickle.HIGHEST_PROTOCOL)
     torch.save(dat.targets_full, os.path.join(out_dir, output_fle + ".indices"), pickle_protocol=pickle.HIGHEST_PROTOCOL)
     torch.save(dat.data_full, os.path.join(out_dir, output_fle + ".input"), pickle_protocol=pickle.HIGHEST_PROTOCOL)
-    torch.save(rec_mse, os.path.join(out_dir, mse_fle), pickle_protocol=pickle.HIGHEST_PROTOCOL)
+    torch.save(torch.cat(rec_mse_full, dim=0), os.path.join(out_dir, mse_fle), pickle_protocol=pickle.HIGHEST_PROTOCOL)
+
+
+
 
 
 def main(yml_fpath, ddp_port):
