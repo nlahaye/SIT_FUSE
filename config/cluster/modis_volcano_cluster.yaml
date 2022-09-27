@@ -1,6 +1,10 @@
 
 files_train: ["/data/nlahaye/output/Learnergy/DBN_MODIS_VOLC/file0_output.data"]
-files_test: ["/data/nlahaye/output/Learnergy/DBN_MODIS_VOLC/file0_output_test.data", "/data/nlahaye/output/Learnergy/DBN_MODIS_VOLC/file1_output_test.data"]
+files_test: ["/data/nlahaye/output/Learnergy/DBN_MODIS_VOLC/file0_output_test.data", "/data/nlahaye/output/Learnergy/DBN_MODIS_VOLC/file1_output_test.data",
+"/data/nlahaye/output/Learnergy/DBN_MODIS_VOLC/file2_output_test.data", "/data/nlahaye/output/Learnergy/DBN_MODIS_VOLC/file3_output_test.data",
+"/data/nlahaye/output/Learnergy/DBN_MODIS_VOLC/file4_output_test.data", "/data/nlahaye/output/Learnergy/DBN_MODIS_VOLC/file5_output_test.data",
+"/data/nlahaye/output/Learnergy/DBN_MODIS_VOLC/file6_output_test.data", "/data/nlahaye/output/Learnergy/DBN_MODIS_VOLC/file7_output_test.data",
+"/data/nlahaye/output/Learnergy/DBN_MODIS_VOLC/file8_output_test.data", "/data/nlahaye/output/Learnergy/DBN_MODIS_VOLC/file9_output_test.data"]
 
 output:
  out_dir: "/data/nlahaye/output/Learnergy/DBN_MODIS_VOLC/"
