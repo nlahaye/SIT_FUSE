@@ -23,9 +23,9 @@ matplotlib.use("Agg")
 import  matplotlib.pyplot as plt
 
 #Data
-#from dbn_datasets_cupy import DBNDataset
+from dbn_datasets_cupy import DBNDataset
 from utils_cupy import numpy_to_torch, read_yaml, get_read_func, get_scaler
-from dbn_datasets import DBNDataset
+#from dbn_datasets import DBNDataset
 #from utils import numpy_to_torch, read_yaml, get_read_func, get_scaler
 
 #Input Parsing
