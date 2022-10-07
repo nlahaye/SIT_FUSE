@@ -38,11 +38,10 @@ import pickle
 
 SEED = 42
 
-def setup_ddp(device_ids, use_gpu=True, use_gpu_preprocess = False):
+def setup_ddp(device_ids, use_gpu=True):
     #os.environ['MASTER_ADDR'] = 'localhost'
     #os.environ['MASTER_PORT'] = port
     os.environ['CUDA_VISIBLE_DEVICES'] = ",".join(device_ids)
-    os.environ['PREPROCESS_GPU'] = str(int(use_gpu_preprocess))
     #os.environ['NCCL_SOCKET_IFNAME'] = "lo"
 
     driver = "nccl"
@@ -77,6 +76,8 @@ def run_dbn(yml_conf):
 
     transform_chans = yml_conf["data"]["transform_default"]["chans"]
     transform_values = 	yml_conf["data"]["transform_default"]["transform"]
+
+    num_loader_workers = int(yml_conf["data"]["num_loader_workers"])
 
     out_dir = yml_conf["output"]["out_dir"]
     os.makedirs(out_dir, exist_ok=True)
@@ -125,8 +126,12 @@ def run_dbn(yml_conf):
     scaler_type = yml_conf["scaler"]["name"]
     scaler, scaler_train = get_scaler(scaler_type, cuda = use_gpu_pre)
 
- 
-    setup_ddp(device_ids, use_gpu, use_gpu_pre)
+    os.environ['PREPROCESS_GPU'] = str(int(use_gpu_pre))
+
+    local_rank = 0
+    if "LOCAL_RANK" in os.environ.keys():
+        setup_ddp(device_ids, use_gpu)
+        local_rank = int(os.environ["LOCAL_RANK"])
 
     read_func = get_read_func(data_reader)
 
@@ -139,10 +144,7 @@ def run_dbn(yml_conf):
     #Unsupervised, so targets are not used. Currently, I use this to store original image indices for each point 
 
  
-    local_rank = 0
-    if "LOCAL_RANK" in os.environ.keys():
-        local_rank = int(os.environ["LOCAL_RANK"])
-    
+
     if subset_count > 1: 
         print("WARNING: Making subset count > 1 for training data may lead to suboptimal results")
     x2 = DBNDataset(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
@@ -173,7 +175,8 @@ def run_dbn(yml_conf):
             #new_dbn.models[i] = new_dbn.models[i].local_rank = local_rank
             #new_dbn.models[i] = new_dbn.models[i].torch_device = device
             #new_dbn.models[i] = new_dbn.models[i].to(device=device)
-            new_dbn.models[i].ddp_model = DDP(new_dbn.models[i], device_ids=[local_rank], output_device=local_rank) #, device_ids=device_ids)
+            if "LOCAL_RANK" in os.environ.keys():
+                new_dbn.models[i].ddp_model = DDP(new_dbn.models[i], device_ids=[local_rank], output_device=local_rank) #, device_ids=device_ids)
             new_dbn.models[i]._optimizer = opt.SGD(new_dbn.models[i].parameters(), lr=learning_rate[i], momentum=momentum[i], weight_decay=decay[i], nesterov=nesterov_accel[i])
             new_dbn.models[i].normalize = normalize_learnergy[i]
             new_dbn.models[i].batch_normalize = batch_normalize[i]
@@ -182,7 +185,7 @@ def run_dbn(yml_conf):
         count = 0
         while(count == 0 or x2.has_next_subset()):
             mse, pl = new_dbn.fit(x2, batch_size=batch_size, epochs=epochs,
-               is_distributed = True, num_loader_workers = int(os.cpu_count() / 3))
+               is_distributed = True, num_loader_workers = num_loader_workers, pin_memory=~use_gpu_pre) #int(os.cpu_count() / 3))
             count = count + 1
             x2.next_subset()
 
@@ -230,7 +233,7 @@ def run_dbn(yml_conf):
                 scaler = x3.scalers
             x3 = DBNDataset([data_test[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scalers=scaler, scale = scale_data, transform=numpy_to_torch, subset=subset_count)
 
-            generate_output(x3, new_dbn, use_gpu, out_dir, "file" + str(t) + "_" +  testing_output, testing_mse, output_subset_count)
+            generate_output(x3, new_dbn, use_gpu, out_dir, "file" + str(t) + "_" +  testing_output, testing_mse, output_subset_count, ~use_gpu_pre)
     
         #Generate test datasets. Doing it this way, because generating all at once creates memory issues
         x2 = None
@@ -242,11 +245,12 @@ def run_dbn(yml_conf):
                 scaler = x2.scalers
             x2 = DBNDataset([data_train[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scalers = scaler, scale = scale_data, transform=numpy_to_torch, subset=subset_count)
 
-            generate_output(x2, new_dbn, use_gpu, out_dir, "file" + str(t) + "_" +  training_output, training_mse, output_subset_count)
+            generate_output(x2, new_dbn, use_gpu, out_dir, "file" + str(t) + "_" +  training_output, training_mse, output_subset_count, ~use_gpu_pre)
 
-    cleanup_ddp()
-
-def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, output_subset_count):
+    if "LOCAL_RANK" in os.environ.keys():
+        cleanup_ddp() 
+ 
+def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, output_subset_count, pin_mem = False):
     output_full = None
     rec_mse_full = []
     count = 0
@@ -263,8 +267,8 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, output_subs
 
     while(count == 0 or dat.has_next_subset() or dat.current_subset > (dat.subset-2)):
         test_loader = DataLoader(dat, batch_size=1000, shuffle=False,
-                    num_workers = int(os.cpu_count() / 3), pin_memory = True,
-                    drop_last=True)
+                    num_workers = 0, drop_last = True, pin_memory = pin_mem) #int(os.cpu_count() / 3), pin_memory = True,
+        #            drop_last=True)
 
         for data in test_loader:
             dat_dev, lab_dev = data[0].to(device=device, non_blocking=True), data[1].to(device=device, non_blocking=True)
@@ -275,7 +279,7 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, output_subs
                 output = output.detach().cpu()
 
             loader = DataLoader(dev_ds, batch_size=len(dat_dev), shuffle=False, \
-                num_workers = 0)
+                num_workers = 0, drop_last = True, pin_memory = False)
             rec_mse, _ = mdl.reconstruct(dat_dev, loader)
 
             rec_mse = rec_mse.detach().cpu()
@@ -321,6 +325,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-y", "--yaml", help="YAML file for DBN and output config.")
     args = parser.parse_args()
+    from timeit import default_timer as timer
+    start = timer()
     main(args.yaml)
+    end = timer()
+    print(end - start) # Time in seconds, e.g. 5.38091952400282
 
 

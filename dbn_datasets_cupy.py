@@ -1,22 +1,23 @@
 import torch
 import os
-
-if "PREPREOCESS_GPU" in os.environ and os.environ["PREPREOCESS_GPU"] == "1":
-    import cupy as arrop
-    from utils_cupy import sliding_window_view
-    from cuml.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
-else:
-    import numpy as arrop
-    import numba
-    from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler 
- 
+import numba
 import random
 import copy
 import sys
+
+import numpy as arrop
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
+
+
 sys.setrecursionlimit(4500)
 
 
 def filter_samples_cupy(data_local, pixel_padding, chan_dim, filenames):
+   
+    import cupy as arrop
+    from utils_cupy import sliding_window_view
+    from cuml.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
+
     dpix = 2*pixel_padding + 1
     dim1 = 0
     dim2 = 1
@@ -56,6 +57,7 @@ def filter_samples_cupy(data_local, pixel_padding, chan_dim, filenames):
  
 @numba.njit
 def filter_samples_numba(data_local, pixel_padding, chan_dim, filenames):
+
     dim1 = 0
     dim2 = 1
     if chan_dim == 0:
@@ -124,12 +126,22 @@ class DBNDataset(torch.utils.data.Dataset):
         self.current_subset = -1
 
         self.device = 'cpu'
-        if "PREPREOCESS_GPU" in os.environ and os.environ["PREPREOCESS_GPU"] == 1:
+        if "PREPROCESS_GPU" in os.environ and os.environ["PREPROCESS_GPU"] == "1": 
             self.device = 'cuda'
 
         self.__loaddata__()
 
     def __loaddata__(self):
+
+        if "PREPROCESS_GPU" in os.environ and os.environ["PREPROCESS_GPU"] == "1":
+            import cupy as arrop
+            from utils_cupy import sliding_window_view
+            from cuml.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
+        else:
+            import numpy as arrop
+            from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
+ 
+
 
         data_local = []
         for i in range(0, len(self.filenames)):
@@ -242,6 +254,15 @@ class DBNDataset(torch.utils.data.Dataset):
     # TODO - ensure that channel dimension is always last and only use one StandardScaler
 
     def __train_scalers__(self, data):
+
+        if "PREPROCESS_GPU" in os.environ and os.environ["PREPROCESS_GPU"] == "1":
+            import cupy as arrop
+            from utils_cupy import sliding_window_view
+            from cuml.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
+        else:
+            import numpy as arrop
+            from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
+
         copy_first_scaler = False
         if self.scalers is None:
             self.scalers = []
