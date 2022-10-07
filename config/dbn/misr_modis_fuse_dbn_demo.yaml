@@ -7,7 +7,8 @@ data:
  valid_min: -100.0
  valid_max: 100000000
  subset_count: 1
- output_subset_count: 10
+ output_subset_count: 5000
+ #reader_type: "cupy"
  reader_type: "numpy"
  reader_kwargs:
   no_arg: "no_arg"
@@ -48,8 +49,9 @@ dbn:
 
  training:
   use_gpu: True
+  use_gpu_preprocessing: False 
   world_size: 1
   rank: 0
-  device_ids: [0,1,2,3,4,5,6,7]
+  device_ids: ["0","1","2","3","4","5","6","7"]
   batch_size: 10000
   epochs: [65] #[8] #, 1, 1] #, 5] #, 10]

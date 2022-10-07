@@ -10,7 +10,7 @@ from osgeo import osr, gdal
 
 
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
-from dask_ml.preprocessing import StandardScaler as DaskStandardScaler
+#from dask_ml.preprocessing import StandardScaler as DaskStandardScaler
 
 def torch_to_numpy(trch):
         return trch.numpy()
@@ -298,7 +298,7 @@ def read_trop_l1b_geo(filename, **kwargs):
     return dat
  
 
-def get_scaler(scaler_name):
+def get_scaler(scaler_name, cuda=True):
 	if scaler_name == "standard":
 		return StandardScaler(), True
 	elif scaler_name == "standard_dask":
