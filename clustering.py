@@ -1,3 +1,11 @@
+"""
+Copyright [2022-23], by the California Institute of Technology and Chapman University. 
+ALL RIGHTS RESERVED. United States Government Sponsorship acknowledged. Any commercial use must be negotiated with the 
+Office of Technology Transfer at the California Institute of Technology and Chapman University.
+This software may be subject to U.S. export control laws. By accepting this software, the user agrees to comply with all 
+applicable U.S. export laws and regulations. User has the responsibility to obtain export licenses, or other export authority as may be 
+required before exporting such information to foreign countries or providing access to foreign persons.
+"""
 #General Imports
 import matplotlib
 matplotlib.use('agg')
@@ -10,7 +18,7 @@ import dask.array as da
 import random
 import pickle
 import sys
-sys.setrecursionlimit(10**6)
+sys.setrecursionlimit(10**8)
 
 #ML imports
 import torch
@@ -70,7 +78,9 @@ class RSClustering(object):
 
     def __plot_clusters__(self, coord, labels, output_basename):
 
-        n_clusters = self.max_clust - self.min_clust + 1
+        n_clusters_local = self.max_clust - self.min_clust + 1
+        if self.reset_n_clusters == True and self.n_clusters is not None:
+            n_clusters_local = self.n_clusters
 
         data = []
         max_dim1 = max(coord[:,1])
@@ -106,13 +116,13 @@ class RSClustering(object):
         data2 = da.from_array(data)
         #del data
 
-        da.to_zarr(data2,output_basename + "_" + str(self.n_clusters) + "clusters.zarr", overwrite=True)
+        da.to_zarr(data2,output_basename + "_" + str(n_clusters_local) + "clusters.zarr", overwrite=True)
         img = plt.imshow(data, vmin=-1, vmax=self.max_clust)
         print("HERE CLUSTERS MIN MAX MEAN STD", data.min(), data.max(), data.mean(), data.std()) 
         cmap = ListedColormap(CMAP_COLORS[0:int(self.max_clust - (-1) + 1)])
         img.set_cmap(cmap)
         plt.colorbar()
-        plt.savefig(output_basename + "_" + str(self.n_clusters) + "clusters.png", dpi=400, bbox_inches='tight')
+        plt.savefig(output_basename + "_" + str(n_clusters_local) + "clusters.png", dpi=400, bbox_inches='tight')
         plt.clf()
 
         return data2
@@ -155,6 +165,9 @@ class RSClustering(object):
             labels[start_ind:end_ind] = self.__predict_cluster__(data[start_ind:end_ind,:])
         print("HERE AFTER PREDICTION")
         unique_files = np.unique(indices[:,0]).shape[0]
+        self.min_clust = min(self.min_clust, min(labels))
+        self.max_clust = max(self.max_clust, max(labels))
+ 
         if unique_files > 1:
             for i in range(unique_files):
                 inds = np.where(indices[:,0] == i)
@@ -171,6 +184,8 @@ class RSClustering(object):
             if scale:
                 print("TRAINING SCALERS")
                 for i in range(len(train_data)): 
+                    if not os.path.exists(train_data[i]):
+                        continue
                     print(train_data[i])
                     #if ".data.input" in train_data[i]:
                     #    dat = da.from_array(torch.load(train_data[i]), chunks=20000)
@@ -240,8 +255,8 @@ class RSClustering(object):
             #self.__train_clustering__(trn) 
 
             #print("FINAL CLUSTER TRAINING")
-            #print(self.n_clusters, self.reset_n_clusters == True)
             #print("HERE PREV ", self.clustering.get_params().keys())
+            print("HERE TEST", self.n_clusters, self.reset_n_clusters == True)
             if self.n_clusters is not None and self.reset_n_clusters == True:
                  print("FINAL CLUSTER TRAINING")
                  ##self.estimator = self.clustering._postfit_estimator
@@ -249,11 +264,14 @@ class RSClustering(object):
                  self.clustering.set_params(n_clusters=self.n_clusters)
                  #self.clustering = Incremental(estimator=self.estimator)
                  self.clustering.partial_fit(None)
-            #    #self.clustering.set_params(estimator__n_clusters=self.n_clusters)
-            #    #print("HERE", self.estimator, self.clustering.estimator, self.estimator.get_params(), self.clustering.get_params())
-            #    #self.clustering.fit(None)
-            self.min_clust = -1
-            self.max_clust = self.n_clusters
+                #    #self.clustering.set_params(estimator__n_clusters=self.n_clusters)
+                #    #print("HERE", self.estimator, self.clustering.estimator, self.estimator.get_params(), self.clustering.get_params())
+                #    #self.clustering.fit(None)
+                 self.min_clust = -1
+                 self.max_clust = self.n_clusters
+            else:
+                self.min_clust = 999999
+                self.max_clust = -999999
 
         train_indices = []
         trn = []

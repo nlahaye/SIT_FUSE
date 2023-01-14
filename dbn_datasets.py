@@ -1,3 +1,11 @@
+"""
+Copyright [2022-23], by the California Institute of Technology and Chapman University. 
+ALL RIGHTS RESERVED. United States Government Sponsorship acknowledged. Any commercial use must be negotiated with the 
+Office of Technology Transfer at the California Institute of Technology and Chapman University.
+This software may be subject to U.S. export control laws. By accepting this software, the user agrees to comply with all 
+applicable U.S. export laws and regulations. User has the responsibility to obtain export licenses, or other export authority as may be 
+required before exporting such information to foreign countries or providing access to foreign persons.
+"""
 import os
 import numpy as np
 import random
@@ -48,6 +56,8 @@ class DBNDataset(torch.utils.data.Dataset):
 			if (type(self.filenames[i]) == str and os.path.exists(self.filenames[i])) or (type(self.filenames[i]) is list and os.path.exists(self.filenames[i][0])):
 				print(self.filenames[i])
 				dat = self.read_func(self.filenames[i], **self.read_func_kwargs).astype(np.float64)
+				print(dat.shape)
+				#dat = dat[:,2000:2100,2000:2100] #TODO REMOVE
 				print(dat.shape, dat[np.where(dat > -99999)].min(), dat[np.where(dat > -99999)].max())
 				for t in range(len(self.transform_chans)):
 					slc = [slice(None)] * dat.ndim
@@ -162,10 +172,13 @@ class DBNDataset(torch.utils.data.Dataset):
 				self.subset_inds[1] = self.data_full.shape[0]
 		else:
 			self.subset_inds = [0,self.data_full.shape[0]]		
-
-		self.data = torch.from_numpy(self.data_full[self.subset_inds[0]:self.subset_inds[1],:])
-		self.targets = torch.from_numpy(self.targets_full[self.subset_inds[0]:self.subset_inds[1],:])		
-	
+ 
+		if not torch.is_tensor(self.data_full): 
+			self.data = torch.from_numpy(self.data_full[self.subset_inds[0]:self.subset_inds[1],:])
+			self.targets = torch.from_numpy(self.targets_full[self.subset_inds[0]:self.subset_inds[1],:])		
+		else:
+			self.data = self.data_full[self.subset_inds[0]:self.subset_inds[1],:]
+			self.targets = self.targets_full[self.subset_inds[0]:self.subset_inds[1],:]	
 
 
         #TODO - ensure that channel dimension is always last and only use one StandardScaler

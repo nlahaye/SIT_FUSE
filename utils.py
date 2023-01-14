@@ -1,3 +1,11 @@
+"""
+Copyright [2022-23], by the California Institute of Technology and Chapman University. 
+ALL RIGHTS RESERVED. United States Government Sponsorship acknowledged. Any commercial use must be negotiated with the 
+Office of Technology Transfer at the California Institute of Technology and Chapman University.
+This software may be subject to U.S. export control laws. By accepting this software, the user agrees to comply with all 
+applicable U.S. export laws and regulations. User has the responsibility to obtain export licenses, or other export authority as may be 
+required before exporting such information to foreign countries or providing access to foreign persons.
+"""
 import torch
 import yaml
 import cv2
@@ -7,10 +15,11 @@ import xarray as xr
 import dask.array as da
 from netCDF4 import Dataset
 from osgeo import osr, gdal
-
+import pandas as pd
+import geopandas as gpd
 
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
-#from dask_ml.preprocessing import StandardScaler as DaskStandardScaler
+from dask_ml.preprocessing import StandardScaler as DaskStandardScaler
 
 def torch_to_numpy(trch):
         return trch.numpy()
@@ -53,21 +62,38 @@ def read_goes_netcdf(filenames, **kwargs):
     data1 = []
     for j in range(0, len(filenames)):
         f = Dataset(filenames[j])
-        rad = f.variables['Rad'][:]
+        
+        fire = False
+        bool_fire = False
+        if "fire_mask" in kwargs:
+            fire = kwargs["fire_mask"]
+        if fire and "bool_fire" in kwargs:
+            bool_fire = kwargs["bool_fire"]
+
+        if fire:
+            rad = f.variables['Mask'][:]
+            if bool_fire:
+                tmp = np.zeros(rad.shape)
+                tmp[np.where((rad > 10) & ((rad < 16) | ((rad > 29) & (rad < 36))))] = 1
+                rad = tmp
+        else:
+            rad = f.variables['Rad'][:]
         f.close()
         f = None
         data1.append(rad)
-    refShp = data1[3].shape
-    for k in range(0, len(data1)):
-        shp = data1[k].shape
-        print(shp, refShp)
-        if shp[0] != refShp[0] or shp[1] != refShp[1]:
-            data1[k] = cv2.resize(data1[k], (refShp[1],refShp[0]), interpolation=cv2.INTER_CUBIC)
-        print(data1[k].shape)
+    if not fire:
+        refShp = data1[3].shape
+        for k in range(0, len(data1)):
+            shp = data1[k].shape
+            print(shp, refShp)
+            if shp[0] != refShp[0] or shp[1] != refShp[1]:
+                data1[k] = cv2.resize(data1[k], (refShp[1],refShp[0]), interpolation=cv2.INTER_CUBIC)
+            print(data1[k].shape)
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:	
         dat = np.array(data1)[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
     print(dat.shape)
     return dat
+
 
 def read_s3_netcdf(s3_dir, **kwargs):
 	data1 = []
@@ -176,7 +202,41 @@ def read_gtiff_generic(flename, **kwargs):
 		dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
 	return dat
 
+def insitu_hab_to_tif(filename, **kwargs):
 
+    print(filename)
+    insitu_df = pd.read_excel(filename)
+    # Format Datetime Stamp
+    insitu_df['Datetime'] = pd.to_datetime(insitu_df['Sample Date'])
+    insitu_df.set_index('Datetime')
+
+    # Shorten Karenia Column Name
+    insitu_df.rename(columns={"Karenia brevis abundance (cells/L)":'Karenia'}, inplace=True)
+  
+    insitu_df['Karenia'] = np.log(insitu_df['Karenia'])
+    ## Subset to Time Window and Depth  of Interest
+    #insitu_subTime = insitu_df[(insitu_df['Sample Date'] > '2018-07-01') &
+    #                       (insitu_df['Sample Date'] < '2019-03-01')]
+    #insitu_subDepth = insitu_subTime[insitu_subTime['Sample Depth (m)'] < 1]
+ 
+    uniques = np.unique(insitu_df['Sample Date'].values)
+    for date in uniques:
+        subset = insitu_df[(insitu_df['Sample Date'] == date)]
+        print(subset.head)
+        subset.drop(['Sample Date', 'Datetime', 'Sample Depth (m)', 'County'], inplace=True, axis=1)
+        gdf = gpd.GeoDataFrame(subset, geometry=gpd.GeoSeries.from_xy(subset['Longitude'], subset['Latitude']), crs=4326)
+
+        shp_fname = filename + np.datetime_as_string(date) + ".shp"
+        gdf.to_file(shp_fname)
+
+        rst_fname = filename + np.datetime_as_string(date) + ".tif"
+        rasterDs = gdal.Grid(rst_fname, 
+                     shp_fname, 
+                     format='GTiff',
+                     algorithm='invdist', 
+                     zfield='Karenia')
+        rasterDs.FlushCache()
+ 
 
 def read_trop_mod_xr(flename, **kwargs):
 
@@ -298,6 +358,18 @@ def read_trop_l1b_geo(filename, **kwargs):
     return dat
  
 
+def read_geo_nc_ungridded(fname, **kwargs):
+    print(flename)
+    dat = Dataset(fname)
+    lat = dat.variables['lat'][:]
+    lon = dat.variables['lon'][:]
+    longr, latgr = np.meshgrid(lat, lon)
+    geo = np.array([latgr, longr])
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+        geo = geo[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+    return geo
+
+
 def get_scaler(scaler_name, cuda=True):
 	if scaler_name == "standard":
 		return StandardScaler(), True
@@ -349,6 +421,8 @@ def get_read_func(data_reader):
 		return read_trop_l1b
 	if data_reader == "trop_l1b_geo":
 		return read_trop_l1b_geo
+	if data_reader == "nc_ungrid_geo":
+        	return	read_geo_nc_ungridded 
 	#TODO return BCDP reader
 	return None
 

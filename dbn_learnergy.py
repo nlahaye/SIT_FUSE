@@ -1,3 +1,11 @@
+"""
+Copyright [2022-23], by the California Institute of Technology and Chapman University. 
+ALL RIGHTS RESERVED. United States Government Sponsorship acknowledged. Any commercial use must be negotiated with the 
+Office of Technology Transfer at the California Institute of Technology and Chapman University.
+This software may be subject to U.S. export control laws. By accepting this software, the user agrees to comply with all 
+applicable U.S. export laws and regulations. User has the responsibility to obtain export licenses, or other export authority as may be 
+required before exporting such information to foreign countries or providing access to foreign persons.
+"""
 #General Imports
 import os
 import numpy as np
@@ -23,10 +31,10 @@ matplotlib.use("Agg")
 import  matplotlib.pyplot as plt
 
 #Data
-from dbn_datasets_cupy import DBNDataset
-from utils_cupy import numpy_to_torch, read_yaml, get_read_func, get_scaler
-#from dbn_datasets import DBNDataset
-#from utils import numpy_to_torch, read_yaml, get_read_func, get_scaler
+#from dbn_datasets_cupy import DBNDataset
+from dbn_datasets import DBNDataset
+#from utils_cupy import numpy_to_torch, read_yaml, get_read_func, get_scaler
+from utils import numpy_to_torch, read_yaml, get_read_func, get_scaler
 
 #Input Parsing
 import yaml
@@ -94,7 +102,7 @@ def run_dbn(yml_conf):
     learning_rate = tuple(yml_conf["dbn"]["params"]["learning_rate"])
     momentum = tuple(yml_conf["dbn"]["params"]["momentum"])
     decay = tuple(yml_conf["dbn"]["params"]["decay"])
-    normalize_learnergy = tuple(yml_conf["dbn"]["params"]["nesterov_accel"])
+    normalize_learnergy = tuple(yml_conf["dbn"]["params"]["normalize_learnergy"])
     batch_normalize = tuple(yml_conf["dbn"]["params"]["batch_normalize"])
 
     temp = None
@@ -265,11 +273,13 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, output_subs
     else:
         device = torch.device("cpu:{}".format(local_rank))
 
+    ind = 0
     while(count == 0 or dat.has_next_subset() or dat.current_subset > (dat.subset-2)):
         test_loader = DataLoader(dat, batch_size=1000, shuffle=False,
-                    num_workers = 0, drop_last = True, pin_memory = pin_mem) #int(os.cpu_count() / 3), pin_memory = True,
+                    num_workers = 0, drop_last = False, pin_memory = pin_mem) #int(os.cpu_count() / 3), pin_memory = True,
         #            drop_last=True)
 
+        
         for data in test_loader:
             dat_dev, lab_dev = data[0].to(device=device, non_blocking=True), data[1].to(device=device, non_blocking=True)
             dev_ds = TensorDataset(dat_dev, lab_dev)
@@ -286,10 +296,10 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, output_subs
 
             rec_mse_full.append(torch.unsqueeze(rec_mse, 0)) 
             if output_full is None:
-                output_full = output
-            else:
-                output_full = torch.cat((output_full,output))
+                output_full = torch.zeros(dat.data.shape[0], output.shape[1], dtype=torch.float32)
+            output_full[1000*ind:1000*(ind+1),:] = output
             print("CONSTRUCTING OUTPUT", dat.data.shape, dat.data_full.shape, output.shape, output_full.shape, output.get_device(), rec_mse.get_device())
+            ind = ind + 1
             del output
             #del rec_mse
             del dat_dev
@@ -301,7 +311,6 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, output_subs
             dat.next_subset()
         else:
             break 
-
     #Save training output
     torch.save(output_full, os.path.join(out_dir, output_fle), pickle_protocol=pickle.HIGHEST_PROTOCOL)
     torch.save(dat.targets_full, os.path.join(out_dir, output_fle + ".indices"), pickle_protocol=pickle.HIGHEST_PROTOCOL)
