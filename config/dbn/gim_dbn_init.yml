@@ -1,0 +1,91 @@
+output:
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_GIM_INIT/"
+ training_output: "output.data"
+ training_mse: "rec_mse.data"
+ testing_output: "output_test.data"
+ testing_mse: "rec_mse_test.data"
+ model: "dbn.pth"
+
+dbn:
+ overwrite_model: True
+ params:
+  #model_type: 'gaussian_relu' "variance_gaussian"
+  model_type: ["gaussian_selu"] #, 'gaussian_relu_dropout', 'gaussian_relu_dropout'] #'variance_gaussian_dropout' "gaussian_dropout"
+  #model_type: "variance_gaussian"
+  dbn_arch: [2000] #[2000] [250, 500, 2000] #, 2000]
+  gibbs_steps: [30] #, 7, 7] #, 10] #, 25]
+  learning_rate: [0.00001] #, 0.0001, 0.0001] #, 0.01] #, 0.01]
+  momentum: [0.95] #, 0.95, 0.95] #, 0.95] #, 0.95]
+  decay: [0.0001] #, 0.0001, 0.0001] #, 0.0001] #, 0.0001]
+  temp: [1.0] #, 1.0, 1.0] [0.9, 0.75, 0.5] #, 1.0] #, 0.5] #, 0.5] 
+  nesterov_accel: [True]
+  normalize_learnergy: [True]
+  batch_normalize: [False]
+
+ training:
+  use_gpu: True
+  use_gpu_preprocessing: False
+  world_size: 1
+  rank: 0
+  device_ids: ["0","1","2","3","4","5","6","7"]
+  batch_size: 10000
+  epochs: [20] #[40] #[8] #, 1, 1] #, 5] #, 10]
+
+scaler:
+ name: "maxabs"
+
+#S5P_OFFL_L1B_RA_BD5_20190802T170826
+#S5P_OFFL_L1B_RA_BD5_20190802T170826
+
+data:
+ num_loader_workers: 10
+ scale_data: True
+ pixel_padding: 1
+ number_channels: 1
+ fill_value: -9999.0
+ valid_min: -900.0
+ valid_max: 65534.0
+ subset_count: 1
+ output_subset_count: 1 #8000
+ reader_type: "zarr_to_numpy"
+ reader_kwargs:
+  no_arg: "no_arg"
+ chan_dim: 0
+ delete_chans: []
+ transform_default:
+  chans: []
+  transform: []
+
+ files_train: ["/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0054.22i.nc_0.zarr"]
+#"/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0054.22i.nc_1.zarr",
+#"/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0054.22i.nc_2.zarr",
+#"/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0054.22i.nc_3.zarr",
+#"/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0054.22i.nc_4.zarr",
+#"/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0054.22i.nc_5.zarr",
+#"/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0054.22i.nc_6.zarr",
+#"/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0054.22i.nc_7.zarr",
+#"/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0054.22i.nc_8.zarr",
+#"/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0120.22i.nc_63.zarr",
+#"/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0180.22i.nc_69.zarr",
+#"/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0168.22i.nc_73.zarr",
+#"/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0054.22i.nc_9.zarr",
+#"/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0054.22i.nc_10.zarr",
+#"/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0120.22i.nc_64.zarr",
+#"/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0180.22i.nc_70.zarr"]
+
+ files_test: [
+"/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0168.22i.nc_74.zarr",
+"/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0054.22i.nc_11.zarr",
+"/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0054.22i.nc_12.zarr",
+"/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0054.22i.nc_13.zarr",
+"/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0054.22i.nc_14.zarr",
+"/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0054.22i.nc_15.zarr",
+"/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0054.22i.nc_16.zarr",
+"/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0054.22i.nc_17.zarr",
+"/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0054.22i.nc_18.zarr",
+"/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0054.22i.nc_19.zarr",
+"/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0054.22i.nc_20.zarr",
+"/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0054.22i.nc_21.zarr",
+"/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0054.22i.nc_22.zarr"]
+
+

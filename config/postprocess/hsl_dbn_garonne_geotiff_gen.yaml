@@ -1,0 +1,38 @@
+
+gen_from_geotiffs: false
+
+data:
+ clust_reader_type: "zarr_to_numpy"
+ reader_kwargs:
+   no_arg: "no_arg" 
+ subset_inds: [[],[],[],[],[],[],[],[]]
+ create_separate: true
+   
+ gtiff_data: [
+"/data/nlahaye/remoteSensing/LS8_GARRONE/HLS.S30.T31TCJ.2021260T104639.v2.0.B01.tif",
+"/data/nlahaye/remoteSensing/LS8_GARRONE/HLS.S30.T31TCJ.2021265T105031.v2.0.B01.tif",
+"/data/nlahaye/remoteSensing/LS8_GARRONE/HLS.S30.T31TCJ.2021275T104901.v2.0.B01.tif",
+"/data/nlahaye/remoteSensing/LS8_GARRONE/HLS.S30.T31TCJ.2021280T104829.v2.0.B01.tif",
+"/data/nlahaye/remoteSensing/LS8_GARRONE/HLS.S30.T31TCJ.2021285T105011.v2.0.B01.tif",
+"/data/nlahaye/remoteSensing/LS8_GARRONE/HLS.S30.T31TCJ.2021290T104939.v2.0.B01.tif",
+"/data/nlahaye/remoteSensing/LS8_GARRONE/HLS.S30.T31TCJ.2021350T105349.v2.0.B01.tif"] #,
+#"/data/nlahaye/remoteSensing/LS8_GARRONE/HLS.S30.T31TCJ.2021365T105441.v2.0.B01.tif"]
+ 
+
+ cluster_fnames: ["/data/nlahaye/output/Learnergy/DBN_HSL_S2_GARONNE/file0_output_test.data.clustering_500clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_HSL_S2_GARONNE/file1_output_test.data.clustering_500clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_HSL_S2_GARONNE/file2_output_test.data.clustering_500clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_HSL_S2_GARONNE/file3_output_test.data.clustering_500clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_HSL_S2_GARONNE/file4_output_test.data.clustering_500clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_HSL_S2_GARONNE/file5_output_test.data.clustering_500clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_HSL_S2_GARONNE/file6_output_test.data.clustering_500clusters.zarr"]
+
+
+ 
+context:
+ apply_context: false
+ clusters: [] #i.e. smoke clusters
+ name: "" #i.e. smoke
+ compare_truth: false
+
+

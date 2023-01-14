@@ -1,0 +1,55 @@
+output:
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_GIM_INIT/"
+
+
+clustering:
+        n_clusters: 50
+        branch: 5
+        thresh: 1e-10
+        pixel_padding: 1
+        train_sample_size: 150000 #000
+        clustering:
+        train: True
+        reset_n_clusters: True
+        model:
+
+scaler:
+ name: "maxabs"
+ scale: False
+
+
+files_train: [ "/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file0_output.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file1_output.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file2_output.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file3_output.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file4_output.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file5_output.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file6_output.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file7_output.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file8_output.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file9_output.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file10_output.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file11_output.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file12_output.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file13_output.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file14_output.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file15_output.data.input"]
+
+files_test: [
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file0_output_test.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file1_output_test.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file2_output_test.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file3_output_test.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file4_output_test.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file5_output_test.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file6_output_test.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file7_output_test.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file8_output_test.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file9_output_test.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file10_output_test.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file11_output_test.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file12_output_test.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file13_output_test.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file14_output_test.data.input",
+"/data/nlahaye/output/Learnergy/DBN_GIM_INIT/file15_output_test.data.input"]
+
