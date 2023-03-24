@@ -7,7 +7,8 @@ data:
    no_arg: "no_arg" 
  subset_inds: [[],[],[],[],[],[],[],[]]
  create_separate: true
-   
+
+
  gtiff_data: [
 "/data/nlahaye/remoteSensing/LS8_GARRONE/new_tile/HLS.S30.T30TYQ.2022345T105339.v2.0.B01.tif",
 "/data/nlahaye/remoteSensing/LS8_GARRONE/new_tile/HLS.S30.T30TYQ.2022345T105339.v2.0.B01.tif",
@@ -28,12 +29,13 @@ data:
 "/data/nlahaye/output/Learnergy/DBN_HSL_S2_GARONNE/file4_output_test.data.clustering_500clusters.zarr",
 "/data/nlahaye/output/Learnergy/DBN_HSL_S2_GARONNE/file5_output_test.data.clustering_500clusters.zarr"]
 
-
+   
  
 context:
- apply_context: false
- clusters: [] #i.e. smoke clusters
- name: "" #i.e. smoke
+ apply_context: true
+ clusters: [292, 10]
+ name: "Water" #i.e. smoke
  compare_truth: false
- generate_union: false
+ generate_union: 3
+
 

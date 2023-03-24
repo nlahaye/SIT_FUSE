@@ -1,6 +1,6 @@
 
 output:
- out_dir: "/data/nlahaye/output/Learnergy/DBN_TROP_SIF_ONLY/"
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_TROP_MODIS_ONLY/"
  training_output: "output.data"
  training_mse: "rec_mse.data"
  testing_output: "output_test.data"
@@ -24,20 +24,22 @@ dbn:
   batch_normalize: [False]
 
  training:
+  use_gpu_preprocessing: False
   use_gpu: True
   world_size: 1
   rank: 0
-  device_ids: [0,1,2,3,4,5,6,7]
   batch_size: 100
+  device_ids: ["0","1","2","3","4","5", "6", "7"]
   epochs: [200] #[40] #[8] #, 1, 1] #, 5] #, 10]
 
 scaler:
  name: "standard"
 
 data:
+ num_loader_workers: 10
  scale_data: True
  pixel_padding: 1
- number_channels: 1
+ number_channels: 5
  fill_value: -9999.0
  valid_min: -4000.0
  valid_max: 4000.0
@@ -47,7 +49,7 @@ data:
  reader_kwargs:
   vars: "sif"
  chan_dim: 0
- delete_chans: [0,1,2,4,5]
+ delete_chans: [3]
  transform_default:
   chans: []
   transform: []

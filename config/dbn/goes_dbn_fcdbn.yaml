@@ -12,32 +12,33 @@ scaler:
  name: "standard"
 
 dbn:
+ deep_cluster: False
  overwrite_model: True
  params:
   model_type: ["FCDBN"] #, 'gaussian_relu_dropout', 'gaussian_relu_dropout'] #'variance_gaussian_dropout' "gaussian_dropout"
   dbn_arch: [2000] #[2000] [250, 500, 2000] #, 2000]
-  gibbs_steps: [5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5]
+  gibbs_steps: [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1] #[5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5]
 #[5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5]
 #[2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
 #[3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3]
 #[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 #[3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3] #, 7, 7] #, 10] #, 25]
 #1e-4 1e-5
-  learning_rate: [1.0e-2,1.0e-5,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-2,1.0e-2,1.0e-2,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8]
+  learning_rate: [1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-2,1.0e-2,1.0e-2,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8]
 #1.0e-6,1.0e-6,1.0e-6,1.0e-6,1.0e-6,1.0e-6,1.0e-6,1.0e-6,1.0e-6,1.0e-6,1.0e-6,1.0e-6,1.0e-6,1.0e-6,1.0e-6,1.0e-6,1.0e-6,1.0e-6,1.0e-6,1.0e-6,1.0e-6,1.0e-6,1.0e-6,1.0e-6,1.0e-6] 
 #[0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01]
 #[0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001] #, 0.0001, 0.0001] #, 0.01] #, 0.01]
-  momentum: [0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.95,0.95,0.95,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25] #0.95
+  momentum: [0.95,0.95,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.95,0.95,0.95,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25] #0.95
 #[0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95]
 #[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 #[0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95] #, 0.95, 0.95] #, 0.95] #, 0.95]
-  decay: [0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001]
+  decay: [0.001,0.001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001]
 #[0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001]  
 #[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 #[0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001] #, 0.0001, 0.0001] #, 0.0001] #, 0.0001]
   temp: [1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0] #, 1.0, 1.0] [0.9, 0.75, 0.5] #, 1.0] #, 0.5] #, 0.5] 
 
-  nesterov_accel: [True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True] 
+  nesterov_accel: [False,False,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True] 
 #[True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True]
 #[False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False] 
 #[True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True]
@@ -53,14 +54,14 @@ dbn:
   world_size: 1
   rank: 0
   device_ids: ["1","2","3","4","5","6","7"]
-  batch_size: 1 #10
+  batch_size: 64
   epochs: [40, 40, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75] #[100] #[8] #, 1, 1] #, 5] #, 10]
 
 data:
  num_loader_workers: 10
- tile: False #True
- tile_size: [16,16,16]
- tile_step: [16,16,16]
+ tile: True
+ tile_size: [32,32,16]
+ tile_step: [32,32,16]
  scale_data: False
  pixel_padding: 1
  number_channels: 16
@@ -71,10 +72,11 @@ data:
  output_subset_count: 10
  reader_type: "goes_netcdf"
  reader_kwargs:
-  start_sample: 1850
-  end_sample: 2000
-  start_line: 0
-  end_line: 100
+  no_arg: ""
+  #start_sample: 1850
+  #end_sample: 2000
+  #start_line: 0
+  #end_line: 100
  chan_dim: 0
  delete_chans: []
  transform_default:
@@ -98,7 +100,9 @@ data:
 "/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C13_G17_s20192191821196_e20192191823580_c20192191824065.nc",
 "/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C14_G17_s20192191821196_e20192191823569_c20192191824085.nc",
 "/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C15_G17_s20192191821196_e20192191823575_c20192191824080.nc",
-"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C16_G17_s20192191821196_e20192191823580_c20192191824045.nc"],
+"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C16_G17_s20192191821196_e20192191823580_c20192191824045.nc"]]
+
+ files_test: [
 ["/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C01_G17_s20192191931196_e20192191933569_c20192191934019.nc",
 "/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C02_G17_s20192191931196_e20192191933569_c20192191933598.nc",
 "/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C03_G17_s20192191931196_e20192191933569_c20192191934013.nc",
@@ -259,10 +263,8 @@ data:
  "/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C13_G17_s20192201851196_e20192201853581_c20192201854085.nc",
  "/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C14_G17_s20192201851196_e20192201853569_c20192201854072.nc",
  "/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C15_G17_s20192201851196_e20192201853575_c20192201854081.nc",
- "/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C16_G17_s20192201851196_e20192201853581_c20192201854066.nc"]]
-
- files_test: [
-#VIIRS                                                                                                           
+ "/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C16_G17_s20192201851196_e20192201853581_c20192201854066.nc"],
+#VIIRS                                                                                                           ["/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C01_G17_s20192201931196_e20192201933569_c20192201934013.nc",
 ["/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C01_G17_s20192201931196_e20192201933569_c20192201934013.nc",
  "/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C02_G17_s20192201931196_e20192201933569_c20192201934003.nc",
  "/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C03_G17_s20192201931196_e20192201933569_c20192201934008.nc",

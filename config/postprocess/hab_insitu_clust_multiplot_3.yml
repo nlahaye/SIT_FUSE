@@ -1,57 +1,14 @@
 
-output:
- out_dir: "/data/nlahaye/output/Learnergy/DBN_TROP_SIF_ONLY/"
- training_output: "output.data"
- training_mse: "rec_mse.data"
- testing_output: "output_test.data"
- testing_mse: "rec_mse_test.data"
- model: "dbn.pth"
+xl_fname: '/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/InSitu/W_FL_Karenia_brevis_abundance_2002-2021.04.05.xlsx'
+start_date: "2018-08-01"
+end_date: "2020-12-31"
+clusters: 100
 
-dbn:
- overwrite_model: True
- params:
-  #model_type: 'gaussian_relu' "variance_gaussian"
-  model_type: ["gaussian_selu"] #, 'gaussian_relu_dropout', 'gaussian_relu_dropout'] #'variance_gaussian_dropout' "gaussian_dropout"
-  #model_type: "variance_gaussian"
-  dbn_arch: [300] #[2000] [250, 500, 2000] #, 2000]
-  gibbs_steps: [2] #, 7, 7] #, 10] #, 25]
-  learning_rate: [0.00001] #, 0.0001, 0.0001] #, 0.01] #, 0.01]
-  momentum: [0.95] #, 0.95, 0.95] #, 0.95] #, 0.95]
-  decay: [0.0001] #, 0.0001, 0.0001] #, 0.0001] #, 0.0001]
-  temp: [1.0] #, 1.0, 1.0] [0.9, 0.75, 0.5] #, 1.0] #, 0.5] #, 0.5] 
-  nesterov_accel: [True]
-  normalize_learnergy: [False]
-  batch_normalize: [False]
+clusters_dir: '/data/nlahaye/output/Learnergy/DBN_TROP_MODIS_ONLY/' #DBN_L2_TROP_MOD/
+radius_meters: 100
 
- training:
-  use_gpu: True
-  world_size: 1
-  rank: 0
-  device_ids: [0,1,2,3,4,5,6,7]
-  batch_size: 100
-  epochs: [200] #[40] #[8] #, 1, 1] #, 5] #, 10]
 
-scaler:
- name: "standard"
-
-data:
- scale_data: True
- pixel_padding: 1
- number_channels: 1
- fill_value: -9999.0
- valid_min: -4000.0
- valid_max: 4000.0
- subset_count: 1
- output_subset_count: 1
- reader_type: "zarr_to_numpy"
- reader_kwargs:
-  vars: "sif"
- chan_dim: 0
- delete_chans: [0,1,2,4,5]
- transform_default:
-  chans: []
-  transform: []
- files_train: [ #"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_0",
+files_train: [ #"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_0",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_1",
 #"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_10",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_100",
@@ -62,7 +19,7 @@ data:
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_105",
 #"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_106",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_107",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_108", 5
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_108",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_109",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_11",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_110",
@@ -70,7 +27,7 @@ data:
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_112",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_113",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_114",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_115",10
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_115",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_116",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_117",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_118",
@@ -86,7 +43,7 @@ data:
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_127",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_128",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_129",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_13", 18
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_13",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_130",
 #"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_131",
 #"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_132",
@@ -98,7 +55,7 @@ data:
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_138",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_139",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_14",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_140", 21
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_140",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_141",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_142",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_143",
@@ -106,7 +63,7 @@ data:
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_145",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_146",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_147",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_148", 25
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_148",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_149",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_15",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_150",
@@ -117,8 +74,8 @@ data:
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_155",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_156",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_157",
-"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_158", 
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_159", 30
+"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_158",
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_159",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_16",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_160",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_161",
@@ -137,7 +94,7 @@ data:
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_173",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_174",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_175",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_176", 36
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_176",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_177",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_178", 
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_179",
@@ -149,14 +106,14 @@ data:
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_184",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_185",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_186",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_187", 40
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_187",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_188",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_189",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_19",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_190",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_191",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_192",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_193", 45
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_193",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_194",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_195",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_196",
@@ -168,7 +125,7 @@ data:
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_200",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_201",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_202",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_203", 50
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_203",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_204",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_205",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_206",
@@ -178,7 +135,7 @@ data:
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_21",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_210",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_211",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_212", 56
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_212",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_213",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_214",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_215",
@@ -189,14 +146,14 @@ data:
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_22",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_220",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_221",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_222", 61
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_222",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_223",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_224",
 #"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_225",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_226",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_227",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_228",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_229", 66
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_229",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_23",
 #"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_230",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_231",
@@ -207,7 +164,7 @@ data:
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_236",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_237",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_238",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_239", 71
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_239",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_24",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_240",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_241",
@@ -217,7 +174,7 @@ data:
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_245",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_246",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_247",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_248", 78
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_248",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_249",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_25",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_250",
@@ -227,7 +184,7 @@ data:
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_254",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_255",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_256",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_257", 86
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_257",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_258",
 #"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_259",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_26",
@@ -238,12 +195,12 @@ data:
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_264",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_265",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_266",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_267", 91
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_267",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_268",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_269",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_27",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_270",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_271", 95
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_271",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_272",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_273",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_274",
@@ -252,7 +209,7 @@ data:
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_277",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_278",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_279",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_28", 100
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_28",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_280",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_281",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_282",
@@ -260,7 +217,7 @@ data:
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_284",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_285",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_286",
-#"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_287", 106
+#"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_287",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_288",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_289",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_29",
@@ -274,7 +231,7 @@ data:
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_297",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_298",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_299",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_3", 110
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_3",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_30",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_300",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_301",
@@ -286,7 +243,7 @@ data:
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_307",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_308",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_309",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_31", 115
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_31",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_310",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_311",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_312",
@@ -298,7 +255,7 @@ data:
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_318",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_319",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_32",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_320", 121
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_320",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_321",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_322",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_323",
@@ -320,7 +277,7 @@ data:
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_338",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_339",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_34",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_340", 125
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_340",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_341",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_342",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_343",
@@ -336,7 +293,7 @@ data:
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_352",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_353",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_354",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_355", 130
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_355",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_356",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_357",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_358",
@@ -346,7 +303,7 @@ data:
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_361",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_362",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_363",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_364", 136
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_364",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_365",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_366",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_367",
@@ -366,7 +323,7 @@ data:
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_38",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_380",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_381",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_382", 145
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_382",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_383",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_384",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_385",
@@ -384,7 +341,7 @@ data:
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_396",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_397",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_398",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_399", 151
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_399",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_4",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_40",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_400",
@@ -397,7 +354,7 @@ data:
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_407",
 #"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_408",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_409",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_41", 155
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_41",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_410",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_411",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_412",
@@ -415,13 +372,13 @@ data:
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_423",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_424",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_425",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_426", 162
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_426",
 #"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_427",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_428",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_429",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_43",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_430",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_431", 165
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_431",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_432",
 #"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_433",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_434",
@@ -443,7 +400,7 @@ data:
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_449",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_45",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_450",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_451", 174
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_451",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_452",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_453",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_454",
@@ -455,7 +412,7 @@ data:
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_47",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_48",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_49",
-#"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_5",  180
+#"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_5",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_50",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_51",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_52",
@@ -463,7 +420,7 @@ data:
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_54",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_55",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_56",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_57", 185
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_57",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_58", #HERE TODO
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_59",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_6",
@@ -474,7 +431,7 @@ data:
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_64",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_65",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_66",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_67", 191
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_67",
 #"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_68",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_69",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_7",
@@ -487,28 +444,29 @@ data:
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_76",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_77",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_78",
-"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_79", 
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_8", 197
+"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_79",
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_8",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_80",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_81",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_82",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_83",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_84",
-##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_85", 202
+##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_85",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_86",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_87",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_88",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_89",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_9",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_90",
-"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_91"] #205
+"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_91"]
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_92",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_93",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_94"]
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_95",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_96",
 
- files_test: ["/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_97",
+files_test: ["/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_97",
 "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_98"]
 #"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_99"]
+
 
