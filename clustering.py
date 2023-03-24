@@ -18,7 +18,7 @@ import dask.array as da
 import random
 import pickle
 import sys
-sys.setrecursionlimit(10**8)
+sys.setrecursionlimit(10**9)
 
 #ML imports
 import torch
