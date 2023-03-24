@@ -23,8 +23,9 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
 
 class DBNDataset(torch.utils.data.Dataset):
 
-	def __init__(self, filenames, read_func, read_func_kwargs, pixel_padding, delete_chans, valid_min, valid_max, fill_value = -9999, chan_dim = 0, transform_chans = [], transform_values = [], scalers = None, scale=False, transform=None, subset=None, train_scalers = False):
+	def __init__(self, filenames, read_func, read_func_kwargs, pixel_padding, delete_chans, valid_min, valid_max, fill_value = -9999, chan_dim = 0, transform_chans = [], transform_values = [], scalers = None, scale=False, transform=None, subset=None, train_scalers = False, subset_training = -1):
 
+		self.training = False
 		self.filenames = filenames
 		self.transform = transform
 		self.pixel_padding = pixel_padding
@@ -42,6 +43,7 @@ class DBNDataset(torch.utils.data.Dataset):
 		self.read_func = read_func
 		self.read_func_kwargs = read_func_kwargs
 		self.subset = subset
+		self.subset_training = subset_training
 		if self.subset is None:
 			self.subset = 1		
 		self.current_subset = -1
@@ -86,6 +88,7 @@ class DBNDataset(torch.utils.data.Dataset):
 		#del dat
 		if self.scale:
 			if self.scalers is None or self.train_scalers:
+				self.training = True
 				self.__train_scalers__(data_local)
 
 			for r in range(len(data_local)):	
@@ -137,6 +140,9 @@ class DBNDataset(torch.utils.data.Dataset):
 		#self.data_full = self.data_full * 1e10
 		#self.data_full = self.data_full.astype(np.int32)
 		self.targets_full = np.array(self.targets).astype(np.int16)
+		if self.training and self.subset_training > 0:
+			self.data_full = self.data_full[:self.subset_training,:]
+			self.targets_full = self.targets_full[:self.subset_training,:]
 		del self.data
 		del self.targets
 

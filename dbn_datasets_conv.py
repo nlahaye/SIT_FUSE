@@ -26,7 +26,7 @@ from skimage.util import view_as_windows
 
 class DBNDatasetConv(DBNDataset):
 
-	def __init__(self, filenames, read_func, read_func_kwargs, delete_chans, valid_min, valid_max, fill_value = -9999, chan_dim = 0, transform_chans = [], transform_values = [], transform=None, subset=None, tile = False, tile_size = None, tile_step = None):
+	def __init__(self, filenames, read_func, read_func_kwargs, delete_chans, valid_min, valid_max, fill_value = -9999, chan_dim = 0, transform_chans = [], transform_values = [], transform=None, subset=None, tile = False, tile_size = None, tile_step = None, subset_training = -1):
 		#Scaler info isnt used here, but keeping same interface as DBNDataset
 
 		self.filenames = filenames
@@ -48,7 +48,8 @@ class DBNDatasetConv(DBNDataset):
 		if self.subset is None:
 			self.subset = 1		
 		self.current_subset = -1
-
+		self.subset_training = subset_training
+	
 
 		self.__loaddata__()
 
@@ -137,6 +138,7 @@ class DBNDatasetConv(DBNDataset):
 		c = list(zip(self.data, self.targets))
 		random.shuffle(c)
 		self.data, self.targets = zip(*c)
+		del c
 		self.data_full = np.array(self.data).astype(np.float32) #float32
 		self.targets_full = np.array(self.targets).astype(np.int16)
 		self.data_full = torch.from_numpy(self.data_full)
@@ -150,6 +152,10 @@ class DBNDatasetConv(DBNDataset):
 			mean_per_channel = []
 			std_per_channel = []
 
+ 
+			if self.subset_training > 0:
+				self.data_full = self.dat_full[:self.subset_training,:,:,:]
+				self.targets_full = self.dat_full[:self.subset_training,:,:]
 			for chan in range(self.data_full.shape[self.chan_dim]):
 				#TODO slice to make more generic
 				subd = self.data_full[:,chan,:,:]
