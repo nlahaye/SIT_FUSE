@@ -141,6 +141,8 @@ def run_dbn(yml_conf):
         normalize_learnergy = tuple(yml_conf["dbn"]["params"]["normalize_learnergy"])
         batch_normalize = tuple(yml_conf["dbn"]["params"]["batch_normalize"])
  
+        subset_training = yml_conf["dbn"]["subset_training"]
+
         if "FCDBN" in model_type[0]:
             tile = yml_conf["data"]["tile"]
             tile_size = yml_conf["data"]["tile_size"]
@@ -174,13 +176,13 @@ def run_dbn(yml_conf):
         x2 = DBNDataset(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
             valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
             transform_values=transform_values, scalers = [scaler], train_scalers = scaler_train, scale = scale_data, \
-            transform=numpy_to_torch, subset=subset_count)
+            transform=numpy_to_torch, subset=subset_count, subset_training = subset_training)
     else:
         x2 = DBNDatasetConv(data_train, read_func, data_reader_kwargs, delete_chans=delete_chans, \
              valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
-             transform_values=transform_values, transform=None, subset=subset_count, tile=tile, tile_size=tile_size, tile_step=tile_step)
-
-
+             transform_values=transform_values, transform=None, subset=subset_count, tile=tile, tile_size=tile_size, tile_step=tile_step,
+             subset_training = subset_training)
+ 
     #Generate model
     if not fcn:
         chunk_size = 1

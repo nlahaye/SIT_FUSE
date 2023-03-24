@@ -8,6 +8,8 @@ output:
  model: "dbn.pth"
 
 dbn:
+ subset_training: 300000
+ deep_cluster: False
  overwrite_model: True
  params:
   model_type: ["gaussian_selu"] #, 'gaussian_relu_dropout', 'gaussian_relu_dropout'] #'variance_gaussian_dropout' "gaussian_dropout"

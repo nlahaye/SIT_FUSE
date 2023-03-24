@@ -12,6 +12,7 @@ scaler:
  name: "standard"
 
 dbn:
+ subset_training: -1
  deep_cluster: False
  overwrite_model: True
  params:
