@@ -25,8 +25,8 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 	totalTruth = []
 	outUnion = None
 	for p in range(len(cluster_data)):
-		print(cluster_data[p])
-		print(gtiff_data[p])
+		print("FNAME1", cluster_data[p])
+		print("FNAME2", gtiff_data[p])
                
 		dbnDat1 = read_func(cluster_data[p], **data_reader_kwargs).astype(np.int32)
 		print(dbnDat1.min(), dbnDat1.max())
@@ -61,7 +61,7 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 		if len(imgData.shape) > 2:
 			imgData = np.squeeze(imgData[0,:,:])
 		print(p)
-		print(dbnDat1.shape, imgData.shape)
+		print("HERE", dbnDat1.shape, imgData.shape)
 		nx = imgData.shape[1]
 		ny = imgData.shape[0]
 		geoTransform = dat.GetGeoTransform()
@@ -92,17 +92,19 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 
 		if apply_context:
 			outDat = np.zeros(dbnDat1.shape, dtype=np.int32) - 1
-			if generate_union and outUnion is None:
+			if generate_union > 0 and outUnion is None:
 				#union cases assume input scenes are all the same size
-				outUnion = np.zeros(dbnDat1.shape, dtype=np.int32) - 1			
+				outUnion = np.zeros(dbnDat1.shape, dtype=np.int32) 	
 
 			for i in range(len(context_clusters)):
 				clss = context_clusters[i]
 				ind = np.where(dbnDat1 == clss)
 				outDat[ind] = 1
-				if outUnion:
-					outUnion[ind] = 1
+				if generate_union > 0 and outUnion is not None:
+					outUnion[ind] = outUnion[ind] + 1
 
+			inds = np.where(outDat < 0 & dbnDat1 >= 0)
+			outDat[inds] = 0
 			outDatFull = np.zeros(imgData.shape, dtype=np.int32) - 1
 			if len(subset_inds[p]) > 0:
 				outDatFull[subset_inds[0]:subset_inds[1],subset_inds[2]:subset_inds[3]] = outDat
@@ -118,7 +120,7 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 			out_ds.FlushCache()
 			out_ds = None
 
-			if generate_union and p == len(cluster_data)-1:
+			if generate_union > 0 and p == len(cluster_data)-1:
 				fname = os.path.join(os.path.dirname(cluster_data[p]), context_name + ".Union.tif")
 				out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
 				out_ds.SetGeoTransform(geoTransform)
@@ -129,7 +131,10 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 					outUnionFull[subset_inds[0]:subset_inds[1],subset_inds[2]:subset_inds[3]] = outUnion
 				else:
 					outUnionFull = outUnion
-
+				inds = np.where(outUnionFull < (generate_union))
+				outUnionFull[inds] = 0 
+				inds = np.where(outUnionFull > 0)
+				outUnionFull[inds] = 1
 				out_ds.GetRasterBand(1).WriteArray(outUnionFull) 
 				out_ds.FlushCache()
 				out_ds = None
@@ -148,6 +153,8 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 				clss = classes[i]
 				ind = np.where(dbnDat1 == clss)
 				outDat[ind] = 1
+				inds = np.where(outDat < 0 & dbnDat1 >= 0)
+				outDat[inds] = 0
 				file_ext = ".cluster_class" + str(clss)
  
 				outDatFull = np.zeros(imgData.shape, dtype=np.int32) - 1
@@ -184,7 +191,8 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
  
 
 
-def generate_separate_from_full(gtiff_data, apply_context, context_clusters, context_name, create_separate=True):
+def generate_separate_from_full(gtiff_data, apply_context, context_clusters, context_name, create_separate=True, generate_union=False):
+        outUnion = None
         for p in range(len(gtiff_data)):
                 print(gtiff_data[p])
 
@@ -207,10 +215,15 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
  
                 if apply_context:
                         outDatFull = np.zeros(imgData.shape, dtype=np.int32) - 1
+                        if generate_union > 0 and outUnion is None:
+                                #union cases assume input scenes are all the same size
+                                outUnion = np.zeros(dbnDat1.shape, dtype=np.int32) - 1
                         for i in range(len(context_clusters)):
                                 clss = context_clusters[i]
                                 ind = np.where(imgData == clss)
                                 outDatFull[ind] = 1
+                                if generate_union > 0 and outUnion is not None:
+                                        outUnion[ind] = outUnion[ind] + 1
 
                         file_ext = "." + context_name
 
@@ -222,6 +235,26 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
                         out_ds.GetRasterBand(1).WriteArray(outDatFull)
                         out_ds.FlushCache()
                         out_ds = None
+                         
+                        if generate_union > 0 and p == len(gtiff_data)-1:
+                                fname = os.path.join(os.path.dirname(gtiff_data[p]), context_name + ".Union.tif")
+                                out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
+                                out_ds.SetGeoTransform(geoTransform)
+                                out_ds.SetProjection(wkt)
+
+                                outUnionFull = None
+                                if len(subset_inds[p]) > 0:
+                                        outUnionFull[subset_inds[0]:subset_inds[1],subset_inds[2]:subset_inds[3]] = outUnion
+                                else:
+                                        outUnionFull = outUnion
+
+                                inds = np.where(outUnionFull < (generate_union-1))
+                                outUnionFull[inds] = 0
+                                inds = np.where(outUnionFull > 0)
+                                outUnionFull[inds] = 1
+                                out_ds.GetRasterBand(1).WriteArray(outUnionFull)
+                                out_ds.FlushCache()
+                                out_ds = None
 
 
                 if create_separate:
@@ -269,7 +302,7 @@ def main(yml_fpath):
     gen_from_gtiffs = yml_conf["gen_from_geotiffs"]
 
     if gen_from_gtiffs:
-        generate_separate_from_full(gtiff_data = gtiff_data, apply_context = apply_context,
+        generate_separate_from_full(gtiff_data = cluster_data, apply_context = apply_context,
             context_clusters = context_clusters, context_name = context_name, create_separate=create_separate, generate_union=generate_union)
     else: 
         generate_cluster_gtiffs(data_reader = reader, data_reader_kwargs = data_reader_kwargs, subset_inds = subset_inds,
