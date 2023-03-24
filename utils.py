@@ -17,6 +17,12 @@ from netCDF4 import Dataset
 from osgeo import osr, gdal
 import pandas as pd
 import geopandas as gpd
+from geocube.api.core import make_geocube
+from pprint import pprint
+import matplotlib
+matplotlib.use('agg')
+import matplotlib.pyplot as plt
+from CMAP import CMAP, CMAP_COLORS
 
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
 from dask_ml.preprocessing import StandardScaler as DaskStandardScaler
@@ -89,8 +95,9 @@ def read_goes_netcdf(filenames, **kwargs):
             if shp[0] != refShp[0] or shp[1] != refShp[1]:
                 data1[k] = cv2.resize(data1[k], (refShp[1],refShp[0]), interpolation=cv2.INTER_CUBIC)
             print(data1[k].shape)
+    dat = np.array(data1)
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:	
-        dat = np.array(data1)[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+        dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
     print(dat.shape)
     return dat
 
@@ -158,7 +165,6 @@ def read_s6_netcdf(filename, **kwargs):
 	if "log" in kwargs and kwargs["log"]:
 		data = np.log(data)
        
-	print("HERE", data.min(), data.max()) 
 	return data
 
 def read_s6_netcdf_geo(filename, **kwargs):
@@ -202,6 +208,132 @@ def read_gtiff_generic(flename, **kwargs):
 		dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
 	return dat
 
+
+
+
+def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n_clusters, radius_meters, files_test, files_train):
+    print(insitu_fname)
+    insitu_df = pd.read_excel(insitu_fname)
+    # Format Datetime Stamp
+    insitu_df['Datetime'] = pd.to_datetime(insitu_df['Sample Date'])
+    insitu_df.set_index('Datetime')
+
+    # Shorten Karenia Column Name
+    insitu_df.rename(columns={"Karenia brevis abundance (cells/L)":'Karenia'}, inplace=True)
+    
+    insitu_df = insitu_df[(insitu_df['Sample Date'] >= start_date) & (insitu_df['Sample Date'] <= end_date)] 
+
+    uniques = np.unique(insitu_df['Sample Date'].values)
+
+    #TODO
+    #subset by date - start and end day of SIF 
+    #tie date to cluster dat
+
+    final_hist_data = []
+    ind = 1
+    for date in uniques:
+        #    find associated cluster
+        input_fname = os.path.join(os.path.dirname(files_train[0]), "sif_finalday_" + str(ind))
+        ind = ind + 1
+        clust_fname = os.path.join(clusters_dir, "file")
+        dat_ind = -1
+
+        dat_train = False
+        dat_test = False
+
+        try:
+            dat_ind = files_train.index(input_fname)
+            dat_train = True
+        except ValueError:
+            dat_ind = -1
+
+        if dat_ind == -1:
+            try:
+                dat_ind = files_test.index(input_fname)
+            except ValueError:
+                continue
+       
+        print(input_fname, dat_train, dat_test)
+        if dat_train:
+            clust_fname = clust_fname + str(dat_ind) + "_output.data.clustering_" + str(n_clusters) + "clusters.zarr.tif"
+        else:
+            clust_fname = clust_fname + str(dat_ind) + "_output_test.data.clustering_" + str(n_clusters) + "clusters.zarr.tif"
+        
+        print(clust_fname) 
+        if not os.path.exists(clust_fname):
+            clust_fname = clust_fname + "f"
+            if not os.path.exists(clust_fname):
+                continue
+  
+        clust = gdal.Open(clust_fname)
+        lonLat = get_lat_lon(clust_fname)
+        print(lonLat.shape)
+        clust = clust.ReadAsArray()
+               
+ 
+        lat = lonLat[:,:,0].reshape(clust.shape[0]*clust.shape[1])
+        lon = lonLat[:,:,1].reshape(clust.shape[0]*clust.shape[1])
+        clust = clust.reshape(clust.shape[0]*clust.shape[1])
+        inds_clust = np.where(clust >= 0)
+        lat = lat[inds_clust]
+        lon = lon[inds_clust]
+        clust = clust[inds_clust]
+        print(np.unique(clust))
+
+        gdf = gpd.GeoDataFrame(clust, geometry=gpd.GeoSeries.from_xy(lon, lat), crs=4326)
+        subset = insitu_df[(insitu_df['Sample Date'] == date)]
+        gdf_insitu = gpd.GeoDataFrame(subset["Karenia"], geometry=gpd.GeoSeries.from_xy(subset['Longitude'], subset['Latitude']), crs=4326)
+
+        #gdf_proj = gdf.to_crs({"init": "EPSG:3857"})
+        #gdf_insitu_proj = gdf_insitu.to_crs({"init": "EPSG:3857"})     
+ 
+        dists = []
+        count = -1
+        print(gdf_insitu)
+        hist_data = []
+        for index, poi in gdf_insitu.iterrows():
+            count = count + 1
+            neighbours = []
+            for index2, poi2 in gdf.iterrows():
+                if poi2.geometry.distance(poi.geometry) < 0.1:
+                    neighbours.append(index2)
+            #print(poi.geometry)
+            #x = poi.geometry.buffer(0.011) #.unary_union
+            #print(gdf["geometry"])
+            #neighbours = gdf["geometry"].intersection(x)
+            #inds = gdf[~neighbours.is_empty]
+            #print(index, poi)
+            #print(inds, len(inds), len(clust))
+            if len(neighbours) < 1:
+                continue
+            clusters = clust[neighbours]
+            clusters_index = []
+            for c in range(n_clusters+1):
+                clusters_index.append((c in clusters))
+            hist_data.append(clusters_index)
+            for j in range(len(clusters_index)):
+                if clusters_index[j]:
+                    hist_data[-1][j] = poi["Karenia"]
+                else:
+                    hist_data[-1][j] = -1
+
+        final_hist_data.extend(hist_data)
+    fnl = np.array(final_hist_data)
+    fnl = np.swapaxes(fnl, 0,1)
+    print(fnl.shape, fnl.max())
+    ranges = [0, 1000,fnl.max()]
+    algal = []
+    for i in range(fnl.shape[0]):
+        hist, _ = np.histogram(fnl[i], bins=ranges, density=False)
+        if hist[0] < hist[1]:
+           algal.append(i+1)
+    pprint(algal)    
+
+
+    #for p in ra nge(len(ranges)):
+    #    plt.hist(fnl, 5, density=True, histtype='bar', stacked=True, color = CMAP_COLORS[0:n_clusters+1], label=range(0,101), range=ranges[p]) 
+    #    plt.savefig("TEST_HIST_" + str(p) + ".png")
+
 def insitu_hab_to_tif(filename, **kwargs):
 
     print(filename)
@@ -212,8 +344,9 @@ def insitu_hab_to_tif(filename, **kwargs):
 
     # Shorten Karenia Column Name
     insitu_df.rename(columns={"Karenia brevis abundance (cells/L)":'Karenia'}, inplace=True)
-  
+
     insitu_df['Karenia'] = np.log(insitu_df['Karenia'])
+    insitu_df.replace([np.inf, -np.inf], -10.0, inplace=True)
     ## Subset to Time Window and Depth  of Interest
     #insitu_subTime = insitu_df[(insitu_df['Sample Date'] > '2018-07-01') &
     #                       (insitu_df['Sample Date'] < '2019-03-01')]
@@ -225,17 +358,43 @@ def insitu_hab_to_tif(filename, **kwargs):
         print(subset.head)
         subset.drop(['Sample Date', 'Datetime', 'Sample Depth (m)', 'County'], inplace=True, axis=1)
         gdf = gpd.GeoDataFrame(subset, geometry=gpd.GeoSeries.from_xy(subset['Longitude'], subset['Latitude']), crs=4326)
+        interp = "nearest"
+        if subset.count()["Karenia"] >= 8:
+            interp = "cubic"
+        elif subset.count()["Karenia"] >= 4:
+            interp = "linear"
+        else:
+            interp = "nearest"
 
         shp_fname = filename + np.datetime_as_string(date) + ".shp"
         gdf.to_file(shp_fname)
 
         rst_fname = filename + np.datetime_as_string(date) + ".tif"
-        rasterDs = gdal.Grid(rst_fname, 
-                     shp_fname, 
-                     format='GTiff',
-                     algorithm='invdist', 
-                     zfield='Karenia')
-        rasterDs.FlushCache()
+         
+        gdf.plot() # first image hereunder
+
+        geotif_file = "/tmp/raster.tif"
+ 
+        try:
+            out_grd = make_geocube(
+                vector_data=gdf,
+                measurements=["Karenia"],
+                output_crs=4326,
+                fill = 0.0,
+                interpolate_na_method=interp,
+                resolution=(-0.01,0.01) #, interpolate_na_method="nearest", TODO parameterize
+            )
+        except:
+            out_grd = make_geocube(
+                vector_data=gdf,
+                measurements=["Karenia"],
+                output_crs=4326,
+                fill = 0.0,
+                interpolate_na_method="nearest",
+                resolution=(-0.01,0.01)
+            )
+        out_grd["Karenia"].rio.to_raster(rst_fname)
+
  
 
 def read_trop_mod_xr(flename, **kwargs):
@@ -255,7 +414,6 @@ def read_trop_mod_xr(flename, **kwargs):
         vrs = kwargs["vars"] 
 
 
-    print("HERE ", vrs)
 
     data1  = []
     for i in range(len(vrs)):
@@ -292,6 +450,8 @@ def read_trop_mod_xr_geo(flename, **kwargs):
         sif_temp = sif_temp.sel(**{'lon' : slice(kwargs["start_lon"], kwargs["end_lon"]), 'lat': slice(kwargs["start_lat"], kwargs["start_lat"])})
 
 
+    print(sif_temp.variables["time"].min())
+    print(sif_temp.variables["time"].max())
     vrs = ["lat", "lon"]
     data1  = []
     for i in range(len(vrs)):
@@ -344,7 +504,6 @@ def read_trop_l1b_geo(filename, **kwargs):
     vrs = ["latitude", "longitude"]
     print(filename)
     x = Dataset(filename)
-    print("HERE")
     for i in range(len(vrs)):
         print(vrs[i])
         dat = x.groups["BAND5_RADIANCE"].groups["STANDARD_MODE"].groups["GEODATA"].variables[vrs[i]][:]
@@ -383,6 +542,32 @@ def get_scaler(scaler_name, cuda=True):
 		return DaskStandardScaler(with_mean=False), True
 	else:
 		return None, True
+
+def get_lat_lon(fname):
+    # open the dataset and get the geo transform matrix
+    ds = gdal.Open(fname)
+    xoffset, px_w, rot1, yoffset, px_h, rot2 = ds.GetGeoTransform()
+    dataArr = ds.ReadAsArray()
+
+    lonLat = np.zeros((dataArr.shape[0], dataArr.shape[1], 2))
+
+    # get CRS from dataset 
+    crs = osr.SpatialReference()
+    crs.ImportFromWkt(ds.GetProjectionRef())
+
+    # create lat/long crs with WGS84 datum
+    crsGeo = osr.SpatialReference()
+    crsGeo.ImportFromEPSG(4326) # 4326 is the EPSG id of lat/long crs 
+    t = osr.CoordinateTransformation(crs, crsGeo)
+    for j in range(dataArr.shape[1]):
+        for k in range(dataArr.shape[0]):
+            posX = px_w * j + rot1 * k + (px_w * 0.5) + (rot1 * 0.5) + xoffset
+            posY = px_h * j + rot2 * k + (px_h * 0.5) + (rot2 * 0.5) + yoffset
+
+            (lon, lat, z) = t.TransformPoint(posX, posY)
+            lonLat[k,j,1] = lon
+            lonLat[k,j,0] = lat
+    return lonLat
 
 
 #TODO worldview
