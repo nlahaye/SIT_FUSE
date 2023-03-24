@@ -6,6 +6,8 @@ This software may be subject to U.S. export control laws. By accepting this soft
 applicable U.S. export laws and regulations. User has the responsibility to obtain export licenses, or other export authority as may be 
 required before exporting such information to foreign countries or providing access to foreign persons.
 """
+from GPUtil import showUtilization as gpu_usage
+
 #General Imports
 import os
 import numpy as np
@@ -21,9 +23,13 @@ import torch.optim as opt
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data.distributed import DistributedSampler
 #from torch.nn import DataParallel as DDP
-from learnergy.models.deep import DBN, ResidualDBN, FCDBN
+from learnergy.models.deep import DBN, ResidualDBN
+from torch.utils.data.distributed import DistributedSampler
 
+from rbm_models.fcn_dbn import FCDBN
+from rbm_models.clust_dbn import ClustDBN
 #Visualization
 import learnergy.visual.convergence as converge
 import matplotlib 
@@ -33,6 +39,7 @@ import  matplotlib.pyplot as plt
 #Data
 #from dbn_datasets_cupy import DBNDataset
 from dbn_datasets import DBNDataset
+from dbn_datasets_conv import DBNDatasetConv 
 #from utils_cupy import numpy_to_torch, read_yaml, get_read_func, get_scaler
 from utils import numpy_to_torch, read_yaml, get_read_func, get_scaler
 
@@ -46,6 +53,9 @@ import pickle
 
 SEED = 42
 
+torch.backends.cudnn.benchmark = True
+torch.backends.cudnn.enabled = True
+
 def setup_ddp(device_ids, use_gpu=True):
     #os.environ['MASTER_ADDR'] = 'localhost'
     #os.environ['MASTER_PORT'] = port
@@ -57,7 +67,7 @@ def setup_ddp(device_ids, use_gpu=True):
         driver = "gloo"
 
     # initialize the process group
-    dist.init_process_group(driver)#, rank=rank, world_size=world_size, init_method="env://", timeout=timedelta(seconds=10))
+    dist.init_process_group(driver)
 
 def cleanup_ddp():
     dist.destroy_process_group()
@@ -91,45 +101,60 @@ def run_dbn(yml_conf):
     os.makedirs(out_dir, exist_ok=True)
 
     model_fname = yml_conf["output"]["model"]
+    model_file = os.path.join(out_dir, model_fname)
     training_output = yml_conf["output"]["training_output"]
     training_mse = yml_conf["output"]["training_mse"]
     testing_output = yml_conf["output"]["testing_output"]
     testing_mse = yml_conf["output"]["testing_mse"]
 
-    model_type = yml_conf["dbn"]["params"]["model_type"]
-    dbn_arch = tuple(yml_conf["dbn"]["params"]["dbn_arch"])
-    gibbs_steps = tuple(yml_conf["dbn"]["params"]["gibbs_steps"])
-    learning_rate = tuple(yml_conf["dbn"]["params"]["learning_rate"])
-    momentum = tuple(yml_conf["dbn"]["params"]["momentum"])
-    decay = tuple(yml_conf["dbn"]["params"]["decay"])
-    normalize_learnergy = tuple(yml_conf["dbn"]["params"]["normalize_learnergy"])
-    batch_normalize = tuple(yml_conf["dbn"]["params"]["batch_normalize"])
+    overwrite_model = yml_conf["dbn"]["overwrite_model"] 
+    use_gpu_pre = yml_conf["dbn"]["training"]["use_gpu_preprocessing"]
+    use_gpu = yml_conf["dbn"]["training"]["use_gpu"]
+    device_ids = yml_conf["dbn"]["training"]["device_ids"] 
 
     temp = None
     nesterov_accel = None
-
-    visible_shape = None
-    filter_shape = None
-    stride = None
-    n_filters = None
-    if "conv" in model_type[0]:
-        visible_shape = yml_conf["dbn"]["params"]["visible_shape"]
-        filter_shape = yml_conf["dbn"]["params"]["filter_shape"]
-        stride = yml_conf["dbn"]["params"]["stride"]
-        n_filters = yml_conf["dbn"]["params"]["n_filters"]
-    else:
-        temp = tuple(yml_conf["dbn"]["params"]["temp"])
+    model_type = None
+    dbn_arch = None
+    gibbs_steps = None
+    learning_rate = None
+    momentum = None
+    decay = None
+    normalize_learnergy = None
+    batch_normalize = None
+    fcn = False
+    tile = False
+    tile_size = None 
+    tile_step = None
+    nesterov_accel = None
+    auto_clust = False
+    use_gpu = False
+    batch_size = 0
+    epochs = 0
+    if not os.path.exists(model_file) or overwrite_model:
+        model_type = yml_conf["dbn"]["params"]["model_type"]
+        dbn_arch = tuple(yml_conf["dbn"]["params"]["dbn_arch"])
+        gibbs_steps = tuple(yml_conf["dbn"]["params"]["gibbs_steps"])
+        learning_rate = tuple(yml_conf["dbn"]["params"]["learning_rate"])
+        momentum = tuple(yml_conf["dbn"]["params"]["momentum"])
+        decay = tuple(yml_conf["dbn"]["params"]["decay"])
+        normalize_learnergy = tuple(yml_conf["dbn"]["params"]["normalize_learnergy"])
+        batch_normalize = tuple(yml_conf["dbn"]["params"]["batch_normalize"])
+ 
+        if "FCDBN" in model_type[0]:
+            tile = yml_conf["data"]["tile"]
+            tile_size = yml_conf["data"]["tile_size"]
+            tile_step = yml_conf["data"]["tile_step"]
+            fcn = True
+        else:
+            temp = tuple(yml_conf["dbn"]["params"]["temp"])
         nesterov_accel = tuple(yml_conf["dbn"]["params"]["nesterov_accel"])
  
-    use_gpu = yml_conf["dbn"]["training"]["use_gpu"]
-    use_gpu_pre = yml_conf["dbn"]["training"]["use_gpu_preprocessing"]
-    world_size = yml_conf["dbn"]["training"]["world_size"]
-    rank = yml_conf["dbn"]["training"]["rank"]
-    device_ids = yml_conf["dbn"]["training"]["device_ids"]
-    batch_size = yml_conf["dbn"]["training"]["batch_size"]
-    epochs = yml_conf["dbn"]["training"]["epochs"]
+        auto_clust = yml_conf["dbn"]["deep_cluster"]
+        use_gpu = yml_conf["dbn"]["training"]["use_gpu"]
+        batch_size = yml_conf["dbn"]["training"]["batch_size"]
+        epochs = yml_conf["dbn"]["training"]["epochs"]
 
-    overwrite_model = yml_conf["dbn"]["overwrite_model"]
 
     scaler_type = yml_conf["scaler"]["name"]
     scaler, scaler_train = get_scaler(scaler_type, cuda = use_gpu_pre)
@@ -143,26 +168,33 @@ def run_dbn(yml_conf):
 
     read_func = get_read_func(data_reader)
 
-    #Generate model
-    chunk_size = 1
-    for i in range(1,pixel_padding+1):
-        chunk_size = chunk_size + (8*i)
-
-    #Generate training dataset object
-    #Unsupervised, so targets are not used. Currently, I use this to store original image indices for each point 
-
- 
-
     if subset_count > 1: 
         print("WARNING: Making subset count > 1 for training data may lead to suboptimal results")
-    x2 = DBNDataset(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
-        valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
-        transform_values=transform_values, scalers = [scaler], train_scalers = scaler_train, scale = scale_data, \
-        transform=numpy_to_torch, subset=subset_count)
+    if not fcn:
+        x2 = DBNDataset(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
+            valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
+            transform_values=transform_values, scalers = [scaler], train_scalers = scaler_train, scale = scale_data, \
+            transform=numpy_to_torch, subset=subset_count)
+    else:
+        x2 = DBNDatasetConv(data_train, read_func, data_reader_kwargs, delete_chans=delete_chans, \
+             valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
+             transform_values=transform_values, transform=None, subset=subset_count, tile=tile, tile_size=tile_size, tile_step=tile_step)
 
+
+    #Generate model
+    if not fcn:
+        chunk_size = 1
+        for i in range(1,pixel_padding+1):
+            chunk_size = chunk_size + (8*i)
+    else:
+        print(x2.data_full.shape)
+        chunk_size = (x2.data_full.shape[2],x2.data_full.shape[3]) #TODO generalize
+        #chunk_size = x2.data_full.shape[x2.chan_dim+1] 
+
+    #TODO random sample in test, fix for generic case for commit
+    #x2.data_full = x2.data_full[100,:,:,:]
+    print(x2.data_full.shape)
  
-    fcn = False ##TODO fix
-
     model_file = os.path.join(out_dir, model_fname)
     if not os.path.exists(model_file) or overwrite_model:
         if not fcn:
@@ -170,7 +202,7 @@ def run_dbn(yml_conf):
             new_dbn = DBN(model=model_type, n_visible=chunk_size*number_channel, n_hidden=dbn_arch, steps=gibbs_steps, \
                 learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=use_gpu)
         else:
-            new_dbn = FCDBN(model=model_type,visible_shape=(chunk_size, chunk_size, number_channel), n_channels=number_channel, steps=gibbs_steps, \
+            new_dbn = FCDBN(model=model_type,visible_shape=chunk_size, n_channels=number_channel, steps=gibbs_steps, \
                 learning_rate=learning_rate, momentum=momentum, decay=decay, use_gpu=use_gpu)
 
         if use_gpu:
@@ -184,10 +216,14 @@ def run_dbn(yml_conf):
             #new_dbn.models[i] = new_dbn.models[i].torch_device = device
             #new_dbn.models[i] = new_dbn.models[i].to(device=device)
             if "LOCAL_RANK" in os.environ.keys():
-                new_dbn.models[i].ddp_model = DDP(new_dbn.models[i], device_ids=[local_rank], output_device=local_rank) #, device_ids=device_ids)
-            new_dbn.models[i]._optimizer = opt.SGD(new_dbn.models[i].parameters(), lr=learning_rate[i], momentum=momentum[i], weight_decay=decay[i], nesterov=nesterov_accel[i])
-            new_dbn.models[i].normalize = normalize_learnergy[i]
-            new_dbn.models[i].batch_normalize = batch_normalize[i]
+                if not isinstance(new_dbn.models[i], torch.nn.MaxPool2d):
+                    new_dbn.models[i].ddp_model = DDP(new_dbn.models[i], device_ids=[local_rank], output_device=local_rank) #, device_ids=device_ids)
+                else:
+                    new_dbn.models[i].ddp_model = new_dbn.models[i]
+            if not isinstance(new_dbn.models[i], torch.nn.MaxPool2d):
+                new_dbn.models[i]._optimizer = opt.SGD(new_dbn.models[i].parameters(), lr=learning_rate[i], momentum=momentum[i], weight_decay=decay[i], nesterov=nesterov_accel[i])
+                new_dbn.models[i].normalize = normalize_learnergy[i]
+                new_dbn.models[i].batch_normalize = batch_normalize[i]
  
         #Train model
         count = 0
@@ -196,71 +232,119 @@ def run_dbn(yml_conf):
                is_distributed = True, num_loader_workers = num_loader_workers, pin_memory=~use_gpu_pre) #int(os.cpu_count() / 3))
             count = count + 1
             x2.next_subset()
-
-
+ 
         dist.barrier()
         if local_rank == 0:            
             for i in range(len(new_dbn.models)):	
-                converge.plot(new_dbn.models[i]._history['mse'],
-                    labels=['MSE'], title='convergence', subtitle='Model: Restricted Boltzmann Machine')
-                plt.savefig(os.path.join(out_dir, "mse_plot_layer" + str(i) + ".png"))
-                plt.clf()
-                converge.plot( new_dbn.models[i]._history['pl'],
-                    labels=['log-PL'], title='Log-PL', subtitle='Model: Restricted Boltzmann Machine')
-                plt.savefig(os.path.join(out_dir, "log-pl_plot_layer" + str(i) + ".png"))
-                plt.clf()
-                converge.plot( new_dbn.models[i]._history['time'],
-                    labels=['time (s)'], title='Training Time', subtitle='Model: Restricted Boltzmann Machine')
-                plt.savefig(os.path.join(out_dir, "time_plot_layer" + str(i) + ".png"))
-                plt.clf()
+                if not isinstance(new_dbn.models[i], torch.nn.MaxPool2d):
+                    converge.plot(new_dbn.models[i]._history['mse'],
+                        labels=['MSE'], title='convergence', subtitle='Model: Restricted Boltzmann Machine')
+                    plt.savefig(os.path.join(out_dir, "mse_plot_layer" + str(i) + ".png"))
+                    plt.clf()
+                    converge.plot( new_dbn.models[i]._history['pl'],
+                        labels=['log-PL'], title='Log-PL', subtitle='Model: Restricted Boltzmann Machine')
+                    plt.savefig(os.path.join(out_dir, "log-pl_plot_layer" + str(i) + ".png"))
+                    plt.clf()
+                    converge.plot( new_dbn.models[i]._history['time'],
+                        labels=['time (s)'], title='Training Time', subtitle='Model: Restricted Boltzmann Machine')
+                    plt.savefig(os.path.join(out_dir, "time_plot_layer" + str(i) + ".png"))
+                    plt.clf()
+
+
+        final_model = new_dbn
+        if auto_clust == True:
+
+           dataset2 = TensorDataset(x2.data, x2.targets)
+           loader = None
+           is_distributed = True #TODO
+           if is_distributed:
+               sampler = DistributedSampler(dataset2, shuffle=True)
+               loader = DataLoader(dataset2, batch_size=batch_size, shuffle=False,
+                    sampler=sampler, num_workers = num_loader_workers, pin_memory = ~use_gpu_pre,
+                    drop_last=False)
+
+           #Get cluster config
+           #call clustering 
+           clust_dbn = ClustDBN(new_dbn, dbn_arch[-1], 500, True) #TODO parameterize
+           final_model = clust_dbn
+        count = 0
+        while(count == 0 or x2.has_next_subset()):
+           clust_dbn.fit(dataset2, batch_size, epochs[-1], loader, sampler)
+           count = count + 1
+           x2.next_subset()
 
     else:
         print("Loading pre-existing model")
         new_dbn = torch.load(model_file)   
-
-    for i in range(len(new_dbn.models)):
-        converge.plot(new_dbn.models[i]._history['mse'], new_dbn.models[i]._history['pl'],
-            new_dbn.models[i]._history['time'], labels=['MSE', 'log-PL', 'time (s)'],
-            title='convergence over MNIST dataset', subtitle='Model: Restricted Boltzmann Machine')
-        plt.savefig(os.path.join(out_dir, "convergence_plot_layer" + str(i) + ".png"))
+ 
+        for i in range(len(new_dbn.models)):
+            if not isinstance(new_dbn.models[i], torch.nn.MaxPool2d):
+                converge.plot(new_dbn.models[i]._history['mse'], new_dbn.models[i]._history['pl'],
+                    new_dbn.models[i]._history['time'], labels=['MSE', 'log-PL', 'time (s)'],
+                    title='convergence over MNIST dataset', subtitle='Model: Restricted Boltzmann Machine')
+                plt.savefig(os.path.join(out_dir, "convergence_plot_layer" + str(i) + ".png"))
+        final_model = new_dbn
 
     if not os.path.exists(model_file) or overwrite_model:
         #Save model
-        torch.save(new_dbn, os.path.join(out_dir, model_fname))
+        torch.save(new_dbn.state_dict(), os.path.join(out_dir, model_fname))
 
     #TODO: For now set all subsetting to 1 - will remove subsetting later. 
     #Maintain output_subset_count - is/will be used by DataLoader in generate_output
     if local_rank == 0:
         #Generate test datasets
         x3 = None
+        fname_begin = "file"
+        if auto_clust == True:
+            fname_begin = fname_begin +"_clust"
         for t in range(0, len(data_test)):
             if t == 0:
                 scaler = x2.scalers
+                transform = x2.transform
                 del x2
             else:
                 scaler = x3.scalers
-            x3 = DBNDataset([data_test[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scalers=scaler, scale = scale_data, transform=numpy_to_torch, subset=subset_count)
+                transform = x3.transform
+	
+            if not fcn:
+                x3 = DBNDataset([data_test[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
+                    fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scalers=scaler, scale = scale_data, \
+				transform=transform,  subset=subset_count)
+            else:
+                x3 = DBNDatasetConv([data_test[t]], read_func, data_reader_kwargs,  delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
+                fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, transform = transform, \
+                subset=subset_count, tile=tile, tile_size=tile_size, tile_step=tile_step)
 
-            generate_output(x3, new_dbn, use_gpu, out_dir, "file" + str(t) + "_" +  testing_output, testing_mse, output_subset_count, ~use_gpu_pre)
+            generate_output(x3, final_model, use_gpu, out_dir, fname_begin + str(t) + "_" +  testing_output, testing_mse, output_subset_count, ~use_gpu_pre, fcn)
     
-        #Generate test datasets. Doing it this way, because generating all at once creates memory issues
+	#Generate test datasets. Doing it this way, because generating all at once creates memory issues
         x2 = None
         for t in range(0, len(data_train)):
             if t == 0:
                 scaler = x3.scalers
+                transform = x3.transform
                 del x3
             else:
                 scaler = x2.scalers
-            x2 = DBNDataset([data_train[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scalers = scaler, scale = scale_data, transform=numpy_to_torch, subset=subset_count)
+                transform = x2.transform
 
-            generate_output(x2, new_dbn, use_gpu, out_dir, "file" + str(t) + "_" +  training_output, training_mse, output_subset_count, ~use_gpu_pre)
+            if not fcn:
+                x2 = DBNDataset([data_train[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, \
+                   valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, \
+                   scalers = scaler, scale = scale_data, transform=numpy_to_torch, subset=subset_count)
+            else:
+                x2 = DBNDatasetConv([data_train[t]], read_func, data_reader_kwargs,  delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
+                    fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, transform = transform, \
+                    subset=subset_count, tile=tile, tile_size=tile_size, tile_step=tile_step)
+ 
+            generate_output(x2, final_model, use_gpu, out_dir, fname_begin + str(t) + "_" +  training_output, training_mse, output_subset_count, ~use_gpu_pre, fcn)
 
     if "LOCAL_RANK" in os.environ.keys():
         cleanup_ddp() 
  
-def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, output_subset_count, pin_mem = False):
+def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, output_subset_count, pin_mem = False, fcn = False):
     output_full = None
-    rec_mse_full = []
+    #rec_mse_full = []
     count = 0
     dat.current_subset = -1
     dat.next_subset()
@@ -274,37 +358,56 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, output_subs
         device = torch.device("cpu:{}".format(local_rank))
 
     ind = 0
-    while(count == 0 or dat.has_next_subset() or dat.current_subset > (dat.subset-2)):
-        test_loader = DataLoader(dat, batch_size=1000, shuffle=False,
-                    num_workers = 0, drop_last = False, pin_memory = pin_mem) #int(os.cpu_count() / 3), pin_memory = True,
-        #            drop_last=True)
+    while(count == 0 or dat.has_next_subset() or (dat.subset > 1 and dat.current_subset > (dat.subset-2))):
+        gpu_usage()
+        test_loader = DataLoader(dat, batch_size=1000, shuffle=False, \
+        num_workers = 0, drop_last = False, pin_memory = pin_mem) #int(os.cpu_count() / 3), pin_memory = True,
+        #            drop_last=False)
 
-        
+        gpu_usage()
+        ind = 0
+        ind2 = 0 
         for data in test_loader:
             dat_dev, lab_dev = data[0].to(device=device, non_blocking=True), data[1].to(device=device, non_blocking=True)
             dev_ds = TensorDataset(dat_dev, lab_dev)
 
+            gpu_usage()
             output = mdl.forward(dat_dev)  
+            if isinstance(output, list):
+                output = output[0] #TODO improve usage uf multi-headed output after single-headed approach validated
+
             if use_gpu == True:
                 output = output.detach().cpu()
+            gpu_usage()
+            loader = DataLoader(dev_ds, batch_size=1000, shuffle=False, \
+                num_workers = 0, drop_last = False, pin_memory = False)
+            #TODO rec_mse, visible_probs = mdl.reconstruct(dat_dev, loader)
+            dat_dev = dat_dev.detach().cpu()
+            lab_dev = lab_dev.detach().cpu()
+            del dev_ds
+            #visible_probs = visible_probs.detach().cpu()
+            #del visible_probs
+            #if use_gpu == True:
+            #    rec_mse = rec_mse.detach().cpu() 
 
-            loader = DataLoader(dev_ds, batch_size=len(dat_dev), shuffle=False, \
-                num_workers = 0, drop_last = True, pin_memory = False)
-            rec_mse, _ = mdl.reconstruct(dat_dev, loader)
-
-            rec_mse = rec_mse.detach().cpu()
-
-            rec_mse_full.append(torch.unsqueeze(rec_mse, 0)) 
+            #gpu_usage()
+            #rec_mse_full.append(rec_mse) 
             if output_full is None:
-                output_full = torch.zeros(dat.data.shape[0], output.shape[1], dtype=torch.float32)
-            output_full[1000*ind:1000*(ind+1),:] = output
-            print("CONSTRUCTING OUTPUT", dat.data.shape, dat.data_full.shape, output.shape, output_full.shape, output.get_device(), rec_mse.get_device())
+                if not fcn:
+                    output_full = torch.zeros(dat.data_full.shape[0], output.shape[1], dtype=torch.float32)
+                else:
+                    output_full = torch.zeros(dat.data_full.shape[0], dat.data_full.shape[1], output.shape[2], dtype=torch.float32)       
+            ind1 = ind2 
+            ind2 += dat_dev.shape[0]
+            if ind2 > output_full.shape[0]:
+                ind2 = output_full.shape[0]
+            output_full[ind1:ind2,:] = output
+            print("CONSTRUCTING OUTPUT", dat.data.shape, dat.data_full.shape, output.shape, output_full.shape, output.get_device()) #, rec_mse.get_device())
             ind = ind + 1
             del output
             #del rec_mse
             del dat_dev
             del lab_dev
-            del dev_ds
             del loader
         count = count + 1
         if dat.has_next_subset():
@@ -312,6 +415,7 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, output_subs
         else:
             break 
     #Save training output
+    print("SAVING", os.path.join(out_dir, output_fle))
     torch.save(output_full, os.path.join(out_dir, output_fle), pickle_protocol=pickle.HIGHEST_PROTOCOL)
     torch.save(dat.targets_full, os.path.join(out_dir, output_fle + ".indices"), pickle_protocol=pickle.HIGHEST_PROTOCOL)
     torch.save(dat.data_full, os.path.join(out_dir, output_fle + ".input"), pickle_protocol=pickle.HIGHEST_PROTOCOL)
@@ -322,22 +426,21 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, output_subs
 
 
 def main(yml_fpath):
-   
-    #Translate config to dictionary 
-    yml_conf = read_yaml(yml_fpath)
-    #Run 
-    run_dbn(yml_conf)
+	#Translate config to dictionary 
+	yml_conf = read_yaml(yml_fpath)
+	#Run 
+	run_dbn(yml_conf)
 
 
 if __name__ == '__main__':
-	
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-y", "--yaml", help="YAML file for DBN and output config.")
-    args = parser.parse_args()
-    from timeit import default_timer as timer
-    start = timer()
-    main(args.yaml)
-    end = timer()
-    print(end - start) # Time in seconds, e.g. 5.38091952400282
+	 
+	parser = argparse.ArgumentParser()
+	parser.add_argument("-y", "--yaml", help="YAML file for DBN and output config.")
+	args = parser.parse_args()
+	from timeit import default_timer as timer
+	start = timer()
+	main(args.yaml)
+	end = timer()
+	print(end - start) # Time in seconds, e.g. 5.38091952400282
 
 
