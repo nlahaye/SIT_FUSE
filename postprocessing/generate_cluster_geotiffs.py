@@ -153,7 +153,7 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 				clss = classes[i]
 				ind = np.where(dbnDat1 == clss)
 				outDat[ind] = 1
-				inds = np.where(outDat < 0 & dbnDat1 >= 0)
+				inds = np.where((outDat < 0) & (dbnDat1 >= 0))
 				outDat[inds] = 0
 				file_ext = ".cluster_class" + str(clss)
  

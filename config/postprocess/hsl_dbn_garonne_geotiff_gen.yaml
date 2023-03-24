@@ -9,13 +9,10 @@ data:
  create_separate: true
    
  gtiff_data: [
-"/data/nlahaye/remoteSensing/LS8_GARRONE/new_tile/HLS.S30.T30TYQ.2022345T105339.v2.0.B01.tif",
-"/data/nlahaye/remoteSensing/LS8_GARRONE/new_tile/HLS.S30.T30TYQ.2022345T105339.v2.0.B01.tif",
-"/data/nlahaye/remoteSensing/LS8_GARRONE/new_tile/HLS.S30.T30TYQ.2022345T105339.v2.0.B01.tif",
-"/data/nlahaye/remoteSensing/LS8_GARRONE/new_tile/HLS.S30.T30TYQ.2022345T105339.v2.0.B01.tif",
-"/data/nlahaye/remoteSensing/LS8_GARRONE/new_tile/HLS.S30.T30TYQ.2022345T105339.v2.0.B01.tif",
-"/data/nlahaye/remoteSensing/LS8_GARRONE/new_tile/HLS.S30.T30TYQ.2022345T105339.v2.0.B01.tif",
-"/data/nlahaye/remoteSensing/LS8_GARRONE/new_tile/HLS.S30.T30TYQ.2022345T105339.v2.0.B01.tif"]
+"/data/nlahaye/remoteSensing/LS8_GARRONE/HLS.L30.T30TYQ.2022105T104152.v2.0.B01.tif",
+"/data/nlahaye/remoteSensing/LS8_GARRONE/HLS.L30.T30TYQ.2022105T104152.v2.0.B01.tif",
+"/data/nlahaye/remoteSensing/LS8_GARRONE/HLS.L30.T30TYQ.2022105T104152.v2.0.B01.tif",
+"/data/nlahaye/remoteSensing/LS8_GARRONE/HLS.L30.T30TYQ.2022105T104152.v2.0.B01.tif"]
 
 
 
@@ -23,10 +20,7 @@ data:
 "/data/nlahaye/output/Learnergy/DBN_HSL_S2_GARONNE/file0_output.data.clustering_500clusters.zarr",
 "/data/nlahaye/output/Learnergy/DBN_HSL_S2_GARONNE/file0_output_test.data.clustering_500clusters.zarr",
 "/data/nlahaye/output/Learnergy/DBN_HSL_S2_GARONNE/file1_output_test.data.clustering_500clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_HSL_S2_GARONNE/file2_output_test.data.clustering_500clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_HSL_S2_GARONNE/file3_output_test.data.clustering_500clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_HSL_S2_GARONNE/file4_output_test.data.clustering_500clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_HSL_S2_GARONNE/file5_output_test.data.clustering_500clusters.zarr"]
+"/data/nlahaye/output/Learnergy/DBN_HSL_S2_GARONNE/file2_output_test.data.clustering_500clusters.zarr"]
 
 
  
