@@ -13,7 +13,7 @@ import numpy as np
 from osgeo import osr, gdal
 from subprocess import DEVNULL, run, Popen, PIPE
 
-from utils import numpy_to_torch, read_yaml, get_read_func
+from utils import numpy_to_torch, read_yaml, get_read_func, get_lat_lon
 
 TIF_RE = "(\w+_\w+_)\w+(_\d+_\d+)_wgs84_fit.tif"
 MODIS_BAND_ORDER = ["vis01", "vis02", "vis03", "vis04", "vis05", "vis06", "vis07",  "bt20", "bt21", "bt22", "bt23", "bt24", "bt25", "vis26", "bt27", "bt28", "bt29", "bt30", "bt31", "bt32", "bt33", "bt34", "bt35", "bt36"]
@@ -172,31 +172,7 @@ def genLatLon(fnames):
 
     for i in range(len(fnames)):
         fname = fnames[i]
- 
-        # open the dataset and get the geo transform matrix
-        ds = gdal.Open(fname)
-        xoffset, px_w, rot1, yoffset, px_h, rot2 = ds.GetGeoTransform()
-        dataArr = ds.ReadAsArray()
-
-        lonLat = np.zeros((dataArr.shape[0], dataArr.shape[1], 2))
-
-        # get CRS from dataset 
-        crs = osr.SpatialReference()
-        crs.ImportFromWkt(ds.GetProjectionRef())
-
-        # create lat/long crs with WGS84 datum
-        crsGeo = osr.SpatialReference()
-        crsGeo.ImportFromEPSG(4326) # 4326 is the EPSG id of lat/long crs 
-        t = osr.CoordinateTransformation(crs, crsGeo)
-        for j in range(dataArr.shape[1]):
-            for k in range(dataArr.shape[0]):
-                posX = px_w * j + rot1 * k + (px_w * 0.5) + (rot1 * 0.5) + xoffset
-                posY = px_h * j + rot2 * k + (px_h * 0.5) + (rot2 * 0.5) + yoffset
- 
-                (lon, lat, z) = t.TransformPoint(posX, posY)
-                lonLat[k,j,1] = lon
-                lonLat[k,j,0] = lat
-
+        lonLat = get_lat_lon(fname)
  
         outFname = fname + ".lonlat.zarr"
         print(outFname)
