@@ -28,7 +28,9 @@ def main(yml_fpath):
     start_date = datetime.strptime( yml_conf['start_date'], '%Y-%m-%d')
     end_date = datetime.strptime( yml_conf['end_date'], '%Y-%m-%d')
     insitu_hab_to_multi_hist(yml_conf['xl_fname'], start_date, end_date,
-		yml_conf['clusters_dir'], yml_conf['clusters'], yml_conf['radius_meters'], yml_conf['files_test'],
+		yml_conf['clusters_dir'], yml_conf['clusters'], yml_conf['radius_degrees'],
+                yml_conf['ranges'], yml_conf['global_max'],
+                yml_conf['files_test'],
 		yml_conf['files_train'])
 
 if __name__ == '__main__':
