@@ -18,25 +18,33 @@ from copy import deepcopy
 
 
  
-def merge_datasets(paths, fname_str, out_dir): 
-    for root, dirs, files in os.walk(paths[0]):
+def merge_datasets(num_classes, paths, fname_str, out_dir, base_index = 0): 
+    for root, dirs, files in os.walk(paths[base_index]):
         for fle in files:
             if fname_str in fle:
+                fname = os.path.join(out_dir, fle)
+                if os.path.exists(fname):
+                    continue
                 fle1 = os.path.join(root, fle)
                 dat1 = gdal.Open(fle1)
                 imgData1 = dat1.ReadAsArray()
                 inds = np.where(imgData1 >= 0)
-                imgData1[inds] = imgData1[inds] + 2**(len(paths)-1)
-
-
-                for j in range(1, len(paths)):
+                print(imgData1.max(), num_classes**(len(paths)-(1+base_index)))
+                imgData1[inds] = imgData1[inds] + num_classes**(len(paths)-(1+base_index))
+                
+                for j in range(base_index+1, len(paths)):
                     fle2 = os.path.join(paths[j], fle)
-                    dat2 = gdal.Open(fle2)
-                    imgData2 = dat2.ReadAsArray()
-                    inds = np.where((imgData1 < 0) & (imgData2 >= 0))
-                    imgData1[inds] = imgData2[inds] + 2**(len(paths)-(1+j))
-                    dat2.FlushCache()
-                    dat2 = None
+                    if os.path.exists(fle2):
+                        dat2 = gdal.Open(fle2)
+                        imgData2 = dat2.ReadAsArray()
+                        inds = np.where((imgData1 < 0) & (imgData2 >= 0))
+                        imgData1[inds] = imgData2[inds] + num_classes**(len(paths)-(1+j))
+                        #inds = np.where((imgData1 % num_classes == 0) & (imgData2 > 0))
+                        #imgData1[inds] = imgData2[inds] + num_classes**(len(paths)-(1+j))
+                        inds = np.where((imgData1 % num_classes == 0))
+                        imgData1[inds] = 0
+                        dat2.FlushCache()
+                        dat2 = None
                 
                 nx = imgData1.shape[1]
                 ny = imgData1.shape[0]
@@ -45,7 +53,6 @@ def merge_datasets(paths, fname_str, out_dir):
                 dat1.FlushCache()
                 dat1 = None
           
-                fname = os.path.join(out_dir, fle)
                 out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Byte)
                 out_ds.SetGeoTransform(geoTransform)
                 out_ds.SetProjection(wkt)
@@ -58,8 +65,9 @@ def main(yml_fpath):
     #Translate config to dictionary 
     yml_conf = read_yaml(yml_fpath)
     #Run 
-    merge_datasets(yml_conf['input_paths'], yml_conf['fname_str'], yml_conf['out_dir'])
-
+    for i in range(len(yml_conf['input_paths'])):
+        merge_datasets(yml_conf['num_classes'], yml_conf['input_paths'], yml_conf['fname_str'], yml_conf['out_dir'], i)
+ 
 
 if __name__ == '__main__':
 
