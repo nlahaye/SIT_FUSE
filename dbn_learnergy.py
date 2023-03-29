@@ -14,7 +14,12 @@ import numpy as np
 import random
 
 import sys
-sys.setrecursionlimit(4500)
+import resource
+max_rec = 0x100000
+
+# May segfault without this line. 0x100 is a guess at the size of each stack frame.
+resource.setrlimit(resource.RLIMIT_STACK, [0x100 * max_rec, resource.RLIM_INFINITY])
+sys.setrecursionlimit(max_rec)
 
 #ML imports
 import torch
@@ -131,31 +136,30 @@ def run_dbn(yml_conf):
     use_gpu = False
     batch_size = 0
     epochs = 0
-    if not os.path.exists(model_file) or overwrite_model:
-        model_type = yml_conf["dbn"]["params"]["model_type"]
-        dbn_arch = tuple(yml_conf["dbn"]["params"]["dbn_arch"])
-        gibbs_steps = tuple(yml_conf["dbn"]["params"]["gibbs_steps"])
-        learning_rate = tuple(yml_conf["dbn"]["params"]["learning_rate"])
-        momentum = tuple(yml_conf["dbn"]["params"]["momentum"])
-        decay = tuple(yml_conf["dbn"]["params"]["decay"])
-        normalize_learnergy = tuple(yml_conf["dbn"]["params"]["normalize_learnergy"])
-        batch_normalize = tuple(yml_conf["dbn"]["params"]["batch_normalize"])
+    model_type = yml_conf["dbn"]["params"]["model_type"]
+    dbn_arch = tuple(yml_conf["dbn"]["params"]["dbn_arch"])
+    gibbs_steps = tuple(yml_conf["dbn"]["params"]["gibbs_steps"])
+    learning_rate = tuple(yml_conf["dbn"]["params"]["learning_rate"])
+    momentum = tuple(yml_conf["dbn"]["params"]["momentum"])
+    decay = tuple(yml_conf["dbn"]["params"]["decay"])
+    normalize_learnergy = tuple(yml_conf["dbn"]["params"]["normalize_learnergy"])
+    batch_normalize = tuple(yml_conf["dbn"]["params"]["batch_normalize"])
  
-        subset_training = yml_conf["dbn"]["subset_training"]
+    subset_training = yml_conf["dbn"]["subset_training"]
 
-        if "FCDBN" in model_type[0]:
-            tile = yml_conf["data"]["tile"]
-            tile_size = yml_conf["data"]["tile_size"]
-            tile_step = yml_conf["data"]["tile_step"]
-            fcn = True
-        else:
-            temp = tuple(yml_conf["dbn"]["params"]["temp"])
-        nesterov_accel = tuple(yml_conf["dbn"]["params"]["nesterov_accel"])
+    if "FCDBN" in model_type[0]:
+        tile = yml_conf["data"]["tile"]
+        tile_size = yml_conf["data"]["tile_size"]
+        tile_step = yml_conf["data"]["tile_step"]
+        fcn = True
+    else:
+        temp = tuple(yml_conf["dbn"]["params"]["temp"])
+    nesterov_accel = tuple(yml_conf["dbn"]["params"]["nesterov_accel"])
  
-        auto_clust = yml_conf["dbn"]["deep_cluster"]
-        use_gpu = yml_conf["dbn"]["training"]["use_gpu"]
-        batch_size = yml_conf["dbn"]["training"]["batch_size"]
-        epochs = yml_conf["dbn"]["training"]["epochs"]
+    auto_clust = yml_conf["dbn"]["deep_cluster"]
+    use_gpu = yml_conf["dbn"]["training"]["use_gpu"]
+    batch_size = yml_conf["dbn"]["training"]["batch_size"]
+    epochs = yml_conf["dbn"]["training"]["epochs"]
 
 
     scaler_type = yml_conf["scaler"]["name"]
@@ -197,36 +201,35 @@ def run_dbn(yml_conf):
     #x2.data_full = x2.data_full[100,:,:,:]
     print(x2.data_full.shape)
  
-    model_file = os.path.join(out_dir, model_fname)
-    if not os.path.exists(model_file) or overwrite_model:
-        if not fcn:
-            #ResidualDBN?
-            new_dbn = DBN(model=model_type, n_visible=chunk_size*number_channel, n_hidden=dbn_arch, steps=gibbs_steps, \
-                learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=use_gpu)
-        else:
-            new_dbn = FCDBN(model=model_type,visible_shape=chunk_size, n_channels=number_channel, steps=gibbs_steps, \
-                learning_rate=learning_rate, momentum=momentum, decay=decay, use_gpu=use_gpu)
+    if not fcn:
+        #ResidualDBN?
+        new_dbn = DBN(model=model_type, n_visible=chunk_size*number_channel, n_hidden=dbn_arch, steps=gibbs_steps, \
+            learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=use_gpu)
+    else:
+        new_dbn = FCDBN(model=model_type,visible_shape=chunk_size, n_channels=number_channel, steps=gibbs_steps, \
+            learning_rate=learning_rate, momentum=momentum, decay=decay, use_gpu=use_gpu)
 
-        if use_gpu:
-            torch.cuda.manual_seed_all(SEED)
-            device = torch.device("cuda:{}".format(local_rank))
-        else:
-            device = torch.device("cpu:{}".format(local_rank))
+    if use_gpu:
+        torch.cuda.manual_seed_all(SEED)
+        device = torch.device("cuda:{}".format(local_rank))
+    else:
+        device = torch.device("cpu:{}".format(local_rank))
 
-        for i in range(len(new_dbn.models)):
-            #new_dbn.models[i] = new_dbn.models[i].local_rank = local_rank
-            #new_dbn.models[i] = new_dbn.models[i].torch_device = device
-            #new_dbn.models[i] = new_dbn.models[i].to(device=device)
-            if "LOCAL_RANK" in os.environ.keys():
-                if not isinstance(new_dbn.models[i], torch.nn.MaxPool2d):
-                    new_dbn.models[i].ddp_model = DDP(new_dbn.models[i], device_ids=[local_rank], output_device=local_rank) #, device_ids=device_ids)
-                else:
-                    new_dbn.models[i].ddp_model = new_dbn.models[i]
+    for i in range(len(new_dbn.models)):
+        #new_dbn.models[i] = new_dbn.models[i].local_rank = local_rank
+        #new_dbn.models[i] = new_dbn.models[i].torch_device = device
+        #new_dbn.models[i] = new_dbn.models[i].to(device=device)
+        if "LOCAL_RANK" in os.environ.keys():
             if not isinstance(new_dbn.models[i], torch.nn.MaxPool2d):
-                new_dbn.models[i]._optimizer = opt.SGD(new_dbn.models[i].parameters(), lr=learning_rate[i], momentum=momentum[i], weight_decay=decay[i], nesterov=nesterov_accel[i])
-                new_dbn.models[i].normalize = normalize_learnergy[i]
-                new_dbn.models[i].batch_normalize = batch_normalize[i]
- 
+                new_dbn.models[i] = DDP(new_dbn.models[i], device_ids=[local_rank], output_device=local_rank) #, device_ids=device_ids)
+            else:
+                new_dbn.models[i] = new_dbn.models[i]
+        if not isinstance(new_dbn.models[i], torch.nn.MaxPool2d):
+            new_dbn.models[i]._optimizer = opt.SGD(new_dbn.models[i].parameters(), lr=learning_rate[i], momentum=momentum[i], weight_decay=decay[i], nesterov=nesterov_accel[i])
+            new_dbn.models[i].normalize = normalize_learnergy[i]
+            new_dbn.models[i].batch_normalize = batch_normalize[i]
+
+    if not os.path.exists(model_file + ".ckpt") or overwrite_model: 
         #Train model
         count = 0
         while(count == 0 or x2.has_next_subset()):
@@ -239,61 +242,73 @@ def run_dbn(yml_conf):
         if local_rank == 0:            
             for i in range(len(new_dbn.models)):	
                 if not isinstance(new_dbn.models[i], torch.nn.MaxPool2d):
-                    converge.plot(new_dbn.models[i]._history['mse'],
+                    converge.plot(new_dbn.models[i].module._history['mse'],
                         labels=['MSE'], title='convergence', subtitle='Model: Restricted Boltzmann Machine')
                     plt.savefig(os.path.join(out_dir, "mse_plot_layer" + str(i) + ".png"))
                     plt.clf()
-                    converge.plot( new_dbn.models[i]._history['pl'],
+                    converge.plot( new_dbn.models[i].module._history['pl'],
                         labels=['log-PL'], title='Log-PL', subtitle='Model: Restricted Boltzmann Machine')
                     plt.savefig(os.path.join(out_dir, "log-pl_plot_layer" + str(i) + ".png"))
                     plt.clf()
-                    converge.plot( new_dbn.models[i]._history['time'],
+                    converge.plot( new_dbn.models[i].module._history['time'],
                         labels=['time (s)'], title='Training Time', subtitle='Model: Restricted Boltzmann Machine')
                     plt.savefig(os.path.join(out_dir, "time_plot_layer" + str(i) + ".png"))
                     plt.clf()
 
 
-        final_model = new_dbn
-        if auto_clust == True:
-
+    final_model = new_dbn
+    if auto_clust == True:
+        clust_dbn = ClustDBN(new_dbn, dbn_arch[-1], 500, True) #TODO parameterize
+        clust_dbn.fc = DDP(clust_dbn.fc, device_ids=[local_rank], output_device=local_rank)
+        final_model = clust_dbn
+        if not os.path.exists(model_file + ".ckpt") or overwrite_model:
            dataset2 = TensorDataset(x2.data, x2.targets)
            loader = None
-           is_distributed = True #TODO
+           is_distributed = True 
            if is_distributed:
                sampler = DistributedSampler(dataset2, shuffle=True)
                loader = DataLoader(dataset2, batch_size=batch_size, shuffle=False,
                     sampler=sampler, num_workers = num_loader_workers, pin_memory = ~use_gpu_pre,
                     drop_last=False)
 
-           #Get cluster config
-           #call clustering 
-           clust_dbn = ClustDBN(new_dbn, dbn_arch[-1], 500, True) #TODO parameterize
-           final_model = clust_dbn
-        count = 0
-        while(count == 0 or x2.has_next_subset()):
-           clust_dbn.fit(dataset2, batch_size, epochs[-1], loader, sampler)
-           count = count + 1
-           x2.next_subset()
+           count = 0
+           while(count == 0 or x2.has_next_subset()):
+               clust_dbn.fit(dataset2, batch_size, epochs[-1], loader, sampler)
+               count = count + 1
+               x2.next_subset()
 
-    else:
+    if os.path.exists(model_file + ".ckpt") and not overwrite_model:
         print("Loading pre-existing model")
-        new_dbn = torch.load(model_file)   
+        if auto_clust == True:
+            final_model.dbn_trunk.load_state_dict(torch.load(model_file + ".ckpt"))
+            final_model.fc.load_state_dict(torch.load(model_file + "_fc_clust.ckpt"))
+        else:
+            final_model.load_state_dict(torch.load(model_file + ".ckpt"))
+        #for m in range(len(new_dbn._models)):
+        #    new_dbn._models[m].load_state_dict(model_file + "_sub_model_" + str(m) + ".ckpt") 
+
+
  
+    if not os.path.exists(model_file + ".ckpt") or overwrite_model:
         for i in range(len(new_dbn.models)):
             if not isinstance(new_dbn.models[i], torch.nn.MaxPool2d):
-                converge.plot(new_dbn.models[i]._history['mse'], new_dbn.models[i]._history['pl'],
-                    new_dbn.models[i]._history['time'], labels=['MSE', 'log-PL', 'time (s)'],
-                    title='convergence over MNIST dataset', subtitle='Model: Restricted Boltzmann Machine')
+                converge.plot(new_dbn.models[i].module._history['mse'], new_dbn.models[i].module._history['pl'],
+                    new_dbn.models[i].module._history['time'], labels=['MSE', 'log-PL', 'time (s)'],
+                    title='convergence over dataset', subtitle='Model: Restricted Boltzmann Machine')
                 plt.savefig(os.path.join(out_dir, "convergence_plot_layer" + str(i) + ".png"))
-        final_model = new_dbn
 
-    if not os.path.exists(model_file) or overwrite_model:
-        #Save model
-        torch.save(new_dbn.state_dict(), os.path.join(out_dir, model_fname))
-
-    #TODO: For now set all subsetting to 1 - will remove subsetting later. 
-    #Maintain output_subset_count - is/will be used by DataLoader in generate_output
+    dist.barrier()
     if local_rank == 0:
+        if not os.path.exists(model_file + ".ckpt") or overwrite_model:
+            #Save model
+            if auto_clust == True:
+                torch.save(final_model.dbn_trunk.state_dict(), model_file + ".ckpt")
+                torch.save(final_model.fc.state_dict(), model_file + "_fc_clust.ckpt")
+            else:
+                torch.save(final_model.state_dict(), model_file + ".ckpt")
+
+        #TODO: For now set all subsetting to 1 - will remove subsetting later. 
+        #Maintain output_subset_count - is/will be used by DataLoader in generate_output
         #Generate test datasets
         x3 = None
         fname_begin = "file"
