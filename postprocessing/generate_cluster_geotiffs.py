@@ -24,6 +24,7 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 	total = []
 	totalTruth = []
 	outUnion = None
+	unionCount = None
 	for p in range(len(cluster_data)):
 		print("FNAME1", cluster_data[p])
 		print("FNAME2", gtiff_data[p])
@@ -95,13 +96,20 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 			if generate_union > 0 and outUnion is None:
 				#union cases assume input scenes are all the same size
 				outUnion = np.zeros(dbnDat1.shape, dtype=np.int32) 	
+				unionCount = np.zeros(dbnDat1.shape, dtype=np.int32) 
 
-			for i in range(len(context_clusters)):
-				clss = context_clusters[i]
-				ind = np.where(dbnDat1 == clss)
-				outDat[ind] = 1
-				if generate_union > 0 and outUnion is not None:
-					outUnion[ind] = outUnion[ind] + 1
+			if not isinstance(context_clusters[0], list):
+				tmp = []
+				tmp.append(context_clusters)
+				context_clusters = tmp
+			for j in range(len(context_clusters)):
+				for i in range(len(context_clusters[j])):
+					clss = context_clusters[j][i]
+					ind = np.where(dbnDat1 == clss)
+					outDat[ind] = (j+1)
+					if generate_union > 0 and outUnion is not None:
+						outUnion[ind] = outUnion[ind] + (j+1)
+						unionCount[ind] = unionCount[ind] + 1
 
 			inds = np.where(outDat < 0 & dbnDat1 >= 0)
 			outDat[inds] = 0
@@ -126,15 +134,19 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 				out_ds.SetGeoTransform(geoTransform)
 				out_ds.SetProjection(wkt)
 
+				inds = np.where(unionCount == 0)
+				unionCount[inds] = 1
+				outUnion = np.divide(outUnion,unionCount,dtype=np.int32)
+
 				outUnionFull = None
 				if len(subset_inds[p]) > 0:
 					outUnionFull[subset_inds[0]:subset_inds[1],subset_inds[2]:subset_inds[3]] = outUnion
 				else:
 					outUnionFull = outUnion
-				inds = np.where(outUnionFull < (generate_union))
+				inds = np.where(outUnionFull <= 0)
 				outUnionFull[inds] = 0 
-				inds = np.where(outUnionFull > 0)
-				outUnionFull[inds] = 1
+				#inds = np.where(outUnionFull > 0)
+				#outUnionFull[inds] = 1
 				out_ds.GetRasterBand(1).WriteArray(outUnionFull) 
 				out_ds.FlushCache()
 				out_ds = None
@@ -193,6 +205,7 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 
 def generate_separate_from_full(gtiff_data, apply_context, context_clusters, context_name, create_separate=True, generate_union=False):
         outUnion = None
+        unionCount = None
         for p in range(len(gtiff_data)):
                 print(gtiff_data[p])
 
@@ -218,17 +231,29 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
                         if generate_union > 0 and outUnion is None:
                                 #union cases assume input scenes are all the same size
                                 outUnion = np.zeros(dbnDat1.shape, dtype=np.int32) - 1
-                        for i in range(len(context_clusters)):
-                                clss = context_clusters[i]
+                                unionCount = np.zeros(dbnDat1.shape, dtype=np.int32)
+
+                        print(context_clusters[0], isinstance(context_clusters[0], list))
+                        if not isinstance(context_clusters[0], list):
+                            tmp = []
+                            tmp.append(context_clusters)
+                            context_clusters = tmp
+                        for j in range(len(context_clusters)):
+                            for i in range(len(context_clusters[j])):
+                                clss = context_clusters[j][i]
+                                print(clss, imgData.shape, outDatFull.shape)
                                 ind = np.where(imgData == clss)
-                                outDatFull[ind] = 1
+                                if j == 3:
+                                    print("CLUST HERE", ind)
+                                outDatFull[ind] = (j+1)
                                 if generate_union > 0 and outUnion is not None:
-                                        outUnion[ind] = outUnion[ind] + 1
+                                    outUnion[ind] = outUnion[ind] + 1
+                                    unionCount[ind] = unionCount[ind] + 1
 
                         file_ext = "." + context_name
 
                         fname = os.path.splitext(gtiff_data[p])[0] + file_ext + ".tif"
-                        print(fname)
+                        print(fname, outDatFull.max())
                         out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
                         out_ds.SetGeoTransform(geoTransform)
                         out_ds.SetProjection(wkt)
@@ -241,6 +266,11 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
                                 out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
                                 out_ds.SetGeoTransform(geoTransform)
                                 out_ds.SetProjection(wkt)
+ 
+                                inds = np.where(unionCount == 0)
+                                unionCount[inds] = 1
+                                outUnion = np.divide(outUnion,unionCount,dtype=np.int32)
+
 
                                 outUnionFull = None
                                 if len(subset_inds[p]) > 0:
@@ -248,10 +278,10 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
                                 else:
                                         outUnionFull = outUnion
 
-                                inds = np.where(outUnionFull < (generate_union-1))
+                                inds = np.where(outUnionFull <= 0)
                                 outUnionFull[inds] = 0
-                                inds = np.where(outUnionFull > 0)
-                                outUnionFull[inds] = 1
+                                #inds = np.where(outUnionFull > 0)
+                                #outUnionFull[inds] = 1
                                 out_ds.GetRasterBand(1).WriteArray(outUnionFull)
                                 out_ds.FlushCache()
                                 out_ds = None
