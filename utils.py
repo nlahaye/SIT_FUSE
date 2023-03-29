@@ -210,8 +210,8 @@ def read_gtiff_generic(flename, **kwargs):
 
 
 
-
-def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n_clusters, radius_meters, files_test, files_train):
+#TODO generalize pieces for other tasks
+def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n_clusters, radius_degrees, ranges, global_max, files_test, files_train):
     print(insitu_fname)
     insitu_df = pd.read_excel(insitu_fname)
     # Format Datetime Stamp
@@ -295,7 +295,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
             count = count + 1
             neighbours = []
             for index2, poi2 in gdf.iterrows():
-                if poi2.geometry.distance(poi.geometry) < 0.1:
+                if abs(poi2.geometry.distance(poi.geometry)) < radius_degrees:
                     neighbours.append(index2)
             #print(poi.geometry)
             #x = poi.geometry.buffer(0.011) #.unary_union
@@ -321,13 +321,12 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
     fnl = np.array(final_hist_data)
     fnl = np.swapaxes(fnl, 0,1)
     print(fnl.shape, fnl.max())
-    ranges = [0, 1000,fnl.max()]
-    algal = []
+    ranges[-1] = max(ranges[-1], global_max)
+    algal = [[] for _ in range(len(ranges)-1)]
     for i in range(fnl.shape[0]):
         hist, _ = np.histogram(fnl[i], bins=ranges, density=False)
-        if hist[0] < hist[1]:
-           algal.append(i+1)
-    pprint(algal)    
+        algal[np.argmax(hist)].append(i)
+    print(algal)    
 
 
     #for p in ra nge(len(ranges)):
