@@ -1,5 +1,6 @@
 
 input_paths: ["/data/nlahaye/output/Learnergy/DBN_L2_TROP_MOD/", "/data/nlahaye/output/Learnergy/DBN_TROP_SIF_ONLY/","/data/nlahaye/output/Learnergy/DBN_TROP_MODIS_ONLY/"]
 fname_str: "karenia_brevis_bloom"
-out_dir: "/data/nlahaye/output/MERGED_ALGAL/"
+out_dir: "/data/nlahaye/output/MERGED_ALGAL_3/"
+num_classes: 5
 

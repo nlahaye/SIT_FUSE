@@ -5,8 +5,9 @@ end_date: "2020-12-31"
 clusters: 100
 
 clusters_dir: '/data/nlahaye/output/Learnergy/DBN_L2_TROP_MOD/' #DBN_L2_TROP_MOD/
-radius_meters: 100
-
+radius_degrees: 0.02
+global_max: 10000000
+ranges: [0,1000,10000,100000,1000000,10000000]
 
 files_train: [ #"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_0",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_1",

@@ -384,7 +384,7 @@ data:
 
 context:
  apply_context: True
- clusters: [17, 21, 22, 23, 24, 25, 26, 29, 37, 41, 42, 43, 45, 52, 66, 83, 87, 91] #i.e. smoke clusters
+ clusters: [[20, 64, 89, 93], [35, 40, 42, 51], [8], [31]]
  name: "karenia_brevis_bloom" #i.e. smoke
  compare_truth: false
  generate_union: false
