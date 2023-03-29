@@ -703,7 +703,8 @@ class FCDBN(Model):
                 if self.device == "cpu":
                     dt = torch.bfloat16
                 with torch.autocast(device_type=self.device, dtype=dt):
-           
+          
+                    new_samples = torch.zeros(self.n_samples, model.n_filters, model.hidden_shape[0], model.hidden_shape[0]) 
                     # Reshape the samples into an appropriate shape
                     if self.local_rank == 0:
                         samples = samples.reshape(
@@ -712,6 +713,7 @@ class FCDBN(Model):
                             model.visible_shape[0],
                             model.visible_shape[1],
                         )
+
                     #else:
                     #    samples = torch.zeros((self.n_samples,model.n_filters,self.output_shapes[i][0], self.output_shapes[i][1]))
  
@@ -721,27 +723,30 @@ class FCDBN(Model):
                     gpu_usage()
  
                     # TODO? if self.local_rank == 0:
-              
+               
                     # Performs a forward pass over the samples to get their probabilities
-                    samples, samples2 = model.hidden_sampling(samples)
-                    samples2 = samples2.detach().cpu()
-                    del samples2
-
+                    for i in range(0,samples.shape[0], batch_size):
+                        end_ind = i+batch_size
+                        if end_ind > samples.shape[0]:
+                            end_ind = samples.shape[0]
+                        print("INDEX ISSUES", i, i+batch_size, end_ind, samples.shape[0], new_samples.shape)
+                        new_samps, samples2 = model.hidden_sampling(samples[i:end_ind])
+                        samples2 = samples2.detach().cpu()
+                        new_samples[i:end_ind] = new_samps.detach().cpu()
+                        del new_samps
+                        del samples2
+                    
                     print("1 USAGE FIT_LAYER")
+                    del samples
                     gpu_usage()
                     # Detaches the variable from the computing graph
-                    #samples = samples.detach()
-                    print("HERE PRE BROADCAST2", samples.shape) #, samples.min(), samples.max(), samples.mean(), samples.std())                
 
        
-                    # TODO?dist.broadcast(samples, src=0, async_op=False)
-                    samples = samples.detach()
                     torch.cuda.empty_cache()
                 #Synchronize again after sample generation
-                dist.barrier()         
+                #dist.barrier()         
  
-                print("HERE POST BROADCAST", samples.shape, self.local_rank)
-                print("HERE POST BROADCAST2") #, samples.min(), samples.max(), samples.mean(), samples.std())
+                print("HERE POST BROADCAST", new_samples.shape, self.local_rank)
                 if isinstance(dataset, TensorDataset):
                     targets = dataset.tensors[1]
                 else:
@@ -750,9 +755,9 @@ class FCDBN(Model):
 
                 del self.current_layer_samples 
                 torch.cuda.empty_cache()
-                self.current_layer_samples = TensorDataset(samples.cpu().detach(), targets.cpu().detach()) 
+                self.current_layer_samples = TensorDataset(new_samples.cpu().detach(), targets.cpu().detach()) 
             del targets
-            del samples
+            del new_samples
             del dataset
             model.W.detach()
             model.a.detach()
@@ -760,7 +765,6 @@ class FCDBN(Model):
         torch.cuda.empty_cache()
         print("HERE AFTER CACHE EMPTY")
         dist.barrier()
-        #return mse, samples
 
     def reconstruct(
         self, dataset: torch.utils.data.Dataset,
