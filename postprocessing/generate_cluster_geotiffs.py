@@ -111,7 +111,7 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 						outUnion[ind] = outUnion[ind] + (j+1)
 						unionCount[ind] = unionCount[ind] + 1
 
-			inds = np.where(outDat < 0 & dbnDat1 >= 0)
+			inds = np.where((outDat < 0) & (dbnDat1 >= 0))
 			outDat[inds] = 0
 			outDatFull = np.zeros(imgData.shape, dtype=np.int32) - 1
 			if len(subset_inds[p]) > 0:
@@ -136,7 +136,7 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 
 				inds = np.where(unionCount == 0)
 				unionCount[inds] = 1
-				outUnion = np.divide(outUnion,unionCount,dtype=np.int32)
+				outUnion = np.divide(outUnion,unionCount).astype(np.int32)
 
 				outUnionFull = None
 				if len(subset_inds[p]) > 0:
