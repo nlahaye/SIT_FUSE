@@ -20,10 +20,9 @@ import pickle
 
 import sys
 import resource
-max_rec = 0x100000
-
+max_rec = 10**6
 # May segfault without this line. 0x100 is a guess at the size of each stack frame.
-resource.setrlimit(resource.RLIMIT_STACK, [0x100 * max_rec, resource.RLIM_INFINITY])
+resource.setrlimit(resource.RLIMIT_STACK, [100*max_rec, resource.RLIM_INFINITY])
 sys.setrecursionlimit(max_rec)
 
 #ML imports
@@ -79,8 +78,15 @@ class RSClustering(object):
             self.clustering = Birch(branching_factor=self.branch, threshold=self.thresh, n_clusters=None) #self.n_clusters)
             #self.clustering = Incremental(estimator=self.estimator)
         elif isinstance(self.clustering, str) and os.path.exists(self.clustering):
+            #Given a known joblib/sklearn issue with highly recursive structures, cannot support reloading/online learning
+            #     Can only support exporting centroids and doing predictions with initial model
+            self.train = False
+            self.clustering = Birch(branching_factor=self.branch, threshold=self.thresh, n_clusters=self.n_clusters)
+            with open(os.path.join(os.path.dirname(self.clustering) + "cluster_scale.pkl")) as f2:
+                self.scaler = load(f2)
             with open(self.clustering, "rb") as f:
-                self.clustering = load(f)
+                self.clustering.subcluster_centers_ = load(f)
+            print("HERE LOADED SUBCLUST CENTERS")
 
     def __plot_clusters__(self, coord, labels, output_basename):
 
@@ -186,7 +192,7 @@ class RSClustering(object):
     def run_clustering(self, train_data, test_data, scale = True):
 
         trn = []
-        if self.train:
+        if self.train_scaler:
             if scale:
                 print("TRAINING SCALERS")
                 for i in range(len(train_data)): 
@@ -219,7 +225,7 @@ class RSClustering(object):
                 del trn
                 #shuffle data
                 np.random.seed(42)
-            
+        if self.train: 
             for i in range(len(train_data)):
                 trn = []
                 print(train_data[i])
@@ -260,8 +266,7 @@ class RSClustering(object):
             #trn = self.scaler.transform(trn)
             #self.__train_clustering__(trn) 
 
-            #print("FINAL CLUSTER TRAINING")
-            #print("HERE PREV ", self.clustering.get_params().keys())
+ 
             print("HERE TEST", self.n_clusters, self.reset_n_clusters == True)
             if self.n_clusters is not None and self.reset_n_clusters == True:
                  print("FINAL CLUSTER TRAINING")
@@ -312,8 +317,17 @@ class RSClustering(object):
 
     def save_clustering(self):
         os.makedirs(self.out_dir, exist_ok = True)
-        with open(os.path.join(self.out_dir, "clustering.pkl"), "wb") as f:
-            dump(self.clustering, f, True, pickle.HIGHEST_PROTOCOL)
+        with open(os.path.join(self.out_dir, "cluster_scale.pkl"), "wb") as f2:
+            dump(self.scaler, f2, True, pickle.HIGHEST_PROTOCOL)
+        with open(os.path.join(self.out_dir, "clustering_centroids.pkl"), "wb") as f:
+            dump(self.clustering.subcluster_centers_, f, True, pickle.HIGHEST_PROTOCOL)
+        #Given a known joblib/sklearn issue with highly recursive structures, cannot support reloading/online learning
+        #     Can only support exporting centroids and doing predictions with initial model
+        #with open(os.path.join(self.out_dir, "clustering_dummy_leaf.pkl"), "wb") as f:
+        #    dump(self.clustering.dummy_leaf_, f, True, pickle.HIGHEST_PROTOCOL)
+        #with open(os.path.join(self.out_dir, "clustering_root.pkl"), "wb") as f:
+        #    dump(self.clustering.root_, f, True, pickle.HIGHEST_PROTOCOL)
+
 
 def main(yml_fpath):
 
@@ -337,7 +351,12 @@ def main(yml_fpath):
         chunks = yml_conf["clustering"]["chunks"]
 
 
-    scaler, scaler_train = get_scaler(scaler_type)
+    scaler_train = True 
+    if isinstance(model , str) and os.path.exists(model) and os.path.exists(os.path.join(out_dir, "cluster_scale.pkl")) and not train:
+        scaler_train = False
+        scaler = None
+    else:
+        scaler, scaler_train = get_scaler(scaler_type)
 
     clustering = RSClustering(pixel_padding = pixel_padding, branch = branch,
         thresh = thresh, train_sample_size = train_sample_size,
@@ -351,8 +370,7 @@ def main(yml_fpath):
     test_data = yml_conf["files_test"]
     clustering.run_clustering(train_data, test_data, scale)
     clustering.save_clustering()
-
-
+ 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
