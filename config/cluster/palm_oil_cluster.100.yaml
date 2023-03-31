@@ -1,5 +1,5 @@
 output:
- out_dir: "/data/nlahaye/output/Learnergy/DBN_PALM_OIL/"
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_PALM_OIL_3/"
 
 
 clustering:
@@ -18,7 +18,7 @@ scaler:
  scale: True
 
 
-files_train: ["/data/nlahaye/output/Learnergy/DBN_PALM_OIL/file0_output.data"]
+files_train: ["/data/nlahaye/output/Learnergy/DBN_PALM_OIL_3/file0_output.data"]
 
-files_test: ["/data/nlahaye/output/Learnergy/DBN_PALM_OIL/file0_output.data"]
+files_test: ["/data/nlahaye/output/Learnergy/DBN_PALM_OIL_3/file0_output.data"]
 

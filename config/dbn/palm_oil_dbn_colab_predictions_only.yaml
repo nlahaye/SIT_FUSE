@@ -10,7 +10,7 @@ output:
 dbn:
  subset_training: 300000
  deep_cluster: False
- overwrite_model: True
+ overwrite_model: False
  params:
   model_type: ["gaussian_selu"] #, 'gaussian_relu_dropout', 'gaussian_relu_dropout'] #'variance_gaussian_dropout' "gaussian_dropout"
   dbn_arch: [75] #[2000] [250, 500, 2000] #, 2000]

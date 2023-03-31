@@ -21,7 +21,7 @@ import pickle
 import sys
 import resource
 max_rec = 10**6
-# May segfault without this line. 0x100 is a guess at the size of each stack frame.
+# May segfault without this line. 100 is a guess at the size of each stack frame.
 resource.setrlimit(resource.RLIMIT_STACK, [100*max_rec, resource.RLIM_INFINITY])
 sys.setrecursionlimit(max_rec)
 
