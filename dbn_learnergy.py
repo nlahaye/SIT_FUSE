@@ -15,10 +15,9 @@ import random
 
 import sys
 import resource
-max_rec = 0x100000
-
-# May segfault without this line. 0x100 is a guess at the size of each stack frame.
-resource.setrlimit(resource.RLIMIT_STACK, [0x100 * max_rec, resource.RLIM_INFINITY])
+max_rec = 10**6
+# May segfault without this line. 100 is a guess at the size of each stack frame.
+resource.setrlimit(resource.RLIMIT_STACK, [100 * max_rec, resource.RLIM_INFINITY])
 sys.setrecursionlimit(max_rec)
 
 #ML imports
@@ -40,6 +39,9 @@ import learnergy.visual.convergence as converge
 import matplotlib 
 matplotlib.use("Agg")
 import  matplotlib.pyplot as plt
+
+#Serialization
+from joblib import dump, load
 
 #Data
 #from dbn_datasets_cupy import DBNDataset
@@ -162,8 +164,16 @@ def run_dbn(yml_conf):
     epochs = yml_conf["dbn"]["training"]["epochs"]
 
 
-    scaler_type = yml_conf["scaler"]["name"]
-    scaler, scaler_train = get_scaler(scaler_type, cuda = use_gpu_pre)
+    scaler = None
+    scaler_train = True 
+    scaler_fname = os.path.join(out_dir, "dbn_scaler.pkl")
+    if not os.path.exists(scaler_fname) or overwrite_model:    
+        scaler_type = yml_conf["scaler"]["name"]
+        scaler, scaler_train = get_scaler(scaler_type, cuda = use_gpu_pre)
+    else:
+        with open(scaler_fname, "rb") as f:
+                scaler = load(f)
+        scaler_train = False
 
     os.environ['PREPROCESS_GPU'] = str(int(use_gpu_pre))
 
@@ -306,6 +316,10 @@ def run_dbn(yml_conf):
                 torch.save(final_model.fc.state_dict(), model_file + "_fc_clust.ckpt")
             else:
                 torch.save(final_model.state_dict(), model_file + ".ckpt")
+
+            #Save scaler
+            with open(os.path.join(out_dir, "dbn_scaler.pkl"), "wb") as f:
+                dump(x2.scalers[0], f, True, pickle.HIGHEST_PROTOCOL)
 
         #TODO: For now set all subsetting to 1 - will remove subsetting later. 
         #Maintain output_subset_count - is/will be used by DataLoader in generate_output
