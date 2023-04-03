@@ -81,7 +81,7 @@ class RSClustering(object):
             #Given a known joblib/sklearn issue with highly recursive structures, cannot support reloading/online learning
             #     Can only support exporting centroids and doing predictions with initial model
             self.train = False
-            with open(os.path.join(os.path.dirname(self.clustering) + "cluster_scale.pkl")) as f2:
+            with open(os.path.join(os.path.dirname(self.clustering), "cluster_scale.pkl")) as f2:
                 self.scaler = load(f2)
             with open(self.clustering, "rb") as f:
                 self.clustering = Birch(branching_factor=self.branch, threshold=self.thresh, n_clusters=self.n_clusters)
