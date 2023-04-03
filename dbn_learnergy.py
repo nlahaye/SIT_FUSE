@@ -171,8 +171,7 @@ def run_dbn(yml_conf):
         scaler_type = yml_conf["scaler"]["name"]
         scaler, scaler_train = get_scaler(scaler_type, cuda = use_gpu_pre)
     else:
-        with open(scaler_fname, "rb") as f:
-                scaler = load(f)
+        scaler = load(scaler_fname)
         scaler_train = False
 
     os.environ['PREPROCESS_GPU'] = str(int(use_gpu_pre))
