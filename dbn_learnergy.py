@@ -188,7 +188,7 @@ def run_dbn(yml_conf):
     if not fcn:
         x2 = DBNDataset(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
             valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
-            transform_values=transform_values, scalers = [scaler], train_scalers = scaler_train, scale = scale_data, \
+            transform_values=transform_values, scaler = scaler, train_scaler = scaler_train, scale = scale_data, \
             transform=numpy_to_torch, subset=subset_count, subset_training = subset_training)
     else:
         x2 = DBNDatasetConv(data_train, read_func, data_reader_kwargs, delete_chans=delete_chans, \
@@ -318,7 +318,7 @@ def run_dbn(yml_conf):
 
             #Save scaler
             with open(os.path.join(out_dir, "dbn_scaler.pkl"), "wb") as f:
-                dump(x2.scalers[0], f, True, pickle.HIGHEST_PROTOCOL)
+                dump(x2.scaler, f, True, pickle.HIGHEST_PROTOCOL)
 
         #TODO: For now set all subsetting to 1 - will remove subsetting later. 
         #Maintain output_subset_count - is/will be used by DataLoader in generate_output
@@ -329,16 +329,16 @@ def run_dbn(yml_conf):
             fname_begin = fname_begin +"_clust"
         for t in range(0, len(data_test)):
             if t == 0:
-                scaler = x2.scalers
+                scaler = x2.scaler
                 transform = x2.transform
                 del x2
             else:
-                scaler = x3.scalers
+                scaler = x3.scaler
                 transform = x3.transform
 	
             if not fcn:
                 x3 = DBNDataset([data_test[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
-                    fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scalers=scaler, scale = scale_data, \
+                    fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scaler=scaler, scale = scale_data, \
 				transform=transform,  subset=subset_count)
             else:
                 x3 = DBNDatasetConv([data_test[t]], read_func, data_reader_kwargs,  delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
@@ -351,17 +351,17 @@ def run_dbn(yml_conf):
         x2 = None
         for t in range(0, len(data_train)):
             if t == 0:
-                scaler = x3.scalers
+                scaler = x3.scaler
                 transform = x3.transform
                 del x3
             else:
-                scaler = x2.scalers
+                scaler = x2.scaler
                 transform = x2.transform
 
             if not fcn:
                 x2 = DBNDataset([data_train[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, \
                    valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, \
-                   scalers = scaler, scale = scale_data, transform=numpy_to_torch, subset=subset_count)
+                   scaler = scaler, scale = scale_data, transform=numpy_to_torch, subset=subset_count)
             else:
                 x2 = DBNDatasetConv([data_train[t]], read_func, data_reader_kwargs,  delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
                     fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, transform = transform, \
