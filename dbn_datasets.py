@@ -23,7 +23,7 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
 
 class DBNDataset(torch.utils.data.Dataset):
 
-	def __init__(self, filenames, read_func, read_func_kwargs, pixel_padding, delete_chans, valid_min, valid_max, fill_value = -9999, chan_dim = 0, transform_chans = [], transform_values = [], scalers = None, scale=False, transform=None, subset=None, train_scalers = False, subset_training = -1):
+	def __init__(self, filenames, read_func, read_func_kwargs, pixel_padding, delete_chans, valid_min, valid_max, fill_value = -9999, chan_dim = 0, transform_chans = [], transform_values = [], scaler = None, scale=False, transform=None, subset=None, train_scaler = False, subset_training = -1):
 
 		self.training = False
 		self.filenames = filenames
@@ -36,8 +36,8 @@ class DBNDataset(torch.utils.data.Dataset):
 		self.chan_dim = chan_dim
 		self.transform_chans = transform_chans
 		self.transform_value = transform_values
-		self.scalers = scalers
-		self.train_scalers = train_scalers
+		self.scaler = scaler
+		self.train_scaler = train_scaler
 		self.scale = scale
 		self.transform = transform
 		self.read_func = read_func
@@ -83,21 +83,20 @@ class DBNDataset(torch.utils.data.Dataset):
 					dat[np.where(dat > self.valid_max - 0.00000000005)] = -9999
 				if self.fill_value is not None:
 					dat[np.where(dat == self.fill_value)] = -9999
+				dat = np.moveaxis(dat, self.chan_dim, 2)
 				data_local.append(dat)
 
 		#del dat
+		self.chan_dim = 2
 		if self.scale:
-			if self.scalers is None or self.train_scalers:
+			if self.scaler is None or self.train_scaler:
 				self.training = True
-				self.__train_scalers__(data_local)
+				self.__train_scaler__(data_local)
 
 			for r in range(len(data_local)):	
-				for n in range(data_local[r].shape[self.chan_dim]):
-					slc = [slice(None)] * data_local[r].ndim
-					slc[self.chan_dim] = slice(n, n+1)
-					subd = data_local[r][tuple(slc)]
-					subd[np.where(subd > -9999)] = self.scalers[n].transform(subd[np.where(subd > -9999)].reshape(-1, 1)).reshape(-1)
-					data_local[r][tuple(slc)] = subd
+					subd = data_local[r]
+					subd[np.where(subd > -9999)] = self.scaler.transform(subd[np.where(subd > -9999)].reshape(-1, 1)).reshape(-1)
+					data_local[r] = subd
 		dim1 = 0
 		dim2 = 1
 		if self.chan_dim == 0:
@@ -110,6 +109,7 @@ class DBNDataset(torch.utils.data.Dataset):
 		self.targets = []
 		for r in range(len(data_local)):
 			count = 0
+			print("HERE",  data_local[r].shape)
 			last_count = len(self.data)
 			for j in range(self.pixel_padding, data_local[r].shape[dim1] - self.pixel_padding):
 				for k in range(self.pixel_padding, data_local[r].shape[dim2] - self.pixel_padding):
@@ -121,7 +121,6 @@ class DBNDataset(torch.utils.data.Dataset):
 						slc[dim1] = slice(j-self.pixel_padding,j+self.pixel_padding+1)	
 						slc[dim2] = slice(k-self.pixel_padding, k+self.pixel_padding+1)
 						sub_data = data_local[r][tuple(slc)]
-
 						sub_data_total.append(sub_data)
 
 					sub_data_total = np.array(sub_data_total)
@@ -187,26 +186,10 @@ class DBNDataset(torch.utils.data.Dataset):
 			self.targets = self.targets_full[self.subset_inds[0]:self.subset_inds[1],:]	
 
 
-        #TODO - ensure that channel dimension is always last and only use one StandardScaler
-	def __train_scalers__(self, data):
-		copy_first_scaler = False
-		if self.scalers is None:
-			self.scalers = []
-		else:
-			copy_first_scaler = True
+	def __train_scaler__(self, data):
 		for r in range(len(data)):
-			for n in range(data[r].shape[self.chan_dim]):
-				if r == 0:
-					if n > 0 and copy_first_scaler:
-						self.scalers.append(copy.deepcopy(self.scalers[n-1]))
-					elif not copy_first_scaler:
-						self.scalers.append(StandardScaler())
-					#self.scalers.append(MaxAbsScaler())
-				slc = [slice(None)] * data[r].ndim
-				slc[self.chan_dim] = slice(n, n+1)
-				subd = data[r][tuple(slc)]
-				print("CHANNELS", n, r, self.filenames[r], subd.min(), subd.max(), np.where(subd > -9999)[0].shape)
-				self.scalers[n].partial_fit(subd[np.where(subd > -9999)].reshape(-1, 1))
+                        subd = data[r]
+                        self.scaler.partial_fit(subd[np.where(subd > -9999)].reshape(-1, 1))
 
 	def __len__(self):
 		return len(self.data)
