@@ -63,6 +63,17 @@ def zarr_load(filename, **kwargs):
 
 def numpy_from_zarr(filename, **kwargs):
     return np.array(zarr_load(filename).compute())
+
+
+def read_misr_sim(filename, **kwargs):
+ 
+    ds = Dataset(filename)
+    dat = ds.variables['rad'][:]
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+                dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+    return dat    
+ 
  
 def read_goes_netcdf(filenames, **kwargs):
     data1 = []
@@ -324,9 +335,22 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
     ranges[-1] = max(ranges[-1], global_max)
     algal = [[] for _ in range(len(ranges)-1)]
     for i in range(fnl.shape[0]):
-        hist, _ = np.histogram(fnl[i], bins=ranges, density=False)
-        algal[np.argmax(hist)].append(i)
+        hist, bins = np.histogram(fnl[i], bins=ranges, density=False)
+        mx1 = np.argmax(hist)
+        if mx1 == 0:
+            sm = np.sum(hist[1:])
+            if sm >= hist[0]:
+                mx1 = np.argmax(hist[1:])
+        algal[mx1].append(i)
+        print(bins, hist,i)
+        plt.ylim(0, 50)
+        plt.bar([k*2 for k in range(len(bins[:-1]))],hist, width=1, linewidth=1, align="center")
+        plt.show()
+        plt.savefig("TEST_HIST_" + str(i) + ".png") 
+        plt.clf()
     print(algal)    
+
+    
 
 
     #for p in ra nge(len(ranges)):
@@ -571,6 +595,8 @@ def get_lat_lon(fname):
 
 #TODO worldview
 def get_read_func(data_reader):
+	if data_reader == "misr_sim":
+		return read_misr_sim
 	if data_reader == "goes_netcdf":
 		return read_goes_netcdf
 	if data_reader == "s3_netcdf":
