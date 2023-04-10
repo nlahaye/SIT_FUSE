@@ -1,0 +1,24 @@
+output:
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_MISR_SIMULATED_C9/"
+
+
+clustering:
+        n_clusters: 20
+        branch: 5
+        thresh: 1e-15
+        pixel_padding: 1
+        train_sample_size: 150000 #000
+        clustering:
+        train: True
+        reset_n_clusters: True
+        model:
+
+scaler:
+ name: "standard_dask"
+ scale: True
+
+
+files_train: ["/data/nlahaye/output/Learnergy/DBN_MISR_SIMULATED_C9/file0_output.data"]
+
+files_test: ["/data/nlahaye/output/Learnergy/DBN_MISR_SIMULATED_C9/file0_output.data"]
+

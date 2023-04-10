@@ -8,6 +8,8 @@ output:
  model: "dbn.pth"
 
 dbn:
+ subset_training: 300000
+ deep_cluster: False
  overwrite_model: True
  params:
   model_type: ["gaussian_selu"] #, 'gaussian_relu_dropout', 'gaussian_relu_dropout'] #'variance_gaussian_dropout' "gaussian_dropout"
@@ -23,13 +25,20 @@ dbn:
 
  training:
   use_gpu: True
+  use_gpu_preprocessing: False
   world_size: 1
   rank: 0
-  device_ids: [0,1,2,3,4,5,6,7]
+  device_ids: ["0","1","2","3","4","5","6","7"]
   batch_size: 1000
   epochs: [100] #[8] #, 1, 1] #, 5] #, 10]
 
+scaler:
+ name: "standard"
+
+
 data:
+ num_loader_workers: 10
+ scale_data: True
  pixel_padding: 1
  number_channels: 16
  fill_value: -9999.0

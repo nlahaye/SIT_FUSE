@@ -5,6 +5,9 @@ out_dir: "/data/nlahaye/output/MERGED_ALGAL_3/"
 num_classes: 5
 
 
-gen_daily: true
-gen_monthly: false
+dirname: "/data/nlahaye/output/MERGED_ALGAL_3/"
+max_dqi: 2
+max_class: 5
+gen_daily: false
+gen_monthly: true
 

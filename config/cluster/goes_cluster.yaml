@@ -1,9 +1,22 @@
-files_train: "/home/nlahaye/Multi_Layer_Test/output/Learnergy/DBN_GOES/output.data"
-files_test: "/home/nlahaye/Multi_Layer_Test/output/Learnergy/DBN_GOES/output_test.data"
- 
 
+files_train: ["/data/nlahaye/output/Learnergy/DBN_GOES/file0_output.data",
+"/data/nlahaye/output/Learnergy/DBN_GOES/file1_output.data",
+"/data/nlahaye/output/Learnergy/DBN_GOES/file2_output.data",
+"/data/nlahaye/output/Learnergy/DBN_GOES/file3_output.data",
+"/data/nlahaye/output/Learnergy/DBN_GOES/file4_output.data",
+"/data/nlahaye/output/Learnergy/DBN_GOES/file5_output.data",
+"/data/nlahaye/output/Learnergy/DBN_GOES/file6_output.data",
+"/data/nlahaye/output/Learnergy/DBN_GOES/file7_output.data",
+"/data/nlahaye/output/Learnergy/DBN_GOES/file8_output.data",
+"/data/nlahaye/output/Learnergy/DBN_GOES/file9_output.data",
+"/data/nlahaye/output/Learnergy/DBN_GOES/file10_output.data"]
+files_test: [
+"/data/nlahaye/output/Learnergy/DBN_GOES/file1_output_test.data",
+"/data/nlahaye/output/Learnergy/DBN_GOES/file2_output_test.data", "/data/nlahaye/output/Learnergy/DBN_GOES/file3_output_test.data",
+"/data/nlahaye/output/Learnergy/DBN_GOES/file4_output_test.data", "/data/nlahaye/output/Learnergy/DBN_GOES/file5_output_test.data"]
+  
 output:
- out_dir: "output/Learnergy/DBN_GOES/"
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_GOES/"
 
 
 clustering:
@@ -11,9 +24,7 @@ clustering:
         branch: 5
         thresh: 1e-5
         pixel_padding: 1
-        train_sample_size: 1000
-        number_train_epochs: 40
-        predict_data_chunk: 10000
+        train_sample_size: 150000 #000
         clustering:
         train: True
         reset_n_clusters: True
@@ -22,3 +33,5 @@ clustering:
 scaler:
  name: "standard_dask"
  scale: True
+
+
