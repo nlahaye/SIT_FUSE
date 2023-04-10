@@ -82,9 +82,17 @@ class RSClustering(object):
             #     Can only support exporting centroids and doing predictions with initial model
             self.train = False
             self.scaler = load(os.path.join(os.path.dirname(self.clustering), "cluster_scale.pkl"))
+            centroid_norm_fname = os.path.join(os.path.dirname(self.clustering), "clustering_centroid_norms.pkl")
+            label_fname = os.path.join(os.path.dirname(self.clustering), "clustering_labels.pkl")
             cluster_fpath = self.clustering
             self.clustering = Birch(branching_factor=self.branch, threshold=self.thresh, n_clusters=self.n_clusters)
             self.clustering.subcluster_centers_ = load(cluster_fpath)
+            self.clustering._subcluster_norms = load(centroid_norm_fname)
+            self.clustering.subcluster_labels_ = load(label_fname)
+
+            self.min_clust = 0
+            self.max_clust = n_clusters
+
             print("HERE LOADED SUBCLUST CENTERS")
 
     def __plot_clusters__(self, coord, labels, output_basename):
@@ -320,6 +328,10 @@ class RSClustering(object):
             dump(self.scaler, f2, True, pickle.HIGHEST_PROTOCOL)
         with open(os.path.join(self.out_dir, "clustering_centroids.pkl"), "wb") as f:
             dump(self.clustering.subcluster_centers_, f, True, pickle.HIGHEST_PROTOCOL)
+        with open(os.path.join(self.out_dir, "clustering_centroid_norms.pkl"), "wb") as f:
+            dump(self.clustering._subcluster_norms, f, True, pickle.HIGHEST_PROTOCOL)
+        with open(os.path.join(self.out_dir, "clustering_labels.pkl"), "wb") as f:
+            dump(self.clustering.subcluster_labels_, f, True, pickle.HIGHEST_PROTOCOL) 
         #Given a known joblib/sklearn issue with highly recursive structures, cannot support reloading/online learning
         #     Can only support exporting centroids and doing predictions with initial model
         #with open(os.path.join(self.out_dir, "clustering_dummy_leaf.pkl"), "wb") as f:
