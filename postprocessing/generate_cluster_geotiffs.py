@@ -73,12 +73,15 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
  
 		classes = np.unique(dbnDat1)
 		print(int(classes.max() - classes.min() + 2))
-		outDat = np.zeros(imgData.shape, dtype=np.int32) - 1
+		outDat = np.zeros(imgData.shape, dtype=np.int32)
 		if len(subset_inds[p]) > 0:
 			outDat[subset_inds[0]:subset_inds[1],subset_inds[2]:subset_inds[3]] = dbnDat1
 		else:
 			outDat = dbnDat1
 
+
+		inds = np.where(imgData < 0)
+		outDat[inds] = -1
 		file_ext = ".full_geo"
 		fname = cluster_data[p] + file_ext + ".tif"
 		print(fname, "HERE", nx, ny, outDat.shape)
@@ -92,7 +95,9 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 
 
 		if apply_context:
-			outDat = np.zeros(dbnDat1.shape, dtype=np.int32) - 1
+			outDat = np.zeros(dbnDat1.shape, dtype=np.int32)
+			inds = np.where(imgData < 0)
+			outDat[inds] = -1
 			if generate_union > 0 and outUnion is None:
 				#union cases assume input scenes are all the same size
 				outUnion = np.zeros(dbnDat1.shape, dtype=np.int32) 	
@@ -230,8 +235,8 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
                         outDatFull = np.zeros(imgData.shape, dtype=np.int32) - 1
                         if generate_union > 0 and outUnion is None:
                                 #union cases assume input scenes are all the same size
-                                outUnion = np.zeros(dbnDat1.shape, dtype=np.int32) - 1
-                                unionCount = np.zeros(dbnDat1.shape, dtype=np.int32)
+                                outUnion = np.zeros(imgData.shape, dtype=np.int32) - 1
+                                unionCount = np.zeros(imgData.shape, dtype=np.int32)
 
                         print(context_clusters[0], isinstance(context_clusters[0], list))
                         if not isinstance(context_clusters[0], list):
@@ -250,6 +255,8 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
                                     outUnion[ind] = outUnion[ind] + 1
                                     unionCount[ind] = unionCount[ind] + 1
 
+                        inds = np.where((outDatFull < 0) & (imgData >= 0))
+                        outDatFull[inds] = 0
                         file_ext = "." + context_name
 
                         fname = os.path.splitext(gtiff_data[p])[0] + file_ext + ".tif"
