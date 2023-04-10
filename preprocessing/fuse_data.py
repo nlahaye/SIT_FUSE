@@ -212,16 +212,16 @@ def fuse_data(yml_conf):
             locMapped = np.moveaxis(locMapped, 0, 2)
             np.save(output_files[i] + ".lonlat.npy", locMapped)
 
-def toGeotiff(outputImage, areaDef, outFname, proj_id):
+def toGeotiff(output_image, area_def, out_fname, proj_id):
  
   # create GDAL driver for writing Geotiff
   driver = gdal.GetDriverByName('GTiff')
  
  
   # create Geotiff destination dataset for output
-  dstds = driver.Create(outFname,outputImage.shape[2],outputImage.shape[1],outputImage.shape[0],gdal.GDT_Float32)
-  gt = [ areaDef.area_extent[0],areaDef.pixel_size_x,0,\
-  areaDef.area_extent[3],0,-areaDef.pixel_size_y]
+  dstds = driver.Create(out_fname,output_image.shape[2],output_image.shape[1],output_image.shape[0],gdal.GDT_Float32)
+  gt = [ area_def.area_extent[0],area_def.pixel_size_x,0,\
+  area_def.area_extent[3],0,-area_def.pixel_size_y]
  
   # seto geotransform of output geotiff
   dstds.SetGeoTransform(gt)
@@ -235,10 +235,10 @@ def toGeotiff(outputImage, areaDef, outFname, proj_id):
  
   # write array data (1 band) ... set NoData value at 0.0
   # in output Geotiff
-  print(outputImage.shape)
+  print(output_image.shape)
  
-  for i in range(outputImage.shape[0]):
-      dstds.GetRasterBand((i+1)).WriteArray(np.squeeze(outputImage[i]))
+  for i in range(output_image.shape[0]):
+      dstds.GetRasterBand((i+1)).WriteArray(np.squeeze(output_image[i]))
       dstds.GetRasterBand((i+1)).SetNoDataValue(-9999.0)
 
   dstds=None
