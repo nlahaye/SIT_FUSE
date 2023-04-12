@@ -3,7 +3,7 @@ output:
 
 
 clustering:
-        n_clusters: 20
+        n_clusters: 5
         branch: 5
         thresh: 1e-15
         pixel_padding: 1
