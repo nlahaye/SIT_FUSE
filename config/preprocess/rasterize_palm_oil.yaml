@@ -1,0 +1,7 @@
+
+
+pixel_size: 0.0001
+raster_fn: "/home/nlahaye/mygeodata/Dataset_Ucayali_Palm_V2-polygon.tif"
+vector_fn: "/home/nlahaye/mygeodata/Dataset_Ucayali_Palm_V2-polygon.shp"
+nodata: -9999
+
