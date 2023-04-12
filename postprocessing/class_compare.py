@@ -8,10 +8,24 @@ required before exporting such information to foreign countries or providing acc
 """
 
 
+from operator import itemgetter
+import sys
+import numpy as np
+import matplotlib
+matplotlib.use('agg')
+import matplotlib.pyplot as plt
+from pprint import pprint
+from sklearn.metrics import confusion_matrix, accuracy_score, balanced_accuracy_score
+import argparse
 import zarr
 import shutil
 import os
 import datetime
+import copy
+
+from osgeo import gdal
+
+from utils import numpy_to_torch, read_yaml, get_read_func
 
 def calc_class_stats(new_data_label_counts, init_data_label_counts):
 
@@ -48,6 +62,8 @@ def calc_class_stats(new_data_label_counts, init_data_label_counts):
 
         pprint(new_data_label_counts.keys())
         pprint(init_data_label_counts.keys())
+        pprint(new_data_label_counts)
+        pprint(init_data_label_counts)
         pprint(new_data_stat)
         pprint(init_data_stat)
         return new_data_stat, init_data_stat, label_agree_new_data, label_agree_init_data
@@ -155,9 +171,9 @@ def get_class_mask_func(key):
         return class_mask_gen_basic
 
 
-def compare_label_sets(new_data, init_data, mask_name, map_vals, no_retrieval=-1, 
-    new_data_label_counts = None, init_data_label_counts  = None, glint = None):
-
+def compare_label_sets(new_data, init_data, mask_name, map_vals, no_retrieval_init=-1, 
+    no_retrieval_new=-1, new_data_label_counts = None, init_data_label_counts  = None, glint = None):
+ 
         init_data = init_data[:new_data.shape[0],:new_data.shape[1]]
         new_data = new_data[:init_data.shape[0], :init_data.shape[1]]
 
@@ -166,10 +182,11 @@ def compare_label_sets(new_data, init_data, mask_name, map_vals, no_retrieval=-1
         if init_data_label_counts is None:
                 init_data_label_counts = {}
 
+
         for i in range(new_data.shape[0]):
                 for j in range(new_data.shape[1]):
-                        if init_data[i,j] == no_retrieval or \
-                            new_data[i,j] == NO_RETRIEVAL_DBN or \
+                        if init_data[i,j] == no_retrieval_init or \
+                            new_data[i,j] == no_retrieval_new or \
                                 (mask_name == "Aerosol" and glint is not None and glint[i,j] == 0):
                                     init_data[i,j] = -1
                                     new_data[i,j] = -1
@@ -200,12 +217,21 @@ def compare_label_sets(new_data, init_data, mask_name, map_vals, no_retrieval=-1
                         else:
                                 new_data_label_counts[new_data[i,j]] = {init_data[i,j]: 1, "total": 1}
 
+
+        print("KEYS")
+        pprint(init_data_label_counts)
+        print("KEYS")
+        pprint(new_data_label_counts)
         return init_data, new_data, new_data_label_counts, init_data_label_counts
 
 
-def plot_classifier_map(init_data, new_data, log_fname, total_data, total_mask,
+def plot_classifier_map(init_dat, new_dat, log_fname, total_data, total_mask,
     mask_name, map_vals, agree_new, agree_init, labels, gradient,
-    grad_increase, gradient_local = None, no_retrieval=-1, glint = None):
+    grad_increase, gradient_local = None, no_retrieval_init=-1, no_retrieval_new=-1, glint = None):
+
+        init_data = init_dat.ReadAsArray()
+        new_data = new_dat.ReadAsArray()
+
 
         if total_mask is None:
                 total_mask = np.zeros(new_data.shape) -1
@@ -222,11 +248,13 @@ def plot_classifier_map(init_data, new_data, log_fname, total_data, total_mask,
         if gradient_local is None:
                 gradient_local = {}
 
+        pprint(agree_new)
+
 
         for i in range(new_data.shape[0]):
                 for j in range(new_data.shape[1]):
-                        if init_data[i,j] == no_retrieval or \
-                            new_data[i,j] == NO_RETRIEVAL_DBN or \
+                        if init_data[i,j] == no_retrieval_init or \
+                            new_data[i,j] == no_retrieval_new or \
                             (total_data is not None and total_data[i,j] > -1) or \
                             (mask_name == "Aerosol" and glint is not None and glint[i,j] == 0):
                                 #plotted_data[i,j] = total_data[i,j]
@@ -264,7 +292,7 @@ def plot_classifier_map(init_data, new_data, log_fname, total_data, total_mask,
 
 
 
-        #print(np.unique(flat_data), np.unique(flat_predict), labels[mask_name])
+        print("CLASSES", np.unique(flat_data), np.unique(flat_predict), labels[mask_name])
 
 
         with open(log_fname, "a") as f:
@@ -285,21 +313,49 @@ def plot_classifier_map(init_data, new_data, log_fname, total_data, total_mask,
                 with open(log_fname, "a") as f:
                         f.write(mask_name + ": NO LABELS FOUND\n\n")
 
-        plt.imshow(datPlt)
+        nx = new_data.shape[1]
+        ny = new_data.shape[0]
+        geoTransform = new_dat.GetGeoTransform()
+        wkt = new_dat.GetProjection()
+        print(wkt)
+        fname = log_fname + ".DBN_DATA_AGREE.tif"
+        print(fname, plotted_data.max())
+        out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Int32)
+        out_ds.SetGeoTransform(geoTransform)
+        out_ds.SetProjection(wkt)
+        out_ds.GetRasterBand(1).WriteArray(plotted_data.astype(np.int32))
+        out_ds.FlushCache()
+        out_ds = None
+
+
+
+        plt.imshow(plotted_data)
         plt.colorbar()
         plt.savefig(log_fname + ".DBN_DATA_AGREE.png")
         plt.clf()
-        plt.imshow(datPlt.astype(np.float32))
+
+        fname = log_fname + ".MASKED_DATA.tif"
+        out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
+        out_ds.SetGeoTransform(geoTransform)
+        out_ds.SetProjection(wkt)
+        out_ds.GetRasterBand(1).WriteArray(plotted_data.astype(np.float32))
+        out_ds.FlushCache()
+        out_ds = None
+
+        plt.imshow(plotted_data.astype(np.float32))
         plt.colorbar()
         plt.savefig(log_fname + ".MASKED_DATA.png")
         plt.clf()
         return plotted_data, init_data, gradient_local
 
-def run_compare(init_data, new_data, class_order, log_fname, out_ext, clust_ext, no_retrieval_init, \
+def run_compare(init_input, new_input, class_order, log_fname, out_ext, clust_ext, no_retrieval_init, \
         no_retrieval_new, good_vals, map_vals, labels, gradient, grad_increase, class_mask_gen_func):
 
-        for clust in range(len(new_data[0])):
-                for dbn1 in range(0, len(init_data), len(init_data)):
+
+        print(new_input, init_input)
+
+        for clust in range(len(new_input[0])):
+                for dbn1 in range(0, len(init_input), len(new_input)):
                         compare_new = {}
                         compare_init = {}
                         dstats = {}
@@ -311,7 +367,7 @@ def run_compare(init_data, new_data, class_order, log_fname, out_ext, clust_ext,
                         gradient_local = {}
                         grad = copy.deepcopy(gradient)
                         print("Comparing...", out_ext[dbn1])
-                        for dbn in range(dbn1, dbn1+len(init_data)):
+                        for dbn in range(dbn1, dbn1+len(init_input)):
                                 glint = None
                                 for i in range(len(class_order)):
 
@@ -321,14 +377,20 @@ def run_compare(init_data, new_data, class_order, log_fname, out_ext, clust_ext,
                                                 init_data[class_order[i]] = []
                                                 new_data[class_order[i]] = []
 
-                                        if not os.path.exists(new_data[dbn][clust]) or not os.path.exists(init_data[dbn][class_order[i]]):
-                                                print(new_data[dbn][clust], init_data[dbn][class_order[i]], 
-                                                    os.path.exists(new_data[dbn][clust]), 
-                                                    os.path.exists(init_data[dbn][class_order[i]]), " ERROR MISSING FILE")
+                                        pprint(init_input)
+                                        pprint(new_input)
+                                        if not os.path.exists(new_input[dbn][clust]) or not os.path.exists(init_input[dbn][class_order[i]]):
+                                                print(new_input[dbn][clust], init_input[dbn][class_order[i]], 
+                                                    os.path.exists(new_input[dbn][clust]), 
+                                                    os.path.exists(init_input[dbn][class_order[i]]), " ERROR MISSING FILE")
                                                 break
+
+                                        init_dat = gdal.Open(init_input[dbn][class_order[i]]).ReadAsArray()
+                                        new_dat = gdal.Open(new_input[dbn][clust]).ReadAsArray()
+
                                         init_dat, out_dat, compare_new_single, compare_init_single = \
-                                            compareClassifiers(new_data[dbn][clust], init_data[dbn][class_order[i]], \
-                                                class_order[i], MAP_VALS, no_retrieval[i], \
+                                            compare_label_sets(new_dat, init_dat, \
+                                                class_order[i], map_vals, no_retrieval_init[i], no_retrieval_new[i], \
                                                 compare_new[class_order[i]],  compare_init[class_order[i]], glint)
                                         init_data[class_order[i]].append(init_dat)
                                         new_data[class_order[i]].append(out_dat)
@@ -351,7 +413,6 @@ def run_compare(init_data, new_data, class_order, log_fname, out_ext, clust_ext,
                         truth = []
                         for ind in range(len(init_data[class_order[0]])):
                                 dbn = dbn1 + ind
-                                geo_dat = geo_data[dbn]
                                 total_mask = None
                                 total_actual_mask = None
                                 masks = {}
@@ -359,19 +420,24 @@ def run_compare(init_data, new_data, class_order, log_fname, out_ext, clust_ext,
                                 glint = None
                                 log_fname_fn = None
                                 for i in range(len(class_order)):
+                                        print(log_fname, class_order[i], i, dbn, out_ext[dbn], clust, clust_ext[clust])
                                         log_fname_fn = log_fname + "_" + class_order[i] + "_" + \
                                             out_ext[dbn] + "_" + clust_ext[clust] + ".txt"
-                                        dat, actualMask, gradient_local = plot_classifier_map(init_data[class_order[i]][ind], 
-                                            new_data[class_order[i]][ind], log_fname_fn, total_mask, total_actual_mask, class_order[i], 
-                                            MAP_VALS, agree_new[class_order[i]], agree_init[class_order[i]], labels, grad, 
-                                            grad_increase, gradient_local, no_retrieval[i], glint)
+
+                                        init_dat = gdal.Open(init_input[dbn][class_order[i]])
+                                        new_dat = gdal.Open(new_input[dbn][clust])                                   
+ 
+                                        dat, actualMask, gradient_local = plot_classifier_map(init_dat, 
+                                            new_dat, log_fname_fn, total_mask, total_actual_mask, class_order[i], 
+                                            map_vals, agree_new[class_order[i]], agree_init[class_order[i]], labels, grad, 
+                                            grad_increase, gradient_local, no_retrieval_init[i], no_retrieval_new[i], glint)
                                         data[class_order[i]] = dat
                                         masks[class_order[i]] = actualMask
                                         if class_order[i] == "SunGlint":
                                                 data[class_order[i]] = masks[class_order[i]]
                                                 glint =  masks[class_order[i]]
 
-                                        total_actual_mask = class_mask_gen_funck(masks, good_vals, map_vals, class_order)
+                                        total_actual_mask = class_mask_gen_func(masks, good_vals, map_vals, class_order)
                                         total_mask = class_mask_gen_func(data, good_vals, map_vals, class_order)
 
                                 #Should just use fuse_data for this
@@ -384,9 +450,9 @@ def run_compare(init_data, new_data, class_order, log_fname, out_ext, clust_ext,
 
 
 
-                                #print(np.unique(total_actual_mask), np.unique(total_mask), labels["TotalMask"])
+                                #print(np.unique(total_actual_mask), np.unique(total_mask), labels["total_mask"])
                                 cm = confusion_matrix(np.ravel(total_actual_mask.astype(np.int32)), \
-                                    np.ravel(total_mask.astype(np.int32)), labels=labels["TotalMask"])
+                                    np.ravel(total_mask.astype(np.int32)), labels=labels["total_mask"])
                                 acc = accuracy_score(np.ravel(total_actual_mask.astype(np.int32)), np.ravel(total_mask.astype(np.int32)))
                                 balanced_acc = balanced_accuracy_score(np.ravel(total_actual_mask.astype(np.int32)), \
                                     np.ravel(total_mask.astype(np.int32)))
@@ -395,14 +461,14 @@ def run_compare(init_data, new_data, class_order, log_fname, out_ext, clust_ext,
                                 cm2 = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
                                 print(log_fname_fn)
                                 with open(log_fname_fn, "a") as f:
-                                        f.write("TotalMask:")
-                                        pprint(labels["TotalMask"], f)
+                                        f.write("total_mask:")
+                                        pprint(labels["total_mask"], f)
                                         pprint(cm, f)
                                         pprint(cm2, f)
 
                                         totalActSum = 0
                                         total_maskSum = 0
-                                        for i in labels["TotalMask"]:
+                                        for i in labels["total_mask"]:
                                                 totalActSum = totalActSum + (total_actual_mask.astype(np.int32) == i).sum()
                                                 total_maskSum = total_maskSum + (total_mask.astype(np.int32) == i).sum()
                                                 f.write("LABEL:" + " " + str(i) + " COUNT: " + \
@@ -416,7 +482,7 @@ def run_compare(init_data, new_data, class_order, log_fname, out_ext, clust_ext,
                                 zarr.save(log_fname_fn + "_TOTAL_ACTUAL_MASK" + ".zarr", total_actual_mask)
                         print(out_ext[dbn1] + " TOTAL ACCURACY: " + str(accuracy_score(truth, lbls)) +  \
                             " BALANCED ACC: ", str(balanced_accuracy_score(truth, lbls)), "\n")
-                        cm = confusion_matrix(truth, lbls, labels=labels["TotalMask"])
+                        cm = confusion_matrix(truth, lbls, labels=labels["total_mask"])
                         cm2 = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
                         pprint(cm)
                         pprint(cm2)
@@ -428,21 +494,21 @@ def main(yml_fpath):
     #Translate config to dictionary 
     yml_conf = read_yaml(yml_fpath)
     #Run 
-    init_data = conf["init_data"]
-    new_data = conf["new_data"]
-    class_order = conf["class_order"]
-    log_fname = conf["log_fname"]
-    out_ext = conf["out_ext"]
-    clust_ext = conf["clust_ext"]
-    no_retrieval_init = conf["no_retrieval_init"]
-    no_retrieval_new = conf["no_retrieval_new"]
-    good_vals = conf["good_vals"]
-    map_vals = conf["map_vals"]
-    labels = conf["labels"]
-    gradient = conf["gradient"]
-    grad_increase = conf["gradient_increase"]
+    init_data = yml_conf["init_data"]
+    new_data = yml_conf["new_data"]
+    class_order = yml_conf["class_order"]
+    log_fname = yml_conf["log_fname"]
+    out_ext = yml_conf["out_ext"]
+    clust_ext = yml_conf["clust_ext"]
+    no_retrieval_init = yml_conf["no_retrieval_init"]
+    no_retrieval_new = yml_conf["no_retrieval_new"]
+    good_vals = yml_conf["good_vals"]
+    map_vals = yml_conf["map_vals"]
+    labels = yml_conf["labels"]
+    gradient = yml_conf["gradient"]
+    grad_increase = yml_conf["gradient_increase"]
 
-    class_mask_gen_func = get_class_mask_gen_func(yml_conf["class_mask_gen_func"])
+    class_mask_gen_func = get_class_mask_func(yml_conf["class_mask_gen_func"])
 
     run_compare(init_data, new_data, class_order, log_fname, out_ext, clust_ext, no_retrieval_init, \
         no_retrieval_new, good_vals, map_vals, labels, gradient, grad_increase, class_mask_gen_func)

@@ -96,6 +96,8 @@ def merge_monthly(dirname, max_dqi, max_class):
 
     for root, dirs, files in os.walk(dirname):
         for fle in files:
+            if "DQI" in fle:
+                continue
             mtch = re.search(DATE_RE, fle)
             if mtch:
                 dte = datetime.datetime.strptime(mtch.group(1), "%Y%m%d")
@@ -108,21 +110,42 @@ def merge_monthly(dirname, max_dqi, max_class):
         newImgData = None
         newDqi = None
         dat = None
-        for i in range(0, max_dqi):
-            for k in range(max_class,0,-1):
-                for j in range(0, len(monthlies[mnth])):
+        pixCnt = None
+        #for i in range(0, max_dqi):
+        #    for k in range(max_class,0,-1):
+        for j in range(0, len(monthlies[mnth])):
+
+                          
+                    dqi_fname = os.path.splitext(monthlies[mnth][j][1])[0] + ".DQI.tif"
+ 
                     dat = gdal.Open(monthlies[mnth][j][1]) 
                     imgData = dat.ReadAsArray()
+
+                    dqi = gdal.Open(dqi_fname).ReadAsArray()
  
                     if newImgData is None:
-                        newImgData = np.zeros(imgData.shape) - 1
-                        newDqi = np.zeros(imgData.shape) - 1
-
+                        newImgData = np.zeros(imgData.shape)
+                        newDqi = np.zeros(imgData.shape)
+                        pixCnt = np.zeros(imgData.shape) 
+                     
+                    inds = np.where((dqi >= 0) & (imgData >= 0))
                     
-                    inds = np.where((imgData == k) & (k > newImgData) & ((newDqi == -1) | ((newDqi > -1) & (i < newDqi)))) 
-                    newDqi[inds] = i
-                    newImgData[inds] = k
-          
+                    newImgData[inds] += imgData[inds]
+                    newDqi[inds] += dqi[inds]
+                    pixCnt[inds] += 1
+
+        
+        inds = np.where(pixCnt < 1)
+        pixCnt[inds] = 1
+        print(inds)        
+
+        newImgData = np.round(np.divide(newImgData, pixCnt)).astype(np.int32)
+        newDqi = np.round(np.divide(newDqi, pixCnt)).astype(np.int32)  
+
+        newImgData[inds] = -1
+        newDqi[inds] = -1
+        pixCnt[inds] = 0
+
         nx = newImgData.shape[1]
         ny = newImgData.shape[0]
         geoTransform = dat.GetGeoTransform()
@@ -130,14 +153,14 @@ def merge_monthly(dirname, max_dqi, max_class):
         dat.FlushCache()
         dat = None
 
-        out_ds = gdal.GetDriverByName("GTiff").Create(os.path.join(dirname, monthlies[mnth][0][0].strftime("%Y%m") + "_karenia_brevis.Monthly.tif"), nx, ny, 1, gdal.GDT_Byte)
+        out_ds = gdal.GetDriverByName("GTiff").Create(os.path.join(dirname, monthlies[mnth][0][0].strftime("%Y%m") + "_karenia_brevis.Monthly.tif"), nx, ny, 1, gdal.GDT_Int32)
         out_ds.SetGeoTransform(geoTransform)
         out_ds.SetProjection(wkt)
         out_ds.GetRasterBand(1).WriteArray(newImgData)
         out_ds.FlushCache()
         out_ds = None
             
-        out_ds = gdal.GetDriverByName("GTiff").Create(os.path.join(dirname, monthlies[mnth][0][0].strftime("%Y%m") + "_karenia_brevis.Monthly.DQI.tif"), nx, ny, 1, gdal.GDT_Byte)
+        out_ds = gdal.GetDriverByName("GTiff").Create(os.path.join(dirname, monthlies[mnth][0][0].strftime("%Y%m") + "_karenia_brevis.Monthly.DQI.tif"), nx, ny, 1, gdal.GDT_Int32)
         out_ds.SetGeoTransform(geoTransform)
         out_ds.SetProjection(wkt)
         out_ds.GetRasterBand(1).WriteArray(newDqi)
