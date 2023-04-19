@@ -162,7 +162,11 @@ def run_dbn(yml_conf):
     use_gpu = yml_conf["dbn"]["training"]["use_gpu"]
     batch_size = yml_conf["dbn"]["training"]["batch_size"]
     epochs = yml_conf["dbn"]["training"]["epochs"]
-
+ 
+ 
+    stratify_data = None
+    if "stratify_data" in yml_conf["dbn"]["training"]:
+        stratify_data = yml_conf["dbn"]["training"]["stratify_data"]
 
     scaler = None
     scaler_train = True 
@@ -186,15 +190,25 @@ def run_dbn(yml_conf):
     if subset_count > 1: 
         print("WARNING: Making subset count > 1 for training data may lead to suboptimal results")
     if not fcn:
+        #TODO stratify conv data
+
+ 
+        if stratify_data is not None:
+            strat_read_func = get_read_func(stratify_data["stratify_data"]["reader"]) 
+            stratify_data["stratify_data"]["reader"] = strat_read_func
+
         x2 = DBNDataset(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
             valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
             transform_values=transform_values, scaler = scaler, train_scaler = scaler_train, scale = scale_data, \
-            transform=numpy_to_torch, subset=subset_count, subset_training = subset_training)
+            transform=numpy_to_torch, subset=subset_count, subset_training = subset_training, stratify_data=stratify_data)
     else:
         x2 = DBNDatasetConv(data_train, read_func, data_reader_kwargs, delete_chans=delete_chans, \
              valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
              transform_values=transform_values, transform=None, subset=subset_count, tile=tile, tile_size=tile_size, tile_step=tile_step,
              subset_training = subset_training)
+
+    if x2.train_indices is not None:
+        np.save(os.path.join(out_dir, "train_indices"), x2.train_indices)
  
     #Generate model
     if not fcn:
@@ -390,7 +404,8 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, output_subs
     ind = 0
     while(count == 0 or dat.has_next_subset() or (dat.subset > 1 and dat.current_subset > (dat.subset-2))):
         gpu_usage()
-        test_loader = DataLoader(dat, batch_size=1000, shuffle=False, \
+        output_batch_size = min(100000, int(dat.data_full.shape[0] / 5))
+        test_loader = DataLoader(dat, batch_size=output_batch_size, shuffle=False, \
         num_workers = 0, drop_last = False, pin_memory = pin_mem) #int(os.cpu_count() / 3), pin_memory = True,
         #            drop_last=False)
 
@@ -409,7 +424,7 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, output_subs
             if use_gpu == True:
                 output = output.detach().cpu()
             gpu_usage()
-            loader = DataLoader(dev_ds, batch_size=1000, shuffle=False, \
+            loader = DataLoader(dev_ds, batch_size=output_batch_size, shuffle=False, \
                 num_workers = 0, drop_last = False, pin_memory = False)
             #TODO rec_mse, visible_probs = mdl.reconstruct(dat_dev, loader)
             dat_dev = dat_dev.detach().cpu()
@@ -432,7 +447,7 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, output_subs
             if ind2 > output_full.shape[0]:
                 ind2 = output_full.shape[0]
             output_full[ind1:ind2,:] = output
-            print("CONSTRUCTING OUTPUT", dat.data.shape, dat.data_full.shape, output.shape, output_full.shape, output.get_device()) #, rec_mse.get_device())
+            print("CONSTRUCTING OUTPUT", dat.data.shape, dat.data_full.shape, output.shape, output_full.shape, output.get_device(), ind1, ind2) #, rec_mse.get_device())
             ind = ind + 1
             del output
             #del rec_mse
