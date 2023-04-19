@@ -17,6 +17,7 @@ from skimage.util import view_as_windows
 from copy import deepcopy
 import re
 import datetime
+from pprint import pprint
 
 DATE_RE = ".*(\d{8}).*"
  
@@ -101,71 +102,77 @@ def merge_monthly(dirname, max_dqi, max_class):
             mtch = re.search(DATE_RE, fle)
             if mtch:
                 dte = datetime.datetime.strptime(mtch.group(1), "%Y%m%d")
-                if dte.month in monthlies.keys():
-                    monthlies[dte.month].append([dte, os.path.join(root, fle)])
+                if dte.year in monthlies.keys():
+                    if dte.month in monthlies[dte.year].keys():
+                        monthlies[dte.year][dte.month].append([dte, os.path.join(root, fle)])
+                    else:
+                        monthlies[dte.year][dte.month] = [[dte, os.path.join(root, fle)]]
                 else:
-                    monthlies[dte.month] = [[dte, os.path.join(root, fle)]]
-
-    for mnth in monthlies.keys():
-        newImgData = None
-        newDqi = None
-        dat = None
-        pixCnt = None
-        #for i in range(0, max_dqi):
-        #    for k in range(max_class,0,-1):
-        for j in range(0, len(monthlies[mnth])):
-
-                          
-                    dqi_fname = os.path.splitext(monthlies[mnth][j][1])[0] + ".DQI.tif"
+                    monthlies[dte.year] = {dte.month : [[dte, os.path.join(root, fle)]]}
  
-                    dat = gdal.Open(monthlies[mnth][j][1]) 
-                    imgData = dat.ReadAsArray()
-
-                    dqi = gdal.Open(dqi_fname).ReadAsArray()
+    pprint(monthlies.keys())
+    for yr in monthlies.keys():
+        for mnth in monthlies[yr].keys():
+            newImgData = None
+            newDqi = None
+            dat = None
+            pixCnt = None
+            #for i in range(0, max_dqi):
+            #    for k in range(max_class,0,-1):
+            for j in range(0, len(monthlies[yr][mnth])):
+                      
+                dqi_fname = os.path.splitext(monthlies[yr][mnth][j][1])[0] + ".DQI.tif"
  
-                    if newImgData is None:
-                        newImgData = np.zeros(imgData.shape)
-                        newDqi = np.zeros(imgData.shape)
-                        pixCnt = np.zeros(imgData.shape) 
-                     
-                    inds = np.where((dqi >= 0) & (imgData >= 0))
+                dat = gdal.Open(monthlies[yr][mnth][j][1]) 
+                imgData = dat.ReadAsArray()
+
+                dqi = gdal.Open(dqi_fname).ReadAsArray()
+ 
+                if newImgData is None:
+                    newImgData = np.zeros(imgData.shape)
+                    newDqi = np.zeros(imgData.shape)
+                    pixCnt = np.zeros(imgData.shape) 
+                
+                print(pixCnt.max(), monthlies[yr][mnth][j][1])     
+                inds = np.where((dqi >= 0) & (imgData >= 0))
                     
-                    newImgData[inds] += imgData[inds]
-                    newDqi[inds] += dqi[inds]
-                    pixCnt[inds] += 1
+                newImgData[inds] += imgData[inds]
+                newDqi[inds] += dqi[inds]
+                pixCnt[inds] += 1
 
         
-        inds = np.where(pixCnt < 1)
-        pixCnt[inds] = 1
-        print(inds)        
+            inds = np.where(pixCnt < 1)
+            pixCnt[inds] = 1
 
-        newImgData = np.round(np.divide(newImgData, pixCnt)).astype(np.int32)
-        newDqi = np.round(np.divide(newDqi, pixCnt)).astype(np.int32)  
+            newImgData = np.round(np.divide(newImgData, pixCnt)).astype(np.int32)
+            newDqi = np.round(np.divide(newDqi, pixCnt)).astype(np.int32)  
 
-        newImgData[inds] = -1
-        newDqi[inds] = -1
-        pixCnt[inds] = 0
+            newImgData[inds] = -1
+            newDqi[inds] = -1
+            pixCnt[inds] = 0
+            print("HERE ", mnth, yr)
 
-        nx = newImgData.shape[1]
-        ny = newImgData.shape[0]
-        geoTransform = dat.GetGeoTransform()
-        wkt = dat.GetProjection()
-        dat.FlushCache()
-        dat = None
 
-        out_ds = gdal.GetDriverByName("GTiff").Create(os.path.join(dirname, monthlies[mnth][0][0].strftime("%Y%m") + "_karenia_brevis.Monthly.tif"), nx, ny, 1, gdal.GDT_Int32)
-        out_ds.SetGeoTransform(geoTransform)
-        out_ds.SetProjection(wkt)
-        out_ds.GetRasterBand(1).WriteArray(newImgData)
-        out_ds.FlushCache()
-        out_ds = None
+            nx = newImgData.shape[1]
+            ny = newImgData.shape[0]
+            geoTransform = dat.GetGeoTransform()
+            wkt = dat.GetProjection()
+            dat.FlushCache()
+            dat = None
+    
+            out_ds = gdal.GetDriverByName("GTiff").Create(os.path.join(dirname, monthlies[yr][mnth][0][0].strftime("%Y%m") + "_karenia_brevis.Monthly.tif"), nx, ny, 1, gdal.GDT_Int32)
+            out_ds.SetGeoTransform(geoTransform)
+            out_ds.SetProjection(wkt)
+            out_ds.GetRasterBand(1).WriteArray(newImgData)
+            out_ds.FlushCache()
+            out_ds = None
             
-        out_ds = gdal.GetDriverByName("GTiff").Create(os.path.join(dirname, monthlies[mnth][0][0].strftime("%Y%m") + "_karenia_brevis.Monthly.DQI.tif"), nx, ny, 1, gdal.GDT_Int32)
-        out_ds.SetGeoTransform(geoTransform)
-        out_ds.SetProjection(wkt)
-        out_ds.GetRasterBand(1).WriteArray(newDqi)
-        out_ds.FlushCache()
-        out_ds = None    
+            out_ds = gdal.GetDriverByName("GTiff").Create(os.path.join(dirname, monthlies[yr][mnth][0][0].strftime("%Y%m") + "_karenia_brevis.Monthly.DQI.tif"), nx, ny, 1, gdal.GDT_Int32)
+            out_ds.SetGeoTransform(geoTransform)
+            out_ds.SetProjection(wkt)
+            out_ds.GetRasterBand(1).WriteArray(newDqi)
+            out_ds.FlushCache()
+            out_ds = None    
 
 
 

@@ -384,10 +384,11 @@ def run_compare(init_input, new_input, class_order, log_fname, out_ext, clust_ex
                                                     os.path.exists(new_input[dbn][clust]), 
                                                     os.path.exists(init_input[dbn][class_order[i]]), " ERROR MISSING FILE")
                                                 break
-
+                                
                                         init_dat = gdal.Open(init_input[dbn][class_order[i]]).ReadAsArray()
                                         new_dat = gdal.Open(new_input[dbn][clust]).ReadAsArray()
-
+                                        inds = np.where(init_dat > 0) #TODO generalize to multi-class
+                                        init_dat[inds] = 1
                                         init_dat, out_dat, compare_new_single, compare_init_single = \
                                             compare_label_sets(new_dat, init_dat, \
                                                 class_order[i], map_vals, no_retrieval_init[i], no_retrieval_new[i], \

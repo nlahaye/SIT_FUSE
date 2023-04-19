@@ -15,6 +15,109 @@ from osgeo import gdal, osr
 import argparse
 import os
 from utils import numpy_to_torch, read_yaml, get_read_func
+import zarr
+
+import matplotlib
+matplotlib.use('agg')
+import matplotlib.pyplot as plt
+ 
+def generate_cluster_masks_no_geo(data_reader, data_reader_kwargs, subset_inds, cluster_data, 
+    apply_context, context_clusters, context_name, compare, create_separate, generate_union = False):
+
+        read_func = get_read_func(data_reader)
+    
+        total = []
+        totalTruth = []
+        outUnion = None
+        unionCount = None
+        for p in range(len(cluster_data)):
+            print("FNAME1", cluster_data[p])
+
+            dbnDat1 = read_func(cluster_data[p], **data_reader_kwargs).astype(np.int32)
+            print(dbnDat1.min(), dbnDat1.max())
+            classes = np.unique(dbnDat1)
+            print(int(classes.max() - classes.min() + 2))
+            outDat = np.zeros(dbnDat1.shape, dtype=np.int32)
+ 
+            if apply_context:
+               outDat = np.zeros(dbnDat1.shape, dtype=np.int32)
+               inds = np.where(dbnDat1 < 0)
+               outDat[inds] = -1
+               if generate_union > 0 and outUnion is None:
+                   #union cases assume input scenes are all the same size        
+                   outUnion = np.zeros(dbnDat1.shape, dtype=np.int32)
+                   unionCount = np.zeros(dbnDat1.shape, dtype=np.int32)
+
+               if not isinstance(context_clusters[0], list):
+                       tmp = []
+                       tmp.append(context_clusters)
+                       context_clusters = tmp
+               for j in range(len(context_clusters)):
+                       for i in range(len(context_clusters[j])):
+                           clss = context_clusters[j][i]
+                           ind = np.where(dbnDat1 == clss)
+                           print(clss)
+                           outDat[ind] = (j+1)
+                           if generate_union > 0 and outUnion is not None:
+                               outUnion[ind] = outUnion[ind] + (j+1)
+                               unionCount[ind] = unionCount[ind] + 1
+    
+               inds = np.where((outDat < 0) & (dbnDat1 >= 0))
+               outDat[inds] = 0
+               outDatFull = np.zeros(dbnDat1.shape, dtype=np.int32) - 1
+               if len(subset_inds[p]) > 0:
+                    outDatFull[subset_inds[0]:subset_inds[1],subset_inds[2]:subset_inds[3]] = outDat
+               else:
+                    outDatFull = outDat
+               file_ext = "." + context_name
+    
+               fname = cluster_data[p] + file_ext + ".zarr"
+               zarr.save(fname,outDatFull)
+               img = plt.imshow(outDatFull, vmin=-1, vmax=1)
+               plt.savefig(fname + ".png", dpi=400, bbox_inches='tight')
+
+               if generate_union > 0 and p == len(cluster_data)-1:
+                                fname = os.path.join(os.path.dirname(cluster_data[p]), context_name + ".Union.zarr")
+
+                                inds = np.where(unionCount == 0)
+                                unionCount[inds] = 1
+                                outUnion = np.divide(outUnion,unionCount).astype(np.int32)
+    
+                                outUnionFull = None
+                                if len(subset_inds[p]) > 0:
+                                    outUnionFull[subset_inds[0]:subset_inds[1],subset_inds[2]:subset_inds[3]] = outUnion
+                                else:
+                                    outUnionFull = outUnion
+                                inds = np.where(outUnionFull <= 0)
+                                outUnionFull[inds] = 0
+                                #inds = np.where(outUnionFull > 0)
+                                #outUnionFull[inds] = 1
+                                zarr.save(fname,outUnionFull)
+                                img = plt.imshow(outDatFull, vmin=-1, vmax=1)
+                                plt.savefig(fname + ".png", dpi=400, bbox_inches='tight')
+ 
+
+            if create_separate:
+                            for i in range(len(classes)):
+                                    outDat = np.zeros(dbnDat1.shape, dtype=np.int32) - 1
+                                    clss = classes[i]
+                                    ind = np.where(dbnDat1 == clss)
+                                    outDat[ind] = 1
+                                    inds = np.where((outDat < 0) & (dbnDat1 >= 0))
+                                    outDat[inds] = 0
+                                    file_ext = ".cluster_class" + str(clss)
+
+                                    outDatFull = np.zeros(dbnDat1.shape, dtype=np.int32) - 1
+                                    if len(subset_inds[p]) > 0:
+                                            outDatFull[subset_inds[0]:subset_inds[1],subset_inds[2]:subset_inds[3]] = outDat
+                                    else:
+                                            outDatFull = outDat
+
+                                    fname = cluster_data[p] + file_ext + ".zarr"
+                                    zarr.save(fname,outDatFull)
+                                    img = plt.imshow(outDatFull, vmin=-1, vmax=1)
+                                    plt.savefig(fname + ".png", dpi=400, bbox_inches='tight') 
+ 
 
 def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
     cluster_data, gtiff_data, apply_context, context_clusters, context_name, compare, create_separate, generate_union = False):
@@ -338,13 +441,20 @@ def main(yml_fpath):
 
     gen_from_gtiffs = yml_conf["gen_from_geotiffs"]
 
-    if gen_from_gtiffs:
-        generate_separate_from_full(gtiff_data = cluster_data, apply_context = apply_context,
-            context_clusters = context_clusters, context_name = context_name, create_separate=create_separate, generate_union=generate_union)
-    else: 
-        generate_cluster_gtiffs(data_reader = reader, data_reader_kwargs = data_reader_kwargs, subset_inds = subset_inds,
-            cluster_data = cluster_data, gtiff_data = gtiff_data, apply_context = apply_context,
-            context_clusters = context_clusters, context_name = context_name, compare = compare, create_separate = create_separate, generate_union=generate_union)
+ 
+    if gtiff_data is not None:
+        if gen_from_gtiffs:
+            generate_separate_from_full(gtiff_data = cluster_data, apply_context = apply_context,
+                context_clusters = context_clusters, context_name = context_name, create_separate=create_separate, generate_union=generate_union)
+        else: 
+            generate_cluster_gtiffs(data_reader = reader, data_reader_kwargs = data_reader_kwargs, subset_inds = subset_inds,
+                cluster_data = cluster_data, gtiff_data = gtiff_data, apply_context = apply_context,
+                context_clusters = context_clusters, context_name = context_name, compare = compare, 
+                    create_separate = create_separate, generate_union=generate_union)
+    else:
+        generate_cluster_masks_no_geo(data_reader = reader, data_reader_kwargs = data_reader_kwargs, subset_inds = subset_inds,
+                cluster_data = cluster_data, apply_context = apply_context, context_clusters = context_clusters, 
+                context_name = context_name, compare = compare, create_separate = create_separate, generate_union=generate_union)
 
 if __name__ == '__main__':
 
