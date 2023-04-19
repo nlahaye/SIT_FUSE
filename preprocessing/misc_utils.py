@@ -31,6 +31,21 @@ def run_cmd(cmd):
     print(out.decode(), end=" ")
 
 
+
+
+def goes_to_geotiff(data_file):
+
+    out_fname = os.path.splitext(data_file)[0] + ".tif"
+    cmd = "gdal_translate NETCDF:\"" + data_file + "\":Rad tmp.tif;" 
+    cmd += " gdalwarp -t_srs EPSG:4326 -wo SOURCE_EXTRA=100 tmp.tif " + out_fname
+    cmd += "; rm tmp.tif" 
+
+    run_cmd(cmd)
+
+
+
+
+
 #Assumes each set of tiffs will be moved to a separate directory
 def gen_polar_2_grid_cmds(exe_location, data_files, location_files, instruments, out_dirs):
 

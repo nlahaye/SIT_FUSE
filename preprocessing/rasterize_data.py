@@ -8,21 +8,27 @@ required before exporting such information to foreign countries or providing acc
 """
 
 from osgeo import gdal, ogr
+import os
+import argparse
+from utils import numpy_to_torch, read_yaml, get_read_func
 
-
-
-def rasterize(nodata, vector_fn, raster_fn, pixel_size):
+def rasterize(nodata, vector_fn, pixel_size):
+    print(vector_fn)
     source_ex = gdal.OpenEx(vector_fn)
     
-    gdal.Rasterize(raster_fn, source_ex, format='GTIFF', outputType=gdal.GDT_Byte, creationOptions=["COMPRESS=DEFLATE"], noData=NoData_value, initValues=NoData_value, xRes=pixel_size, yRes=-pixel_size, allTouched=True, burnValues=[1])    
+    raster_fn = os.path.splitext(vector_fn)[0] + "tif"
+
+
+    gdal.Rasterize(raster_fn, source_ex, format='GTIFF', outputType=gdal.GDT_Byte, creationOptions=["COMPRESS=DEFLATE"], noData=nodata, initValues=nodata, xRes=pixel_size, yRes=-pixel_size, allTouched=True, burnValues=[1])    
 
 
 def main(yml_fpath):
 
     #Translate config to dictionary 
     yml_conf = read_yaml(yml_fpath)
-    #Run 
-    tile_data(yml_conf["nodata"], yml_conf["vector_fn"], yml_conf["raster_fn"], yml_conf["pixel_size"])
+    for i in range(len(yml_conf["vector_fn"])):
+        #Run 
+        rasterize(yml_conf["nodata"], yml_conf["vector_fn"][i], yml_conf["pixel_size"])
 
 
 if __name__ == '__main__':
