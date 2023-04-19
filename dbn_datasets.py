@@ -23,8 +23,9 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
 
 class DBNDataset(torch.utils.data.Dataset):
 
-	def __init__(self, filenames, read_func, read_func_kwargs, pixel_padding, delete_chans, valid_min, valid_max, fill_value = -9999, chan_dim = 0, transform_chans = [], transform_values = [], scaler = None, scale=False, transform=None, subset=None, train_scaler = False, subset_training = -1):
+	def __init__(self, filenames, read_func, read_func_kwargs, pixel_padding, delete_chans, valid_min, valid_max, fill_value = -9999, chan_dim = 0, transform_chans = [], transform_values = [], scaler = None, scale=False, transform=None, subset=None, train_scaler = False, subset_training = -1, stratify_data = None):
 
+		self.train_indices = None
 		self.training = False
 		self.filenames = filenames
 		self.transform = transform
@@ -44,6 +45,7 @@ class DBNDataset(torch.utils.data.Dataset):
 		self.read_func_kwargs = read_func_kwargs
 		self.subset = subset
 		self.subset_training = subset_training
+		self.stratify_data = stratify_data
 		if self.subset is None:
 			self.subset = 1		
 		self.current_subset = -1
@@ -53,12 +55,20 @@ class DBNDataset(torch.utils.data.Dataset):
 
 	def __loaddata__(self):
 		
+		strat_local = []
 		data_local = []
 		for i in range(0, len(self.filenames)):
 			if (type(self.filenames[i]) == str and os.path.exists(self.filenames[i])) or (type(self.filenames[i]) is list and os.path.exists(self.filenames[i][0])):
+
 				print(self.filenames[i])
 				dat = self.read_func(self.filenames[i], **self.read_func_kwargs).astype(np.float64)
 				print(dat.shape)
+				strat_data = None
+				if dat.ndim == 2:
+					dat = np.expand_dims(dat, self.chan_dim)
+				if self.stratify_data is not None:
+					strat_data = self.stratify_data["reader"](self.stratify_data["filename"][i], \
+						**self.stratify_data["reader_kwargs"])	
 				#dat = dat[:,2000:2100,2000:2100] #TODO REMOVE
 				print(dat.shape, dat[np.where(dat > -99999)].min(), dat[np.where(dat > -99999)].max())
 				for t in range(len(self.transform_chans)):
@@ -85,6 +95,12 @@ class DBNDataset(torch.utils.data.Dataset):
 					dat[np.where(dat == self.fill_value)] = -9999
 				dat = np.moveaxis(dat, self.chan_dim, 2)
 				data_local.append(dat)
+				if strat_data is not None:
+					#TODO Generalize to multi-class
+					strat_data = strat_data.astype(np.int32)
+					strat_data[np.where(strat_data < 0)] = 0
+					strat_data[np.where(strat_data > 0)] = 1	
+					strat_local.append(strat_data)
 
 		#del dat
 		self.chan_dim = 2
@@ -107,6 +123,7 @@ class DBNDataset(torch.utils.data.Dataset):
 
 		self.data = []
 		self.targets = []
+		self.stratify_training = []
 		for r in range(len(data_local)):
 			count = 0
 			print("HERE",  data_local[r].shape)
@@ -114,6 +131,7 @@ class DBNDataset(torch.utils.data.Dataset):
 			for j in range(self.pixel_padding, data_local[r].shape[dim1] - self.pixel_padding):
 				for k in range(self.pixel_padding, data_local[r].shape[dim2] - self.pixel_padding):
 					sub_data_total = []
+					sub_data_strat = []
 					for c in range(0, data_local[r].shape[self.chan_dim]):
 
 						slc = [slice(None)] * data_local[r].ndim
@@ -123,12 +141,21 @@ class DBNDataset(torch.utils.data.Dataset):
 						sub_data = data_local[r][tuple(slc)]
 						sub_data_total.append(sub_data)
 
+					if len(strat_local) > 0:
+						sub_data_strat = strat_local[r][j,k]	
+						#slc = [slice(None)] * strat_local[r].ndim
+						#slc[0] = slice(j-self.pixel_padding,j+self.pixel_padding+1)
+						#slc[1] = slice(k-self.pixel_padding, k+self.pixel_padding+1)
+						#sub_data_strat = strat_local[r][tuple(slc)]
 					sub_data_total = np.array(sub_data_total)
 					if(sub_data_total.min() <= -9999):
 						count = count + 1
 						continue
 					self.data.append(sub_data_total.ravel())
 					self.targets.append([r,j,k])
+
+					if len(strat_local) > 0:
+						self.stratify_training.append(sub_data_strat)
 			if last_count >= len(self.data):
 				print("ERROR NO DATA RECEIVED FROM", self.filenames[r]) 
 			print("SKIPPED", count, "SAMPLES OUT OF", len(self.data), data_local[r].shape, dim1, dim2, self.chan_dim)
@@ -140,8 +167,13 @@ class DBNDataset(torch.utils.data.Dataset):
 		#self.data_full = self.data_full.astype(np.int32)
 		self.targets_full = np.array(self.targets).astype(np.int16)
 		if self.training and self.subset_training > 0:
-			self.data_full = self.data_full[:self.subset_training,:]
-			self.targets_full = self.targets_full[:self.subset_training,:]
+			if len(self.stratify_training) > 0:
+				self.stratify_training = np.array(self.stratify_training)
+				print("STRAT", self.stratify_training.shape)
+				self.__stratify_training__()
+			else:
+				self.data_full = self.data_full[:self.subset_training,:]
+				self.targets_full = self.targets_full[:self.subset_training,:]
 		del self.data
 		del self.targets
 
@@ -162,6 +194,35 @@ class DBNDataset(torch.utils.data.Dataset):
 
 	def has_prev_subset(self):
 		return self.current_subset > 0
+
+        
+	def __stratify_training__(self):
+
+		num_train_exs = self.subset_training
+		counts = []
+		type_inds = []
+		train_indices = []     
+		dataset_size = self.data_full.shape[0]
+
+		for mask_val in range(self.stratify_training.max() + 1):
+			print(np.where(self.stratify_training == mask_val)[0].shape, mask_val)
+			type_inds.append(np.where(self.stratify_training == mask_val)[0])
+			percentage_of_dataset = len(type_inds[mask_val]) / dataset_size
+			# calculate how many test & val exaples to take from the given water type
+			num_train_exs_of_type = round(percentage_of_dataset * num_train_exs)
+			# randomly sample examples from the givenlaprint(len(type_inds[mask_val]), num_train_exs_of_type)
+			train_indices.extend(np.random.choice(type_inds[mask_val], size=num_train_exs_of_type, replace=False))
+
+		#all_indices = train_indices + test_indices + val_indices
+		#unique_indices, counts = np.unique(all_indices, return_counts=True)
+		#dup = unique_indices[counts > 1]
+		#if len(dup) > 0:
+		#	raise Exception("Train, test, and val splits overlap. Redefine splits.")
+
+		self.train_indices = train_indices
+		self.data_full = self.data_full[train_indices]
+		self.targets_full = self.targets_full[train_indices]
+ 
 
 	def __set_subset__(self,increment):
 		#TODO: optimize to minimize data duplication - lazy loading & Dask
