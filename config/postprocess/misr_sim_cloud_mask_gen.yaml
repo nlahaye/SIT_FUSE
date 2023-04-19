@@ -1,0 +1,29 @@
+
+gen_from_geotiffs: False
+
+data:
+ clust_reader_type: "zarr_to_numpy"
+ reader_kwargs:
+   no_arg: "no_arg" 
+ subset_inds: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
+ create_separate: False
+  
+ gtiff_data: 
+ cluster_fnames: ["/data/nlahaye/output/Learnergy/DBN_MISR_SIMULATED/file0_output_test.data.clustering_10clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MISR_SIMULATED/file1_output_test.data.clustering_10clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MISR_SIMULATED/file2_output_test.data.clustering_10clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MISR_SIMULATED/file3_output_test.data.clustering_10clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MISR_SIMULATED/file4_output_test.data.clustering_10clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MISR_SIMULATED/file5_output_test.data.clustering_10clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MISR_SIMULATED/file6_output_test.data.clustering_10clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MISR_SIMULATED/file7_output_test.data.clustering_10clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MISR_SIMULATED/file8_output_test.data.clustering_10clusters.zarr"]
+
+
+context:
+ apply_context: True
+ clusters: [[1,2,3,4,5,7,9,10]] #i.e. smoke clusters
+ name: "cloud" #i.e. smoke
+ compare_truth: false
+ generate_union: false
+

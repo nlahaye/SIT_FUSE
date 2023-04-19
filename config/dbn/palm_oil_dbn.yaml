@@ -29,8 +29,14 @@ dbn:
   world_size: 1
   rank: 0
   device_ids: ["0","1","2","3","4","5","6","7"]
-  batch_size: 1000
-  epochs: [100] #[8] #, 1, 1] #, 5] #, 10]
+  batch_size: 5000
+  epochs: [200] #[8] #, 1, 1] #, 5] #, 10]
+  stratify_data: 
+   reader: "gtiff"
+   filename: ["/data/nlahaye/remoteSensing/Palm_Oil_Test_V2.Filled.tif"]
+   reader_kwargs:
+    None:
+ 
 
 scaler:
  name: "standard"
@@ -44,7 +50,7 @@ data:
  valid_min: -10000.0
  valid_max: 100000000
  subset_count: 1
- output_subset_count: 100
+ output_subset_count: 5
  reader_type: "gtiff"
  reader_kwargs:
   no_arg: ''

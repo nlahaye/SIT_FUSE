@@ -1,0 +1,21 @@
+
+
+
+
+data:
+ filename: ["/data/nlahaye/output/Learnergy/DBN_MISR_SIMULATED/file0_output_test.data.clustering_10clusters.zarr.cloud.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MISR_SIMULATED/file1_output_test.data.clustering_10clusters.zarr.cloud.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MISR_SIMULATED/file2_output_test.data.clustering_10clusters.zarr.cloud.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MISR_SIMULATED/file3_output_test.data.clustering_10clusters.zarr.cloud.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MISR_SIMULATED/file4_output_test.data.clustering_10clusters.zarr.cloud.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MISR_SIMULATED/file5_output_test.data.clustering_10clusters.zarr.cloud.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MISR_SIMULATED/file6_output_test.data.clustering_10clusters.zarr.cloud.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MISR_SIMULATED/file7_output_test.data.clustering_10clusters.zarr.cloud.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MISR_SIMULATED/file8_output_test.data.clustering_10clusters.zarr.cloud.zarr"] 
+ reader_type: "zarr_to_numpy"
+ reader_kwargs:
+  None:
+
+
+write_geotiff: False
+

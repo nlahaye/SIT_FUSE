@@ -4,5 +4,9 @@
 
 data:
  filename: ["/data/nlahaye/remoteSensing/Palm_Oil/Contour_Test/Palm_Oil_Test_V2.tif"]
+ reader_type: "gtiff"
+ reader_kwargs:
+  None:
 
+write_geotiff: True
 

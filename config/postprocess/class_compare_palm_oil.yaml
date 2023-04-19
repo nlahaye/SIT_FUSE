@@ -1,20 +1,20 @@
 
 
 init_data: 
- - palm_oil: "/data/nlahaye/remoteSensing/Palm_Oil_Test_V2.tif"
+ - palm_oil: "/data/nlahaye/remoteSensing/Palm_Oil_Test_V2.Filled.tif"
 
-new_data : [["/data/nlahaye/output/Learnergy/DBN_PALM_OIL_3/file0_output.data.clustering_100clusters.zarr.full_geo.tif"]]
+new_data : [["/data/nlahaye/output/Learnergy/DBN_PALM_OIL_3/file0_output_test.data.clustering_150clusters.zarr.full_geo.tif"]]
 
 
 class_order: ["palm_oil"]
 
 good_vals: 
- palm_oil: [1,-1]
+ palm_oil: [1,0]
 
 map_vals:
  palm_oil:
   1: 1
-  -1: 0
+  0: 0
 
 out_ext: ["DBN_PALM_OIL"]
 
@@ -26,16 +26,15 @@ no_retrieval_init: [-3]
 no_retrieval_new: [-1]
 
 labels: 
- palm_oil: [-1,1]
- total_mask: [-1,1]
+ palm_oil: [0,1]
+ total_mask: [0,1]
 
 gradient_increase: 0.003
 
 gradient:
  palm_oil: 
   1: 0.0
-  -1: 0.0
-
+  0: 0.0
 
 class_mask_gen_func: "none"
 

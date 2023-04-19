@@ -1,0 +1,12 @@
+
+
+
+
+data:
+ filename: ["/data/nlahaye/output/Learnergy/DBN_PALM_OIL_3/Agreement_Log_palm_oil_DBN_PALM_OIL_CLUST_INIT.txt.DBN_DATA_AGREE.tif"]
+ reader_type: "gtiff"
+ reader_kwargs:
+  None:
+
+write_geotiff: True
+ 

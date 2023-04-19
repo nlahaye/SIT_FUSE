@@ -1,0 +1,20 @@
+
+
+
+pixel_size: 0.0001
+vector_fn: ["/data/nlahaye/remoteSensing/HMS_FIRE_SMOKE/hms_fire20190814.shp",
+"/data/nlahaye/remoteSensing/HMS_FIRE_SMOKE/hms_fire20190815.shp",
+"/data/nlahaye/remoteSensing/HMS_FIRE_SMOKE/hms_fire20190816.shp",
+"/data/nlahaye/remoteSensing/HMS_FIRE_SMOKE/hms_fire20190816.shp",
+"/data/nlahaye/remoteSensing/HMS_FIRE_SMOKE/hms_fire20190818.shp",
+"/data/nlahaye/remoteSensing/HMS_FIRE_SMOKE/hms_fire20190819.shp",
+"/data/nlahaye/remoteSensing/HMS_FIRE_SMOKE/hms_smoke20190814.shp",
+"/data/nlahaye/remoteSensing/HMS_FIRE_SMOKE/hms_smoke20190815.shp",
+"/data/nlahaye/remoteSensing/HMS_FIRE_SMOKE/hms_smoke20190816.shp",
+"/data/nlahaye/remoteSensing/HMS_FIRE_SMOKE/hms_smoke20190816.shp",
+"/data/nlahaye/remoteSensing/HMS_FIRE_SMOKE/hms_smoke20190818.shp",
+"/data/nlahaye/remoteSensing/HMS_FIRE_SMOKE/hms_smoke20190819.shp"]
+
+
+nodata: -9999
+

@@ -18,7 +18,7 @@ scaler:
  scale: True
 
 
-files_train: ["/data/nlahaye/output/Learnergy/DBN_PALM_OIL_3/file0_output.data"]
+files_train: ["/data/nlahaye/output/Learnergy/DBN_PALM_OIL_3/file0_output_test.data"]
 
-files_test: ["/data/nlahaye/output/Learnergy/DBN_PALM_OIL_3/file0_output.data"]
+files_test: ["/data/nlahaye/output/Learnergy/DBN_PALM_OIL_3/file0_output_test.data"]
 

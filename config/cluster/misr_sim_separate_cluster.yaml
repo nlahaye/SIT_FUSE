@@ -3,15 +3,15 @@ output:
 
 
 clustering:
-        n_clusters: 5
+        n_clusters: 10
         branch: 5
         thresh: 1e-15
         pixel_padding: 1
         train_sample_size: 150000 #000
-        clustering: "/data/nlahaye/output/Learnergy/DBN_MISR_SIMULATED/clustering_centroids.pkl"
-        train: False
+        clustering: #"/data/nlahaye/output/Learnergy/DBN_MISR_SIMULATED/clustering_centroids.pkl"
+        train: True
         reset_n_clusters: True
-        model: "/data/nlahaye/output/Learnergy/DBN_MISR_SIMULATED/clustering_centroids.pkl"
+        model: #"/data/nlahaye/output/Learnergy/DBN_MISR_SIMULATED/clustering_centroids.pkl"
 
 
 scaler:
