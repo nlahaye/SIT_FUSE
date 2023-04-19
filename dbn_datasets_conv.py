@@ -29,6 +29,9 @@ class DBNDatasetConv(DBNDataset):
 	def __init__(self, filenames, read_func, read_func_kwargs, delete_chans, valid_min, valid_max, fill_value = -9999, chan_dim = 0, transform_chans = [], transform_values = [], transform=None, subset=None, tile = False, tile_size = None, tile_step = None, subset_training = -1):
 		#Scaler info isnt used here, but keeping same interface as DBNDataset
 
+                #TODO Employ stratification
+		self.train_indices
+ 
 		self.filenames = filenames
 		self.transform = transform
 		self.delete_chans = delete_chans
