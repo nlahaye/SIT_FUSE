@@ -246,18 +246,25 @@ class RSClustering(object):
                     if np.isnan(tmp.min().compute()) and np.isnan(tmp.min().compute()):
                             continue
                     trn.append(tmp)
-                trn = da.concatenate(trn)    
-                index = np.random.choice(trn.shape[0], trn.shape[0], replace=False)
-                trn = da.slicing.shuffle_slice(trn, index)
+                trn = da.concatenate(trn)
+
+                if os.path.exists(train_data[i] + ".train_indices.npy"):
+                    train_indices = np.load(train_data[i] + ".train_indices.npy")
+                    trn = trn[train_indices]
+                    print("STRAT DATA", trn.shape)
+                else:
+                    index = np.random.choice(trn.shape[0], trn.shape[0], replace=False)
+                    trn = da.slicing.shuffle_slice(trn, index)
+                    print(trn.shape, trn.min().compute(), trn.max().compute())
+                    trn = trn[:int(self.train_sample_size/len(train_data)),:]
+                    print(trn.shape)
+                if scale:
+                    trn = self.scaler.transform(trn) #[j:j+50000] = self.scaler.transform(trn[j:j+50000])
                 print(trn.shape, trn.min().compute(), trn.max().compute())
-                trn = trn[:int(self.train_sample_size/len(train_data)),:]
-                print(trn.shape)
-                for j in range(0,trn.shape[0], 50000):
-                    print("INIT TRAINING CLUSTERING MODEL")  
-                    print(j, j+50000)
-                    if scale:
-                        trn[j:j+50000] = self.scaler.transform(trn[j:j+50000])
-                    self.__train_clustering__(trn[j:j+50000]) 
+                for j in range(0,trn.shape[0],50000):
+                    print("HERE", j, j+50000)
+                    tmp = trn[j:j+50000].compute()
+                    self.__train_clustering__(tmp) 
                 del trn
 
             #index = np.random.choice(trn.shape[0], trn.shape[0], replace=False)
