@@ -20,10 +20,15 @@ import pickle
 
 import sys
 import resource
-max_rec = 10**6
-# May segfault without this line. 100 is a guess at the size of each stack frame.
-resource.setrlimit(resource.RLIMIT_STACK, [100*max_rec, resource.RLIM_INFINITY])
-sys.setrecursionlimit(max_rec)
+try:
+    max_rec = 10**6
+    # May segfault without this line. 100 is a guess at the size of each stack frame.
+    resource.setrlimit(resource.RLIMIT_STACK, [100 * max_rec, resource.RLIM_INFINITY])
+    sys.setrecursionlimit(max_rec)
+except Exception as e:
+    pass
+
+from osgeo import gdal
 
 #ML imports
 import torch
@@ -248,9 +253,26 @@ class RSClustering(object):
                     trn.append(tmp)
                 trn = da.concatenate(trn)
 
+                trn2 = None
                 if os.path.exists(train_data[i] + ".train_indices.npy"):
                     train_indices = np.load(train_data[i] + ".train_indices.npy")
-                    trn = trn[train_indices]
+  
+                    nvals = 0
+                    for i in range(len(train_indices)):
+                        nvals +=  train_indices[i].shape[0]
+    
+                    num_train_ex = int(self.train_sample_size/len(train_data))
+                    for i in range(len(train_indices)):
+                        percent = train_indices[i].shape[0] / nvals
+                        num_train_exs_of_type = round(percentage_of_dataset * num_train_ex)
+                        tmp = np.random.choice(train_inds[i], size=num_train_exs_of_type, replace=False)             
+             
+                        if trn2 is None:
+                            trn2 = da.concatenate(trn[tmp])
+                        else:
+                            trn2 = da.concatenate([trn2, trn[tmp]], axis=0) 
+
+                    trn = trn2
                     print("STRAT DATA", trn.shape)
                 else:
                     index = np.random.choice(trn.shape[0], trn.shape[0], replace=False)
