@@ -2,7 +2,7 @@
 start_date: "2018-08-01"
 clusters: 100
 
-clusters_dir: '/data/nlahaye/output/MERGED_ALGAL_3/' #DBN_L2_TROP_MOD/
+clusters_dir: '/data/nlahaye/output/MERGED_ALGAL_3/'
  
 files_train: [ #"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_0",
 ##"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/sif_finalday_1",

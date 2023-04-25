@@ -1,12 +1,12 @@
 
 
-
-
 data:
- filename: ["/data/nlahaye/remoteSensing/Palm_Oil/Contour_Test/Palm_Oil_Test_V2.tif"]
+ #filename: ["/data/nlahaye/remoteSensing/Palm_Oil/Contour_Test/Palm_Oil_Test_V2.tif"]
+ filename: ["/data/nlahaye/output/Learnergy/DBN_PALM_OIL_3/file0_output_test.data.clustering_100clusters.zarr.palm_oil.tif"]
  reader_type: "gtiff"
  reader_kwargs:
   None:
 
+remove_singles: True
 write_geotiff: True
 

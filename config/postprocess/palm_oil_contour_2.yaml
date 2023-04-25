@@ -8,5 +8,6 @@ data:
  reader_kwargs:
   None:
 
+remove_singles: True
 write_geotiff: True
  

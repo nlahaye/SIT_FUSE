@@ -6,14 +6,14 @@ data:
  reader_kwargs:
    no_arg: "no_arg" 
  subset_inds: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
- create_separate: True
+ create_separate: False
   
  gtiff_data: ["/data/nlahaye/remoteSensing/Palm_Oil/ucayali_condensed_stacks_2020_h1v1.tiff"]
- cluster_fnames: ["/data/nlahaye/output/Learnergy/DBN_PALM_OIL_3/file0_output_test.data.clustering_50clusters.zarr"]
+ cluster_fnames: ["/data/nlahaye/output/Learnergy/DBN_PALM_OIL_3/file0_output_test.data.clustering_100clusters.zarr"]
 
 context:
- apply_context: False
- clusters: [3, 17, 49] #i.e. smoke clusters
+ apply_context: True
+ clusters: [4, 40, 43, 85]  #64 #i.e. smoke clusters
  name: "palm_oil" #i.e. smoke
  compare_truth: false
  generate_union: false
