@@ -41,7 +41,6 @@ def rename_files(start_date, clusters_dir, n_clusters, files_test, files_train):
             except ValueError:
                 continue
 
-        print(input_fname, dat_train, dat_test)
         if dat_train:
             clust_fname = clust_fname_init + str(dat_ind) + "_output.data.clustering_" + \
                 str(n_clusters) + "clusters.zarr.karenia_brevis_bloom.tif"
@@ -53,7 +52,6 @@ def rename_files(start_date, clusters_dir, n_clusters, files_test, files_train):
             dqi_fname = clust_fname_init + str(dat_ind) + "_output_test.data.clustering_" + \
                 str(n_clusters) + "clusters.zarr.karenia_brevis_bloom.DQI.tif"
 
-        print(clust_fname)
         if not os.path.exists(clust_fname):
             clust_fname = clust_fname + "f"
             if not os.path.exists(clust_fname):

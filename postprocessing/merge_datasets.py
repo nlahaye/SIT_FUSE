@@ -21,29 +21,32 @@ from pprint import pprint
 
 DATE_RE = ".*(\d{8}).*"
  
-def merge_datasets(num_classes, paths, fname_str, out_dir, base_index = 0, data = None, qual = None): 
+def merge_datasets(num_classes, paths, fname_str, out_dir, base_index = 0): 
     for root, dirs, files in os.walk(paths[base_index]):
         for fle in files:
             if fname_str in fle:
                 fname = os.path.join(out_dir, fle)
                 dqi_fname = os.path.splitext(fname)[0] + ".DQI.tif"
+                data = None
+                qual = None
                 if os.path.exists(fname):
-                    continue
+                    data = gdal.Open(fname).ReadAsArray()
+                    qual = gdal.Open(dqi_fname).ReadAsArray()
                 fle1 = os.path.join(root, fle)
                 dat1 = gdal.Open(fle1)
+                tmp = dat1.ReadAsArray()
                 if data is None:
-                    tmp = dat1.ReadAsArray()
                     imgData1 = np.zeros(tmp.shape) - 1
                 else:
                     imgData1 = data
-                    tmp = dat1.ReadAsArray()
+
                 if qual is None:
                     dqi = np.zeros(imgData1.shape) - 1
                 else:
                     dqi = qual
+
                 inds = np.where((imgData1 < 0) & (tmp >= 0))
-                tmp[inds] = imgData1[inds]
-                imgData1 = tmp 
+                imgData1[inds] = tmp[inds] 
                 #print(imgData1.max(), num_classes**(len(paths)-(1+base_index)))
                 #imgData1[inds] = imgData1[inds] #+ num_classes**(len(paths)-(1+base_index))
 
@@ -60,12 +63,11 @@ def merge_datasets(num_classes, paths, fname_str, out_dir, base_index = 0, data 
                         #imgData1[inds] = imgData2[inds] + num_classes**(len(paths)-(1+j))
                         #inds = np.where((imgData1 % num_classes == 0))
                         #imgData1[inds] = 0
-                        dat2.FlushCache()
+                        #dat2.FlushCache()
                         dat2 = None
                 
                 nx = imgData1.shape[1]
                 ny = imgData1.shape[0]
-                print(imgData1.min(), imgData1.max(), dqi.min(), dqi.max())
                 geoTransform = dat1.GetGeoTransform()
                 wkt = dat1.GetProjection()
                 dat1.FlushCache()
@@ -77,7 +79,6 @@ def merge_datasets(num_classes, paths, fname_str, out_dir, base_index = 0, data 
                 out_ds.GetRasterBand(1).WriteArray(imgData1)
                 out_ds.FlushCache()
                 out_ds = None
-                data = imgData1        
   
                 out_ds = gdal.GetDriverByName("GTiff").Create(dqi_fname, nx, ny, 1, gdal.GDT_Int16)
                 out_ds.SetGeoTransform(geoTransform)
@@ -85,9 +86,6 @@ def merge_datasets(num_classes, paths, fname_str, out_dir, base_index = 0, data 
                 out_ds.GetRasterBand(1).WriteArray(dqi)
                 out_ds.FlushCache()
                 out_ds = None
-                qual = dqi                 
-
-    return data, qual
 
 
 #assumes rename to having date in filename
@@ -133,7 +131,6 @@ def merge_monthly(dirname, max_dqi, max_class):
                     newDqi = np.zeros(imgData.shape)
                     pixCnt = np.zeros(imgData.shape) 
                 
-                print(pixCnt.max(), monthlies[yr][mnth][j][1])     
                 inds = np.where((dqi >= 0) & (imgData >= 0))
                     
                 newImgData[inds] += imgData[inds]
@@ -186,8 +183,8 @@ def main(yml_fpath):
  
     if yml_conf["gen_daily"]:
         for i in range(len(yml_conf['input_paths'])):
-            data, qual = merge_datasets(yml_conf['num_classes'], yml_conf['input_paths'], 
-                yml_conf['fname_str'], yml_conf['out_dir'], i, data, qual)
+            merge_datasets(yml_conf['num_classes'], yml_conf['input_paths'], 
+                yml_conf['fname_str'], yml_conf['out_dir'], i) 
     if yml_conf["gen_monthly"]:
         merge_monthly(yml_conf['dirname'], yml_conf['max_dqi'], yml_conf['max_class'])  
  

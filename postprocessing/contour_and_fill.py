@@ -14,6 +14,8 @@ from osgeo import gdal, osr
 from utils import get_read_func, read_yaml
 import cv2
 
+import diplib as dip
+
 import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
@@ -34,6 +36,9 @@ def main(yml_fpath):
         imgData[np.where(imgData < 0)] = 0
         imgData[np.where(imgData > 0)] = 1       
         imgData = imgData.astype(np.uint8)
+
+        if yml_conf["remove_singles"]:
+            imgData = imgData - dip.GetSinglePixels(imgData > 0)
 
         imgData2 = imgData.copy()
         imgData3 = imgData.copy()
@@ -63,6 +68,9 @@ def main(yml_fpath):
             write_zarr(data_fnames[i] + ".ImFill_Invert.zarr", im_floodfill_inv.astype(np.int32))
         # Combine the two images to get the foreground.
         im_out = imgData | im_floodfill_inv
+        if yml_conf["remove_singles"]:
+            im_out = dip.MajorityVote(im_out > 0)
+            im_out = np.asarray(im_out - dip.GetSinglePixels(im_out > 0))
         if wrt_geotiff:
             write_geotiff(dat, im_out, data_fnames[i] + ".ImFill_Final.tif")
         else:
