@@ -264,13 +264,11 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
             except ValueError:
                 continue
        
-        print(input_fname, dat_train, dat_test)
         if dat_train:
             clust_fname = clust_fname + str(dat_ind) + "_output.data.clustering_" + str(n_clusters) + "clusters.zarr.tif"
         else:
             clust_fname = clust_fname + str(dat_ind) + "_output_test.data.clustering_" + str(n_clusters) + "clusters.zarr.tif"
         
-        print(clust_fname) 
         if not os.path.exists(clust_fname):
             clust_fname = clust_fname + "f"
             if not os.path.exists(clust_fname):
@@ -278,7 +276,6 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
   
         clust = gdal.Open(clust_fname)
         lonLat = get_lat_lon(clust_fname)
-        print(lonLat.shape)
         clust = clust.ReadAsArray()
                
  
@@ -289,7 +286,6 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         lat = lat[inds_clust]
         lon = lon[inds_clust]
         clust = clust[inds_clust]
-        print(np.unique(clust))
 
         gdf = gpd.GeoDataFrame(clust, geometry=gpd.GeoSeries.from_xy(lon, lat), crs=4326)
         subset = insitu_df[(insitu_df['Sample Date'] == date)]
@@ -300,7 +296,6 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
  
         dists = []
         count = -1
-        print(gdf_insitu)
         hist_data = []
         for index, poi in gdf_insitu.iterrows():
             count = count + 1
