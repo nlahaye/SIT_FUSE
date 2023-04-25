@@ -15,10 +15,13 @@ import random
 
 import sys
 import resource
-max_rec = 10**6
-# May segfault without this line. 100 is a guess at the size of each stack frame.
-resource.setrlimit(resource.RLIMIT_STACK, [100 * max_rec, resource.RLIM_INFINITY])
-sys.setrecursionlimit(max_rec)
+try:
+    max_rec = 10**6
+    # May segfault without this line. 100 is a guess at the size of each stack frame.
+    resource.setrlimit(resource.RLIMIT_STACK, [100 * max_rec, resource.RLIM_INFINITY])
+    sys.setrecursionlimit(max_rec)
+except Exception as e:
+    pass
 
 #ML imports
 import torch
@@ -194,8 +197,8 @@ def run_dbn(yml_conf):
 
  
         if stratify_data is not None:
-            strat_read_func = get_read_func(stratify_data["stratify_data"]["reader"]) 
-            stratify_data["stratify_data"]["reader"] = strat_read_func
+            strat_read_func = get_read_func(stratify_data["reader"]) 
+            stratify_data["reader"] = strat_read_func
 
         x2 = DBNDataset(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
             valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \

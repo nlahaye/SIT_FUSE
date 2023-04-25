@@ -30,7 +30,7 @@ class DBNDatasetConv(DBNDataset):
 		#Scaler info isnt used here, but keeping same interface as DBNDataset
 
                 #TODO Employ stratification
-		self.train_indices
+		self.train_indices = None
  
 		self.filenames = filenames
 		self.transform = transform

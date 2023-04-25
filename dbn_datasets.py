@@ -201,7 +201,8 @@ class DBNDataset(torch.utils.data.Dataset):
 		num_train_exs = self.subset_training
 		counts = []
 		type_inds = []
-		train_indices = []     
+		train_indices = []    
+		train_inds_by_value = [] 
 		dataset_size = self.data_full.shape[0]
 
 		for mask_val in range(self.stratify_training.max() + 1):
@@ -211,7 +212,9 @@ class DBNDataset(torch.utils.data.Dataset):
 			# calculate how many test & val exaples to take from the given water type
 			num_train_exs_of_type = round(percentage_of_dataset * num_train_exs)
 			# randomly sample examples from the givenlaprint(len(type_inds[mask_val]), num_train_exs_of_type)
-			train_indices.extend(np.random.choice(type_inds[mask_val], size=num_train_exs_of_type, replace=False))
+			tmp = np.random.choice(type_inds[mask_val], size=num_train_exs_of_type, replace=False)
+			train_indices.extend(tmp)
+			train_inds_by_value.append(tmp) 
 
 		#all_indices = train_indices + test_indices + val_indices
 		#unique_indices, counts = np.unique(all_indices, return_counts=True)
@@ -219,7 +222,7 @@ class DBNDataset(torch.utils.data.Dataset):
 		#if len(dup) > 0:
 		#	raise Exception("Train, test, and val splits overlap. Redefine splits.")
 
-		self.train_indices = train_indices
+		self.train_indices = train_inds_by_value
 		self.data_full = self.data_full[train_indices]
 		self.targets_full = self.targets_full[train_indices]
  
