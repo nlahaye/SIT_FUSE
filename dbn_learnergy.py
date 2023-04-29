@@ -35,7 +35,7 @@ from torch.utils.data.distributed import DistributedSampler
 from learnergy.models.deep import DBN, ResidualDBN
 from torch.utils.data.distributed import DistributedSampler
 
-from rbm_models.fcn_dbn import FCDBN
+from rbm_models.fcn_dbn import DBNUnet
 from rbm_models.clust_dbn import ClustDBN
 #Visualization
 import learnergy.visual.convergence as converge
@@ -232,9 +232,9 @@ def run_dbn(yml_conf):
         new_dbn = DBN(model=model_type, n_visible=chunk_size*number_channel, n_hidden=dbn_arch, steps=gibbs_steps, \
             learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=use_gpu)
     else:
-        new_dbn = FCDBN(model=model_type,visible_shape=chunk_size, n_channels=number_channel, steps=gibbs_steps, \
-            learning_rate=learning_rate, momentum=momentum, decay=decay, use_gpu=use_gpu)
-
+        new_dbn = DBNUnet(model=model_type,visible_shape=chunk_size, in_channels=number_channel, steps=gibbs_steps, \
+            out_channels=500, learning_rate=learning_rate, momentum=momentum, decay=decay, use_gpu=use_gpu)
+ 
     if use_gpu:
         torch.cuda.manual_seed_all(SEED)
         device = torch.device("cuda:{}".format(local_rank))
