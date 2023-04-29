@@ -168,6 +168,7 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 		print("HERE", dbnDat1.shape, imgData.shape)
 		nx = imgData.shape[1]
 		ny = imgData.shape[0]
+		metadata=dat.GetMetadata()
 		geoTransform = dat.GetGeoTransform()
 		wkt = dat.GetProjection()
 		print(wkt)
@@ -188,8 +189,9 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 		file_ext = ".full_geo"
 		fname = cluster_data[p] + file_ext + ".tif"
 		print(fname, "HERE", nx, ny, outDat.shape)
-		out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
+		out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Int32)
 		print(fname)
+		out_ds.SetMetadata(metadata)
 		out_ds.SetGeoTransform(geoTransform)
 		out_ds.SetProjection(wkt)
 		out_ds.GetRasterBand(1).WriteArray(outDat)
@@ -229,8 +231,9 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 			file_ext = "." + context_name
 
 			fname = cluster_data[p] + file_ext + ".tif"
-			out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
+			out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Int32)
 			out_ds.SetGeoTransform(geoTransform)
+			out_ds.SetMetadata(metadata)
 			out_ds.SetProjection(wkt)
 			out_ds.GetRasterBand(1).WriteArray(outDatFull)
 			out_ds.FlushCache()
@@ -238,8 +241,9 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 
 			if generate_union > 0 and p == len(cluster_data)-1:
 				fname = os.path.join(os.path.dirname(cluster_data[p]), context_name + ".Union.tif")
-				out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
+				out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Int32)
 				out_ds.SetGeoTransform(geoTransform)
+				out_ds.SetMetadata(metadata)
 				out_ds.SetProjection(wkt)
 
 				inds = np.where(unionCount == 0)
@@ -284,8 +288,9 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 					outDatFull = outDat
  
 				fname = cluster_data[p] + file_ext + ".tif"
-				out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
+				out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Int32)
 				out_ds.SetGeoTransform(geoTransform)
+				out_ds.SetMetadata(metadata)
 				out_ds.SetProjection(wkt)
 				out_ds.GetRasterBand(1).WriteArray(outDatFull)
 				out_ds.FlushCache()
@@ -327,6 +332,7 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
                 nx = imgData.shape[1]
                 ny = imgData.shape[0]
                 geoTransform = dat.GetGeoTransform()
+                metadata = dat.GetMetadata()
                 wkt = dat.GetProjection()
                 print(wkt)
                 dat.FlushCache()
@@ -364,8 +370,9 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
 
                         fname = os.path.splitext(gtiff_data[p])[0] + file_ext + ".tif"
                         print(fname, outDatFull.max())
-                        out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
+                        out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Int32)
                         out_ds.SetGeoTransform(geoTransform)
+                        out_ds.SetMetadata(metadata)
                         out_ds.SetProjection(wkt)
                         out_ds.GetRasterBand(1).WriteArray(outDatFull)
                         out_ds.FlushCache()
@@ -373,8 +380,9 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
                          
                         if generate_union > 0 and p == len(gtiff_data)-1:
                                 fname = os.path.join(os.path.dirname(gtiff_data[p]), context_name + ".Union.tif")
-                                out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
+                                out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Int32)
                                 out_ds.SetGeoTransform(geoTransform)
+                                out_ds.SetMetadata(metadata)
                                 out_ds.SetProjection(wkt)
  
                                 inds = np.where(unionCount == 0)
@@ -406,8 +414,9 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
                         file_ext = ".cluster_class" + str(clss)
 
                         fname = gtiff_data[p] + file_ext + ".tif"
-                        out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
+                        out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Int32)
                         out_ds.SetGeoTransform(geoTransform)
+                        out_ds.SetMetadata(metadata)
                         out_ds.SetProjection(wkt)
                         out_ds.GetRasterBand(1).WriteArray(outDatFull)
                         out_ds.FlushCache()
