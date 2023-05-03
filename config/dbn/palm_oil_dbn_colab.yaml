@@ -13,7 +13,7 @@ dbn:
  overwrite_model: True
  params:
   model_type: ["gaussian_selu"] #, 'gaussian_relu_dropout', 'gaussian_relu_dropout'] #'variance_gaussian_dropout' "gaussian_dropout"
-  dbn_arch: [75] #[2000] [250, 500, 2000] #, 2000]
+  dbn_arch: [250] #[2000] [250, 500, 2000] #, 2000]
   gibbs_steps: [5] #, 7, 7] #, 10] #, 25]
   learning_rate: [0.0001] #, 0.0001, 0.0001] #, 0.01] #, 0.01]
   momentum: [0.95] #, 0.95, 0.95] #, 0.95] #, 0.95]
@@ -29,8 +29,8 @@ dbn:
   world_size: 1
   rank: 0
   device_ids: ["0"]
-  batch_size: 1000
-  epochs: [25] #[8] #, 1, 1] #, 5] #, 10]
+  batch_size: 5000
+  epochs: [200] #[8] #, 1, 1] #, 5] #, 10]
   stratify_data:
    reader: "gtiff"
    filename: ["/content/drive/MyDrive/oil_palm_data_science/Palm_Oil_Test_V2.Filled.tif"]
