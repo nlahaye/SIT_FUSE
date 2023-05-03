@@ -40,7 +40,7 @@ class DBNDataset(torch.utils.data.Dataset):
 
 		self.train_indices = None
 		self.scale = False
-		self.scaler = None
+		self.scaler = scaler
 		self.transform = None
 		if scaler is not None:
 			self.scale = True
