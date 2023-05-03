@@ -39,6 +39,8 @@ class DBNDatasetConv(DBNDataset):
 		self.targets_full = np.load(indices_filename)
 
 		self.scale = False
+		self.scaler = None
+		self.train_indices = None
 		self.transform = transform
 
 		self.subset = subset

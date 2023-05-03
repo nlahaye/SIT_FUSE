@@ -38,8 +38,10 @@ class DBNDataset(torch.utils.data.Dataset):
 		self.data_full = np.load(data_filename)
 		self.targets_full = np.load(indices_filename)
 
+		self.train_indices = None
 		self.scale = False
 		self.scaler = None
+		self.transform = None
 		if scaler is not None:
 			self.scale = True
 
