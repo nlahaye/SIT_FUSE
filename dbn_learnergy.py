@@ -182,7 +182,7 @@ def run_dbn(yml_conf):
     if os.path.exists(targets_fname) and os.path.exists(data_fname):
         preprocess_train = False
 
-    if not os.path.exists(scaler_fname) or (preprocess_train == False and overwrite_model):    
+    if not os.path.exists(scaler_fname) or (preprocess_train == True and overwrite_model):    
         scaler_type = yml_conf["scaler"]["name"]
         scaler, scaler_train = get_scaler(scaler_type, cuda = use_gpu_pre)
     else:
