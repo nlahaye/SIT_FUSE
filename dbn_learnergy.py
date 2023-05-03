@@ -228,7 +228,7 @@ def run_dbn(yml_conf):
                         )            
                transform.load_state_dict(torch.load(os.path.join(out_dir, "dbn_data_transform.ckpt")))
 
-            x2 = DBNDatasetConv(data_fname, targets_fname, transform=transform)
+           x2 = DBNDatasetConv(data_fname, targets_fname, transform=transform)
 
     if x2.train_indices is not None:
         np.save(os.path.join(out_dir, "train_indices"), x2.train_indices)

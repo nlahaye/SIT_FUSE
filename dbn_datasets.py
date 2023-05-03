@@ -21,7 +21,8 @@ sys.setrecursionlimit(4500)
 
 from utils import numpy_to_torch, read_yaml, get_read_func, get_scaler
 
-from joblib import load
+import pickle
+from joblib import load, dump
 
 #ML imports
 import torch
@@ -327,6 +328,9 @@ def main(yml_fpath):
   
     scaler_fname = os.path.join(out_dir, "dbn_scaler.pkl")
     scaler_type = yml_conf["scaler"]["name"]
+
+    use_gpu_pre = subset_training = yml_conf["dbn"]["training"]["use_gpu_preprocessing"]
+
     scaler, scaler_train = get_scaler(scaler_type, cuda = use_gpu_pre)
 
     subset_training = yml_conf["dbn"]["subset_training"]
