@@ -174,7 +174,15 @@ def run_dbn(yml_conf):
     scaler = None
     scaler_train = True 
     scaler_fname = os.path.join(out_dir, "dbn_scaler.pkl")
-    if not os.path.exists(scaler_fname) or overwrite_model:    
+
+    preprocess_train = True
+    targets_fname = os.path.join(out_dir, "train_data.indices.npy")
+    data_fname = os.path.join(out_dir, "train_data.npy")
+
+    if os.path.exists(targets_fname) and os.path.exists(data_fname):
+        preprocess_train = False
+
+    if not os.path.exists(scaler_fname) or (preprocess_train == False and overwrite_model):    
         scaler_type = yml_conf["scaler"]["name"]
         scaler, scaler_train = get_scaler(scaler_type, cuda = use_gpu_pre)
     else:
@@ -192,13 +200,6 @@ def run_dbn(yml_conf):
 
     if subset_count > 1: 
         print("WARNING: Making subset count > 1 for training data may lead to suboptimal results")
-
-    preprocess_train = True
-    targets_fname = os.path.join(out_dir, "train_data.indices.npy")
-    data_fname = os.path.join(out_dir, "train_data.npy")
-  
-    if os.path.exists(targets_fname) and os.path.exists(data_fname):
-        preprocess_train = False
 
     if not fcn:
         #TODO stratify conv data
