@@ -14,14 +14,39 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+import argparse
+
 import sys
 sys.setrecursionlimit(4500)
+
+from utils import numpy_to_torch, read_yaml, get_read_func, get_scaler
+
+from joblib import load
 
 #ML imports
 import torch
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
 
 class DBNDataset(torch.utils.data.Dataset):
+
+	def __init__(self, data_filename, indices_filename, scaler = None, subset=None):
+        
+		self.data_full = torch.load(data_filename)
+		self.targets_full = torch.load(indices_filename)
+
+		self.scale = False
+		self.scaler = None
+		if scaler is not None:
+			self.scale = True
+
+		self.subset = subset
+      
+		if self.subset is None:
+   			self.subset = 1
+		self.current_subset = -1
+    
+		self.next_subset()
+
 
 	def __init__(self, filenames, read_func, read_func_kwargs, pixel_padding, delete_chans, valid_min, valid_max, fill_value = -9999, chan_dim = 0, transform_chans = [], transform_values = [], scaler = None, scale=False, transform=None, subset=None, train_scaler = False, subset_training = -1, stratify_data = None):
 
@@ -270,6 +295,85 @@ class DBNDataset(torch.utils.data.Dataset):
 		#sample = sample.astype(np.int32)
 
 		return sample, self.targets[index]
+
+
+
+
+def main(yml_fpath):
+    #Translate config to dictionary 
+    yml_conf = read_yaml(yml_fpath)
+
+    #Get config values 
+    data_train = yml_conf["data"]["files_train"]
+
+    pixel_padding = yml_conf["data"]["pixel_padding"]
+    number_channel = yml_conf["data"]["number_channels"]
+    data_reader =  yml_conf["data"]["reader_type"]
+    data_reader_kwargs = yml_conf["data"]["reader_kwargs"]
+    fill = yml_conf["data"]["fill_value"]
+    chan_dim = yml_conf["data"]["chan_dim"]
+    valid_min = yml_conf["data"]["valid_min"]
+    valid_max = yml_conf["data"]["valid_max"]
+    delete_chans = yml_conf["data"]["delete_chans"]
+    subset_count = yml_conf["data"]["subset_count"]
+    output_subset_count = yml_conf["data"]["output_subset_count"]
+    scale_data = yml_conf["data"]["scale_data"]
+
+    transform_chans = yml_conf["data"]["transform_default"]["chans"]
+    transform_values =  yml_conf["data"]["transform_default"]["transform"]
+
+    out_dir = yml_conf["output"]["out_dir"]
+    os.makedirs(out_dir, exist_ok=True)
+  
+    scaler_fname = os.path.join(out_dir, "dbn_scaler.pkl")
+    scaler_type = yml_conf["scaler"]["name"]
+    scaler, scaler_train = get_scaler(scaler_type, cuda = use_gpu_pre)
+
+    subset_training = yml_conf["dbn"]["subset_training"]
+ 
+    os.environ['PREPROCESS_GPU'] = str(int(use_gpu_pre))
+
+    read_func = get_read_func(data_reader)
+
+    stratify_data = None
+    if "stratify_data" in yml_conf["dbn"]["training"]:
+        stratify_data = yml_conf["dbn"]["training"]["stratify_data"]
+
+    if stratify_data is not None:
+        strat_read_func = get_read_func(stratify_data["reader"])
+        stratify_data["reader"] = strat_read_func
+
+    x2 = DBNDataset(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
+            valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
+            transform_values=transform_values, scaler = scaler, train_scaler = scaler_train, scale = scale_data, \
+            transform=numpy_to_torch, subset=subset_count, subset_training = subset_training, stratify_data=stratify_data)
+ 
+    if x2.train_indices is not None:
+        np.save(os.path.join(out_dir, "train_indices"), x2.train_indices)
+        
+
+    np.save(os.path.join(out_dir, "train_data.indices"), x2.targets_full)
+    np.save(os.path.join(out_dir, "train_data"), x2.data_full) 
+ 
+    #Save scaler
+    with open(os.path.join(out_dir, "dbn_scaler.pkl"), "wb") as f:
+        dump(x2.scaler, f, True, pickle.HIGHEST_PROTOCOL)
+
+
+if __name__ == '__main__':
+
+        parser = argparse.ArgumentParser()
+        parser.add_argument("-y", "--yaml", help="YAML file for data config.")
+        args = parser.parse_args()
+        from timeit import default_timer as timer
+        start = timer()
+        main(args.yaml)
+        end = timer()
+        print(end - start) # Time in seconds, e.g. 5.38091952400282
+
+
+
+
 
 
 

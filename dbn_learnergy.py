@@ -192,23 +192,43 @@ def run_dbn(yml_conf):
 
     if subset_count > 1: 
         print("WARNING: Making subset count > 1 for training data may lead to suboptimal results")
+
+    preprocess_train = True
+    targets_fname = os.path.join(out_dir, "train_data.indices.npy")
+    data_fname = os.path.join(out_dir, "train_data.npy")
+  
+    if os.path.exists(targets_fname) and os.path.exists(data_fname):
+        preprocess_train = False
+
     if not fcn:
         #TODO stratify conv data
 
- 
-        if stratify_data is not None:
-            strat_read_func = get_read_func(stratify_data["reader"]) 
-            stratify_data["reader"] = strat_read_func
+        if preprocess_train: 
+            if stratify_data is not None:
+                strat_read_func = get_read_func(stratify_data["reader"]) 
+                stratify_data["reader"] = strat_read_func
 
-        x2 = DBNDataset(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
-            valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
-            transform_values=transform_values, scaler = scaler, train_scaler = scaler_train, scale = scale_data, \
-            transform=numpy_to_torch, subset=subset_count, subset_training = subset_training, stratify_data=stratify_data)
+            x2 = DBNDataset(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
+                valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
+                transform_values=transform_values, scaler = scaler, train_scaler = scaler_train, scale = scale_data, \
+                transform=numpy_to_torch, subset=subset_count, subset_training = subset_training, stratify_data=stratify_data)
+        else:
+            x2 = DBNDataset(data_fname, targets_fname, scaler)
     else:
-        x2 = DBNDatasetConv(data_train, read_func, data_reader_kwargs, delete_chans=delete_chans, \
-             valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
-             transform_values=transform_values, transform=None, subset=subset_count, tile=tile, tile_size=tile_size, tile_step=tile_step,
-             subset_training = subset_training)
+        if preprocess_train:
+            x2 = DBNDatasetConv(data_train, read_func, data_reader_kwargs, delete_chans=delete_chans, \
+                 valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
+                 transform_values=transform_values, transform=None, subset=subset_count, tile=tile, tile_size=tile_size, tile_step=tile_step,
+                 subset_training = subset_training)
+        else:
+           transform = None
+           if os.path.exists(os.path.join(out_dir, "dbn_data_transform.ckpt")):
+               transform = torch.nn.Sequential(
+                                transforms.Normalize(mean_per_channel, std_per_channel)
+                        )            
+               transform.load_state_dict(torch.load(os.path.join(out_dir, "dbn_data_transform.ckpt")))
+
+            x2 = DBNDatasetConv(data_fname, targets_fname, transform=transform)
 
     if x2.train_indices is not None:
         np.save(os.path.join(out_dir, "train_indices"), x2.train_indices)
@@ -332,6 +352,10 @@ def run_dbn(yml_conf):
                 torch.save(final_model.fc.state_dict(), model_file + "_fc_clust.ckpt")
             else:
                 torch.save(final_model.state_dict(), model_file + ".ckpt")
+
+            if fcn:
+                torch.save(x2.transform.state_dict(), os.path.join(out_dir, "dbn_data_transform.ckpt"))
+
 
             #Save scaler
             with open(os.path.join(out_dir, "dbn_scaler.pkl"), "wb") as f:

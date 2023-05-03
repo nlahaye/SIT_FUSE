@@ -22,9 +22,31 @@ import torch
 from torchvision import transforms
 from dbn_datasets import DBNDataset
 
+from utils import numpy_to_torch, read_yaml, get_read_func, get_scaler
+
+import argparse
+
 from skimage.util import view_as_windows
 
 class DBNDatasetConv(DBNDataset):
+
+	def __init__(self, data_filename, indices_filename, transform = None, subset=None):
+
+		self.data_full = torch.load(data_filename)
+		self.targets_full = torch.load(indices_filename)
+
+		self.scale = False
+		self.transform = transform
+
+		self.subset = subset
+
+		if self.subset is None:
+			self.subset = 1
+		self.current_subset = -1
+
+		self.next_subset()
+
+
 
 	def __init__(self, filenames, read_func, read_func_kwargs, delete_chans, valid_min, valid_max, fill_value = -9999, chan_dim = 0, transform_chans = [], transform_values = [], transform=None, subset=None, tile = False, tile_size = None, tile_step = None, subset_training = -1):
 		#Scaler info isnt used here, but keeping same interface as DBNDataset
@@ -177,7 +199,7 @@ class DBNDatasetConv(DBNDataset):
 			self.transform = transform_norm 
 
 		#print("HERE", self.data_full.shape, len(mean_per_channel), len(std_per_channel))
-		#self.data_full = self.transform(self.data_full)
+		self.data_full = self.transform(self.data_full)
 
 
 		self.next_subset()
@@ -187,3 +209,85 @@ class DBNDatasetConv(DBNDataset):
  
 	def __train_scalers__(self, data):
 		pass
+
+
+
+def main(yml_fpath):
+    #Translate config to dictionary 
+    yml_conf = read_yaml(yml_fpath)
+
+    #Get config values 
+    data_train = yml_conf["data"]["files_train"]
+
+    tile = False
+    tile_size = None
+    tile_step = None
+    tile = yml_conf["data"]["tile"]
+    tile_size = yml_conf["data"]["tile_size"]
+    tile_step = yml_conf["data"]["tile_step"]
+
+    data_reader =  yml_conf["data"]["reader_type"]
+    data_reader_kwargs = yml_conf["data"]["reader_kwargs"]
+    fill = yml_conf["data"]["fill_value"]
+    chan_dim = yml_conf["data"]["chan_dim"]
+    valid_min = yml_conf["data"]["valid_min"]
+    valid_max = yml_conf["data"]["valid_max"]
+    delete_chans = yml_conf["data"]["delete_chans"]
+    subset_count = yml_conf["data"]["subset_count"]
+    output_subset_count = yml_conf["data"]["output_subset_count"]
+    scale_data = yml_conf["data"]["scale_data"]
+
+    transform_chans = yml_conf["data"]["transform_default"]["chans"]
+    transform_values =  yml_conf["data"]["transform_default"]["transform"]
+
+    out_dir = yml_conf["output"]["out_dir"]
+    os.makedirs(out_dir, exist_ok=True)
+
+    scaler_fname = os.path.join(out_dir, "dbn_scaler.pkl")
+    scaler_type = yml_conf["scaler"]["name"]
+    scaler, scaler_train = get_scaler(scaler_type, cuda = use_gpu_pre)
+
+    subset_training = yml_conf["dbn"]["subset_training"]
+
+    os.environ['PREPROCESS_GPU'] = str(int(use_gpu_pre))
+
+    read_func = get_read_func(data_reader)
+
+    stratify_data = None
+    if "stratify_data" in yml_conf["dbn"]["training"]:
+        stratify_data = yml_conf["dbn"]["training"]["stratify_data"]
+
+    if stratify_data is not None:
+        strat_read_func = get_read_func(stratify_data["reader"])
+        stratify_data["reader"] = strat_read_func
+
+    x2 = DBNDatasetConv(data_train, read_func, data_reader_kwargs, delete_chans=delete_chans, \
+            valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
+            transform_values=transform_values, transform=None, subset=subset_count, tile=tile, tile_size=tile_size, tile_step=tile_step,
+            subset_training = subset_training)
+
+    if x2.train_indices is not None:
+        np.save(os.path.join(out_dir, "train_indices"), x2.train_indices)
+
+
+    np.save(os.path.join(out_dir, "train_data.indices"), x2.targets_full)
+    np.save(os.path.join(out_dir, "train_data"), x2.data_full)
+
+    torch.save(x2.transform.state_dict(), os.path.join(out_dir, "dbn_data_transform.ckpt"))
+
+
+
+if __name__ == '__main__':
+
+        parser = argparse.ArgumentParser()
+        parser.add_argument("-y", "--yaml", help="YAML file for data config.")
+        args = parser.parse_args()
+        from timeit import default_timer as timer
+        start = timer()
+        main(args.yaml)
+        end = timer()
+        print(end - start) # Time in seconds, e.g. 5.38091952400282
+
+
+
+
