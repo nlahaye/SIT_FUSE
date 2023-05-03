@@ -382,11 +382,13 @@ def run_dbn(yml_conf):
                 transform = x3.transform
 	
             if not fcn:
-                x3 = DBNDataset([data_test[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
+                x3 = DBNDataset()
+                x3.read_and_preprocess_data([data_test[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
                     fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scaler=scaler, scale = scale_data, \
 				transform=transform,  subset=subset_count)
             else:
-                x3 = DBNDatasetConv([data_test[t]], read_func, data_reader_kwargs,  delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
+                x3 = DBNDatasetConv()
+                x3.read_and_preprocess_data([data_test[t]], read_func, data_reader_kwargs,  delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
                 fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, transform = transform, \
                 subset=subset_count, tile=tile, tile_size=tile_size, tile_step=tile_step)
 
@@ -404,11 +406,13 @@ def run_dbn(yml_conf):
                 transform = x2.transform
 
             if not fcn:
-                x2 = DBNDataset([data_train[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, \
+                x2 = DBNDataset()
+                x2.read_and_preprocess_data([data_train[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, \
                    valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, \
                    scaler = scaler, scale = scale_data, transform=numpy_to_torch, subset=subset_count)
             else:
-                x2 = DBNDatasetConv([data_train[t]], read_func, data_reader_kwargs,  delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
+                x2 = DBNDatasetConv()
+                x2.read_and_preprocess_data([data_train[t]], read_func, data_reader_kwargs,  delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
                     fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, transform = transform, \
                     subset=subset_count, tile=tile, tile_size=tile_size, tile_step=tile_step)
  
