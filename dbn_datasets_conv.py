@@ -35,8 +35,8 @@ class DBNDatasetConv(DBNDataset):
 
 	def read_data_preprocessed(self, data_filename, indices_filename, transform = None, subset=None):
 
-		self.data_full = torch.load(data_filename)
-		self.targets_full = torch.load(indices_filename)
+		self.data_full = np.load(data_filename)
+		self.targets_full = np.load(indices_filename)
 
 		self.scale = False
 		self.transform = transform
