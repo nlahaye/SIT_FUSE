@@ -208,15 +208,18 @@ def run_dbn(yml_conf):
                 strat_read_func = get_read_func(stratify_data["reader"]) 
                 stratify_data["reader"] = strat_read_func
 
-            x2 = DBNDataset(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
+            x2 = DBNDataset()
+            x2.read_and_preprocess_data(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
                 valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
                 transform_values=transform_values, scaler = scaler, train_scaler = scaler_train, scale = scale_data, \
                 transform=numpy_to_torch, subset=subset_count, subset_training = subset_training, stratify_data=stratify_data)
         else:
-            x2 = DBNDataset(data_fname, targets_fname, scaler)
+            x2 = DBNDataset()
+            x2.read_data_preprocessed(data_fname, targets_fname, scaler)
     else:
         if preprocess_train:
-            x2 = DBNDatasetConv(data_train, read_func, data_reader_kwargs, delete_chans=delete_chans, \
+            x2 = DBNDatasetConv()
+            x2.read_and_preprocess_data(data_train, read_func, data_reader_kwargs, delete_chans=delete_chans, \
                  valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
                  transform_values=transform_values, transform=None, subset=subset_count, tile=tile, tile_size=tile_size, tile_step=tile_step,
                  subset_training = subset_training)
@@ -228,7 +231,8 @@ def run_dbn(yml_conf):
                         )            
                transform.load_state_dict(torch.load(os.path.join(out_dir, "dbn_data_transform.ckpt")))
 
-           x2 = DBNDatasetConv(data_fname, targets_fname, transform=transform)
+           x2 = DBNDatasetConv()
+           x2.read_data_preprocessed(data_fname, targets_fname, transform=transform)
 
     if x2.train_indices is not None:
         np.save(os.path.join(out_dir, "train_indices"), x2.train_indices)

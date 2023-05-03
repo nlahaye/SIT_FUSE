@@ -30,7 +30,10 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
 
 class DBNDataset(torch.utils.data.Dataset):
 
-	def __init__(self, data_filename, indices_filename, scaler = None, subset=None):
+	def __init__(self):
+		pass    
+
+	def read_data_preprocessed(self, data_filename, indices_filename, scaler = None, subset=None):
         
 		self.data_full = torch.load(data_filename)
 		self.targets_full = torch.load(indices_filename)
@@ -49,7 +52,7 @@ class DBNDataset(torch.utils.data.Dataset):
 		self.next_subset()
 
 
-	def __init__(self, filenames, read_func, read_func_kwargs, pixel_padding, delete_chans, valid_min, valid_max, fill_value = -9999, chan_dim = 0, transform_chans = [], transform_values = [], scaler = None, scale=False, transform=None, subset=None, train_scaler = False, subset_training = -1, stratify_data = None):
+	def read_and_preprocess_data(self, filenames, read_func, read_func_kwargs, pixel_padding, delete_chans, valid_min, valid_max, fill_value = -9999, chan_dim = 0, transform_chans = [], transform_values = [], scaler = None, scale=False, transform=None, subset=None, train_scaler = False, subset_training = -1, stratify_data = None):
 
 		self.train_indices = None
 		self.training = False
@@ -347,7 +350,8 @@ def main(yml_fpath):
         strat_read_func = get_read_func(stratify_data["reader"])
         stratify_data["reader"] = strat_read_func
 
-    x2 = DBNDataset(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
+    x2 = DBNDataset()
+    x2.read_and_preprocess_data(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
             valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
             transform_values=transform_values, scaler = scaler, train_scaler = scaler_train, scale = scale_data, \
             transform=numpy_to_torch, subset=subset_count, subset_training = subset_training, stratify_data=stratify_data)

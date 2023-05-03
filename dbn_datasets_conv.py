@@ -30,7 +30,10 @@ from skimage.util import view_as_windows
 
 class DBNDatasetConv(DBNDataset):
 
-	def __init__(self, data_filename, indices_filename, transform = None, subset=None):
+	def __init__(self):
+		pass
+
+	def read_data_preprocessed(self, data_filename, indices_filename, transform = None, subset=None):
 
 		self.data_full = torch.load(data_filename)
 		self.targets_full = torch.load(indices_filename)
@@ -48,7 +51,7 @@ class DBNDatasetConv(DBNDataset):
 
 
 
-	def __init__(self, filenames, read_func, read_func_kwargs, delete_chans, valid_min, valid_max, fill_value = -9999, chan_dim = 0, transform_chans = [], transform_values = [], transform=None, subset=None, tile = False, tile_size = None, tile_step = None, subset_training = -1):
+	def read_and_preprocess_data(self, filenames, read_func, read_func_kwargs, delete_chans, valid_min, valid_max, fill_value = -9999, chan_dim = 0, transform_chans = [], transform_values = [], transform=None, subset=None, tile = False, tile_size = None, tile_step = None, subset_training = -1):
 		#Scaler info isnt used here, but keeping same interface as DBNDataset
 
                 #TODO Employ stratification
@@ -261,7 +264,8 @@ def main(yml_fpath):
         strat_read_func = get_read_func(stratify_data["reader"])
         stratify_data["reader"] = strat_read_func
 
-    x2 = DBNDatasetConv(data_train, read_func, data_reader_kwargs, delete_chans=delete_chans, \
+    x2 = DBNDatasetConv()
+    x2.read_and_preprocess_data(data_train, read_func, data_reader_kwargs, delete_chans=delete_chans, \
             valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
             transform_values=transform_values, transform=None, subset=subset_count, tile=tile, tile_size=tile_size, tile_step=tile_step,
             subset_training = subset_training)
