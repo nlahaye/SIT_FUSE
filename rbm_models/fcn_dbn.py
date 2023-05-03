@@ -108,6 +108,7 @@ class DBNUnetBlock(Model):
         # 0 = Conv only, 1 = Downsample, 2 = Upsample
         self.sample = sample
         self.pool1 = None
+        self.up = None
         conv_ind = 0
         v_shape = visible_shape
         if self.sample == 1:
@@ -125,6 +126,8 @@ class DBNUnetBlock(Model):
             self.output_shapes.append(v)
             v_shape = v
 
+
+        print("CHECKING OUT UP", self.up, self.pool1)
         self.conv1_1 = conv(v_shape,
             (3,3), self.n_filters, self.n_channels, 1, 1, self.steps[conv_ind], self.lr[conv_ind],
             self.momentum[conv_ind], self.decay[conv_ind], False, None, use_gpu)
@@ -309,7 +312,7 @@ class DBNUnetBlock(Model):
         mse = []
         self.n_samples = dataset.data.shape[0]
 
-        print("PRE TRAIN")
+        print("PRE TRAIN", str(self.sample))
         gpu_usage()
         dt = torch.float16
         if self.device == "cpu":
@@ -324,11 +327,12 @@ class DBNUnetBlock(Model):
             else:
                 self.input_layers[0].append(self.pool1)
             print("INPUT_LAYERS2", len(self.input_layers))
+        next_inp = []
         if self.sample == 2:
             conv_ind = 1
             logger.info("Fitting layer up")
             self.fit_layer(self.up, dataset, None, epochs[0], batch_size, 0, 
-                [self.input_layers[:self.skip_connection+1], self.input_layers], 
+                self.input_layers, 
                 mse, num_loader_workers, pin_memory, is_distributed) 
             print("INPUT_LAYERS3", len(self.input_layers))
             if len(self.input_layers) == 0:
@@ -336,9 +340,12 @@ class DBNUnetBlock(Model):
             else:
                 self.input_layers[0].append(self.up)
             print("INPUT_LAYERS4", len(self.input_layers))
+            next_inp = [self.input_layers[0][:self.skip_connection+1], self.input_layers[0]]
+        else:
+            next_inp = self.input_layers
         logger.info("Fitting layer conv1_1")
         self.fit_layer(self.conv1_1, dataset, None, epochs[conv_ind], batch_size, 
-            conv_ind, self.input_layers, mse, num_loader_workers, pin_memory, is_distributed)
+            conv_ind, next_inp, mse, num_loader_workers, pin_memory, is_distributed)
         print("INPUT_LAYERS5", len(self.input_layers))
         if len(self.input_layers) == 0:
             self.input_layers.append([self.conv1_1])
@@ -360,6 +367,7 @@ class DBNUnetBlock(Model):
         self.fit_layer(self.conv1_2, dataset, None, epochs[conv_ind+1], batch_size, 
             conv_ind + 1, self.input_layers, mse, num_loader_workers, pin_memory, is_distributed)
         self.input_layers[0].append(self.conv1_2)
+        print("INPUT_LAYERS_LAST",self.input_layers)
         #self.current_layer_samples = Tensor
 
         return self.mse
@@ -470,7 +478,10 @@ class DBNUnetBlock(Model):
 
             if self.sample == 2:
                 visible_probs, visible_states = self.up.visible_sampling(visible_probs)
-            
+            if self.sample == 1:
+                hidden_temp, indices = torch.nn.functional.max_pool2d(samples, 2, 2, ceil_mode=True, return_indices=True)           
+                visible_probs = torch.nn.functional.max_unpool2d(visible_probs, indices, 2, stride=2) 
+                visible_states = torch.nn.functional.max_unpool2d(visible_states, indices, 2, stride=2)
 
             # Calculating current's batch reconstruction MSE
             batch_mse = torch.div(
@@ -599,50 +610,51 @@ class DBNUnet(Model):
         #elif model == "gaussian":
         conv = GaussianConvRBM
 
+        input_layers = []
         self.inConv = DBNUnetBlock(model, self.visible_shape,
             self.n_channels, 64, self.steps[0:2], self.lr[0:2],
-                self.momentum[0:2], self.decay[0:2], 0, [], -1, use_gpu)
+                self.momentum[0:2], self.decay[0:2], 0, input_layers, -1, use_gpu)
 
         self.enc1 = DBNUnetBlock(model, self.inConv.output_shapes[-1],
             64, 128, self.steps[2:4], self.lr[2:4],
                 self.momentum[2:4], self.decay[2:4], 1, 
-                    copy.deepcopy(self.inConv.input_layers), -1, use_gpu)
+                    input_layers, -1, use_gpu)
 
         self.enc2 = DBNUnetBlock(model, self.inConv.output_shapes[-1],
             128, 256, self.steps[4:6], self.lr[4:6],
                 self.momentum[4:6], self.decay[4:6], 1, 
-                    copy.deepcopy(self.enc1.input_layers), -1, use_gpu)
+                    input_layers, -1, use_gpu)
 
         self.enc3 = DBNUnetBlock(model, self.inConv.output_shapes[-1],
             256, 512, self.steps[6:8], self.lr[6:8],
                 self.momentum[6:8], self.decay[6:8], 1, 
-                    copy.deepcopy(self.enc2.input_layers), -1, use_gpu)
+                    input_layers, -1, use_gpu)
 
         self.enc4 = DBNUnetBlock(model, self.inConv.output_shapes[-1],
             512, 512, self.steps[8:10], self.lr[8:10],
                 self.momentum[8:10], self.decay[8:10], 1, 
-                    copy.deepcopy(self.enc3.input_layers), -1, use_gpu) 
+                    input_layers, -1, use_gpu) 
 
 
         self.dec4 = DBNUnetBlock(model, self.inConv.output_shapes[-1],
             1024, 256, self.steps[10:13], self.lr[10:13],
                 self.momentum[10:13], self.decay[10:13], 2, 
-                    copy.deepcopy(self.enc4.input_layers), 10, use_gpu)
+                    input_layers, 10, use_gpu)
 
         self.dec3 = DBNUnetBlock(model, self.inConv.output_shapes[-1],
             512, 128, self.steps[13:16], self.lr[13:16],
                 self.momentum[13:16], self.decay[13:16], 2, 
-                    copy.deepcopy(self.dec4.input_layers), 7, use_gpu)
+                    input_layers, 7, use_gpu)
 
         self.dec2 = DBNUnetBlock(model, self.inConv.output_shapes[-1],
             256, 64, self.steps[16:19], self.lr[16:19],
                 self.momentum[16:19], self.decay[16:19], 2,
-                copy.deepcopy(self.dec3.input_layers), 4, use_gpu)
+                input_layers, 4, use_gpu)
 
         self.dec1 = DBNUnetBlock(model, self.inConv.output_shapes[-1],
             128, 64, self.steps[19:22], self.lr[19:22],
                 self.momentum[19:22], self.decay[19:22], 2, 
-                copy.deepcopy(self.dec2.input_layers), 1, use_gpu)
+                input_layers, 1, use_gpu)
 
         self.outConv = conv(self.dec1.output_shapes[-1],
             (1,1), self.n_filters, 64, 1, 0, self.steps[22], self.lr[22],
@@ -700,10 +712,10 @@ class DBNUnet(Model):
                 increase = 3
                 if i <= 4:
                     increase = 2    
-                    err = self.models[i].module.fit(dataset, batch_size, epochs[internal_ind: internal_ind + increase],
-                        is_distributed, num_loader_workers, pin_memory)
-                    mse.extend(err)
-                    internal_ind = internal_ind + increase
+                err = self.models[i].module.fit(dataset, batch_size, epochs[internal_ind: internal_ind + increase],
+                    is_distributed, num_loader_workers, pin_memory)
+                mse.extend(err)
+                internal_ind = internal_ind + increase
             else:  
                 # For every possible model (ConvRBM)
                 logger.info("Fitting OutConv ...")
@@ -719,8 +731,7 @@ class DBNUnet(Model):
                 print("INIT USAGE FIT_LAYER")
                 gpu_usage()
                 # Fits the RBM
-                mods = copy.deepcopy(self.dec1.input_layers)
-                model_mse = self.models[i].module.fit(dataset, batch_size, epochs, loader, sampler, mods).item()
+                model_mse = self.models[i].module.fit(dataset, batch_size, epochs[-1], loader, sampler, self.dec1.input_layers).item()
 
                 print("0 USAGE FIT_LAYER")
                 gpu_usage()
