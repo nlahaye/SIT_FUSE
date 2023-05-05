@@ -16,7 +16,7 @@ def rasterize(nodata, vector_fn, pixel_size):
     print(vector_fn)
     source_ex = gdal.OpenEx(vector_fn)
     
-    raster_fn = os.path.splitext(vector_fn)[0] + "tif"
+    raster_fn = os.path.splitext(vector_fn)[0] + ".tif"
 
 
     gdal.Rasterize(raster_fn, source_ex, format='GTIFF', outputType=gdal.GDT_Byte, creationOptions=["COMPRESS=DEFLATE"], noData=nodata, initValues=nodata, xRes=pixel_size, yRes=-pixel_size, allTouched=True, burnValues=[1])    
