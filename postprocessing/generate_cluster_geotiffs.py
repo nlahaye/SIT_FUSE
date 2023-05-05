@@ -66,7 +66,7 @@ def generate_cluster_masks_no_geo(data_reader, data_reader_kwargs, subset_inds, 
                outDat[inds] = 0
                outDatFull = np.zeros(dbnDat1.shape, dtype=np.int32) - 1
                if len(subset_inds[p]) > 0:
-                    outDatFull[subset_inds[0]:subset_inds[1],subset_inds[2]:subset_inds[3]] = outDat
+                    outDatFull[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = outDat
                else:
                     outDatFull = outDat
                file_ext = "." + context_name
@@ -85,7 +85,7 @@ def generate_cluster_masks_no_geo(data_reader, data_reader_kwargs, subset_inds, 
     
                                 outUnionFull = None
                                 if len(subset_inds[p]) > 0:
-                                    outUnionFull[subset_inds[0]:subset_inds[1],subset_inds[2]:subset_inds[3]] = outUnion
+                                    outUnionFull[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = outUnion
                                 else:
                                     outUnionFull = outUnion
                                 inds = np.where(outUnionFull <= 0)
@@ -109,7 +109,7 @@ def generate_cluster_masks_no_geo(data_reader, data_reader_kwargs, subset_inds, 
 
                                     outDatFull = np.zeros(dbnDat1.shape, dtype=np.int32) - 1
                                     if len(subset_inds[p]) > 0:
-                                            outDatFull[subset_inds[0]:subset_inds[1],subset_inds[2]:subset_inds[3]] = outDat
+                                            outDatFull[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = outDat
                                     else:
                                             outDatFull = outDat
 
@@ -178,8 +178,9 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 		classes = np.unique(dbnDat1)
 		print(int(classes.max() - classes.min() + 2))
 		outDat = np.zeros(imgData.shape, dtype=np.int32)
+		print(subset_inds)
 		if len(subset_inds[p]) > 0:
-			outDat[subset_inds[0]:subset_inds[1],subset_inds[2]:subset_inds[3]] = dbnDat1
+			outDat[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = dbnDat1
 		else:
 			outDat = dbnDat1
 
@@ -225,7 +226,7 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 			outDat[inds] = 0
 			outDatFull = np.zeros(imgData.shape, dtype=np.int32) - 1
 			if len(subset_inds[p]) > 0:
-				outDatFull[subset_inds[0]:subset_inds[1],subset_inds[2]:subset_inds[3]] = outDat
+				outDatFull[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = outDat
 			else:
 				outDatFull = outDat
 			file_ext = "." + context_name
@@ -252,7 +253,7 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 
 				outUnionFull = None
 				if len(subset_inds[p]) > 0:
-					outUnionFull[subset_inds[0]:subset_inds[1],subset_inds[2]:subset_inds[3]] = outUnion
+					outUnionFull[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = outUnion
 				else:
 					outUnionFull = outUnion
 				inds = np.where(outUnionFull <= 0)
@@ -283,7 +284,7 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
  
 				outDatFull = np.zeros(imgData.shape, dtype=np.int32) - 1
 				if len(subset_inds[p]) > 0:
-					outDatFull[subset_inds[0]:subset_inds[1],subset_inds[2]:subset_inds[3]] = outDat
+					outDatFull[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = outDat
 				else:
 					outDatFull = outDat
  
@@ -392,7 +393,7 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
 
                                 outUnionFull = None
                                 if len(subset_inds[p]) > 0:
-                                        outUnionFull[subset_inds[0]:subset_inds[1],subset_inds[2]:subset_inds[3]] = outUnion
+                                        outUnionFull[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = outUnion
                                 else:
                                         outUnionFull = outUnion
 
