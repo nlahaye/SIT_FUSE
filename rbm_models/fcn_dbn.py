@@ -1,6 +1,7 @@
 """Convolutional Deep Belief Network.
 """
 import numpy as np
+import math
 
 from GPUtil import showUtilization as gpu_usage
 
@@ -322,36 +323,41 @@ class DBNUnetBlock(Model):
         conv_ind = 0
         print("INPUT_LAYERS1", len(self.input_layers))
         if self.sample == 1:
-            if len(self.input_layers) == 0:
-                self.input_layers.append([self.pool1])
-            else:
-                self.input_layers[0].append(self.pool1)
+            #if len(self.input_layers) == 0:
+            #    self.input_layers.append(self.pool1)
+            #else:
+            #    self.input_layers[0].append(self.pool1)
+            self.input_layers.append(self.pool1)
             print("INPUT_LAYERS2", len(self.input_layers))
         next_inp = []
         if self.sample == 2:
             conv_ind = 1
             logger.info("Fitting layer up")
             self.fit_layer(self.up, dataset, None, epochs[0], batch_size, 0, 
-                self.input_layers, 
+                self.input_layers.copy(), 
                 mse, num_loader_workers, pin_memory, is_distributed) 
             print("INPUT_LAYERS3", len(self.input_layers))
-            if len(self.input_layers) == 0:
-                self.input_layers.append([self.up])
-            else:
-                self.input_layers[0].append(self.up)
+            #if len(self.input_layers) == 0:
+            #    self.input_layers.append([self.up])
+            #else:
+            #    self.input_layers[0].append(self.up)
+            self.input_layers.append(self.up)
             print("INPUT_LAYERS4", len(self.input_layers))
-            next_inp = [self.input_layers[0][:self.skip_connection+1], self.input_layers[0]]
+            next_inp = [[self.input_layers[:self.skip_connection+1].copy(), self.input_layers.copy()]]
         else:
-            next_inp = self.input_layers
+            next_inp = self.input_layers.copy()
+            print("INPUT_LAYERS4.5", len(self.input_layers))
         logger.info("Fitting layer conv1_1")
         self.fit_layer(self.conv1_1, dataset, None, epochs[conv_ind], batch_size, 
             conv_ind, next_inp, mse, num_loader_workers, pin_memory, is_distributed)
         print("INPUT_LAYERS5", len(self.input_layers))
-        if len(self.input_layers) == 0:
-            self.input_layers.append([self.conv1_1])
-        else:
-            self.input_layers[0].append(self.conv1_1)
-        print("INPUT_LAYERS6", len(self.input_layers))
+        #if len(self.input_layers) == 0:
+        #    self.input_layers.append([self.conv1_1])
+        #else:
+        #    self.input_layers[0].append(self.conv1_1)
+        self.input_layers = next_inp
+        self.input_layers.append(self.conv1_1)
+        print("INPUT_LAYERS6", len(self.input_layers), self.input_layers, "\n\n\n")
         #Data is on GPU, cant use multiple workers
         num_loader_workers = 0
         pin_memory = False
@@ -365,8 +371,9 @@ class DBNUnetBlock(Model):
         logger.info("Fitting layer conv1_2")
         gpu_usage()
         self.fit_layer(self.conv1_2, dataset, None, epochs[conv_ind+1], batch_size, 
-            conv_ind + 1, self.input_layers, mse, num_loader_workers, pin_memory, is_distributed)
-        self.input_layers[0].append(self.conv1_2)
+            conv_ind + 1, self.input_layers.copy(), mse, num_loader_workers, pin_memory, is_distributed)
+        #self.input_layers[0].append(self.conv1_2)
+        self.input_layers.append(self.conv1_2)
         print("INPUT_LAYERS_LAST",self.input_layers)
         #self.current_layer_samples = Tensor
 
@@ -403,7 +410,7 @@ class DBNUnetBlock(Model):
         gpu_usage()
         # Fits the RBM
         mods = input_layer
-        if len(input_layer) == 0 or len(input_layer[0]) == 0:
+        if len(input_layer) == 0:
             mods = None
         model_mse = model.fit(dataset, batch_size, epochs, loader, sampler, mods).item()
 
@@ -533,6 +540,7 @@ class DBNUnetBlock(Model):
         for m in self.modules():
             if isinstance(m, ConvRBM):
                 m.W.data.zero_()
+                torch.nn.init.kaiming_normal_(m.W, mode='fan_out', nonlinearity='relu')
                 #m.W.data = m.W.data.half()
                 if m.b is not None:
                     m.b.data.zero_()
@@ -610,54 +618,67 @@ class DBNUnet(Model):
         #elif model == "gaussian":
         conv = GaussianConvRBM
 
+        channel_ratio = (64.0 / 3.0) * self.n_channels
+        single = int(math.ceil((channel_ratio * 1) / 2.) * 2)
+        #single = 64
+        double = single*2 
+        trip = double*2
+        quad = trip*2
+        quint = quad*2
+
         input_layers = []
         self.inConv = DBNUnetBlock(model, self.visible_shape,
-            self.n_channels, 64, self.steps[0:2], self.lr[0:2],
+            self.n_channels, single, self.steps[0:2], self.lr[0:2],
                 self.momentum[0:2], self.decay[0:2], 0, input_layers, -1, use_gpu)
 
         self.enc1 = DBNUnetBlock(model, self.inConv.output_shapes[-1],
-            64, 128, self.steps[2:4], self.lr[2:4],
+           single, double, self.steps[2:4], self.lr[2:4],
                 self.momentum[2:4], self.decay[2:4], 1, 
-                    input_layers, -1, use_gpu)
+                    self.inConv.input_layers, -1, use_gpu)
+
 
         self.enc2 = DBNUnetBlock(model, self.inConv.output_shapes[-1],
-            128, 256, self.steps[4:6], self.lr[4:6],
+            double, trip, self.steps[4:6], self.lr[4:6],
                 self.momentum[4:6], self.decay[4:6], 1, 
-                    input_layers, -1, use_gpu)
+                    self.enc1.input_layers, -1, use_gpu)
+
 
         self.enc3 = DBNUnetBlock(model, self.inConv.output_shapes[-1],
-            256, 512, self.steps[6:8], self.lr[6:8],
+            trip, quad, self.steps[6:8], self.lr[6:8],
                 self.momentum[6:8], self.decay[6:8], 1, 
-                    input_layers, -1, use_gpu)
+                    self.enc2.input_layers, -1, use_gpu)
+
 
         self.enc4 = DBNUnetBlock(model, self.inConv.output_shapes[-1],
-            512, 512, self.steps[8:10], self.lr[8:10],
+            quad, quad, self.steps[8:10], self.lr[8:10],
                 self.momentum[8:10], self.decay[8:10], 1, 
-                    input_layers, -1, use_gpu) 
+                    self.enc3.input_layers, -1, use_gpu) 
 
 
         self.dec4 = DBNUnetBlock(model, self.inConv.output_shapes[-1],
-            1024, 256, self.steps[10:13], self.lr[10:13],
+            quint, trip, self.steps[10:13], self.lr[10:13],
                 self.momentum[10:13], self.decay[10:13], 2, 
-                    input_layers, 10, use_gpu)
+                    self.enc4.input_layers, 10, use_gpu)
+
+
 
         self.dec3 = DBNUnetBlock(model, self.inConv.output_shapes[-1],
-            512, 128, self.steps[13:16], self.lr[13:16],
+            quad, double, self.steps[13:16], self.lr[13:16],
                 self.momentum[13:16], self.decay[13:16], 2, 
-                    input_layers, 7, use_gpu)
+                    self.dec4.input_layers, 7, use_gpu)
 
         self.dec2 = DBNUnetBlock(model, self.inConv.output_shapes[-1],
-            256, 64, self.steps[16:19], self.lr[16:19],
+            trip, single, self.steps[16:19], self.lr[16:19],
                 self.momentum[16:19], self.decay[16:19], 2,
-                input_layers, 4, use_gpu)
+                self.dec3.input_layers, 4, use_gpu)
 
         self.dec1 = DBNUnetBlock(model, self.inConv.output_shapes[-1],
-            128, 64, self.steps[19:22], self.lr[19:22],
+            double, single, self.steps[19:22], self.lr[19:22],
                 self.momentum[19:22], self.decay[19:22], 2, 
-                input_layers, 1, use_gpu)
+                self.dec2.input_layers, 1, use_gpu)
 
         self.outConv = conv(self.dec1.output_shapes[-1],
-            (1,1), self.n_filters, 64, 1, 0, self.steps[22], self.lr[22],
+            (1,1), self.n_filters, single, 1, 0, self.steps[22], self.lr[22],
             self.momentum[22], self.decay[22], False, None, use_gpu)
 
         self._models = torch.nn.ModuleList()
@@ -714,6 +735,11 @@ class DBNUnet(Model):
                     increase = 2    
                 err = self.models[i].module.fit(dataset, batch_size, epochs[internal_ind: internal_ind + increase],
                     is_distributed, num_loader_workers, pin_memory)
+                if i < len(self.models)-1:
+                    if hasattr(self.models[i+1], "module"):    
+                        self.models[i+1].module.input_layers = self.models[i].module.input_layers.copy()
+                    else:
+                        self.models[i+1].input_layers = self.models[i].input_layers.copy()
                 mse.extend(err)
                 internal_ind = internal_ind + increase
             else:  
@@ -739,10 +765,15 @@ class DBNUnet(Model):
                 dist.barrier()
                 # Appending the metrics
                 self.mse.append(model_mse)
-        
-                self.models[i].W.detach()
-                self.models[i].a.detach()
-                self.models[i].b.detach()
+         
+                if hasattr(self.models[i+1], "module"): 
+                    self.models[i].module.W.detach()
+                    self.models[i].module.a.detach()
+                    self.models[i].module.b.detach()
+                else:
+                    self.models[i].W.detach()
+                    self.models[i].a.detach()
+                    self.models[i].b.detach()
                 torch.cuda.empty_cache()
                 dist.barrier()
 
