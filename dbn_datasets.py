@@ -27,6 +27,10 @@ from joblib import load, dump
 #ML imports
 import torch
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
+from sklearn.utils import shuffle
+
+from skimage.filters import sobel
+from skimage.util import view_as_windows
 
 class DBNDataset(torch.utils.data.Dataset):
 
@@ -100,8 +104,6 @@ class DBNDataset(torch.utils.data.Dataset):
 				if self.stratify_data is not None:
 					strat_data = self.stratify_data["reader"](self.stratify_data["filename"][i], \
 						**self.stratify_data["reader_kwargs"])	
-				#dat = dat[:,2000:2100,2000:2100] #TODO REMOVE
-				print(dat.shape, dat[np.where(dat > -99999)].min(), dat[np.where(dat > -99999)].max())
 				for t in range(len(self.transform_chans)):
 					slc = [slice(None)] * dat.ndim
 					slc[self.chan_dim] = slice(self.transform_chans[t], self.transform_chans[t]+1)
@@ -112,10 +114,15 @@ class DBNDataset(torch.utils.data.Dataset):
 					if self.valid_max is not None:
 						inds = np.where(tmp > self.valid_max - 0.00000000005)
 						tmp[inds] = self.transform_value[t]
+					dat[tuple(slc)] = tmp
+				inds = np.where(dat < self.valid_min - 0.00000000005)
+				dat[inds] = -9999
+				inds = np.where(dat > self.valid_max - 0.00000000005)
+				dat[inds] = -9999
 				if len(self.transform_chans) > 0:
 					del slc
 					del tmp
-										
+								
 				dat = np.delete(dat, self.delete_chans, self.chan_dim)
 
 				if self.valid_min is not None:
@@ -141,9 +148,15 @@ class DBNDataset(torch.utils.data.Dataset):
 				self.__train_scaler__(data_local)
 
 			for r in range(len(data_local)):	
-					subd = data_local[r]
-					subd[np.where(subd > -9999)] = self.scaler.transform(subd[np.where(subd > -9999)].reshape(-1, 1)).reshape(-1)
-					data_local[r] = subd
+				subd = data_local[r]
+				shape = copy.deepcopy(subd.shape)
+				subd = subd.reshape(-1, shape[self.chan_dim])
+				inds = np.where(subd <= -9998)
+				subd = self.scaler.transform(subd)
+				subd[inds] = -9999
+				subd = subd.reshape(shape)
+				data_local[r] = subd
+
 		dim1 = 0
 		dim2 = 1
 		if self.chan_dim == 0:
@@ -156,51 +169,52 @@ class DBNDataset(torch.utils.data.Dataset):
 		self.targets = []
 		self.stratify_training = []
 		for r in range(len(data_local)):
-			count = 0
-			print("HERE",  data_local[r].shape)
-			last_count = len(self.data)
-			for j in range(self.pixel_padding, data_local[r].shape[dim1] - self.pixel_padding):
-				for k in range(self.pixel_padding, data_local[r].shape[dim2] - self.pixel_padding):
-					sub_data_total = []
-					sub_data_strat = []
-					for c in range(0, data_local[r].shape[self.chan_dim]):
 
-						slc = [slice(None)] * data_local[r].ndim
-						slc[self.chan_dim] = slice(c, c+1)
-						slc[dim1] = slice(j-self.pixel_padding,j+self.pixel_padding+1)	
-						slc[dim2] = slice(k-self.pixel_padding, k+self.pixel_padding+1)
-						sub_data = data_local[r][tuple(slc)]
-						sub_data_total.append(sub_data)
+			size_wind = 1 + 2 * self.pixel_padding
+			tgts = np.indices(data_local[r].shape[0:2])
+			tgts = tgts[:,self.pixel_padding:tgts.shape[1] - self.pixel_padding,self.pixel_padding:tgts.shape[2] - self.pixel_padding]
+			tgts = np.concatenate((np.full((1,tgts.shape[1], tgts.shape[2]),r, dtype=np.int16), tgts), axis=0)
+			tgts = tgts.reshape((3,tgts.shape[1]*tgts.shape[2])).astype(np.int16)
+			sub_data_total = view_as_windows(data_local[r], [size_wind, size_wind, data_local[r].shape[2]], step=1)
+			sub_data_total = sub_data_total.reshape((sub_data_total.shape[0]*sub_data_total.shape[1], -1))        
 
-					if len(strat_local) > 0:
-						sub_data_strat = strat_local[r][j,k]	
-						#slc = [slice(None)] * strat_local[r].ndim
-						#slc[0] = slice(j-self.pixel_padding,j+self.pixel_padding+1)
-						#slc[1] = slice(k-self.pixel_padding, k+self.pixel_padding+1)
-						#sub_data_strat = strat_local[r][tuple(slc)]
-					sub_data_total = np.array(sub_data_total)
-					if(sub_data_total.min() <= -9999):
-						count = count + 1
-						continue
-					self.data.append(sub_data_total.ravel())
-					self.targets.append([r,j,k])
+			del_inds = np.where(sub_data_total <= -9998)[0]
+			sub_data_total = np.delete(sub_data_total, del_inds, 0)
+			tgts = np.delete(tgts, del_inds, 1)
 
-					if len(strat_local) > 0:
-						self.stratify_training.append(sub_data_strat)
-			if last_count >= len(self.data):
-				print("ERROR NO DATA RECEIVED FROM", self.filenames[r]) 
-			print("SKIPPED", count, "SAMPLES OUT OF", len(self.data), data_local[r].shape, dim1, dim2, self.chan_dim)
-		c = list(zip(self.data, self.targets))
+			if len(strat_local) > 0:
+				strat_local[r] = strat_local[r][self.pixel_padding:strat_local[r].shape[1] - \
+					self.pixel_padding,self.pixel_padding:strat_local[r].shape[1] - self.pixel_padding]
+				print(strat_local[r].shape)
+				sub_data_strat = np.squeeze(strat_local[r].flatten()) 
+				self.stratify_training.append(sub_data_strat)
+                       
+			if len(self.data) == 0: 
+				self.data.append(sub_data_total)
+				self.targets.append(tgts)
+			else:
+				self.data[0] = np.concatenate((self.data[0],sub_data_total),axis=0)
+				self.targets[0] = np.concatenate((self.targets[0],tgts),axis=1)
+		self.targets[0] = np.swapaxes(self.targets[0], 0, 1)
+
+		if len(self.stratify_training) > 0:
+			c = list(zip(self.data[0], self.targets[0], self.stratify_training[0]))
+		else:
+			c = list(zip(self.data[0], self.targets[0]))
 		random.shuffle(c)
-		self.data, self.targets = zip(*c)
+		
+		if len(self.stratify_training) > 0:
+			self.data, self.targets, self.stratify_training = zip(*c)
+		else:
+			self.data, self.targets = zip(*c)
 		self.data_full = np.array(self.data).astype(np.float32)
-		#self.data_full = self.data_full * 1e10
-		#self.data_full = self.data_full.astype(np.int32)
-		self.targets_full = np.array(self.targets).astype(np.int16)
+		self.targets_full = np.copy(self.targets).astype(np.int16)
+
+
 		if self.training and self.subset_training > 0:
 			if len(self.stratify_training) > 0:
 				self.stratify_training = np.array(self.stratify_training)
-				print("STRAT", self.stratify_training.shape)
+				self.stratify_training = self.stratify_training.reshape((-1))
 				self.__stratify_training__()
 			else:
 				self.data_full = self.data_full[:self.subset_training,:]
@@ -208,8 +222,7 @@ class DBNDataset(torch.utils.data.Dataset):
 		del self.data
 		del self.targets
 
-		subd = self.data_full[np.where(self.data_full > -9999)]
-		print("STATS", subd.min(), subd.max(), subd.mean(), subd.std(), self.data_full.min(), self.data_full.max(), self.data_full.mean(), self.data_full.std())
+		print("STATS", self.data_full.min(), self.data_full.max(), self.data_full.mean(), self.data_full.std())
 
 		self.next_subset()
  
@@ -234,10 +247,12 @@ class DBNDataset(torch.utils.data.Dataset):
 		type_inds = []
 		train_indices = []    
 		train_inds_by_value = [] 
-		dataset_size = self.data_full.shape[0]
+		dataset_size = self.stratify_training.shape[0]
+                #TEST OVERSAMPLING
+ 
 
-		for mask_val in range(self.stratify_training.max() + 1):
-			print(np.where(self.stratify_training == mask_val)[0].shape, mask_val)
+		#TODO Allow for oversampling, actual stratification, and only selction of a subset of labels
+		for mask_val in range(self.stratify_training.max()):
 			type_inds.append(np.where(self.stratify_training == mask_val)[0])
 			percentage_of_dataset = len(type_inds[mask_val]) / dataset_size
 			# calculate how many test & val exaples to take from the given water type
@@ -246,17 +261,12 @@ class DBNDataset(torch.utils.data.Dataset):
 			tmp = np.random.choice(type_inds[mask_val], size=num_train_exs_of_type, replace=False)
 			train_indices.extend(tmp)
 			train_inds_by_value.append(tmp) 
+			
 
-		#all_indices = train_indices + test_indices + val_indices
-		#unique_indices, counts = np.unique(all_indices, return_counts=True)
-		#dup = unique_indices[counts > 1]
-		#if len(dup) > 0:
-		#	raise Exception("Train, test, and val splits overlap. Redefine splits.")
-
-		self.train_indices = train_inds_by_value
 		self.data_full = self.data_full[train_indices]
 		self.targets_full = self.targets_full[train_indices]
- 
+		self.train_indices = train_inds_by_value
+
 
 	def __set_subset__(self,increment):
 		#TODO: optimize to minimize data duplication - lazy loading & Dask
@@ -284,7 +294,8 @@ class DBNDataset(torch.utils.data.Dataset):
 	def __train_scaler__(self, data):
 		for r in range(len(data)):
                         subd = data[r]
-                        self.scaler.partial_fit(subd[np.where(subd > -9999)].reshape(-1, 1))
+                        shape = subd.shape
+                        self.scaler.partial_fit(subd[np.where(subd > -9999)].reshape(-1, shape[self.chan_dim]))
 
 	def __len__(self):
 		return len(self.data)
@@ -301,7 +312,6 @@ class DBNDataset(torch.utils.data.Dataset):
 		#sample = sample.astype(np.int32)
 
 		return sample, self.targets[index]
-
 
 
 
