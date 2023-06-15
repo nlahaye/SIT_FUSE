@@ -22,7 +22,7 @@ matplotlib.use('agg')
 import matplotlib.pyplot as plt
  
 def generate_cluster_masks_no_geo(data_reader, data_reader_kwargs, subset_inds, cluster_data, 
-    apply_context, context_clusters, context_name, compare, create_separate, generate_union = False):
+    apply_context, context_clusters, context_name, compare, create_separate, generate_union = False, cluster_dependencies={}):
 
         read_func = get_read_func(data_reader)
     
@@ -34,10 +34,8 @@ def generate_cluster_masks_no_geo(data_reader, data_reader_kwargs, subset_inds, 
             print("FNAME1", cluster_data[p])
 
             dbnDat1 = read_func(cluster_data[p], **data_reader_kwargs).astype(np.int32)
-            print(dbnDat1.min(), dbnDat1.max())
             classes = np.unique(dbnDat1)
-            print(int(classes.max() - classes.min() + 2))
-            outDat = np.zeros(dbnDat1.shape, dtype=np.int32)
+            outDat = np.zeros((ny,nx), dtype=np.int32)
  
             if apply_context:
                outDat = np.zeros(dbnDat1.shape, dtype=np.int32)
@@ -45,8 +43,8 @@ def generate_cluster_masks_no_geo(data_reader, data_reader_kwargs, subset_inds, 
                outDat[inds] = -1
                if generate_union > 0 and outUnion is None:
                    #union cases assume input scenes are all the same size        
-                   outUnion = np.zeros(dbnDat1.shape, dtype=np.int32)
-                   unionCount = np.zeros(dbnDat1.shape, dtype=np.int32)
+                   outUnion = np.zeros((ny,nx), dtype=np.int32)
+                   unionCount = np.zeros((ny,nx), dtype=np.int32)
 
                if not isinstance(context_clusters[0], list):
                        tmp = []
@@ -56,7 +54,9 @@ def generate_cluster_masks_no_geo(data_reader, data_reader_kwargs, subset_inds, 
                        for i in range(len(context_clusters[j])):
                            clss = context_clusters[j][i]
                            ind = np.where(dbnDat1 == clss)
-                           print(clss)
+                           if context_clusters[j][i] in cluster_dependencies:
+                                                ind = apply_dependencies(cluster_dependencies[context_clusters[j][i]], ind, dbnDat1)
+
                            outDat[ind] = (j+1)
                            if generate_union > 0 and outUnion is not None:
                                outUnion[ind] = outUnion[ind] + (j+1)
@@ -64,7 +64,7 @@ def generate_cluster_masks_no_geo(data_reader, data_reader_kwargs, subset_inds, 
     
                inds = np.where((outDat < 0) & (dbnDat1 >= 0))
                outDat[inds] = 0
-               outDatFull = np.zeros(dbnDat1.shape, dtype=np.int32) - 1
+               outDatFull = np.zeros((ny,nx), dtype=np.int32) - 1
                if len(subset_inds[p]) > 0:
                     outDatFull[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = outDat
                else:
@@ -99,7 +99,7 @@ def generate_cluster_masks_no_geo(data_reader, data_reader_kwargs, subset_inds, 
 
             if create_separate:
                             for i in range(len(classes)):
-                                    outDat = np.zeros(dbnDat1.shape, dtype=np.int32) - 1
+                                    outDat = np.zeros((ny,nx), dtype=np.int32) - 1
                                     clss = classes[i]
                                     ind = np.where(dbnDat1 == clss)
                                     outDat[ind] = 1
@@ -107,7 +107,7 @@ def generate_cluster_masks_no_geo(data_reader, data_reader_kwargs, subset_inds, 
                                     outDat[inds] = 0
                                     file_ext = ".cluster_class" + str(clss)
 
-                                    outDatFull = np.zeros(dbnDat1.shape, dtype=np.int32) - 1
+                                    outDatFull = np.zeros((ny,nx), dtype=np.int32) - 1
                                     if len(subset_inds[p]) > 0:
                                             outDatFull[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = outDat
                                     else:
@@ -120,7 +120,7 @@ def generate_cluster_masks_no_geo(data_reader, data_reader_kwargs, subset_inds, 
  
 
 def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
-    cluster_data, gtiff_data, apply_context, context_clusters, context_name, compare, create_separate, generate_union = False):
+    cluster_data, gtiff_data, apply_context, context_clusters, context_name, compare, create_separate, generate_union = False, cluster_dependencies={}):
 
 	read_func = get_read_func(data_reader)
 
@@ -129,11 +129,11 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 	outUnion = None
 	unionCount = None
 	for p in range(len(cluster_data)):
-		print("FNAME1", cluster_data[p])
-		print("FNAME2", gtiff_data[p])
-               
+
+		if not os.path.exists(cluster_data[p]):
+			continue		
+
 		dbnDat1 = read_func(cluster_data[p], **data_reader_kwargs).astype(np.int32)
-		print(dbnDat1.min(), dbnDat1.max())
 		#dbnDat1 = np.flipud(dbnDat1)
 		dat = gdal.Open(gtiff_data[p])
 		imgData = dat.ReadAsArray()
@@ -161,37 +161,29 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 		#print(geoTransform)
 
  
-		print(len(imgData.shape), imgData.shape)
 		if len(imgData.shape) > 2:
 			imgData = np.squeeze(imgData[0,:,:])
-		print(p)
-		print("HERE", dbnDat1.shape, imgData.shape)
-		nx = imgData.shape[1]
-		ny = imgData.shape[0]
+		nx = max(dbnDat1.shape[1],imgData.shape[1])
+		ny = max(dbnDat1.shape[0],imgData.shape[0])
 		metadata=dat.GetMetadata()
 		geoTransform = dat.GetGeoTransform()
 		wkt = dat.GetProjection()
-		print(wkt)
 		dat.FlushCache()
 		dat = None			
  
 		classes = np.unique(dbnDat1)
-		print(int(classes.max() - classes.min() + 2))
-		outDat = np.zeros(imgData.shape, dtype=np.int32)
-		print(subset_inds)
+		outDat = np.zeros((ny,nx), dtype=np.int32)
 		if len(subset_inds[p]) > 0:
 			outDat[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = dbnDat1
 		else:
-			outDat = dbnDat1
+			outDat[0:dbnDat1.shape[0],0: dbnDat1.shape[1]] = dbnDat1
 
 
 		inds = np.where(imgData < 0)
 		outDat[inds] = -1
 		file_ext = ".full_geo"
 		fname = cluster_data[p] + file_ext + ".tif"
-		print(fname, "HERE", nx, ny, outDat.shape)
 		out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Int32)
-		print(fname)
 		out_ds.SetMetadata(metadata)
 		out_ds.SetGeoTransform(geoTransform)
 		out_ds.SetProjection(wkt)
@@ -217,12 +209,14 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 				for i in range(len(context_clusters[j])):
 					clss = context_clusters[j][i]
 					ind = np.where(dbnDat1 == clss)
+					if context_clusters[j][i] in cluster_dependencies:
+						ind = apply_dependencies(cluster_dependencies[context_clusters[j][i]], ind, dbnDat1)
 					outDat[ind] = (j+1)
 					if generate_union > 0 and outUnion is not None:
 						outUnion[ind] = outUnion[ind] + (j+1)
 						unionCount[ind] = unionCount[ind] + 1
 
-			inds = np.where((outDat < 0) & (dbnDat1 >= 0))
+			inds = np.where((outDat[0:dbnDat1.shape[0],0: dbnDat1.shape[1]] < 0) & (dbnDat1 >= 0))
 			outDat[inds] = 0
 			outDatFull = np.zeros(imgData.shape, dtype=np.int32) - 1
 			if len(subset_inds[p]) > 0:
@@ -325,30 +319,25 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
 
                 dat = gdal.Open(gtiff_data[p])
                 imgData = dat.ReadAsArray().astype(np.int32)
-                print(len(imgData.shape), imgData.shape)
                 if len(imgData.shape) > 2:
                         imgData = np.squeeze(imgData[0,:,:])
-                print(p)
-                print(imgData.shape)
-                nx = imgData.shape[1]
-                ny = imgData.shape[0]
+                nx = max(dbnDat1.shape[1],imgData.shape[1])
+                ny = max(dbnDat1.shape[0],imgData.shape[0])
                 geoTransform = dat.GetGeoTransform()
                 metadata = dat.GetMetadata()
                 wkt = dat.GetProjection()
-                print(wkt)
                 dat.FlushCache()
                 dat = None
 
                 classes = np.unique(imgData)
  
                 if apply_context:
-                        outDatFull = np.zeros(imgData.shape, dtype=np.int32) - 1
+                        outDatFull = np.zeros((ny,nx), dtype=np.int32) - 1
                         if generate_union > 0 and outUnion is None:
                                 #union cases assume input scenes are all the same size
-                                outUnion = np.zeros(imgData.shape, dtype=np.int32) - 1
-                                unionCount = np.zeros(imgData.shape, dtype=np.int32)
+                                outUnion = np.zeros((ny,nx), dtype=np.int32) - 1
+                                unionCount = np.zeros((ny,nx), dtype=np.int32)
 
-                        print(context_clusters[0], isinstance(context_clusters[0], list))
                         if not isinstance(context_clusters[0], list):
                             tmp = []
                             tmp.append(context_clusters)
@@ -356,10 +345,9 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
                         for j in range(len(context_clusters)):
                             for i in range(len(context_clusters[j])):
                                 clss = context_clusters[j][i]
-                                print(clss, imgData.shape, outDatFull.shape)
                                 ind = np.where(imgData == clss)
-                                if j == 3:
-                                    print("CLUST HERE", ind)
+                                if context_clusters[j][i] in cluster_dependencies:
+                                                ind = apply_dependencies(cluster_dependencies[context_clusters[j][i]], ind, dbnDat1)	
                                 outDatFull[ind] = (j+1)
                                 if generate_union > 0 and outUnion is not None:
                                     outUnion[ind] = outUnion[ind] + 1
@@ -370,7 +358,6 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
                         file_ext = "." + context_name
 
                         fname = os.path.splitext(gtiff_data[p])[0] + file_ext + ".tif"
-                        print(fname, outDatFull.max())
                         out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Int32)
                         out_ds.SetGeoTransform(geoTransform)
                         out_ds.SetMetadata(metadata)
@@ -408,7 +395,7 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
 
                 if create_separate:
                     for i in range(len(classes)):
-                        outDatFull = np.zeros(imgData.shape, dtype=np.int32) - 1
+                        outDatFull = np.zeros((ny,nx), dtype=np.int32) - 1
                         clss = classes[i]
                         ind = np.where(imgData == clss)
                         outDatFull[ind] = 1
@@ -426,6 +413,26 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
 
 
 
+def apply_dependencies(clust_deps, inds, dbnDat, window = 10): #TODO configurable
+
+    final_inds_y = []
+    final_inds_x = []
+    for i in range(len(inds[1])):
+        wind_min_y = max(0,inds[0][i]-window)
+        wind_max_y = min(dbnDat.shape[0],inds[0][i]+window)
+        wind_min_x = max(0,inds[1][i]-window)
+        wind_max_x = min(dbnDat.shape[1],inds[1][i]+window)
+
+        running_count = 0
+        for d in range(len(clust_deps)):
+            if clust_deps[d] in dbnDat[wind_min_y:wind_max_y,wind_min_x:wind_max_x]:
+                    running_count += len(np.where(dbnDat[wind_min_y:wind_max_y,wind_min_x:wind_max_x] == clust_deps[d])[0])
+                    if running_count > 10:
+                        final_inds_y.append(inds[0][i])
+                        final_inds_x.append(inds[1][i])
+                        break
+
+    return final_inds_y,final_inds_x
 
 def main(yml_fpath):
 
@@ -438,10 +445,9 @@ def main(yml_fpath):
     gtiff_data = yml_conf["data"]["gtiff_data"]
     create_separate = yml_conf["data"]["create_separate"]
     subset_inds = yml_conf["data"]["subset_inds"]
-    print(len(subset_inds))
-    if len(subset_inds) == 0:
+
+    if len(subset_inds) == 0 or len(subset_inds) < len(gtiff_data):
         subset_inds = [ [] for _ in range(len(gtiff_data)) ]
-    print(len(subset_inds))
 
     apply_context = yml_conf["context"]["apply_context"]
     generate_union = yml_conf["context"]["generate_union"]
@@ -451,20 +457,24 @@ def main(yml_fpath):
 
     gen_from_gtiffs = yml_conf["gen_from_geotiffs"]
 
+    clust_dep = {}
+    if "cluster_dependencies" in yml_conf["context"]:
+        clust_dep = yml_conf["context"]["cluster_dependencies"]
+
  
     if gtiff_data is not None:
         if gen_from_gtiffs:
             generate_separate_from_full(gtiff_data = cluster_data, apply_context = apply_context,
-                context_clusters = context_clusters, context_name = context_name, create_separate=create_separate, generate_union=generate_union)
+                context_clusters = context_clusters, context_name = context_name, create_separate=create_separate, generate_union=generate_union, cluster_dependencies=clust_dep)
         else: 
             generate_cluster_gtiffs(data_reader = reader, data_reader_kwargs = data_reader_kwargs, subset_inds = subset_inds,
                 cluster_data = cluster_data, gtiff_data = gtiff_data, apply_context = apply_context,
                 context_clusters = context_clusters, context_name = context_name, compare = compare, 
-                    create_separate = create_separate, generate_union=generate_union)
+                    create_separate = create_separate, generate_union=generate_union, cluster_dependencies=clust_dep)
     else:
         generate_cluster_masks_no_geo(data_reader = reader, data_reader_kwargs = data_reader_kwargs, subset_inds = subset_inds,
                 cluster_data = cluster_data, apply_context = apply_context, context_clusters = context_clusters, 
-                context_name = context_name, compare = compare, create_separate = create_separate, generate_union=generate_union)
+                context_name = context_name, compare = compare, create_separate = create_separate, generate_union=generate_union, cluster_dependencies=clust_dep)
 
 if __name__ == '__main__':
 
