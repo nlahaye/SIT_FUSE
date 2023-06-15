@@ -282,7 +282,7 @@ def run_dbn(yml_conf):
 
     for i in range(len(new_dbn.models)):
         if not isinstance(new_dbn.models[i], torch.nn.MaxPool2d):
-            new_dbn.models[i]._optimizer = opt.SGD(new_dbn.models[i].parameters(), lr=learning_rate[i], momentum=momentum[i], weight_decay=decay[i], nesterov=nesterov_accel[i])
+           new_dbn.models[i]._optimizer = opt.SGD(new_dbn.models[i].parameters(), lr=learning_rate[i], momentum=momentum[i], weight_decay=decay[i], nesterov=nesterov_accel[i])
            new_dbn.models[i].normalize = normalize_learnergy[i]
            new_dbn.models[i].batch_normalize = batch_normalize[i]
         if "LOCAL_RANK" in os.environ.keys():
