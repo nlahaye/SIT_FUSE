@@ -24,9 +24,20 @@ def main(yml_fpath):
 
     yml_conf = read_yaml(yml_fpath)
     #Assume GeoTiff only for the time being - geolocation info
+    contour_min_size = yml_conf["contour_min_size"]
     data_fnames = yml_conf["data"]["filename"]
     data_reader =  yml_conf["data"]["reader_type"]
     data_reader_kwargs = yml_conf["data"]["reader_kwargs"]
+    apply_msk = False
+    mask_fname = None
+    mask_band = 0
+    mask_val = 0
+    if "mask" in yml_conf["data"]:
+        mask_fname = yml_conf["data"]["mask"]
+        apply_msk = True
+        mask_band = yml_conf["data"]["mask_band"]
+        mask_val = yml_conf["data"]["mask_val"]
+        
     wrt_geotiff = yml_conf["write_geotiff"] 
 
     for i in range(len(data_fnames)):
@@ -37,16 +48,16 @@ def main(yml_fpath):
         imgData[np.where(imgData > 0)] = 1       
         imgData = imgData.astype(np.uint8)
 
+        if apply_msk:
+            mask= gdal.Open(mask_fname).ReadAsArray()
+            imgData = apply_mask(mask, mask_band, mask_val, imgData)
+        
         if yml_conf["remove_singles"]:
             imgData = imgData - dip.GetSinglePixels(imgData > 0)
-
+ 
         imgData2 = imgData.copy()
         imgData3 = imgData.copy()
 
-        print(imgData.shape, imgData.dtype)
-
-        
-        print(imgData.min(), imgData.max())  
         # Mask used to flood filling.
         # Notice the size needs to be 2 pixels than the image.
         h, w = imgData.shape[:2]
@@ -76,20 +87,22 @@ def main(yml_fpath):
         else:
             write_zarr(data_fnames[i] + ".ImFill_Final.zarr", im_out.astype(np.int32))
         cv2.waitKey(0) 
-
+ 
+        #ret, thresh = cv2.threshold(im_out.astype(np.int32), 0, 255, cv2.THRESH_BINARY) 
+        im_out = im_out.astype(np.uint8) * 255
 
         # Find Canny edges
-        edged = cv2.Canny(imgData2, 30, 200)
+        edged = cv2.Canny(im_out, 30, 200)
         cv2.waitKey(0)
-     
+    
         # Finding Contours
         # Use a copy of the image e.g. edged.copy()
         # since findContours alters the image
-        contours, hierarchy = cv2.findContours(imgData2, 
+        contours, hierarchy = cv2.findContours(im_out, 
             cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
   
         if wrt_geotiff:
-            write_geotiff(dat, imgData2, data_fnames[i] + ".Edged.tif") 
+            write_geotiff(dat, edged, data_fnames[i] + ".Edged.tif") 
         else:
             write_zarr(data_fnames[i] + ".Edged.zarr", imgData2.astype(np.int32))
         #cv2.imshow('Canny Edges After Contouring', edged)
@@ -100,17 +113,24 @@ def main(yml_fpath):
         # Draw all contours
         # -1 signifies drawing all contours
  
-        for j in range(0,len(contours),100):
-            zeros = np.zeros(imgData2.shape)
-            cv2.drawContours(zeros, contours[j*10:(j+1)*10], -1, (0,255,0), 3)
+        final_contours = []
+        for j in range(0,len(contours)):
+            if contour_min_size > 0 and len(contours[j]) < contour_min_size:
+                continue
+            final_contours.append(contours[j])
+            zeros = np.zeros(edged.shape)
+            cv2.drawContours(zeros, contours[j], -1, 1, 3)
+            print(zeros.min(), zeros.max(),len(contours[j]), data_fnames[i] + ".Contours" + str(j) + ".tif")
             if wrt_geotiff:
                 write_geotiff(dat, zeros, data_fnames[i] + ".Contours" + str(j) + ".tif") 
             else:
                 write_zarr(data_fnames[i] + ".Contours.zarr", zeros)
-
-        # cv2.imshow('Contours', image)
-        #cv2.waitKey(0)
-        #cv2.destroyAllWindows()
+        zeros = np.zeros(edged.shape)
+        cv2.drawContours(zeros, final_contours, -1, 1, thickness=cv2.FILLED)
+        if wrt_geotiff:
+            write_geotiff(dat, zeros, data_fnames[i] + ".Contours.tif") 
+        else:
+            write_zarr(data_fnames[i] + ".Contours.zarr", zeros)
 
 
 def write_geotiff(dat, imgData, fname):
@@ -132,6 +152,14 @@ def write_zarr(fname, imgData):
     zarr.save(fname + ".zarr", imgData)
     img = plt.imshow(imgData, vmin=-1, vmax=1)
     plt.savefig(fname + ".png", dpi=400, bbox_inches='tight') 
+
+
+def apply_mask(mask, band, mask_val, data):
+
+    inds = np.where(mask[band,:,:] == mask_val)
+    data[inds] = 0
+    return data
+
  
 if __name__ == '__main__':
 
