@@ -1,6 +1,6 @@
 
 output:
- out_dir: "output/Learnergy/DBN_GOES/"
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/"
  training_output: "output.data"
  training_mse: "rec_mse.data"
  testing_output: "output_test.data"
@@ -8,18 +8,21 @@ output:
  model: "dbn.pth"
 
 dbn:
- subset_training: -1 #300000
- deep_cluster: True
- overwrite_model: True
+ tune_clust: True
+ tune_dbn: False
+ tune_scaler: False
+ subset_training: -1 #10000000
+ deep_cluster: 1000
+ overwrite_model: False
  params:
-  model_type: ["gaussian_selu"] #, 'gaussian_relu_dropout', 'gaussian_relu_dropout'] #'variance_gaussian_dropout' "gaussian_dropout"
-  dbn_arch: [2000] #[2000] [250, 500, 2000] #, 2000]
-  gibbs_steps: [3] #, 7, 7] #, 10] #, 25]
+  model_type: ["gaussian_selu"] #["gaussian_selu"] #, 'gaussian_relu_dropout', 'gaussian_relu_dropout'] #'variance_gaussian_dropout' "gaussian_dropout"
+  dbn_arch: [4000] #[2000] [250, 500, 2000] #, 2000]
+  gibbs_steps: [5] #, 7, 7] #, 10] #, 25]
   learning_rate: [0.0001] #, 0.0001, 0.0001] #, 0.01] #, 0.01]
-  momentum: [0.95] #, 0.95, 0.95] #, 0.95] #, 0.95]
-  decay: [0.0001] #, 0.0001, 0.0001] #, 0.0001] #, 0.0001]
+  momentum: [0.0] #, 0.95, 0.95] #, 0.95] #, 0.95]
+  decay: [0.00001] #, 0.0001, 0.0001] #, 0.0001] #, 0.0001]
   temp: [1.0] #, 1.0, 1.0] [0.9, 0.75, 0.5] #, 1.0] #, 0.5] #, 0.5] 
-  nesterov_accel: [True]
+  nesterov_accel: [False]
   normalize_learnergy: [False]
   batch_normalize: [False]
 
@@ -28,15 +31,20 @@ dbn:
   use_gpu_preprocessing: False
   world_size: 1
   rank: 0
-  device_ids: ["5","6","7"]
-  batch_size: 1000
-  epochs: [100] #[8] #, 1, 1] #, 5] #, 10]
+  device_ids: ["1","2", "3","4","5","6","7"]
+  batch_size: 32
+  epochs: [15] #[8] #, 1, 1] #, 5] #, 10]
+  cluster_batch_size: 128
+  cluster_epochs: 2
 
 scaler:
  name: "standard"
 
 
 data:
+ tile: True
+ tile_size: [3,3,32]
+ tile_step: [1,1,32]
  num_loader_workers: 10
  scale_data: True
  pixel_padding: 1
@@ -48,12 +56,12 @@ data:
  output_subset_count: 10
  reader_type: "goes_netcdf"
  reader_kwargs:
-  start_sample: 1650
+  start_sample: 1720
   end_sample: 2200
-  start_line: 0
-  end_line: 800
+  start_line: 50
+  end_line: 600
  chan_dim: 0
- delete_chans: []
+ delete_chans: [] #[3,7,8,9,10,11,12,15]
  transform_default:
   chans: []
   transform: []

@@ -1,0 +1,50 @@
+
+gen_from_geotiffs: False
+
+data:
+ clust_reader_type: "zarr_to_numpy"
+ reader_kwargs:
+   no_arg: "no_arg" 
+ subset_inds: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
+ create_separate: False
+
+ 
+ gtiff_data: [ 
+"/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981719_02_20190806_1851_1900_V01_georeferenced.tif",
+"/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981719_05_20190806_2033_2039_V01_georeferenced.tif",
+"/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981719_06_20190806_2153_2156_V01_georeferenced.tif",
+"/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981719_08_20190806_2249_2259_V01_georeferenced.tif",
+#"/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981719_10_20190807_0042_0050_V01_georeferenced.tif",
+"/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981720_07_20190808_0055_0103_V01_georeferenced.tif",
+"/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981720_09_20190808_0237_0238_V01_georeferenced.tif",
+"/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981721_01_20190809_0113_0117_V01_georeferenced.tif",
+"/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981721_02_20190809_0120_0121_V01_georeferenced.tif",
+"/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981721_05_20190809_0219_0226_V01_georeferenced.tif",
+"/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981719_07_20190806_2226_2231_V01_georeferenced.tif",
+"/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981719_10_20190807_0042_0050_V01_georeferenced.tif"
+]
+
+
+ cluster_fnames: [
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981719_02_20190806_1851_1900_V01_georeferenced.tif.npy.clustoutput.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981719_05_20190806_2033_2039_V01_georeferenced.tif.npy.clustoutput.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981719_06_20190806_2153_2156_V01_georeferenced.tif.npy.clustoutput_test.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981719_08_20190806_2249_2259_V01_georeferenced.tif.npy.clustoutput.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981720_07_20190808_0055_0103_V01_georeferenced.tif.npy.clustoutput_test.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981720_09_20190808_0237_0238_V01_georeferenced.tif.npy.clustoutput_test.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981721_01_20190809_0113_0117_V01_georeferenced.tif.npy.clustoutput_test.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981721_02_20190809_0120_0121_V01_georeferenced.tif.npy.clustoutput_test.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981721_05_20190809_0219_0226_V01_georeferenced.tif.npy.clustoutput_test.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981719_07_20190806_2226_2231_V01_georeferenced.tif.npy.clustoutput_test.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981719_10_20190807_0042_0050_V01_georeferenced.tif.npy.clustoutput_test.data_5000clusters.zarr" 
+]
+
+
+
+context: 
+ apply_context: True
+ clusters: [942,3531,3937,4331]  #64 #i.e. smoke clusters
+ name: "smoke" #i.e. smoke
+ compare_truth: False
+ generate_union: False
+

@@ -1,0 +1,93 @@
+
+
+data:
+
+ contour_filename: [
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981719_02_20190806_1851_1900_V01_georeferenced.tif.npy.clustoutput.data_5000clusters.zarr.smoke.tif.Contours3884.tif",
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981719_05_20190806_2033_2039_V01_georeferenced.tif.npy.clustoutput.data_5000clusters.zarr.smoke.tif.Contours2084.tif",
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981719_06_20190806_2153_2156_V01_georeferenced.tif.npy.clustoutput_test.data_5000clusters.zarr.smoke.tif.Contours414.tif",
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981719_08_20190806_2249_2259_V01_georeferenced.tif.npy.clustoutput.data_5000clusters.zarr.smoke.tif.Contours104.tif",
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981720_07_20190808_0055_0103_V01_georeferenced.tif.npy.clustoutput_test.data_5000clusters.zarr.smoke.tif.Contours112.tif",
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981721_02_20190809_0120_0121_V01_georeferenced.tif.npy.clustoutput_test.data_5000clusters.zarr.smoke.tif.Contours67.tif",
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981719_07_20190806_2226_2231_V01_georeferenced.tif.npy.clustoutput_test.data_5000clusters.zarr.smoke.tif.Contours140.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_06_20190806_1815_1824_V02_Georeferenced_scaled_SmokeMask_v13.tif.Contours287.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_08_20190806_1834_1846_V02_Georeferenced_scaled_SmokeMask_v13.tif.Contours631.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_10_20190806_1858_1910_V02_Georeferenced_scaled_SmokeMask_v13.tif.Contours360.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_14_20190806_1926_1929_V02_Georeferenced_scaled_SmokeMask_v13.tif.Contours141.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_16_20190806_1941_1956_V02_Georeferenced_scaled_SmokeMask_v13.tif.Contours861.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_17_20190806_2000_2010_V02_Georeferenced_scaled_SmokeMask_v13.tif.Contours825.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_19_20190806_2035_2048_V02_Georeferenced_scaled_SmokeMask_v13.tif.Contours608.tif", 
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_20_20190806_2052_2106_V02_Georeferenced_scaled_SmokeMask_v13.tif.Contours691.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_21_20190806_2111_2125_V02_Georeferenced_scaled_SmokeMask_v13.tif.Contours823.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19911_05_20190807_1817_1833_V02_georeferenced_scaled_SmokeMask_v13.tif.Contours271.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19911_08_20190807_1928_1942_V02_georeferenced_scaled_SmokeMask_v13.tif.Contours303.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19912_07_20190808_1806_1821_V02_georeferenced_scaled_SmokeMask_v13.tif.Contours383.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19911_12_20190807_2039_2051_V02_georeferenced_scaled_SmokeMask_v13.tif.Contours197.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19911_11_20190807_2021_2035_V02_georeferenced_scaled_SmokeMask_v13.tif.Contours279.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19911_10_20190807_2004_2016_V02_georeferenced_scaled_SmokeMask_v13.tif.Contours388.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19911_09_20190807_1947_2002_V02_georeferenced_scaled_SmokeMask_v13.tif.Contours142.tif",
+"/data/nlahaye/output/Learnergy/DBN_LS8_FIREX/HLS.L30.T11ULP.2019219T184259.v2.0.B01.tif.clust.output_test.data_5000clusters.zarr.smoke.tif.Contours764.tif"
+]
+ 
+ filename: [
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981719_02_20190806_1851_1900_V01_georeferenced.tif.npy.clustoutput.data_5000clusters.zarr.full_geo.tif",
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981719_05_20190806_2033_2039_V01_georeferenced.tif.npy.clustoutput.data_5000clusters.zarr.full_geo.tif",
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981719_06_20190806_2153_2156_V01_georeferenced.tif.npy.clustoutput_test.data_5000clusters.zarr.full_geo.tif",
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981719_08_20190806_2249_2259_V01_georeferenced.tif.npy.clustoutput.data_5000clusters.zarr.full_geo.tif",
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981720_07_20190808_0055_0103_V01_georeferenced.tif.npy.clustoutput_test.data_5000clusters.zarr.full_geo.tif",
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981721_02_20190809_0120_0121_V01_georeferenced.tif.npy.clustoutput_test.data_5000clusters.zarr.full_geo.tif",
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981719_07_20190806_2226_2231_V01_georeferenced.tif.npy.clustoutput_test.data_5000clusters.zarr.full_geo.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_06_20190806_1815_1824_V02_Georeferenced_scaled_SmokeMask_v13_FullColor.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_08_20190806_1834_1846_V02_Georeferenced_scaled_SmokeMask_v13_FullColor.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_10_20190806_1858_1910_V02_Georeferenced_scaled_SmokeMask_v13_FullColor.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_14_20190806_1926_1929_V02_Georeferenced_scaled_SmokeMask_v13_FullColor.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_16_20190806_1941_1956_V02_Georeferenced_scaled_SmokeMask_v13_FullColor.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_17_20190806_2000_2010_V02_Georeferenced_scaled_SmokeMask_v13_FullColor.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_19_20190806_2035_2048_V02_Georeferenced_scaled_SmokeMask_v13_FullColor.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_20_20190806_2052_2106_V02_Georeferenced_scaled_SmokeMask_v13_FullColor.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_21_20190806_2111_2125_V02_Georeferenced_scaled_SmokeMask_v13_FullColor.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19911_05_20190807_1817_1833_V02_georeferenced_scaled_SmokeMask_v13_FullColor.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19911_08_20190807_1928_1942_V02_georeferenced_scaled_SmokeMask_v13_FullColor.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19912_07_20190808_1806_1821_V02_georeferenced_scaled_SmokeMask_v13_FullColor.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19911_12_20190807_2039_2051_V02_georeferenced_scaled_SmokeMask_v13_FullColor.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19911_11_20190807_2021_2035_V02_georeferenced_scaled_SmokeMask_v13_FullColor.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19911_10_20190807_2004_2016_V02_georeferenced_scaled_SmokeMask_v13_FullColor.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19911_09_20190807_1947_2002_V02_georeferenced_scaled_SmokeMask_v13_FullColor.tif",
+"/data/nlahaye/output/Learnergy/DBN_LS8_FIREX/HLS.L30.T11ULP.2019219T184259.v2.0.B01.tif.clust.output_test.data_5000clusters.zarr.full_geo.tif"
+]
+
+ mask_filename: [
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981719_02_20190806_1851_1900_V01_georeferenced.tif.npy.clustoutput.data_5000clusters.zarr.smoke.tif",
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981719_05_20190806_2033_2039_V01_georeferenced.tif.npy.clustoutput.data_5000clusters.zarr.smoke.tif",
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981719_06_20190806_2153_2156_V01_georeferenced.tif.npy.clustoutput_test.data_5000clusters.zarr.smoke.tif",
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981719_08_20190806_2249_2259_V01_georeferenced.tif.npy.clustoutput.data_5000clusters.zarr.smoke.tif",
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981720_07_20190808_0055_0103_V01_georeferenced.tif.npy.clustoutput_test.data_5000clusters.zarr.smoke.tif",
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981721_02_20190809_0120_0121_V01_georeferenced.tif.npy.clustoutput_test.data_5000clusters.zarr.smoke.tif",
+"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981719_07_20190806_2226_2231_V01_georeferenced.tif.npy.clustoutput_test.data_5000clusters.zarr.smoke.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_06_20190806_1815_1824_V02_Georeferenced_scaled_SmokeMask_v13.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_08_20190806_1834_1846_V02_Georeferenced_scaled_SmokeMask_v13.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_10_20190806_1858_1910_V02_Georeferenced_scaled_SmokeMask_v13.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_14_20190806_1926_1929_V02_Georeferenced_scaled_SmokeMask_v13.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_16_20190806_1941_1956_V02_Georeferenced_scaled_SmokeMask_v13.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_17_20190806_2000_2010_V02_Georeferenced_scaled_SmokeMask_v13.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_19_20190806_2035_2048_V02_Georeferenced_scaled_SmokeMask_v13.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_20_20190806_2052_2106_V02_Georeferenced_scaled_SmokeMask_v13.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_21_20190806_2111_2125_V02_Georeferenced_scaled_SmokeMask_v13.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19911_05_20190807_1817_1833_V02_georeferenced_scaled_SmokeMask_v13.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19911_08_20190807_1928_1942_V02_georeferenced_scaled_SmokeMask_v13.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19912_07_20190808_1806_1821_V02_georeferenced_scaled_SmokeMask_v13.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19911_12_20190807_2039_2051_V02_georeferenced_scaled_SmokeMask_v13.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19911_11_20190807_2021_2035_V02_georeferenced_scaled_SmokeMask_v13.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19911_10_20190807_2004_2016_V02_georeferenced_scaled_SmokeMask_v13.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19911_09_20190807_1947_2002_V02_georeferenced_scaled_SmokeMask_v13.tif",
+"/data/nlahaye/output/Learnergy/DBN_LS8_FIREX/HLS.L30.T11ULP.2019219T184259.v2.0.B01.tif.clust.output_test.data_5000clusters.zarr.smoke.tif"
+]
+
+##"/data/nlahaye/output/Learnergy/DBN_MASTER/MASTERL1B_1981721_05_20190809_0219_0226_V01_georeferenced.tif.npy.clustoutput_test.data_5000clusters.zarr.smoke.tif"]
+ reader_type: "gtiff"
+ reader_kwargs:
+  None:
+ 
+remove_singles: True
+write_geotiff: True
+

@@ -3,10 +3,13 @@
 
 
 data:
- filename: ["/data/nlahaye/output/Learnergy/DBN_PALM_OIL_3/Agreement_Log_palm_oil_DBN_PALM_OIL_CLUST_INIT.txt.DBN_DATA_AGREE.tif"]
+ filename: ["/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST/ucayali_condensed_stacks_2020_h1v1.tiff.clustoutput_test.data_500clusters.zarr.palm_oil.tif"]
  reader_type: "gtiff"
  reader_kwargs:
   None:
+ mask: "/data/nlahaye/remoteSensing/Palm_Oil/ucayali_condensed_stacks_2020_h1v1.tiff"
+ mask_band: 3
+ mask_val: 0.0
 
 remove_singles: True
 write_geotiff: True

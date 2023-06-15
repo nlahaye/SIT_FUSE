@@ -1,0 +1,12 @@
+
+
+data:
+ filename: [
+"/data/nlahaye/output/Learnergy/DBN_LS8_FIREX/HLS.L30.T11ULP.2019219T184259.v2.0.B01.tif.clust.output_test.data_5000clusters.zarr.smoke.tif"]
+ reader_type: "gtiff"
+ reader_kwargs:
+  None:
+
+remove_singles: True
+write_geotiff: True
+

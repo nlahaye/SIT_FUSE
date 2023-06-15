@@ -3,7 +3,7 @@
 init_data: 
  - palm_oil: "/data/nlahaye/remoteSensing/Palm_Oil_Test_V2.Filled.tif"
 
-new_data : [["/data/nlahaye/output/Learnergy/DBN_PALM_OIL_3/file0_output_test.data.clustering_100clusters.zarr.full_geo.tif"]]
+new_data : [["/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST/ucayali_condensed_stacks_2020_h1v1.tiff.clustoutput_test.data_500clusters.zarr.full_geo.tif"]]
 
 
 class_order: ["palm_oil"]
