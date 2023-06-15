@@ -116,13 +116,23 @@ class DBNUnetBlock(Model):
             #[(I - F) / S] + 1 x D
             v = np.ceil(np.add(np.divide(np.subtract(self.visible_shape,2),2),1)).astype(np.int16)
             self.pool1 = torch.nn.MaxPool2d(2, stride=2, ceil_mode=True)  # 1/2
+            self.pool1.to(self.torch_device, non_blocking=True, memory_format=torch.channels_last)
             self.output_shapes.append(v)
+            self.bn1 = torch.nn.BatchNorm2d(self.n_channels)
+            self.bn1.to(self.torch_device, non_blocking=True, memory_format=torch.channels_last)
+            self.d1 = torch.nn.Dropout(p=0.3)
+            self.d1.to(self.torch_device, non_blocking=True, memory_format=torch.channels_last)
             v_shape = v
         elif self.sample == 2:
             conv_ind = 1
+            self.bn1 = torch.nn.BatchNorm2d(self.n_channels)
+            self.bn1.to(self.torch_device, non_blocking=True, memory_format=torch.channels_last)
+            self.d1 = torch.nn.Dropout(p=0.3)
+            self.d1.to(self.torch_device, non_blocking=True, memory_format=torch.channels_last)
             self.up = convT(visible_shape,
                 (2,2), self.n_channels // 2, self.n_channels // 2, 2, 0, self.steps[0], self.lr[0],
                 self.momentum[0], self.decay[0], use_gpu)
+            self.up.normalize = False
             v = np.array(self.up.hidden_shape, dtype = np.int16)
             self.output_shapes.append(v)
             v_shape = v
@@ -132,6 +142,11 @@ class DBNUnetBlock(Model):
         self.conv1_1 = conv(v_shape,
             (3,3), self.n_filters, self.n_channels, 1, 1, self.steps[conv_ind], self.lr[conv_ind],
             self.momentum[conv_ind], self.decay[conv_ind], False, None, use_gpu)
+        self.conv1_1.normalize = False
+        self.bn2 = torch.nn.BatchNorm2d(self.n_filters)
+        self.bn2.to(self.torch_device, non_blocking=True, memory_format=torch.channels_last)
+        self.d2 = torch.nn.Dropout(p=0.3) 
+        self.d2.to(self.torch_device, non_blocking=True, memory_format=torch.channels_last)  
 
         v = np.array(self.conv1_1.hidden_shape, dtype = np.int16)
         self.output_shapes.append(v)
@@ -140,14 +155,15 @@ class DBNUnetBlock(Model):
             self.momentum[conv_ind+1], self.decay[conv_ind+1], False, None, use_gpu)
         v = np.array(self.conv1_2.hidden_shape, dtype = np.int16)
         self.output_shapes.append(v)
+        self.conv1_2.normalize = False
 
         self._models = torch.nn.ModuleList()
         if self.sample == 1:
-            self._models.extend([self.pool1, self.conv1_1, self.conv1_2])
+            self._models.extend([self.pool1, self.bn1, self.d1, self.conv1_1, self.conv1_2])
         elif self.sample == 2:
-            self._models.extend([self.up, self.conv1_1, self.conv1_2])
+            self._models.extend([self.bn1, self.d1, self.up, self.conv1_1, self.bn2, self.d2, self.conv1_2])
         else:
-            self._models.extend([self.conv1_1, self.conv1_2])
+            self._models.extend([self.conv1_1, self.bn2, self.d2, self.conv1_2])
         self._initialize_weights()
 
 
@@ -417,7 +433,7 @@ class DBNUnetBlock(Model):
         print("0 USAGE FIT_LAYER")
         gpu_usage()
         #Synchronizes all processes
-        dist.barrier()
+        #dist.barrier()
         # Appending the metrics
         self.mse.append(model_mse)
 
@@ -425,7 +441,7 @@ class DBNUnetBlock(Model):
         model.a.detach()
         model.b.detach()
         torch.cuda.empty_cache()
-        dist.barrier()
+        #dist.barrier()
 
 
     def reconstruct(
@@ -537,7 +553,7 @@ class DBNUnetBlock(Model):
  
 
     def _initialize_weights(self):
-        for m in self.modules():
+        for m in self.models:
             if isinstance(m, ConvRBM):
                 m.W.data.zero_()
                 torch.nn.init.kaiming_normal_(m.W, mode='fan_out', nonlinearity='relu')
@@ -677,6 +693,7 @@ class DBNUnet(Model):
                 self.momentum[19:22], self.decay[19:22], 2, 
                 self.dec2.input_layers, 1, use_gpu)
 
+        print("HERE", self.dec1.output_shapes[-1], (1,1), self.n_filters, single, 1, 0, self.steps[22], self.lr[22], self.momentum[22], self.decay[22], False, None, use_gpu)
         self.outConv = conv(self.dec1.output_shapes[-1],
             (1,1), self.n_filters, single, 1, 0, self.steps[22], self.lr[22],
             self.momentum[22], self.decay[22], False, None, use_gpu)
@@ -762,11 +779,11 @@ class DBNUnet(Model):
                 print("0 USAGE FIT_LAYER")
                 gpu_usage()
                 #Synchronizes all processes
-                dist.barrier()
+                #dist.barrier()
                 # Appending the metrics
                 self.mse.append(model_mse)
          
-                if hasattr(self.models[i+1], "module"): 
+                if hasattr(self.models[i], "module"): 
                     self.models[i].module.W.detach()
                     self.models[i].module.a.detach()
                     self.models[i].module.b.detach()
@@ -775,8 +792,8 @@ class DBNUnet(Model):
                     self.models[i].a.detach()
                     self.models[i].b.detach()
                 torch.cuda.empty_cache()
-                dist.barrier()
-
+            dist.barrier()
+        return mse
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Performs a forward pass over the data.
