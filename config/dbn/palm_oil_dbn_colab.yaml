@@ -8,18 +8,21 @@ output:
  model: "dbn"
 
 dbn:
- subset_training: 500000
- deep_cluster: False
+ subset_training: -1
+ deep_cluster: 500
  overwrite_model: True
+ tune_clust: False
+ tune_dbn: False
+ tune_scaler: False
  params:
   model_type: ["gaussian_selu"] #, 'gaussian_relu_dropout', 'gaussian_relu_dropout'] #'variance_gaussian_dropout' "gaussian_dropout"
-  dbn_arch: [250] #[2000] [250, 500, 2000] #, 2000]
+  dbn_arch: [1000] #[2000] [250, 500, 2000] #, 2000]
   gibbs_steps: [5] #, 7, 7] #, 10] #, 25]
   learning_rate: [0.0001] #, 0.0001, 0.0001] #, 0.01] #, 0.01]
-  momentum: [0.95] #, 0.95, 0.95] #, 0.95] #, 0.95]
+  momentum: [0.0] #, 0.95, 0.95] #, 0.95] #, 0.95]
   decay: [0.0001] #, 0.0001, 0.0001] #, 0.0001] #, 0.0001]
   temp: [1.0] #, 1.0, 1.0] [0.9, 0.75, 0.5] #, 1.0] #, 0.5] #, 0.5] 
-  nesterov_accel: [True]
+  nesterov_accel: [False]
   normalize_learnergy: [False]
   batch_normalize: [False]
 
@@ -29,8 +32,10 @@ dbn:
   world_size: 1
   rank: 0
   device_ids: ["0"]
-  batch_size: 5000
-  epochs: [200] #[8] #, 1, 1] #, 5] #, 10]
+  batch_size: 128
+  epochs: [15]
+  cluster_batch_size: 128
+  cluster_epochs: 2
   stratify_data:
    reader: "gtiff"
    filename: ["/content/drive/MyDrive/oil_palm_data_science/Palm_Oil_Test_V2.Filled.tif"]
@@ -58,8 +63,9 @@ data:
  transform_default:
   chans: []
   transform: []
- 
- #only using 300000 random pixels to train - others are left unseen during training
+
+
+ #Need to incorporate other tiles once I have access 
  files_train: [
   "/content/drive/MyDrive/oil_palm_data_science/ucayali_condensed_stacks_2020_h1v1.tiff"]
  files_test: [
