@@ -27,6 +27,7 @@ from utils import numpy_to_torch, read_yaml, get_read_func, get_scaler
 import argparse
 
 from skimage.util import view_as_windows
+from skimage.filters import sobel
 
 class DBNDatasetConv(DBNDataset):
 
@@ -59,6 +60,7 @@ class DBNDatasetConv(DBNDataset):
                 #TODO Employ stratification
 		self.train_indices = None
  
+		self.scaler = None
 		self.filenames = filenames
 		self.transform = transform
 		self.delete_chans = delete_chans
@@ -89,8 +91,7 @@ class DBNDatasetConv(DBNDataset):
 		for i in range(0, len(self.filenames)):
 			if (type(self.filenames[i]) == str and os.path.exists(self.filenames[i])) or (type(self.filenames[i]) is list and os.path.exists(self.filenames[i][0])):
 				print(self.filenames[i])
-				dat = self.read_func(self.filenames[i], **self.read_func_kwargs).astype(np.float64)
-				print(dat.shape, dat[np.where(dat > -99999)].min(), dat[np.where(dat > -99999)].max())
+				dat = self.read_func(self.filenames[i], **self.read_func_kwargs).astype(np.float32)
 				for t in range(len(self.transform_chans)):
 					slc = [slice(None)] * dat.ndim
 					slc[self.chan_dim] = slice(self.transform_chans[t], self.transform_chans[t]+1)
@@ -120,63 +121,67 @@ class DBNDatasetConv(DBNDataset):
 		dim1 = 1
 		dim2 = 2
 		self.chan_dim = 0
+		self.n_chans = data_local[0].shape[self.chan_dim]
 
 		self.data = []
 		self.targets = []
 		if self.tile:
 			window_size = [0,0,0]
+			tile_step_final = [0,0,0]
 			window_size[dim1] = self.tile_size[0]
 			window_size[dim2] = self.tile_size[1]
-			tile_step = self.tile_step
-			window_size[self.chan_dim] = data_local[0].shape[self.chan_dim]
+			tile_step_final[dim1] = self.tile_step[0]
+			tile_step_final[dim2] = self.tile_step[1]
+			tile_step_final[self.chan_dim] = data_local[0].shape[self.chan_dim]*2
+			window_size[self.chan_dim] = data_local[0].shape[self.chan_dim]*2
 			window_size = tuple(window_size)
 		for r in range(len(data_local)):
 			count = 0
 			last_count = len(self.data)
 			sub_data_total = []
+			data_local[r] = np.concatenate((sobel(data_local[r], axis=(dim1,dim2)), data_local[r]), axis=self.chan_dim)
+			
+			#TODO - 0 imputation - fix with mean later
+			data_local[r][np.where(data_local[r] <= -9999)] = 0.0	
 
+			pixel_padding = (window_size[dim1] - 1) //2
+
+			tgts = np.indices(data_local[r].shape[1:])
+			tgts = tgts[:,pixel_padding:tgts.shape[1] - pixel_padding,pixel_padding:tgts.shape[2] - pixel_padding]
+			tgts = np.concatenate((np.full((1,tgts.shape[1], tgts.shape[2]),r, dtype=np.int16), tgts), axis=0)
+	
+			
 			if self.tile:
-				windw_dat = np.squeeze(view_as_windows(data_local[r], window_size, step=tile_step))
-				print("WINDOW SHAPE", windw_dat.shape)
-				#windw_dat = windw_dat.reshape(windw_dat.shape[0]*windw_dat.shape[1], windw_dat.shape[2],windw_dat.shape[3],windw_dat.shape[4])
-				#print("WINDOW SHAPE2", windw_dat.shape)
-				for w in range(0,windw_dat.shape[0]):
-					if len(windw_dat.shape) == 5:
-						for w2 in range(0,windw_dat.shape[1]):
-							if(windw_dat[w][w2].max() > -9999):
-								self.data.append(windw_dat[w][w2])
-								self.targets.append([r,w,w2])
-						
-						else:
-							count = count + 1
-							continue
-					else:
-						if(windw_dat[w].max() > -9999):
-							self.data.append(windw_dat[w])
-							self.targets.append([r,w,0])
- 
+				tmp = np.squeeze(view_as_windows(data_local[r], window_size, step=tile_step_final))
+				tmp = tmp.reshape((tmp.shape[0]*tmp.shape[1], tmp.shape[2], tmp.shape[3], tmp.shape[4]))			
+
+				tgts = tgts.reshape((3,tgts.shape[1]*tgts.shape[2])).astype(np.int16)
+				tgts = np.swapaxes(tgts, 0, 1)     
+
+
+				if isinstance(self.data, list):
+					self.data = tmp
+					self.targets = tgts
+				else:
+					self.data = np.append(self.data, tmp, axis=0)
+					self.targets = np.append(self.targets, tgts, axis=0)		
 			else:
 				if(data_local[r].max() > -9999):
-					self.data.append(data_local[r])	
-					self.targets.append([r,0,0])			
+					np.append(self.data,data_local[r], axis = 0)	
+					np.append(self.targets,[r,0,0], axis = 0)			
 				else:
 					count = count + 1
 					continue
 			if last_count >= len(self.data):
 				print("ERROR NO DATA RECEIVED FROM", self.filenames[r]) 
 			print("SKIPPED", count, "SAMPLES OUT OF", len(self.data), data_local[r].shape, dim1, dim2, self.chan_dim)
-		c = list(zip(self.data, self.targets))
-		random.shuffle(c)
-		self.data, self.targets = zip(*c)
-		del c
-		self.data_full = np.array(self.data).astype(np.float32) #float32
-		self.targets_full = np.array(self.targets).astype(np.int16)
-		self.data_full = torch.from_numpy(self.data_full)
-		self.targets_full = torch.from_numpy(self.targets_full)
+		print("SHUFFLING", self.data.shape, self.targets.shape)
+		p = np.random.permutation(self.data.shape[0])
+		self.data_full = torch.from_numpy(self.data[p]) #np.array(self.data).astype(np.float32) #float32
+		self.targets_full = torch.from_numpy(self.targets[p])  #np.array(self.targets).astype(np.int16)
 		del self.data
 		del self.targets
 
-		print("ERROR", self.data_full.shape)
 		self.chan_dim = 1
 		if self.transform == None:
 			mean_per_channel = []
@@ -184,16 +189,19 @@ class DBNDatasetConv(DBNDataset):
 
  
 			if self.subset_training > 0:
-				self.data_full = self.dat_full[:self.subset_training,:,:,:]
-				self.targets_full = self.dat_full[:self.subset_training,:,:]
-			for chan in range(self.data_full.shape[self.chan_dim]):
+				self.data_full = self.data_full[:self.subset_training,:,:,:]
+				self.targets_full = self.data_full[:self.subset_training,:,:]
+			for chan in range(0,self.n_chans):
+				mean_per_channel.append(0.0)
+				std_per_channel.append(1.0)
+			for chan in range(self.n_chans, self.data_full.shape[self.chan_dim]):
 				#TODO slice to make more generic
 				subd = self.data_full[:,chan,:,:]
 				inds = np.where(subd <= -9999)
 				inds2 = np.where(subd > -9999)
 				mean_per_channel.append(np.squeeze(subd[inds2].mean()))
 				std_per_channel.append(np.squeeze(subd[inds2].std()))
-				subd[inds] = mean_per_channel[chan]
+				subd[inds] = mean_per_channel[chan-self.n_chans]
 				self.data_full[:,chan,:,:] = subd
 
 			transform_norm = torch.nn.Sequential(
@@ -203,7 +211,6 @@ class DBNDatasetConv(DBNDataset):
 
 			self.transform = transform_norm 
 
-		#print("HERE", self.data_full.shape, len(mean_per_channel), len(std_per_channel))
 		self.data_full = self.transform(self.data_full)
 
 
@@ -258,13 +265,13 @@ def main(yml_fpath):
 
     read_func = get_read_func(data_reader)
 
-    stratify_data = None
-    if "stratify_data" in yml_conf["dbn"]["training"]:
-        stratify_data = yml_conf["dbn"]["training"]["stratify_data"]
+    #stratify_data = None
+    #if "stratify_data" in yml_conf["dbn"]["training"]:
+    #    stratify_data = yml_conf["dbn"]["training"]["stratify_data"]
 
-    if stratify_data is not None:
-        strat_read_func = get_read_func(stratify_data["reader"])
-        stratify_data["reader"] = strat_read_func
+    #if stratify_data is not None:
+    #    strat_read_func = get_read_func(stratify_data["reader"])
+    #    stratify_data["reader"] = strat_read_func
 
     x2 = DBNDatasetConv()
     x2.read_and_preprocess_data(data_train, read_func, data_reader_kwargs, delete_chans=delete_chans, \
