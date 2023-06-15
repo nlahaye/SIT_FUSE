@@ -39,7 +39,6 @@ from torch.utils.data.distributed import DistributedSampler
 
 
 #from rbm_models.fcn_dbn import DBNUnet
-from learnergy.models.bernoulli import GRBM
 from rbm_models.clust_dbn import ClustDBN
 #from rbm_models.clust_dbn_2d import ClustDBN2D
 #Visualization
