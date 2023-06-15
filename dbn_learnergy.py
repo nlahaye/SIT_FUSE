@@ -298,11 +298,11 @@ def run_dbn(yml_conf):
         pl = None
         while(count == 0 or x2.has_next_subset()):
             if fcn:
-                mse = 
+                mse = \
                     new_dbn.fit(x2, batch_size=batch_size, epochs=epochs,
                         is_distributed = True, num_loader_workers = num_loader_workers, pin_memory=(not use_gpu_pre)) #int(os.cpu_count() / 3))
             else:
-                mse, pl = 
+                mse, pl = \
                     new_dbn.fit(x2, batch_size=batch_size, epochs=epochs,
                         is_distributed = True, num_loader_workers = num_loader_workers, pin_memory=(not use_gpu_pre)) #int(os.cpu_count() / 3))
             count = count + 1
@@ -363,11 +363,11 @@ def run_dbn(yml_conf):
                 count = 0
                 while(count == 0 or x2.has_next_subset()):
                     if fcn:
-                      mse = 
+                      mse = \
                         final_model.dbn_trunk.fit(x2, batch_size=batch_size, epochs=epochs,
                             is_distributed = True, num_loader_workers = num_loader_workers, pin_memory=(not use_gpu_pre)) #int(os.cpu_count() / 3))
                     else:
-                      mse, pl = 
+                      mse, pl = \
                         final_model.dbn_trunk.fit(x2, batch_size=batch_size, epochs=epochs,
                             is_distributed = True, num_loader_workers = num_loader_workers, pin_memory=(not use_gpu_pre)) #int(os.cpu_count() / 3))
                     count = count + 1
@@ -404,13 +404,13 @@ def run_dbn(yml_conf):
                 count = 0
                 while(count == 0 or x2.has_next_subset()):
                     if fcn:
-                        ##mse = 
+                        mse = \
                         final_model.fit(x2, batch_size=batch_size, epochs=epochs,
                             is_distributed = True, num_loader_workers = num_loader_workers, pin_memory=(not use_gpu_pre)) #int(os.cpu_count() / 3))
                     else:
-                        ##mse, pl = 
-                        final_model.fit(x2, batch_size=batch_size, epochs=epochs,
-                            is_distributed = True, num_loader_workers = num_loader_workers, pin_memory=(not use_gpu_pre)) #int(os.cpu_count() / 3))
+                        mse, pl = \
+                            final_model.fit(x2, batch_size=batch_size, epochs=epochs,
+                                is_distributed = True, num_loader_workers = num_loader_workers, pin_memory=(not use_gpu_pre)) #int(os.cpu_count() / 3))
                     count = count + 1
                     x2.next_subset()
                 torch.save(final_model.state_dict(), model_file + ".ckpt")
