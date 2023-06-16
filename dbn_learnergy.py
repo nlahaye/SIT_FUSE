@@ -161,6 +161,8 @@ def run_dbn(yml_conf):
  
     subset_training = yml_conf["dbn"]["subset_training"]
 
+    generate_train_output = yml_conf["output"]["generate_train_output"]
+
     if "FCDBN" in model_type[0]:
         tile = yml_conf["data"]["tile"]
         tile_size = yml_conf["data"]["tile_size"]
@@ -485,28 +487,30 @@ def run_dbn(yml_conf):
 
             generate_output(x3, final_model, use_gpu, out_dir, fname_begin + testing_output, testing_mse, output_subset_count, (not use_gpu_pre), fcn)
     
-	#Generate test datasets. Doing it this way, because generating all at once creates memory issues
+ 
         x2 = None
-        for t in range(0, len(data_train)):
+        #Generate output from training datasets. Doing it this way, because generating all at once creates memory issues
+        if generate_train_output:
+            for t in range(0, len(data_train)):
 
-            fbase = data_train[t]
-            while isinstance(fbase, list):
-                fbase = fbase[0]
+                fbase = data_train[t]
+                while isinstance(fbase, list):
+                    fbase = fbase[0]
 
-            fname_begin = os.path.basename(fbase) + ".clust"
-            if not fcn:
-                x2 = DBNDataset()
-                x2.read_and_preprocess_data([data_train[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, \
-                   valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, \
-                   scaler = scaler, scale = scale_data, transform=numpy_to_torch, subset=subset_count)
-            else:
-                x2 = DBNDatasetConv()
-                x2.read_and_preprocess_data([data_train[t]], read_func, data_reader_kwargs,  delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
-                    fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, transform = transform, \
-                    subset=subset_count, tile=tile, tile_size=tile_size, tile_step=tile_step)
-                x2.scaler = None 
-
-            generate_output(x2, final_model, use_gpu, out_dir, fname_begin + training_output, training_mse, output_subset_count, (not use_gpu_pre), fcn)
+                fname_begin = os.path.basename(fbase) + ".clust"
+                if not fcn:
+                    x2 = DBNDataset()
+                    x2.read_and_preprocess_data([data_train[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, \
+                       valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, \
+                       scaler = scaler, scale = scale_data, transform=numpy_to_torch, subset=subset_count)
+                else:
+                    x2 = DBNDatasetConv()
+                    x2.read_and_preprocess_data([data_train[t]], read_func, data_reader_kwargs,  delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
+                        fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, transform = transform, \
+                        subset=subset_count, tile=tile, tile_size=tile_size, tile_step=tile_step)
+                    x2.scaler = None 
+ 
+                generate_output(x2, final_model, use_gpu, out_dir, fname_begin + training_output, training_mse, output_subset_count, (not use_gpu_pre), fcn)
 
     if "LOCAL_RANK" in os.environ.keys():
         cleanup_ddp() 
@@ -587,7 +591,6 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, output_subs
     torch.save(output_full, os.path.join(out_dir, output_fle), pickle_protocol=pickle.HIGHEST_PROTOCOL)
     torch.save(dat.targets_full, os.path.join(out_dir, output_fle + ".indices"), pickle_protocol=pickle.HIGHEST_PROTOCOL)
     torch.save(dat.data_full, os.path.join(out_dir, output_fle + ".input"), pickle_protocol=pickle.HIGHEST_PROTOCOL)
-    torch.save(torch.cat(rec_mse_full, dim=0), os.path.join(out_dir, mse_fle), pickle_protocol=pickle.HIGHEST_PROTOCOL)
 
 
 
