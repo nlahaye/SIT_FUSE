@@ -558,16 +558,10 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, output_subs
                 output = output.detach().cpu()
             loader = DataLoader(dev_ds, batch_size=output_batch_size, shuffle=False, \
                 num_workers = 0, drop_last = False, pin_memory = False)
-            rec_mse, visible_probs = mdl.reconstruct(dat_dev, loader)
             dat_dev = dat_dev.detach().cpu()
             lab_dev = lab_dev.detach().cpu()
             del dev_ds
-            visible_probs = visible_probs.detach().cpu()
-            del visible_probs
-            if use_gpu == True:
-                rec_mse = rec_mse.detach().cpu() 
 
-            rec_mse_full.append(rec_mse) 
             if output_full is None:
                 if not fcn:
                     output_full = torch.zeros(dat.data_full.shape[0], output.shape[1], dtype=torch.float32)
@@ -580,7 +574,6 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, output_subs
             output_full[ind1:ind2,:] = output
             ind = ind + 1
             del output
-            del rec_mse
             del dat_dev
             del lab_dev
             del loader
