@@ -5,6 +5,7 @@ output:
  training_mse: "rec_mse.data"
  testing_output: "output_test.data"
  testing_mse: "rec_mse_test.data"
+ generate_train_output: False
  model: "dbn"
 
 dbn:
