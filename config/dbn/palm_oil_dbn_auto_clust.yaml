@@ -33,7 +33,7 @@ dbn:
   rank: 0
   device_ids: ["4","5","6","7"]
   batch_size: 128
-  epochs: [15] #[8] #, 1, 1] #, 5] #, 10]
+  epochs: [1] #[15] #[8] #, 1, 1] #, 5] #, 10]
   cluster_batch_size: 128
   cluster_epochs: 2 #[10]#[8] #, 1, 1] #, 5] #, 10]
   stratify_data: 
