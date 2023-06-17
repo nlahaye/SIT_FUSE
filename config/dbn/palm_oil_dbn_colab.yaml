@@ -36,7 +36,7 @@ dbn:
   batch_size: 128
   epochs: [15]
   cluster_batch_size: 128
-  cluster_epochs: 5
+  cluster_epochs: 3
   stratify_data:
    reader: "gtiff"
    filename: ["/content/drive/MyDrive/oil_palm_data_science/Palm_Oil_Test_V2.Filled.tif"]
