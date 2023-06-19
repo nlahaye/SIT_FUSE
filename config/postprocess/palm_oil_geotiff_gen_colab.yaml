@@ -1,0 +1,25 @@
+
+gen_from_geotiffs: False
+
+data:
+ clust_reader_type: "zarr_to_numpy"
+ reader_kwargs:
+   no_arg: "no_arg" 
+ subset_inds: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
+ create_separate: False
+  
+ gtiff_data: ["/content/drive/MyDrive/oil_palm_data_science/ucayali_condensed_stacks_2020_h1v1.tiff"]
+ #cluster_fnames: ["/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_GRBM/file_clust0_output_test.data_500clusters.zarr"]
+ cluster_fnames: [
+"/content/drive/MyDrive/oil_palm_data_science/ML_Test/ucayali_condensed_stacks_2020_h1v1.tiff.clustoutput_test.data"]
+
+
+context: 
+ apply_context: False
+ clusters: []  #64 #i.e. smoke clusters
+ name: "palm_oil" #i.e. smoke
+ compare_truth: false
+ generate_union: false
+ cluster_dependencies:
+
+
