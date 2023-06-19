@@ -29,8 +29,6 @@ def plot_clusters(coord, labels, output_basename, min_clust, max_clust, pixel_pa
         strt_dim1 = 0
         strt_dim2 = 0
  
-        if os.path.exists(output_basename + "_" + str(n_clusters_local) + "clusters.zarr"):
-            return
 
         #1 subtracted to separate No Data from areas that have cluster value 0.
         data = np.zeros((((int)(max_dim1-strt_dim1)+1+pixel_padding), ((int)(max_dim2-strt_dim2)+pixel_padding+1))) - 1 
