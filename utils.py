@@ -65,6 +65,16 @@ def numpy_from_zarr(filename, **kwargs):
     return np.array(zarr_load(filename).compute())
 
 
+def read_emit(filename, **kwargs):
+
+    ds = Dataset(filename)
+    dat = ds.variables['radiance'][:]
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+                dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+    return dat
+
+
 def read_misr_sim(filename, **kwargs):
  
     ds = Dataset(filename)
@@ -590,6 +600,8 @@ def get_lat_lon(fname):
 
 #TODO worldview
 def get_read_func(data_reader):
+	if data_reader == "emit":
+		return read_emit
 	if data_reader == "misr_sim":
 		return read_misr_sim
 	if data_reader == "goes_netcdf":
