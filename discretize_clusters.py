@@ -71,7 +71,6 @@ def main(yml_fpath):
         min_cluster = 0
         disc_data = np.argmax(data, axis = 1)
         del data
-        print(disc_data.shape, disc_data.mean(), np.unique(disc_data).shape)
     
         plot_clusters(indices, np.squeeze(disc_data), dat[i], min_cluster, max_cluster)
 
