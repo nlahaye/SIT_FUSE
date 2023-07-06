@@ -37,6 +37,26 @@ class DBNDataset(torch.utils.data.Dataset):
 	def __init__(self):
 		pass    
 
+	def init_from_array(self, data_full, targets_full, scaler = None, subset=None):
+		print("INIT", data_full.shape, targets_full.shape)
+		self.data_full = data_full
+		self.targets_full = targets_full
+
+		self.train_indices = None
+		self.scaler = scaler
+		self.transform = None
+		if scaler is not None:
+			self.scale = True
+		
+		self.subset = subset
+
+		if self.subset is None:
+			self.subset = 1
+		self.current_subset = -1
+		
+		self.next_subset()	
+
+
 	def read_data_preprocessed(self, data_filename, indices_filename, scaler = None, subset=None):
         
 		self.data_full = np.load(data_filename)
