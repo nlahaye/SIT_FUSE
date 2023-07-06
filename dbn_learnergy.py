@@ -149,6 +149,8 @@ def run_dbn(yml_conf):
     batch_size = 0
     cluster_batch_size = 0
     cluster_epochs = 0
+    cluster_gauss_noise_stdev = 1
+    cluster_lambda = 1.0
     epochs = 0
     model_type = yml_conf["dbn"]["params"]["model_type"]
     dbn_arch = tuple(yml_conf["dbn"]["params"]["dbn_arch"])
@@ -178,6 +180,8 @@ def run_dbn(yml_conf):
     batch_size = yml_conf["dbn"]["training"]["batch_size"]
     cluster_batch_size = yml_conf["dbn"]["training"]["cluster_batch_size"]
     cluster_epochs =  yml_conf["dbn"]["training"]["cluster_epochs"]
+    cluster_gauss_noise_stdev = yml_conf["dbn"]["training"]["cluster_gauss_noise_stdev"]
+    cluster_lambda = yml_conf["dbn"]["training"]["cluster_lambda"]
     epochs = yml_conf["dbn"]["training"]["epochs"]
  
  
@@ -336,7 +340,13 @@ def run_dbn(yml_conf):
         #    #viz = 9*9*2 #new_dbn.models[-1].module.visible_shape
         #    #filts = new_dbn.models[-1].module.n_filters
         #    #sze = viz #viz[0]*viz[1]*filts
-        clust_dbn = ClustDBN(new_dbn, dbn_arch[-1], auto_clust, True) #TODO parameterize
+ 
+        clust_scaler = None
+        if os.path.exists(os.path.join(out_dir, "fc_clust_scaler.pkl")) and not overwrite_model:
+                with open(os.path.join(out_dir, "fc_clust_scaler.pkl"), "rb") as f:
+                    clust_scaler = load(f)
+
+        clust_dbn = ClustDBN(new_dbn, dbn_arch[-1], auto_clust, True, clust_scaler) #TODO parameterize
         clust_dbn.fc = DDP(clust_dbn.fc, device_ids=[local_rank], output_device=local_rank)
         final_model = clust_dbn
         if not os.path.exists(model_file + "_fc_clust.ckpt") or overwrite_model:
@@ -351,7 +361,7 @@ def run_dbn(yml_conf):
 
            count = 0
            while(count == 0 or x2.has_next_subset()):
-               final_model.fit(dataset2, cluster_batch_size, cluster_epochs, loader, sampler)
+               final_model.fit(dataset2, cluster_batch_size, cluster_epochs, loader, sampler, cluster_gauss_noise_stdev, cluster_lambda)
                count = count + 1
                x2.next_subset()
            final_model.eval()
@@ -376,27 +386,27 @@ def run_dbn(yml_conf):
                 final_model.dbn_trunk.eval()
                 torch.save(final_model.dbn_trunk.state_dict(), model_file + ".ckpt") 
 
+            if os.path.exists(model_file + "_fc_clust.ckpt") and not overwrite_model:
+                final_model.fc.load_state_dict(torch.load(model_file + "_fc_clust.ckpt"))
+                if tune_clust:
+                    print("Tuning pre-existing Deep Clustering layers")
+                    dataset2 = TensorDataset(x2.data, x2.targets)
+                    loader = None
+                    is_distributed = True
+                    if is_distributed:
+                        sampler = DistributedSampler(dataset2, shuffle=True)
+                        loader = DataLoader(dataset2, batch_size=cluster_batch_size, shuffle=False,
+                             sampler=sampler, num_workers = num_loader_workers, pin_memory = (not use_gpu_pre),
+                             drop_last=True)
 
-            final_model.fc.load_state_dict(torch.load(model_file + "_fc_clust.ckpt"))
-            if tune_clust:
-                print("Tuning pre-existing Deep Clustering layers")
-                dataset2 = TensorDataset(x2.data, x2.targets)
-                loader = None
-                is_distributed = True
-                if is_distributed:
-                    sampler = DistributedSampler(dataset2, shuffle=True)
-                    loader = DataLoader(dataset2, batch_size=cluster_batch_size, shuffle=False,
-                         sampler=sampler, num_workers = num_loader_workers, pin_memory = (not use_gpu_pre),
-                         drop_last=True)
-
-                count = 0
-                while(count == 0 or x2.has_next_subset()):
-                    final_model.fit(dataset2, cluster_batch_size, cluster_epochs, loader, sampler)
-                    count = count + 1
-                    x2.next_subset()
-                final_model.eval()
-                final_model.fc.eval() 
-                torch.save(final_model.fc.state_dict(), model_file + "_fc_clust.ckpt")
+                    count = 0
+                    while(count == 0 or x2.has_next_subset()):
+                        final_model.fit(dataset2, cluster_batch_size, cluster_epochs, loader, sampler, cluster_gauss_noise_stdev, cluster_lambda)
+                        count = count + 1
+                        x2.next_subset()
+                    final_model.eval()
+                    final_model.fc.eval() 
+                    torch.save(final_model.fc.state_dict(), model_file + "_fc_clust.ckpt")
 
         else:
             final_model.load_state_dict(torch.load(model_file + ".ckpt"))
@@ -419,23 +429,23 @@ def run_dbn(yml_conf):
         #for m in range(len(new_dbn._models)):
         #    new_dbn._models[m].load_state_dict(model_file + "_sub_model_" + str(m) + ".ckpt") 
 
-    if not os.path.exists(model_file + ".ckpt") or overwrite_model:
-        for i in range(len(new_dbn.models)):
-            if not isinstance(new_dbn.models[i], torch.nn.MaxPool2d):
-                if fcn:
-                    converge.plot(new_dbn.models[i].module._history['mse'], new_dbn.models[i].module._history['time'], 
-                        labels=['MSE', 'time (s)'], title='convergence over dataset', subtitle='Model: Restricted Boltzmann Machine')
-                else:
-                    converge.plot(new_dbn.models[i].module._history['mse'], new_dbn.models[i].module._history['pl'],
-                        new_dbn.models[i].module._history['time'], labels=['MSE', 'log-PL', 'time (s)'],
-                        title='convergence over dataset', subtitle='Model: Restricted Boltzmann Machine')
-                plt.savefig(os.path.join(out_dir, "convergence_plot_layer" + str(i) + ".png"))
-    
-
 
     dist.barrier()
     if local_rank == 0:
         if not os.path.exists(model_file + ".ckpt") or overwrite_model:
+            for i in range(len(new_dbn.models)):
+                if not isinstance(new_dbn.models[i], torch.nn.MaxPool2d):
+                    if fcn:
+                        converge.plot(new_dbn.models[i].module._history['mse'], new_dbn.models[i].module._history['time'], 
+                            labels=['MSE', 'time (s)'], title='convergence over dataset', subtitle='Model: Restricted Boltzmann Machine')
+                    else:
+                        converge.plot(new_dbn.models[i].module._history['mse'], new_dbn.models[i].module._history['pl'],
+                            new_dbn.models[i].module._history['time'], labels=['MSE', 'log-PL', 'time (s)'],
+                            title='convergence over dataset', subtitle='Model: Restricted Boltzmann Machine')
+                    plt.savefig(os.path.join(out_dir, "convergence_plot_layer" + str(i) + ".png"))
+    
+
+        if not os.path.exists(model_file + ".ckpt") or (auto_clust > 0 & os.path.exists(model_file + "_fc_clust.ckpt")) or overwrite_model:
             #Save model
             if auto_clust > 0:
                 torch.save(final_model.dbn_trunk.state_dict(), model_file + ".ckpt")
@@ -454,6 +464,11 @@ def run_dbn(yml_conf):
             else:
                 x2.scaler = None             
 
+            if hasattr(final_model, "scaler") and final_model.scaler is not None:
+                with open(os.path.join(out_dir, "fc_clust_scaler.pkl"), "wb") as f:
+                    dump(final_model.scaler, f, True, pickle.HIGHEST_PROTOCOL)
+            else:
+                final_mode.scaler = None
 
         #TODO: For now set all subsetting to 1 - will remove subsetting later. 
         #Maintain output_subset_count - is/will be used by DataLoader in generate_output
