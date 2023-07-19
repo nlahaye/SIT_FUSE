@@ -825,12 +825,8 @@ def read_annotation(ann_file):
 # def display_images(img, amp_display_limits=None, phase_display_limits=None, cmap='grey', interpolation='nearest'):
 
 #     """
-#         images (list): list of images to be displayed
-#         amp_display_limits (list):  list of tuples (vmin, vmax) corresponding to each
-#                                     image, if vmin or vmax are None, they will be 
-#                                     determined automatically. If there are less tuples
-#                                     than there are images, the display scales for those
-#                                     extra images will be determined automatically. 
+#         images (list): ---
+#         amp_display_limits (list): ---
 #     """
 
 #     matplotlib.use('QtAgg')
