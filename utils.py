@@ -23,6 +23,7 @@ import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 from CMAP import CMAP, CMAP_COLORS
+from glob import glob
 
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
 from dask_ml.preprocessing import StandardScaler as DaskStandardScaler
@@ -546,7 +547,7 @@ def read_trop_l1b_geo(filename, **kwargs):
  
 
 def read_geo_nc_ungridded(fname, **kwargs):
-    print(flename)
+    print(fname)
     dat = Dataset(fname)
     lat = dat.variables['lat'][:]
     lon = dat.variables['lon'][:]
@@ -600,46 +601,284 @@ def get_lat_lon(fname):
 
 #TODO worldview
 def get_read_func(data_reader):
-	if data_reader == "emit":
-		return read_emit
-	if data_reader == "misr_sim":
-		return read_misr_sim
-	if data_reader == "goes_netcdf":
-		return read_goes_netcdf
-	if data_reader == "s3_netcdf":
-		return read_s3_netcdf     
-	if data_reader == "s3_netcdf_geo":
-		return read_s3_netcdf_geo
-	if data_reader == "gtiff_multifile":
-		return read_gtiff_multifile_generic   
-	if data_reader == "landsat_gtiff":
-		return read_gtiff_multifile_generic
-	if data_reader == "s1_gtiff":
-		return read_gtiff_multifile_generic
-	if data_reader == "gtiff":
-		return read_gtiff_generic
-	if data_reader == "aviris_gtiff":
-		return read_gtiff_generic
-	if data_reader == "numpy":
-		return numpy_load
-	if data_reader == "zarr_to_numpy":
-		return numpy_from_zarr
-	if data_reader == "torch":
-		return torch_load
-	if data_reader == "s6_netcdf":
-		return read_s6_netcdf
-	if data_reader == "s6_netcdf_geo":
-		return read_s6_netcdf_geo
-	if data_reader == "trop_mod_xr":
-		return read_trop_mod_xr
-	if data_reader == "trop_mod_xr_geo":
-		return read_trop_mod_xr_geo
-	if data_reader == "trop_l1b":
-		return read_trop_l1b
-	if data_reader == "trop_l1b_geo":
-		return read_trop_l1b_geo
-	if data_reader == "nc_ungrid_geo":
-        	return	read_geo_nc_ungridded 
-	#TODO return BCDP reader
-	return None
+    if data_reader == "emit":
+        return read_emit
+    if data_reader == "misr_sim":
+        return read_misr_sim
+    if data_reader == "goes_netcdf":
+        return read_goes_netcdf
+    if data_reader == "s3_netcdf":
+        return read_s3_netcdf     
+    if data_reader == "s3_netcdf_geo":
+        return read_s3_netcdf_geo
+    if data_reader == "gtiff_multifile":
+        return read_gtiff_multifile_generic   
+    if data_reader == "landsat_gtiff":
+        return read_gtiff_multifile_generic
+    if data_reader == "s1_gtiff":
+        return read_gtiff_multifile_generic
+    if data_reader == "gtiff":
+        return read_gtiff_generic
+    if data_reader == "aviris_gtiff":
+        return read_gtiff_generic
+    if data_reader == "numpy":
+        return numpy_load
+    if data_reader == "zarr_to_numpy":
+        return numpy_from_zarr
+    if data_reader == "torch":
+        return torch_load
+    if data_reader == "s6_netcdf":
+        return read_s6_netcdf
+    if data_reader == "s6_netcdf_geo":
+        return read_s6_netcdf_geo
+    if data_reader == "trop_mod_xr":
+        return read_trop_mod_xr
+    if data_reader == "trop_mod_xr_geo":
+        return read_trop_mod_xr_geo
+    if data_reader == "trop_l1b":
+        return read_trop_l1b
+    if data_reader == "trop_l1b_geo":
+        return read_trop_l1b_geo
+    if data_reader == "nc_ungrid_geo":
+        return read_geo_nc_ungridded
+    if data_reader == "uavsar":
+        return read_uavsar
+   
+    #TODO return BCDP reader
+    return None
 
+def read_uavsar(in_fp, ann_fp = None, linear_to_dB = False):
+    
+    if not os.path.exists(in_fp):
+        raise Exception(f"Input file path: {in_fp} does not exist.")
+
+    fname = os.path.basename(in_fp)
+    exts = fname.split('.')[1:]
+    
+    if len(exts) == 2:
+        ext = exts[1]
+        type = exts[0]
+    elif len(exts) == 1:
+        type = ext = exts[0]
+    else:
+        raise ValueError('Unable to parse extensions')
+    
+    # Find annotation file in same directory if no user given one
+    if not ann_fp:
+        if ext == 'grd' or ext == 'slc':
+            ann_fp = in_fp.replace(f'.{type}', '').replace(f'.{ext}', '.ann')
+        else:
+            ann_fp = in_fp.replace(f'.{ext}', '.ann')
+        if not os.path.exists(ann_fp):
+            search_base = '_'.join(os.path.basename(in_fp).split('.')[0].split('_')[:4])
+            search_full = os.path.join(os.path.dirname(in_fp), f'*{search_base}*.ann')
+            ann_search = glob(search_full)
+            if len(ann_search) == 1:
+                ann_fp = ann_search[0]
+            else:
+                raise Exception(f"No ann file or multiple ann files found in directory {search_full}. Please specify ann filepath.")
+        else:
+            raise Exception(f"No annotation file path specificed. Using {ann_fp}.")
+    
+    # Check for compatible extensions
+    if type == 'zip':
+        raise Exception('Cannot convert zipped directories. Unzip first.')
+    if type == 'dat' or type == 'kmz' or type == 'kml' or type == 'png' or type == 'tif':
+        raise Exception(f"Cannot handle {type} products")
+    if type == 'ann':
+        raise Exception('Cannot convert annotation files.')
+        
+    # Check for slant range files and ancillary files
+    anc = None
+    if type == 'slope' or type == 'inc':
+        anc = True
+
+    # Read in annotation file
+    desc = read_annotation(ann_fp)
+
+    if 'start time of acquisition for pass 1' in desc.keys():
+        mode = 'insar'
+        raise Exception('INSAR data currently not supported.')
+    else:
+        mode = 'polsar'
+
+    # Determine the correct file typing for searching our data dictionary
+    if not anc:
+        if mode == 'polsar':
+            if type == 'hgt':
+                search = type
+            else:
+                polarization = os.path.basename(in_fp).split('_')[5][-4:]
+                if polarization == 'HHHH' or polarization == 'HVHV' or polarization == 'VVVV':
+                        search = f'{type}_pwr'
+                else:
+                    search = f'{type}_phase'
+                type = polarization
+
+        elif mode == 'insar':
+            ## Add features for INSAR support if deemed necessary 
+            # if ext == 'grd':
+            #     if type == 'int':
+            #         search = f'grd_phs'
+            #     else:
+            #         search = 'grd'
+            # else:
+            #     if type == 'int':
+            #         search = 'slt_phs'
+            #     else:
+            #         search = 'slt'
+            pass
+    else:
+        search = type
+
+    # Pull the appropriate values from our annotation dictionary
+    nrow = desc[f'{search}.set_rows']['value']
+    ncol = desc[f'{search}.set_cols']['value']
+
+    # Set up datatypes
+    com_des = desc[f'{search}.val_frmt']['value']
+    com = False
+    if 'COMPLEX' in com_des:
+        com = True
+    if com:
+        dtype = np.complex64
+    else:
+        dtype = np.float32
+
+    # Read in binary data
+    data = np.fromfile(in_fp, dtype = dtype)
+
+    # Reshape it to match what the text file says the image is
+    if type == 'slope':
+        data[data==-10000] = np.nan
+        slopes = {}
+        slopes['east'] = data[::2].reshape(nrow, ncol)
+        slopes['north'] = data[1::2].reshape(nrow, ncol)
+    else:
+        slopes = None
+        data = data.reshape(nrow, ncol)
+
+    # This part needs some work, dB conversion has some issues
+    # Change zeros and -10,000 to nans and convert linear units to dB if specified
+    if com:
+        data[data==0+0*1j] = np.nan + np.nan * 1j
+        if linear_to_dB:
+            data = 10.0 * np.log10(np.abs(np.real(data))) + np.angle(data) * 1j
+    else:
+        data[data==0] = np.nan
+        data[data==-10000] = np.nan
+        if linear_to_dB:
+            data = 10.0 * np.log10(data)
+
+    # slopes returned as a dict containing two arrays, dict['east'] and dict
+    # ['north'], with slopes in the east and north direction, respectively 
+    if slopes:
+        return slopes, type, dtype, desc
+    
+    return data, type, dtype, desc
+
+
+def read_annotation(ann_file):
+
+    with open(ann_file) as fp:
+        lines = fp.readlines()
+        fp.close()
+    data = {}
+
+    # loop through the data and parse
+    for line in lines:
+
+        # Filter out all comments and remove any line returns
+        info = line.strip().split(';')
+        comment = info[-1].strip().lower()
+        info = info[0]
+        
+        # Ignore empty strings
+        if info and "=" in info:
+            d = info.strip().split('=')
+            name, value = d[0], d[1]
+            name_split = name.split('(')
+            key = name_split[0].strip().lower()
+            
+            # Isolate units encapsulated between '(' and ')'
+            if len(name_split) > 1:
+                lidx = name_split[-1].find('(') + 1
+                ridx = name_split[-1].find(')')
+                units = name_split[-1][lidx:ridx]
+            else:
+                units = None
+
+            value = value.strip()
+
+            # Cast the values that can be to numbers ###
+            if value.strip('-').replace('.', '').isnumeric():
+                if '.' in value:
+                    value = float(value)
+                else:
+                    value = int(value)
+
+            # Assign each entry as a dictionary with value and units
+            data[key] = {'value': value, 'units': units, 'comment': comment}
+
+    return data
+
+# def display_images(img, amp_display_limits=None, phase_display_limits=None, cmap='grey', interpolation='nearest'):
+
+#     """
+#         images (list): list of images to be displayed
+#         amp_display_limits (list):  list of tuples (vmin, vmax) corresponding to each
+#                                     image, if vmin or vmax are None, they will be 
+#                                     determined automatically. If there are less tuples
+#                                     than there are images, the display scales for those
+#                                     extra images will be determined automatically. 
+#     """
+
+#     matplotlib.use('QtAgg')
+
+#     amp = []
+#     phase_l = []
+    
+#     fig, ax = plt.subplots(2, 2)
+        
+#     amp = np.real(img)
+#     phase = np.angle(img)
+
+#     if not amp_display_limits:
+#         va_min = np.nanpercentile(amp, 1)
+#         va_max = np.nanpercentile(amp, 99)
+#         amp_display_limits = []
+#         amp_display_limits.append(va_min)
+#         amp_display_limits.append(va_max)
+#         amp_display_limits = tuple(amp_display_limits)
+    
+#     if not phase_display_limits:
+#         vp_min = np.nanpercentile(phase, 1)
+#         vp_max = np.nanpercentile(phase, 99)
+#         phase_display_limits = []
+#         phase_display_limits.append(va_min)
+#         phase_display_limits.append(va_max)
+#         phase_display_limits = tuple(phase_display_limits)
+
+#     # plot amplitude
+#     amp_plot = ax[0][0].imshow(amp, vmin=amp_display_limits[0], vmax=amp_display_limits[1], cmap=cmap, interpolation=interpolation)
+#     ax[0][0].set_facecolor("white")
+#     ax[0][0].set_title("Image amplitude")
+#     plt.colorbar(amp_plot, ax = ax[0][0], orientation='vertical', shrink=0.8)
+    
+#     # plot amplitude histogram
+#     ax[0][1].hist(amp.ravel(), fc='k', ec='k', range=amp_display_limits)
+#     ax[0][1].set_xlabel("Pixel Values (amplitude)")
+#     ax[0][1].set_ylabel("Count")
+    
+#     # plot phase
+#     phase_plot = ax[1][0].imshow(phase, vmin=phase_display_limits[0], vmax=phase_display_limits[1], cmap=cmap, interpolation=interpolation)
+#     ax[1][0].set_facecolor("white")
+#     ax[1][0].set_title("Image phase")
+#     plt.colorbar(phase_plot, ax = ax[1][0], orientation='vertical', shrink=0.8)
+    
+#     # plot phase histogram
+#     ax[1][1].hist(phase.ravel(), fc='k', ec='k', range=phase_display_limits)
+#     ax[1][1].set_xlabel("Pixel Values (phase)")
+#     ax[1][1].set_ylabel("Count")
+
+#     plt.show()
