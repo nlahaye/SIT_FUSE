@@ -647,24 +647,27 @@ def get_read_func(data_reader):
     #TODO return BCDP reader
     return None
 
-def read_uavsar_data(in_fp, out_dir=os.path.getcwd(), ann_fp=None, linear_to_dB=False, tiff_convert=False):
+def read_uavsar(in_fp, ann_fp=None, linear_to_dB=False):
     """
+    Reads UAVSAR data.
+
     Args:
         in_fp (string): path to input binary file
-        out_dir (string): directory to save geotiff in
         ann_fp (string): path to UAVSAR annotation file
-        linear_to_dB: boolean, whether to convert linear amplitude units to decibels
-        tiff_convert: boolean, whether to save uavsar data in geotiff (.tiff) format
-    """
+        linear_to_dB (bool): convert linear amplitude units to decibels
 
-    out_fp = os.path.join(out_dir, os.path.basename(in_fp)) + '.tiff'
+    Returns:
+        (data, desc, type, search): tuple containing information about the file
+
+        data: image array of floats or complex values, or dict containing two arrays of slopes (north, east)
+        desc: the dictionary generated from the annotation file
+        type: the type of inputted file
+        search: the search term for relevant values inside the annotation dictionary
+    """
 
     # Determine image type
     if not os.path.os.path.exists(in_fp):
         raise Exception(f"Input file path: {in_fp} does not exist.")
-
-    if os.path.isfile(out_dir):
-        raise Exception('Provide filepath not the directory.')
     
     fname = os.path.os.path.basename(in_fp)
     exts = fname.split('.')[1:]
@@ -677,14 +680,14 @@ def read_uavsar_data(in_fp, out_dir=os.path.getcwd(), ann_fp=None, linear_to_dB=
     else:
         raise ValueError('Unable to parse extensions')
     
-    # Find annotation file in same directory if no user given one
+    # Find annotation file in same directory if user did not provide one
     if not ann_fp:
         if ext == 'grd' or ext == 'slc':
             ann_fp = in_fp.replace(f'.{type}', '').replace(f'.{ext}', '.ann')
         else:
             ann_fp = in_fp.replace(f'.{ext}', '.ann')
         if not os.path.os.path.exists(ann_fp):
-            search_base = '_'.os.path.join(os.path.os.path.basename(in_fp).split('.')[0].split('_')[:4])
+            search_base = '_'.join(os.path.os.path.basename(in_fp).split('.')[0].split('_')[:4])
             search_full = os.path.os.path.join(os.path.dirname(in_fp), f'*{search_base}*.ann')
             ann_search = glob(search_full)
             if len(ann_search) == 1:
@@ -716,7 +719,7 @@ def read_uavsar_data(in_fp, out_dir=os.path.getcwd(), ann_fp=None, linear_to_dB=
     else:
         mode = 'polsar'
 
-    # Determine the correct file typing for searching our data dictionary
+    # Determine the correct file typing for searching data dictionary
     if not anc:
         if mode == 'polsar':
             if type == 'hgt':
@@ -751,7 +754,7 @@ def read_uavsar_data(in_fp, out_dir=os.path.getcwd(), ann_fp=None, linear_to_dB=
     # Set up datatypes
     com_des = desc[f'{search}.val_frmt']['value']
     com = False
-    if 'COMPLEX' in com_des:
+    if 'COMPLEX' in com_des:                                    
         com = True
     if com:
         dtype = np.complex64
@@ -771,86 +774,34 @@ def read_uavsar_data(in_fp, out_dir=os.path.getcwd(), ann_fp=None, linear_to_dB=
         slopes = None
         data = data.reshape(nrow, ncol)
 
-    # This step may not be necessary, could change gdal dataset.NoDataValue to be 0 (float32) or 0+0*1j (complex64) 
-    # This part needs some work, dB conversion has some issues
     # Change zeros and -10,000 to nans and convert linear units to dB if specified
     if com:
         data[data==0+0*1j] = np.nan + np.nan * 1j
         if linear_to_dB:
-            data = 10.0 * np.log10(np.abs(np.real(data))) + np.angle(data) * 1j
-        # set number of bands for gtiff conversion
-        bands = 2
+            data = 10.0 * np.log10(np.abs(np.real(data))) + np.imag(data) * 1j
     else:
         data[data==0] = np.nan
         data[data==-10000] = np.nan
         if linear_to_dB:
             data = 10.0 * np.log10(data)
-        bands = 1
 
-    if tiff_convert:
-        
-        driver = gdal.GetDriverByName("GTiff")
-        
-        # If ground projected image, north up,
-        if ext == 'grd' or anc:
-            # Delta latitude and longitude
-            dlat = desc[f'{search}.row_mult']['value']
-            dlon = desc[f'{search}.col_mult']['value']
-            # Upper left corner coordinates
-            lat1 = desc[f'{search}.row_addr']['value']
-            lon1 = desc[f'{search}.col_addr']['value']
+    if slopes:
+        return slopes, desc, type, search
+    else:
+        return data, desc, type, search
 
-            # Set up geotransform for gdal
-            srs = osr.SpatialReference()
-            srs.ImportFromEPSG(4326)
-            t = [lon1, dlon, 0.0, lat1, 0.0, dlat]
-
-            # WGS84 Projection, spatial reference using the EPSG code (4326)
-            crs = CRS.from_user_input("EPSG:4326")
-            
-        if tiff_convert:
-            if slopes:
-                    slope_fps = []
-                    
-                    for direction, arr in slopes.items():
-                        slope_fp = out_fp.replace('.tiff',f'.{direction}.tiff')
-                        ds = driver.Create(slope_fp, 
-                                            ysize=arr.shape[0], 
-                                            xsize=arr.shape[1], 
-                                            bands=bands, 
-                                            eType=gdal.GDT_Float32)
-                        ds.SetProjection(srs.ExportToWkt())
-                        ds.SetGeoTransform(t)
-                        ds.GetRasterBand(1).WriteArray(np.abs(data))
-                        ds.GetRasterBand(1).SetNoDataValue(np.nan)
-                    
-                        ds = None
-                        slope_fps.append(slope_fp)
-        
-                    return desc, data, type, slope_fps     
-            else:
-                ds = driver.Create(out_fp, 
-                                        ysize=data.shape[0], 
-                                        xsize=data.shape[1], 
-                                        bands=bands, 
-                                        eType=gdal.GDT_Float32)
-                if ext == 'grd' or anc:
-                    ds.SetProjection(srs.ExportToWkt())
-                    ds.SetGeoTransform(t)
-                if com:
-                    ds.GetRasterBand(1).WriteArray(np.abs(data))
-                    ds.GetRasterBand(1).SetNoDataValue(np.nan)
-                    ds.GetRasterBand(2).WriteArray(np.angle(data))
-                    ds.GetRasterBand(2).SetNoDataValue(np.nan)
-                else:
-                    ds.GetRasterBand(1).WriteArray(data)
-                    ds.GetRasterBand(1).SetNoDataValue(np.nan)
-            ds = None  # close the raster
-
-    return desc, data, type, out_fp
 
 def read_annotation(ann_file):
+    """
+    Reads a UAVSAR annotation file.
 
+    Args:
+        ann_file: path to the annotation file
+
+    Returns:
+        data: a dictionary of the annotation's contents, 
+              data[key] = {'value': value, 'units': units, 'comment': comment}
+    """
     with open(ann_file) as fp:
         lines = fp.readlines()
         fp.close()
@@ -892,61 +843,3 @@ def read_annotation(ann_file):
             data[key] = {'value': value, 'units': units, 'comment': comment}
 
     return data
-
-# def display_image(img, amp_display_limits=None, phase_display_limits=None, cmap='grey', interpolation='nearest'):
-
-#     """
-#         img: 2-d array of pixel values 
-#         amp_display_limits (tuple): (vmin, vmax)
-#     """
-
-#     matplotlib.use('QtAgg')
-
-#     amp = []
-#     phase_l = []
-    
-#     fig, ax = plt.subplots(2, 2)
-        
-#     amp = np.abs(img)
-#     intensity = amp**2
-#     phase = np.angle(img)
-
-#     if not amp_display_limits:
-#         va_min = np.nanpercentile(amp, 1)
-#         va_max = np.nanpercentile(amp, 99)
-#         amp_display_limits = []
-#         amp_display_limits.append(va_min)
-#         amp_display_limits.append(va_max)
-#         amp_display_limits = tuple(amp_display_limits)
-    
-#     if not phase_display_limits:
-#         vp_min = np.nanpercentile(phase, 1)
-#         vp_max = np.nanpercentile(phase, 99)
-#         phase_display_limits = []
-#         phase_display_limits.append(va_min)
-#         phase_display_limits.append(va_max)
-#         phase_display_limits = tuple(phase_display_limits)
-
-#     # plot amplitude
-#     amp_plot = ax[0][0].imshow(amp, vmin=amp_display_limits[0], vmax=amp_display_limits[1], cmap=cmap, interpolation=interpolation)
-#     ax[0][0].set_facecolor("white")
-#     ax[0][0].set_title("Image amplitude")
-#     plt.colorbar(amp_plot, ax = ax[0][0], orientation='vertical', shrink=0.8)
-    
-#     # plot amplitude histogram
-#     ax[0][1].hist(amp.ravel(), fc='k', ec='k', range=amp_display_limits)
-#     ax[0][1].set_xlabel("Pixel Values (amplitude)")
-#     ax[0][1].set_ylabel("Count")
-    
-#     # plot phase
-#     phase_plot = ax[1][0].imshow(phase, vmin=phase_display_limits[0], vmax=phase_display_limits[1], cmap=cmap, interpolation=interpolation)
-#     ax[1][0].set_facecolor("white")
-#     ax[1][0].set_title("Image phase")
-#     plt.colorbar(phase_plot, ax = ax[1][0], orientation='vertical', shrink=0.8)
-    
-#     # plot phase histogram
-#     ax[1][1].hist(phase.ravel(), fc='k', ec='k', range=phase_display_limits)
-#     ax[1][1].set_xlabel("Pixel Values (phase)")
-#     ax[1][1].set_ylabel("Count")
-
-#     plt.show()
