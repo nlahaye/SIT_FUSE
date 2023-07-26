@@ -118,18 +118,11 @@ class ClustDBN(Model):
 
  
         if self.fit_scaler:
-            scaler_loader = DataLoader(
-                dataset, batch_size=1500, shuffle=False, num_workers=0
-            )
-            self.train_scaler(scaler_loader)
+            self.train_scaler(batches)
 
-        # For amount of fine-tuning epochs
-        #stdevs = [0.01,0.001,0.0]
         for e in range(epochs):
 
             noise_stdev = cluster_gauss_noise_stdev[int(e % len(cluster_gauss_noise_stdev))]
-            #if self.fit_scaler and e == 0:
-            #    self.train_scaler(batches)            
 
             if sampler is not None:
                 sampler.set_epoch(e)
@@ -146,13 +139,9 @@ class ClustDBN(Model):
             for x_batch, _ in tqdm(batches): 
                 start_time = time.monotonic()
                 x2 = copy.deepcopy(x_batch)
-                if noise_stdev > 0.0:
-                    x2 = x2 + torch.from_numpy(rng.normal(0,noise_stdev,\
-                      x2.shape[1]*x2.shape[0]).reshape(x2.shape[0],\
-                                x2.shape[1])).type(x2.dtype)
                        
                 loss = 0
-                dt = torch.float32
+                dt = torch.float16
                 if self.device == "cpu":
                     dt = torch.bfloat16 
                 with torch.autocast(device_type=self.device, dtype=dt):
@@ -169,16 +158,13 @@ class ClustDBN(Model):
                             y = y[0]
                             y2 = y2[0]
                         y = torch.flatten(torch.as_tensor(self.scaler.transform(y), dtype=dt), start_dim = 1)
-                        #y = torch.flatten(y, start_dim = 1)
                         y = y.to(self.dbn_trunk.torch_device, non_blocking = True)
                         y2 = torch.flatten(torch.as_tensor(self.scaler.transform(y2), dtype=dt), start_dim = 1)
-                        #y2 = torch.flatten(y2, start_dim = 1)
                         if noise_stdev > 0.0:
                             y2 = y2 + torch.from_numpy(rng.normal(0,noise_stdev,\
                                 y2.shape[1]*y2.shape[0]).reshape(y2.shape[0],\
                                 y2.shape[1])).type(y2.dtype)
                         y2 = y2.to(self.dbn_trunk.torch_device, non_blocking = True)
-                    #x2 = np.clip(x2, pre_min, pre_max)
 
 
                     # Calculating the fully-connected outputs
