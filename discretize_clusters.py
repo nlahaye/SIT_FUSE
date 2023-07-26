@@ -7,6 +7,8 @@ matplotlib.use('agg')
 
 import os
 
+from osgeo import gdal, osr
+
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from CMAP import CMAP, CMAP_COLORS
@@ -52,6 +54,13 @@ def plot_clusters(coord, labels, output_basename, min_clust, max_clust, pixel_pa
         plt.savefig(output_basename + "_" + str(n_clusters_local) + "clusters.png", dpi=400, bbox_inches='tight')
         plt.clf()
 
+        file_ext = ".no_geo"
+        fname = output_basename + "_" + str(n_clusters_local) + "clusters" + file_ext + ".tif"
+        out_ds = gdal.GetDriverByName("GTiff").Create(fname, data.shape[1], data.shape[0], 1, gdal.GDT_Int32)
+        out_ds.GetRasterBand(1).WriteArray(data)
+        out_ds.FlushCache()
+        out_ds = None
+
 
 def main(yml_fpath):
 
@@ -69,9 +78,16 @@ def main(yml_fpath):
 
         max_cluster = data.shape[1]
         min_cluster = 0
-        disc_data = np.argmax(data, axis = 1)
-        del data
-    
+        if data.shape[1] > 1:
+            max_cluster = data.shape[1]
+            disc_data = np.argmax(data, axis = 1)
+            del data
+        else:
+            disc_data = data.astype(np.int32)
+            max_cluster = disc_data.max() #TODO this better!!!
+            del data    
+
+        print(np.unique(disc_data).shape, "UNIQUE LABELS")
         plot_clusters(indices, np.squeeze(disc_data), dat[i], min_cluster, max_cluster)
 
 
