@@ -33,12 +33,27 @@ from skimage.filters import sobel
 from skimage.util import view_as_windows
 
 class DBNDataset(torch.utils.data.Dataset):
+	"""
+	This class is an extension of the PyTorch Dataset class. It is a specialization built for 2-D datasets used in SIT-FUSE.
+	"""
 
 	def __init__(self):
-		pass    
+		"""
+		Constructor for DBNDataset. Initialization of actual datasets are done in 
+		init_from_array, read_data_preprocessed, or read_and_preprocess_data.
+		"""
+		pass	
 
 	def init_from_array(self, data_full, targets_full, scaler = None, subset=None):
-		print("INIT", data_full.shape, targets_full.shape)
+		"""
+		Initializes Dataset from pre-existing external array(s).
+
+		:param data_full: Dataset with N_samples x N_features dimensionality.
+			:param targets_full: Since unsupervised, targets array consists of indices per sample. The indices are representative of (File_Index, Line_Index, Sample_index) and full shape is thus N_samples X 3.
+		:param scaler: Optional The per-feature scaler to train and use with the dataset. If set to None, no scaling will be applied. Default value is None.
+			:param subset: Number of samples to subset from full dataset. If set to None, no subsetting is applied. Default is None. 
+		"""		
+
 		self.data_full = data_full
 		self.targets_full = targets_full
 
@@ -58,7 +73,15 @@ class DBNDataset(torch.utils.data.Dataset):
 
 
 	def read_data_preprocessed(self, data_filename, indices_filename, scaler = None, subset=None):
-        
+		"""
+		Initializes Dataset from files that contain preprocessed samples. Data should have N_samples x N_features dimensionality.
+	
+		:param data_filename: The path to the file that contains data to be loaded.
+		:param indices_filename: The path to the filename that contains per-sample (File_Index, Line_Index, Sample_index) indices.
+		:param scaler: Optional The per-feature scaler to train and use with the dataset. If set to None, no scaling will be applied. Default value is None.
+			:param subset: Number of samples to subset from full dataset. If set to None, no subsetting is applied. Default is None.
+		"""		
+
 		self.data_full = np.load(data_filename)
 		self.targets_full = np.load(indices_filename)
 
@@ -70,15 +93,37 @@ class DBNDataset(torch.utils.data.Dataset):
 			self.scale = True
 
 		self.subset = subset
-      
+	  
 		if self.subset is None:
    			self.subset = 1
 		self.current_subset = -1
-    
+	
 		self.next_subset()
 
 
 	def read_and_preprocess_data(self, filenames, read_func, read_func_kwargs, pixel_padding, delete_chans, valid_min, valid_max, fill_value = -9999, chan_dim = 0, transform_chans = [], transform_values = [], scaler = None, scale=False, transform=None, subset=None, train_scaler = False, subset_training = -1, stratify_data = None):
+		"""
+		High level initialization function for data ingestion, preprocessesing, and Dataset initialization. Data gets read in in file x channel x line x sample dimensionality and gets preprocessed/changed into n_samples x n_features dimensionality. 
+	
+		:param filenames: list of paths to files that will be ingested.
+		:param read_func: function used to read in data. Common interfaces for readers have been developed and can be seen within utils
+		:param read_func_kwargs: keyword args to be passes to read_func.
+			:param pixel_padding: Number of pixels to extend per-pixel/per-sample 'neighborhood' away from center sample of focus. Can be 0.
+		:param delete_chans: list of channels to be deleted pror to preprocessing. Can be empty.
+		:param valid_min: Minimum valid value in data. Anything less will be set to a fill value and not used.
+		:param valid_max: Maximum valid value in data. Anything greater  will be set to a fill value and not used.
+			:param fill_value: Optional fill value to be used for bad/unusample samples/pixeld. Default value is -9999.
+			:param chan_dim: Optional dimension of index that represents channels/bands. Default value is 0.
+		:param transform_chans: Optional channels to have special transforms applied to pixels out of expected ranges prior to filling. Default value is empty list ([]).
+		:param transform_values: Optional values associated with transform_chans. Values to be used for out of range samples in each of the channels specified in transform_chans. Default value is empty list ([]).
+			:param scaler: Optional per-feature scaler to train and use with the dataset. If set to None, no scaling will be applied. Default value is None.
+			:param scale: Optional boolean value specifying whether or not to use scaler to scale data. Default value is False.
+			:param transform: Optional unused currently, but will be updated to be a transform function to be applied in preprocessing. Used in child classes. Default is None.
+			:param subset: Optional number of subsets to break data into. This addition was made to account for memory concerns, but does cause issues if Dataset is being used for training, so should be set to 1 for a Dataset being used for training. Default is 1.
+			:param train_scaler: Optional boolean value indicating whether or not to train scaler with data in Dataset. Default is False.
+			:param subset_training: Optional number of samples to subset and extract out of full preprocessed set. Typically used for training Datasets. If set to -1, full set of samples is kept. Associated stratification and oversampling techniques being developed. Default is -1. 
+			:param stratify_data: Optional dictionary describing data and techniques for stratification of subset. Subset size specified via subset_training. Currently under development and should be left unset/set to None. If set to None, no stratification is done. Default value is None.
+		"""
 
 		self.train_indices = None
 		self.training = False
@@ -109,7 +154,10 @@ class DBNDataset(torch.utils.data.Dataset):
 		self.__loaddata__()
 
 	def __loaddata__(self):
-		
+		"""
+		Internal function for data ingestion and preprocessing. Should not be interfaced with directly. Use read_and_preprocess_data to properly interface.
+		"""
+
 		strat_local = []
 		data_local = []
 		for i in range(0, len(self.filenames)):
@@ -196,7 +244,7 @@ class DBNDataset(torch.utils.data.Dataset):
 			tgts = np.concatenate((np.full((1,tgts.shape[1], tgts.shape[2]),r, dtype=np.int16), tgts), axis=0)
 			tgts = tgts.reshape((3,tgts.shape[1]*tgts.shape[2])).astype(np.int16)
 			sub_data_total = view_as_windows(data_local[r], [size_wind, size_wind, data_local[r].shape[2]], step=1)
-			sub_data_total = sub_data_total.reshape((sub_data_total.shape[0]*sub_data_total.shape[1], -1))        
+			sub_data_total = sub_data_total.reshape((sub_data_total.shape[0]*sub_data_total.shape[1], -1))		
 
 			del_inds = np.where(sub_data_total <= -9998)[0]
 			sub_data_total = np.delete(sub_data_total, del_inds, 0)
@@ -208,7 +256,7 @@ class DBNDataset(torch.utils.data.Dataset):
 				print(strat_local[r].shape)
 				sub_data_strat = np.squeeze(strat_local[r].flatten()) 
 				self.stratify_training.append(sub_data_strat)
-                       
+					   
 			if len(self.data) == 0: 
 				self.data.append(sub_data_total)
 				self.targets.append(tgts)
@@ -248,27 +296,46 @@ class DBNDataset(torch.utils.data.Dataset):
  
 
 	def next_subset(self):
+		"""
+		Shift to next subset within data.
+		"""
 		self.__set_subset__(1)
 
 	def prev_subset(self):
+		"""
+		Shift to previous subset within data.
+		"""
 		self.__set_subset__(-1)
 
 	def has_next_subset(self):
+		"""
+		Checks is there is a subsequent subset of data
+		
+		:return: Whether or not there is a subsequent subset of data
+		"""
 		return self.current_subset <= self.subset-2
 
 	def has_prev_subset(self):
+		"""
+		Checks is there is a previous subset of data
+		
+		:return: Whether or not there is a previous subset of data
+		"""
 		return self.current_subset > 0
 
-        
+		
 	def __stratify_training__(self):
+		"""
+		Internal function to implement stratification. Currently under development and should not be used.
+		"""
 
 		num_train_exs = self.subset_training
 		counts = []
 		type_inds = []
-		train_indices = []    
+		train_indices = []	
 		train_inds_by_value = [] 
 		dataset_size = self.stratify_training.shape[0]
-                #TEST OVERSAMPLING
+				#TEST OVERSAMPLING
  
 
 		#TODO Allow for oversampling, actual stratification, and only selction of a subset of labels
@@ -289,6 +356,11 @@ class DBNDataset(torch.utils.data.Dataset):
 
 
 	def __set_subset__(self,increment):
+		"""
+		Internal function to set the current subset of data. Use next_subset and previous_subset to interface externally.
+	
+		:param increment: The increment, positive or negative, to be used to identify the new current subset.
+		"""
 		#TODO: optimize to minimize data duplication - lazy loading & Dask
 		if self.subset is not None:
 			if (increment < 0 and self.current_subset >= -1*increment) or \
@@ -312,15 +384,32 @@ class DBNDataset(torch.utils.data.Dataset):
 
 
 	def __train_scaler__(self, data):
+		"""
+		Internal function to train scaler.
+	
+		:param data: Data to use to train scaler. partial_fit function used so this process can be done multiple separate times.
+		"""
 		for r in range(len(data)):
-                        subd = data[r]
-                        shape = subd.shape
-                        self.scaler.partial_fit(subd[np.where(subd > -9999)].reshape(-1, shape[self.chan_dim]))
+						subd = data[r]
+						shape = subd.shape
+						self.scaler.partial_fit(subd[np.where(subd > -9999)].reshape(-1, shape[self.chan_dim]))
 
 	def __len__(self):
+		"""
+		Overriding of Dataset internal function __len__.
+	
+		:return: Number of samples.
+		"""
 		return len(self.data)
 
 	def __getitem__(self, index):
+		"""
+		Overriding of Dataset internal function __getitem__.
+	
+		:param index: Index of sample to be returned.
+
+		:return: Sample and associated index.
+		"""
 		if torch.is_tensor(index):
 			index = index.tolist()
 
@@ -336,80 +425,97 @@ class DBNDataset(torch.utils.data.Dataset):
 
 
 def main(yml_fpath):
-    #Translate config to dictionary 
-    yml_conf = read_yaml(yml_fpath)
+	"""
+	Function used if code is called as executable. Generates data and indices in preprocessed format and 
+	saves to files. Can be reaccessed via read_data_preprocessed.
 
-    #Get config values 
-    data_train = yml_conf["data"]["files_train"]
+	:param yml_fpath: Path to YAML configuration.
+	
+	Values required to be in YAML configuration file:
 
-    pixel_padding = yml_conf["data"]["pixel_padding"]
-    number_channel = yml_conf["data"]["number_channels"]
-    data_reader =  yml_conf["data"]["reader_type"]
-    data_reader_kwargs = yml_conf["data"]["reader_kwargs"]
-    fill = yml_conf["data"]["fill_value"]
-    chan_dim = yml_conf["data"]["chan_dim"]
-    valid_min = yml_conf["data"]["valid_min"]
-    valid_max = yml_conf["data"]["valid_max"]
-    delete_chans = yml_conf["data"]["delete_chans"]
-    subset_count = yml_conf["data"]["subset_count"]
-    output_subset_count = yml_conf["data"]["output_subset_count"]
-    scale_data = yml_conf["data"]["scale_data"]
+	/data : Sub-dictionary that contains parameters about dataset.
+	/data/files_train : List of files tp be used for training.
+	/data/pixel_padding : Number of pixels to extend per-pixel/per-sample 'neighborhood' away from center sample of focus. Can be 0.
+	/data/number_channels : Number of channels to be used from dataset.
+	/data/reader_type : Name of reader key (see utils documentation) to get the appropriate data reader function.
+	/data/reader_kwargs : Kwargs for reader function.
+	/data/fill_value : Fill value to use for unusable pixels/samples.
 
-    transform_chans = yml_conf["data"]["transform_default"]["chans"]
-    transform_values =  yml_conf["data"]["transform_default"]["transform"]
+	"""
+	#Translate config to dictionary 
+	yml_conf = read_yaml(yml_fpath)
 
-    out_dir = yml_conf["output"]["out_dir"]
-    os.makedirs(out_dir, exist_ok=True)
+	#Get config values 
+	data_train = yml_conf["data"]["files_train"]
+
+	pixel_padding = yml_conf["data"]["pixel_padding"]
+	number_channel = yml_conf["data"]["number_channels"]
+	data_reader =  yml_conf["data"]["reader_type"]
+	data_reader_kwargs = yml_conf["data"]["reader_kwargs"]
+	fill = yml_conf["data"]["fill_value"]
+	chan_dim = yml_conf["data"]["chan_dim"]
+	valid_min = yml_conf["data"]["valid_min"]
+	valid_max = yml_conf["data"]["valid_max"]
+	delete_chans = yml_conf["data"]["delete_chans"]
+	subset_count = yml_conf["data"]["subset_count"]
+	output_subset_count = yml_conf["data"]["output_subset_count"]
+	scale_data = yml_conf["data"]["scale_data"]
+
+	transform_chans = yml_conf["data"]["transform_default"]["chans"]
+	transform_values =  yml_conf["data"]["transform_default"]["transform"]
+
+	out_dir = yml_conf["output"]["out_dir"]
+	os.makedirs(out_dir, exist_ok=True)
   
-    scaler_fname = os.path.join(out_dir, "dbn_scaler.pkl")
-    scaler_type = yml_conf["scaler"]["name"]
+	scaler_fname = os.path.join(out_dir, "dbn_scaler.pkl")
+	scaler_type = yml_conf["scaler"]["name"]
 
-    use_gpu_pre = subset_training = yml_conf["dbn"]["training"]["use_gpu_preprocessing"]
+	use_gpu_pre = subset_training = yml_conf["dbn"]["training"]["use_gpu_preprocessing"]
 
-    scaler, scaler_train = get_scaler(scaler_type, cuda = use_gpu_pre)
+	scaler, scaler_train = get_scaler(scaler_type, cuda = use_gpu_pre)
 
-    subset_training = yml_conf["dbn"]["subset_training"]
+	subset_training = yml_conf["dbn"]["subset_training"]
  
-    os.environ['PREPROCESS_GPU'] = str(int(use_gpu_pre))
+	os.environ['PREPROCESS_GPU'] = str(int(use_gpu_pre))
 
-    read_func = get_read_func(data_reader)
+	read_func = get_read_func(data_reader)
 
-    stratify_data = None
-    if "stratify_data" in yml_conf["dbn"]["training"]:
-        stratify_data = yml_conf["dbn"]["training"]["stratify_data"]
+	stratify_data = None
+	if "stratify_data" in yml_conf["dbn"]["training"]:
+		stratify_data = yml_conf["dbn"]["training"]["stratify_data"]
 
-    if stratify_data is not None:
-        strat_read_func = get_read_func(stratify_data["reader"])
-        stratify_data["reader"] = strat_read_func
+	if stratify_data is not None:
+		strat_read_func = get_read_func(stratify_data["reader"])
+		stratify_data["reader"] = strat_read_func
 
-    x2 = DBNDataset()
-    x2.read_and_preprocess_data(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
-            valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
-            transform_values=transform_values, scaler = scaler, train_scaler = scaler_train, scale = scale_data, \
-            transform=numpy_to_torch, subset=subset_count, subset_training = subset_training, stratify_data=stratify_data)
+	x2 = DBNDataset()
+	x2.read_and_preprocess_data(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
+			valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
+			transform_values=transform_values, scaler = scaler, train_scaler = scaler_train, scale = scale_data, \
+			transform=numpy_to_torch, subset=subset_count, subset_training = subset_training, stratify_data=stratify_data)
  
-    if x2.train_indices is not None:
-        np.save(os.path.join(out_dir, "train_indices"), x2.train_indices)
-        
+	if x2.train_indices is not None:
+		np.save(os.path.join(out_dir, "train_indices"), x2.train_indices)
+		
 
-    np.save(os.path.join(out_dir, "train_data.indices"), x2.targets_full)
-    np.save(os.path.join(out_dir, "train_data"), x2.data_full) 
+	np.save(os.path.join(out_dir, "train_data.indices"), x2.targets_full)
+	np.save(os.path.join(out_dir, "train_data"), x2.data_full) 
  
-    #Save scaler
-    with open(os.path.join(out_dir, "dbn_scaler.pkl"), "wb") as f:
-        dump(x2.scaler, f, True, pickle.HIGHEST_PROTOCOL)
+	#Save scaler
+	with open(os.path.join(out_dir, "dbn_scaler.pkl"), "wb") as f:
+		dump(x2.scaler, f, True, pickle.HIGHEST_PROTOCOL)
 
 
 if __name__ == '__main__':
 
-        parser = argparse.ArgumentParser()
-        parser.add_argument("-y", "--yaml", help="YAML file for data config.")
-        args = parser.parse_args()
-        from timeit import default_timer as timer
-        start = timer()
-        main(args.yaml)
-        end = timer()
-        print(end - start) # Time in seconds, e.g. 5.38091952400282
+	parser = argparse.ArgumentParser()
+	parser.add_argument("-y", "--yaml", help="YAML file for data config.")
+	args = parser.parse_args()
+	from timeit import default_timer as timer
+	start = timer()
+	main(args.yaml)
+	end = timer()
+	print(end - start) # Time in seconds, e.g. 5.38091952400282
 
 
 
