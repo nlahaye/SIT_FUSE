@@ -1,7 +1,7 @@
 data:
  num_loader_workers: 10
  scale_data: True
- pixel_padding: 1
+ pixel_padding: 0
  number_channels: 50
  fill_value: -9999.0
  valid_min: -900.0 #0.0000001
@@ -46,15 +46,15 @@ output:
 
 dbn:
  subset_training: -1 #1500000
- deep_cluster: 5000
- overwrite_model: True
+ deep_cluster: 120
+ overwrite_model: False
  tune_clust: False
  tune_dbn: False
  tune_scaler: False
  params:
   model_type: ["gaussian_selu"] 
-  dbn_arch: [8000] #[250, 500, 2000] #, 2000]
-  gibbs_steps: [5] #, 7, 7] #, 10] #, 25]
+  dbn_arch: [5000] #[250, 500, 2000] #, 2000]
+  gibbs_steps: [10] #, 7, 7] #, 10] #, 25]
   learning_rate: [0.0001] #, 0.0001, 0.0001] #, 0.01] #, 0.01]
   momentum: [0.0] #, 0.95, 0.95] #, 0.95] #, 0.95]
   decay: [0.0001] #, 0.0001, 0.0001] #, 0.0001] #, 0.0001]
@@ -68,9 +68,13 @@ dbn:
   use_gpu: True
   world_size: 1
   rank: 0
-  device_ids: ["0","1","2","3","4","5","6","7"]
-  batch_size: 32
-  epochs: [10] 
-  cluster_batch_size: 64
-  cluster_epochs: 5
+  device_ids: ["3","4","5","6"]
+  batch_size: 128
+  epochs: [30] 
+  cluster_batch_size: 700
+  cluster_epochs: 24
+  cluster_gauss_noise_stdev: [0.001, 0.0001, 0.00001, 0.000001, 0.0]
+  cluster_lambda: 1.0
+
+
 

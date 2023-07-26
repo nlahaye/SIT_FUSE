@@ -22,7 +22,8 @@ data:
  files_train: [
 '/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_10_20190806_1858_1910_V02_Georeferenced_scaled.tif.npy',
 '/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19911_10_20190807_2004_2016_V02_georeferenced_scaled.tif.npy',
-'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19911_09_20190807_1947_2002_V02_georeferenced_scaled.tif.npy'
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19911_09_20190807_1947_2002_V02_georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19912_07_20190808_1806_1821_V02_georeferenced_scaled.tif.npy',
 ]
 
  files_test: [
@@ -88,7 +89,7 @@ dbn:
   batch_size: 128
   epochs: [25] #[10]#[8] #, 1, 1] #, 5] #, 10]
   cluster_batch_size: 64
-  cluster_epochs: 2 #[10]#[8] #, 1, 1] #, 5] #, 10]
+  cluster_epochs: 1 #[10]#[8] #, 1, 1] #, 5] #, 10]
 
 
 

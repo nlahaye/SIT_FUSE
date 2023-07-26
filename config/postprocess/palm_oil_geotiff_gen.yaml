@@ -10,8 +10,8 @@ data:
   
  gtiff_data: ["/data/nlahaye/remoteSensing/Palm_Oil/ucayali_condensed_stacks_2020_h1v1.tiff"]
  #cluster_fnames: ["/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_GRBM/file_clust0_output_test.data_500clusters.zarr"]
- cluster_fnames: ["/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST/ucayali_condensed_stacks_2020_h1v1.tiff.clustoutput_test.data_500clusters.zarr"]
-
+ cluster_fnames: ["/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST/ucayali_condensed_stacks_2020_h1v1.tiff.clustoutput_test.data_150clusters.zarr"]
+ 
 context: 
  apply_context: True
  clusters: [120,127,213,300,418,440]  #64 #i.e. smoke clusters

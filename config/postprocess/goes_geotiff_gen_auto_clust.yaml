@@ -5,7 +5,7 @@ data:
  clust_reader_type: "zarr_to_numpy"
  reader_kwargs:
    no_arg: "no_arg" 
- subset_inds: [[0,800,1400,2200], [0,800,1400,2200],[0,800,1400,2200],[0,800,1400,2200],[0,800,1400,2200],[0,800,1400,2200],[0,800,1400,2200],[0,800,1400,2200],[0,800,1400,2200],[0,800,1400,2200],[0,800,1400,2200],[0,800,1400,2200],[0,800,1400,2200],[0,800,1400,2200],[0,800,1400,2200],[0,800,1400,2200], [0,800,1400,2200]]
+ subset_inds: [[50,1051,1200,2201], [50,1051,1200,2201],[50,1051,1200,2201],[50,1051,1200,2201],[50,1051,1200,2201],[50,1051,1200,2201],[50,1051,1200,2201],[50,1051,1200,2201],[50,1051,1200,2201],[50,1051,1200,2201],[50,1051,1200,2201],[50,1051,1200,2201],[50,1051,1200,2201],[50,1051,1200,2201],[50,1051,1200,2201],[50,1051,1200,2201], [50,1051,1200,2201]]
  create_separate: False
  gtiff_data: [
   #'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
@@ -31,30 +31,30 @@ data:
   'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad']
   
  cluster_fnames: [
-"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192182036196_e20192182038569_c20192182039008.nc.clustoutput_test.data_5000clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192191821196_e20192191823569_c20192191824007.nc.clustoutput.data_5000clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192192026196_e20192192028569_c20192192029018.nc.clustoutput.data_5000clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192192006196_e20192192008569_c20192192009012.nc.clustoutput.data_5000clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192201931196_e20192201933569_c20192201934013.nc.clustoutput_test.data_5000clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192200236197_e20192200238569_c20192200239018.nc.clustoutput.data_5000clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192210121197_e20192210123570_c20192210124011.nc.clustoutput.data_5000clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192191956196_e20192191958569_c20192191959011.nc.clustoutput.data_5000clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192181926196_e20192181928569_c20192181929007.nc.clustoutput_test.data_5000clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192200056197_e20192200058569_c20192200059025.nc.clustoutput.data_5000clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192210116197_e20192210118570_c20192210119008.nc.clustoutput.data_5000clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192182151196_e20192182153569_c20192182154009.nc.clustoutput_test.data_5000clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192210221197_e20192210223570_c20192210224025.nc.clustoutput_test.data_5000clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192181816196_e20192181818569_c20192181819009.nc.clustoutput_test.data_5000clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192191931196_e20192191933569_c20192191934019.nc.clustoutput.data_5000clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192201851196_e20192201853569_c20192201854012.nc.clustoutput.data_5000clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192192041196_e20192192043569_c20192192044017.nc.clustoutput.data_5000clusters.zarr"
+"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192182036196_e20192182038569_c20192182039008.nc.clustoutput_test.data_100clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192191821196_e20192191823569_c20192191824007.nc.clustoutput.data_100clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192192026196_e20192192028569_c20192192029018.nc.clustoutput.data_100clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192192006196_e20192192008569_c20192192009012.nc.clustoutput.data_100clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192201931196_e20192201933569_c20192201934013.nc.clustoutput_test.data_100clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192200236197_e20192200238569_c20192200239018.nc.clustoutput.data_100clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192210121197_e20192210123570_c20192210124011.nc.clustoutput.data_100clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192191956196_e20192191958569_c20192191959011.nc.clustoutput.data_100clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192181926196_e20192181928569_c20192181929007.nc.clustoutput_test.data_100clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192200056197_e20192200058569_c20192200059025.nc.clustoutput.data_100clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192210116197_e20192210118570_c20192210119008.nc.clustoutput.data_100clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192182151196_e20192182153569_c20192182154009.nc.clustoutput_test.data_100clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192210221197_e20192210223570_c20192210224025.nc.clustoutput_test.data_100clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192181816196_e20192181818569_c20192181819009.nc.clustoutput_test.data_100clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192191931196_e20192191933569_c20192191934019.nc.clustoutput.data_100clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192201851196_e20192201853569_c20192201854012.nc.clustoutput.data_100clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES_AUTO_CLUST_FIRE_SMOKE/OR_ABI-L1b-RadC-M6C01_G17_s20192192041196_e20192192043569_c20192192044017.nc.clustoutput.data_100clusters.zarr"
 ]
 
 
 
 context:
  apply_context: True
- clusters: [673, 1222, 3887, 3888, 2586, 1493, 4951, 2381, 509]  #64 #i.e. smoke clusters
+ clusters: [673, 1222, 3887, 3888, 2586, 1493, 1001, 2381, 509]  #64 #i.e. smoke clusters
  name: "smoke" #i.e. smoke
  compare_truth: false
  generate_union: false
@@ -64,7 +64,7 @@ context:
    3887: [673, 1222, 2586, 509]
    3888: [673, 1222, 2586, 509]
    1493: [673, 1222, 2586, 509]
-   4951: [673, 1222, 2586, 509]
+   1001: [673, 1222, 2586, 509]
    2586: [673, 1222, 509]
    2381: [673, 1222, 2586, 509]
    509:  [673, 1222, 2586, 2381]
