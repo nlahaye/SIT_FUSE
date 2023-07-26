@@ -226,7 +226,10 @@ def read_gtiff_multifile_generic(files, **kwargs):
 def read_gtiff_generic(flename, **kwargs): 
 	dat = gdal.Open(flename, gdal.GA_ReadOnly).ReadAsArray()
 	if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
-		dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+		if len(dat.shape) == 3:
+			dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+		else:
+			dat = dat[kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
 	return dat
 
 
