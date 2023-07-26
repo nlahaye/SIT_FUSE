@@ -51,9 +51,10 @@ class DBNDataset(torch.utils.data.Dataset):
 		:param data_full: Dataset with N_samples x N_features dimensionality.
 			:param targets_full: Since unsupervised, targets array consists of indices per sample. The indices are representative of (File_Index, Line_Index, Sample_index) and full shape is thus N_samples X 3.
 		:param scaler: Optional The per-feature scaler to train and use with the dataset. If set to None, no scaling will be applied. Default value is None.
-			:param subset: Number of samples to subset from full dataset. If set to None, no subsetting is applied. Default is None. 
+		:param subset: Optional number of subsets to break data into. This addition was made to account for memory concerns, but does cause issues if Dataset is being used for training, so should be set to 1 for a Dataset being used for training. Default is 1.
 		"""		
 
+		#Set class attributes
 		self.data_full = data_full
 		self.targets_full = targets_full
 
@@ -65,6 +66,7 @@ class DBNDataset(torch.utils.data.Dataset):
 		
 		self.subset = subset
 
+		#Setup subsetting
 		if self.subset is None:
 			self.subset = 1
 		self.current_subset = -1
@@ -79,9 +81,10 @@ class DBNDataset(torch.utils.data.Dataset):
 		:param data_filename: The path to the file that contains data to be loaded.
 		:param indices_filename: The path to the filename that contains per-sample (File_Index, Line_Index, Sample_index) indices.
 		:param scaler: Optional The per-feature scaler to train and use with the dataset. If set to None, no scaling will be applied. Default value is None.
-			:param subset: Number of samples to subset from full dataset. If set to None, no subsetting is applied. Default is None.
+		:param subset: Optional number of subsets to break data into. This addition was made to account for memory concerns, but does cause issues if Dataset is being used for training, so should be set to 1 for a Dataset being used for training. Default is 1.
 		"""		
 
+		#Load in npy files and set class attributes
 		self.data_full = np.load(data_filename)
 		self.targets_full = np.load(indices_filename)
 
@@ -93,7 +96,8 @@ class DBNDataset(torch.utils.data.Dataset):
 			self.scale = True
 
 		self.subset = subset
-	  
+
+		#Setup subsetting	  
 		if self.subset is None:
    			self.subset = 1
 		self.current_subset = -1
@@ -125,6 +129,7 @@ class DBNDataset(torch.utils.data.Dataset):
 			:param stratify_data: Optional dictionary describing data and techniques for stratification of subset. Subset size specified via subset_training. Currently under development and should be left unset/set to None. If set to None, no stratification is done. Default value is None.
 		"""
 
+		#Set class attributes
 		self.train_indices = None
 		self.training = False
 		self.filenames = filenames
@@ -151,6 +156,7 @@ class DBNDataset(torch.utils.data.Dataset):
 		self.current_subset = -1
 
 
+		#load and preprocess data
 		self.__loaddata__()
 
 	def __loaddata__(self):
@@ -161,17 +167,22 @@ class DBNDataset(torch.utils.data.Dataset):
 		strat_local = []
 		data_local = []
 		for i in range(0, len(self.filenames)):
+			#Read data in one file at a time
 			if (type(self.filenames[i]) == str and os.path.exists(self.filenames[i])) or (type(self.filenames[i]) is list and os.path.exists(self.filenames[i][0])):
 
 				print(self.filenames[i])
+				#Use read function passed in to get data into numpy ndarray
 				dat = self.read_func(self.filenames[i], **self.read_func_kwargs).astype(np.float64)
 				print(dat.shape)
 				strat_data = None
+				#If single channel, 2D data, transform into 3D (setting 3rd dimension to 1)
 				if dat.ndim == 2:
 					dat = np.expand_dims(dat, self.chan_dim)
+				#Setup data to use for stratification
 				if self.stratify_data is not None:
 					strat_data = self.stratify_data["reader"](self.stratify_data["filename"][i], \
 						**self.stratify_data["reader_kwargs"])	
+				#Apply channel-specific transformations, if any. 		
 				for t in range(len(self.transform_chans)):
 					slc = [slice(None)] * dat.ndim
 					slc[self.chan_dim] = slice(self.transform_chans[t], self.transform_chans[t]+1)
@@ -183,23 +194,23 @@ class DBNDataset(torch.utils.data.Dataset):
 						inds = np.where(tmp > self.valid_max - 0.00000000005)
 						tmp[inds] = self.transform_value[t]
 					dat[tuple(slc)] = tmp
-				inds = np.where(dat < self.valid_min - 0.00000000005)
-				dat[inds] = -9999
-				inds = np.where(dat > self.valid_max - 0.00000000005)
-				dat[inds] = -9999
 				if len(self.transform_chans) > 0:
 					del slc
 					del tmp
-								
+							
+				#Delete channels set to be unused in config	
 				dat = np.delete(dat, self.delete_chans, self.chan_dim)
 
+				#Set all other values outside of specified valid range to fill
 				if self.valid_min is not None:
 					dat[np.where(dat < self.valid_min - 0.00000000005)] = -9999
 				if self.valid_max is not None:	
 					dat[np.where(dat > self.valid_max - 0.00000000005)] = -9999
 				if self.fill_value is not None:
 					dat[np.where(dat == self.fill_value)] = -9999
+				#Move specified channel dimension to 3rd position for uniformity
 				dat = np.moveaxis(dat, self.chan_dim, 2)
+				#Append data and stratification data from current files to full set
 				data_local.append(dat)
 				if strat_data is not None:
 					#TODO Generalize to multi-class
@@ -211,10 +222,12 @@ class DBNDataset(torch.utils.data.Dataset):
 		#del dat
 		self.chan_dim = 2
 		if self.scale:
+			#Train scaler if applicable
 			if self.scaler is None or self.train_scaler:
 				self.training = True
 				self.__train_scaler__(data_local)
 
+			#If scale == True do per-channel scaling on all valid pixels
 			for r in range(len(data_local)):	
 				subd = data_local[r]
 				shape = copy.deepcopy(subd.shape)
@@ -237,7 +250,14 @@ class DBNDataset(torch.utils.data.Dataset):
 		self.targets = []
 		self.stratify_training = []
 		for r in range(len(data_local)):
+			"""
+			For each scene split out each pixel and its pre-specified neighborhood/surrounding window to be used as a single sample.
+			Pixel padding can be 0 (no neighborhood). If not zero, any pixel without enough neighbors in all directions 
+			will not be used (but can be used in another pixel's neighborhood)
 
+			Each pixels index is stored alongside it as a 'target' value. In this unsupervised/self-supervised space there are no
+			actual targets, so we use a pre-existing convention in supervised learning to stash these indices.
+			"""
 			size_wind = 1 + 2 * self.pixel_padding
 			tgts = np.indices(data_local[r].shape[0:2])
 			tgts = tgts[:,self.pixel_padding:tgts.shape[1] - self.pixel_padding,self.pixel_padding:tgts.shape[2] - self.pixel_padding]
@@ -246,10 +266,12 @@ class DBNDataset(torch.utils.data.Dataset):
 			sub_data_total = view_as_windows(data_local[r], [size_wind, size_wind, data_local[r].shape[2]], step=1)
 			sub_data_total = sub_data_total.reshape((sub_data_total.shape[0]*sub_data_total.shape[1], -1))		
 
+			#No sample is used that contains a fill value
 			del_inds = np.where(sub_data_total <= -9998)[0]
 			sub_data_total = np.delete(sub_data_total, del_inds, 0)
 			tgts = np.delete(tgts, del_inds, 1)
 
+			#Preprocess stratification data in same manner
 			if len(strat_local) > 0:
 				strat_local[r] = strat_local[r][self.pixel_padding:strat_local[r].shape[1] - \
 					self.pixel_padding,self.pixel_padding:strat_local[r].shape[1] - self.pixel_padding]
@@ -257,14 +279,18 @@ class DBNDataset(torch.utils.data.Dataset):
 				sub_data_strat = np.squeeze(strat_local[r].flatten()) 
 				self.stratify_training.append(sub_data_strat)
 					   
+			#Append to final data structure if any valid samples
 			if len(self.data) == 0: 
 				self.data.append(sub_data_total)
 				self.targets.append(tgts)
 			else:
 				self.data[0] = np.concatenate((self.data[0],sub_data_total),axis=0)
 				self.targets[0] = np.concatenate((self.targets[0],tgts),axis=1)
+
+		#Format as downstream processes expect
 		self.targets[0] = np.swapaxes(self.targets[0], 0, 1)
 
+		#Shuffle samples, indices, and (if applicable) stratification data together
 		if len(self.stratify_training) > 0:
 			c = list(zip(self.data[0], self.targets[0], self.stratify_training[0]))
 		else:
@@ -275,10 +301,13 @@ class DBNDataset(torch.utils.data.Dataset):
 			self.data, self.targets, self.stratify_training = zip(*c)
 		else:
 			self.data, self.targets = zip(*c)
+
+		#Set to float32 type
 		self.data_full = np.array(self.data).astype(np.float32)
 		self.targets_full = np.copy(self.targets).astype(np.int16)
 
 
+		#Subset data for training and/or stratify
 		if self.training and self.subset_training > 0:
 			if len(self.stratify_training) > 0:
 				self.stratify_training = np.array(self.stratify_training)
@@ -292,6 +321,7 @@ class DBNDataset(torch.utils.data.Dataset):
 
 		print("STATS", self.data_full.min(), self.data_full.max(), self.data_full.mean(), self.data_full.std())
 
+		#Setup subsetting
 		self.next_subset()
  
 
@@ -390,9 +420,9 @@ class DBNDataset(torch.utils.data.Dataset):
 		:param data: Data to use to train scaler. partial_fit function used so this process can be done multiple separate times.
 		"""
 		for r in range(len(data)):
-						subd = data[r]
-						shape = subd.shape
-						self.scaler.partial_fit(subd[np.where(subd > -9999)].reshape(-1, shape[self.chan_dim]))
+			subd = data[r]
+			shape = subd.shape
+			self.scaler.partial_fit(subd[np.where(subd > -9999)].reshape(-1, shape[self.chan_dim]))
 
 	def __len__(self):
 		"""
@@ -440,7 +470,15 @@ def main(yml_fpath):
 	/data/reader_type : Name of reader key (see utils documentation) to get the appropriate data reader function.
 	/data/reader_kwargs : Kwargs for reader function.
 	/data/fill_value : Fill value to use for unusable pixels/samples.
-
+	/data/chan_dim : Index of the channel dimension when it is read in from read_func
+	/data/valid_min : Smallest valid value in data. All values less than this threshold will be set to a fill value and not used.
+	/data/valid_max : Largest valid value in data. All values greater than this threshold will be set to a fill value and not used.
+	/data/delete_chans : Set of channels to be unused/deleted prior to preprocessing. Can be empty.
+	/data/subset_count : Optional number of subsets to break data into. This addition was made to account for memory concerns, but does cause issues if Dataset is being used for training, so should be set to 1 for a Dataset being used for training. 
+	/data/scale_data : Boolean indicating whether or not to scale data.
+	/data/transform_default/chans: Typically unused.Optional channels to have special transforms applied to pixels out of expected ranges prior to filling. Can be empty list ([]).
+	/data/transform_default/transform: Typically unused. Optional values associated with transform_chans. Values to be used for out of range samples in each of the channels specified in transform_chans. Can be empty list ([]).
+	/output/out_dir : Directory to write data to.
 	"""
 	#Translate config to dictionary 
 	yml_conf = read_yaml(yml_fpath)
@@ -458,7 +496,6 @@ def main(yml_fpath):
 	valid_max = yml_conf["data"]["valid_max"]
 	delete_chans = yml_conf["data"]["delete_chans"]
 	subset_count = yml_conf["data"]["subset_count"]
-	output_subset_count = yml_conf["data"]["output_subset_count"]
 	scale_data = yml_conf["data"]["scale_data"]
 
 	transform_chans = yml_conf["data"]["transform_default"]["chans"]
@@ -488,6 +525,7 @@ def main(yml_fpath):
 		strat_read_func = get_read_func(stratify_data["reader"])
 		stratify_data["reader"] = strat_read_func
 
+	#Initialize, preprocess, and save to files
 	x2 = DBNDataset()
 	x2.read_and_preprocess_data(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
 			valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
