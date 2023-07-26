@@ -37,7 +37,7 @@ dbn:
   epochs: [30]
   cluster_batch_size: 700
   cluster_epochs: 25
-   reader_kwargs:
+  reader_kwargs:
     start_sample: 1000
     end_sample: 4000
     start_line: 1000
