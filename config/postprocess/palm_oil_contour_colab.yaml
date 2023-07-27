@@ -1,0 +1,16 @@
+
+
+
+
+data:
+ filename: ["/content/drive/MyDrive/oil_palm_data_science/ML_Test/ucayali_condensed_stacks_2020_h1v1.tiff.clustoutput_test.data_500clusters.zarr.palm_oil.tif"]
+ reader_type: "gtiff"
+ reader_kwargs:
+  None:
+ mask: "/data/nlahaye/remoteSensing/Palm_Oil/ucayali_condensed_stacks_2020_h1v1.tiff"
+ mask_band: 3
+ mask_val: 0.0
+
+remove_singles: True
+write_geotiff: True
+ 
