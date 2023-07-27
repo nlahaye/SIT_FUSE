@@ -45,6 +45,8 @@ class ClustDBN(Model):
         self.number_heads = 1 #TODO try out multi
         self.fc = MultiPrototypes(self.input_fc, self.n_classes, self.number_heads)
         self.fc = self.fc.to(self.dbn_trunk.torch_device, non_blocking = True)
+        for m in self.fc.modules():
+            m = m.to(self.dbn_trunk.torch_device, non_blocking = True)
         self.to(self.dbn_trunk.torch_device, non_blocking = True)
         self.dbn_trunk = self.dbn_trunk.to(self.dbn_trunk.torch_device, non_blocking = True)
  

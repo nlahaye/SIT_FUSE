@@ -292,7 +292,7 @@ def run_dbn(yml_conf):
            new_dbn.models[i].batch_normalize = batch_normalize[i]
         if "LOCAL_RANK" in os.environ.keys():
             if not isinstance(new_dbn.models[i], torch.nn.MaxPool2d):
-                new_dbn.models[i] = DDP(new_dbn.models[i], device_ids=[local_rank], output_device=local_rank) #, device_ids=device_ids)
+                new_dbn.models[i] = DDP(new_dbn.models[i], device_ids=[new_dbn.models[i].torch_device], output_device=new_dbn.models[i].torch_device) #, device_ids=device_ids)
             else:
                 new_dbn.models[i] = new_dbn.models[i]
  
@@ -347,7 +347,7 @@ def run_dbn(yml_conf):
                     clust_scaler = load(f)
 
         clust_dbn = ClustDBN(new_dbn, dbn_arch[-1], auto_clust, True, clust_scaler) #TODO parameterize
-        #clust_dbn.fc = DDP(clust_dbn.fc, device_ids=[local_rank], output_device=local_rank)
+        clust_dbn.fc = DDP(clust_dbn.fc, device_ids=[local_rank], output_device=local_rank)
         final_model = clust_dbn
         if not os.path.exists(model_file + "_fc_clust.ckpt") or overwrite_model:
            dataset2 = TensorDataset(x2.data, x2.targets)
