@@ -650,12 +650,12 @@ def get_read_func(data_reader):
     #TODO return BCDP reader
     return None
 
-def read_uavsar(in_fp, ann_fp=None, linear_to_dB=False):
+def read_uavsar(fname, **kwargs):
     """
     Reads UAVSAR data.
 
     Args:
-        in_fp (string): path to input binary file
+        fname (string): path to input binary file
         ann_fp (string): path to UAVSAR annotation file
         linear_to_dB (bool): convert linear amplitude units to decibels
 
@@ -667,12 +667,21 @@ def read_uavsar(in_fp, ann_fp=None, linear_to_dB=False):
         type: the type of inputted file
         search: the search term for relevant values inside the annotation dictionary
     """
+    
+    if "ann_fp" in kwargs:
+        ann_fp = kwargs["ann_fp"]
+    else:
+        ann_fp = None
+    if "linear_to_dB" in kwargs:
+        linear_to_dB = kwargs["linear_to_dB"]
+    else:
+        linear_to_dB = False
 
     # Determine image type
-    if not os.path.os.path.exists(in_fp):
-        raise Exception(f"Input file path: {in_fp} does not exist.")
+    if not os.path.os.path.exists(fname):
+        raise Exception(f"Input file path: {fname} does not exist.")
     
-    fname = os.path.os.path.basename(in_fp)
+    fname = os.path.os.path.basename(fname)
     exts = fname.split('.')[1:]
     
     if len(exts) == 2:
@@ -686,12 +695,12 @@ def read_uavsar(in_fp, ann_fp=None, linear_to_dB=False):
     # Find annotation file in same directory if user did not provide one
     if not ann_fp:
         if ext == 'grd' or ext == 'slc':
-            ann_fp = in_fp.replace(f'.{type}', '').replace(f'.{ext}', '.ann')
+            ann_fp = fname.replace(f'.{type}', '').replace(f'.{ext}', '.ann')
         else:
-            ann_fp = in_fp.replace(f'.{ext}', '.ann')
+            ann_fp = fname.replace(f'.{ext}', '.ann')
         if not os.path.os.path.exists(ann_fp):
-            search_base = '_'.join(os.path.os.path.basename(in_fp).split('.')[0].split('_')[:4])
-            search_full = os.path.os.path.join(os.path.dirname(in_fp), f'*{search_base}*.ann')
+            search_base = '_'.join(os.path.os.path.basename(fname).split('.')[0].split('_')[:4])
+            search_full = os.path.os.path.join(os.path.dirname(fname), f'*{search_base}*.ann')
             ann_search = glob(search_full)
             if len(ann_search) == 1:
                 ann_fp = ann_search[0]
@@ -728,7 +737,7 @@ def read_uavsar(in_fp, ann_fp=None, linear_to_dB=False):
             if type == 'hgt':
                 search = type
             else:
-                polarization = os.path.os.path.basename(in_fp).split('_')[5][-4:]
+                polarization = os.path.os.path.basename(fname).split('_')[5][-4:]
                 if polarization == 'HHHH' or polarization == 'HVHV' or polarization == 'VVVV':
                         search = f'{type}_pwr'
                 else:
@@ -765,7 +774,7 @@ def read_uavsar(in_fp, ann_fp=None, linear_to_dB=False):
         dtype = np.float32
 
     # Read in binary data
-    data = np.fromfile(in_fp, dtype = dtype)
+    data = np.fromfile(fname, dtype = dtype)
 
     # Reshape it to match what the text file says the image is
     if type == 'slope':
