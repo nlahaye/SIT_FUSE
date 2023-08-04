@@ -1,0 +1,12 @@
+BootStrap: docker
+From: nvcr.io/nvidia/pytorch:22.12-py3
+
+
+%post
+    mkdir /app
+    cd /app
+    pip install netCDF4 ray tabulate "ray[tune]" GPUtil geopandas geocube dask_ml zarr
+    chmod -R a+rwx /app
+
+
+
