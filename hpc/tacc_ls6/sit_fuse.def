@@ -7,9 +7,20 @@ From: nvcr.io/nvidia/pytorch:22.12-py3
 
 
 %post
+    ln -fs /usr/share/zoneinfo/UTC /etc/localtime; DEBIAN_FRONTEND=noninteractive; apt-get update
+    DEBIAN_FRONTEND=noninteractive; apt-get --assume-yes install software-properties-common
+    DEBIAN_FRONTEND=noninteractive; add-apt-repository ppa:ubuntugis/ppa
+    DEBIAN_FRONTEND=noninteractive; apt-get update
+    DEBIAN_FRONTEND=noninteractive; apt-get --assume-yes install gdal-bin
+    DEBIAN_FRONTEND=noninteractive; apt-get --assume-yes install libgdal-dev
+    export CPLUS_INCLUDE_PATH=/usr/include/gdal
+    export C_INCLUDE_PATH=/usr/include/gdal
+    pip install GDAL==3.3.2
+    pip install GPUtil geopandas geocube dask_ml zarr
+    pip install netCDF4 ray tabulate "ray[tune]"
+
     mkdir /app
     cd /app
-    pip install netCDF4 ray tabulate "ray[tune]" GPUtil geopandas geocube dask_ml zarr
     chmod -R a+rwx /app
 
 

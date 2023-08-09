@@ -1,0 +1,15 @@
+BootStrap: docker-archive
+From: /work/99999/nlahaye/ls6/SIT_FUSE/hpc/tacc_ls6/sit_fuse.tar
+
+%runscript
+  /app/rundir/SIT_FUSE/hpc/tacc_ls6/run_sit_fuse_heir.sh
+
+
+%post
+    pip install scikit-image diplib pyresample
+
+    cd /app
+    chmod -R a+rwx /app
+
+
+

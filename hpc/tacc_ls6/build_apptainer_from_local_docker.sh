@@ -2,7 +2,7 @@
 
 image=sit_fuse
 
-apptainer build ${image}.sif ${image}.def
+apptainer build ${image}.sif ${image}_from_local_docker.def
 
 if [ $? -ne 0 ] ; then
     echo "Trouble with apptainer build"

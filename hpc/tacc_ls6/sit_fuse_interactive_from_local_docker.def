@@ -1,0 +1,12 @@
+BootStrap: docker-archive
+From: sit_fuse.tar
+
+
+%post
+    pip install scikit-image diplib pyresample
+
+    cd /app
+    chmod -R a+rwx /app
+
+
+
