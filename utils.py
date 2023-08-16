@@ -24,6 +24,8 @@ matplotlib.use('agg')
 import matplotlib.pyplot as plt
 from CMAP import CMAP, CMAP_COLORS
 from glob import glob
+from scipy.ndimage import uniform_filter
+from scipy.ndimage import variance
 
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
 from dask_ml.preprocessing import StandardScaler as DaskStandardScaler
@@ -650,12 +652,23 @@ def get_read_func(data_reader):
     #TODO return BCDP reader
     return None
 
-def read_uavsar(fname, **kwargs):
+def lee_filter(img, size):
+    img_mean = uniform_filter(img, (size, size))
+    img_sqr_mean = uniform_filter(img**2, (size, size))
+    img_variance = img_sqr_mean - img_mean**2
+
+    overall_variance = variance(img)
+
+    img_weights = img_variance / (img_variance + overall_variance)
+    img_output = img_mean + img_weights * (img - img_mean)
+    return img_output
+
+def read_uavsar(in_fp, ann_fp=None, linear_to_dB=False):
     """
     Reads UAVSAR data.
 
     Args:
-        fname (string): path to input binary file
+        in_fp (string): path to input binary file
         ann_fp (string): path to UAVSAR annotation file
         linear_to_dB (bool): convert linear amplitude units to decibels
 
@@ -667,21 +680,12 @@ def read_uavsar(fname, **kwargs):
         type: the type of inputted file
         search: the search term for relevant values inside the annotation dictionary
     """
-    
-    if "ann_fp" in kwargs:
-        ann_fp = kwargs["ann_fp"]
-    else:
-        ann_fp = None
-    if "linear_to_dB" in kwargs:
-        linear_to_dB = kwargs["linear_to_dB"]
-    else:
-        linear_to_dB = False
 
     # Determine image type
-    if not os.path.os.path.exists(fname):
-        raise Exception(f"Input file path: {fname} does not exist.")
+    if not os.path.os.path.exists(in_fp):
+        raise Exception(f"Input file path: {in_fp} does not exist.")
     
-    fname = os.path.os.path.basename(fname)
+    fname = os.path.os.path.basename(in_fp)
     exts = fname.split('.')[1:]
     
     if len(exts) == 2:
@@ -695,12 +699,12 @@ def read_uavsar(fname, **kwargs):
     # Find annotation file in same directory if user did not provide one
     if not ann_fp:
         if ext == 'grd' or ext == 'slc':
-            ann_fp = fname.replace(f'.{type}', '').replace(f'.{ext}', '.ann')
+            ann_fp = in_fp.replace(f'.{type}', '').replace(f'.{ext}', '.ann')
         else:
-            ann_fp = fname.replace(f'.{ext}', '.ann')
+            ann_fp = in_fp.replace(f'.{ext}', '.ann')
         if not os.path.os.path.exists(ann_fp):
-            search_base = '_'.join(os.path.os.path.basename(fname).split('.')[0].split('_')[:4])
-            search_full = os.path.os.path.join(os.path.dirname(fname), f'*{search_base}*.ann')
+            search_base = '_'.join(os.path.os.path.basename(in_fp).split('.')[0].split('_')[:4])
+            search_full = os.path.os.path.join(os.path.dirname(in_fp), f'*{search_base}*.ann')
             ann_search = glob(search_full)
             if len(ann_search) == 1:
                 ann_fp = ann_search[0]
@@ -737,7 +741,7 @@ def read_uavsar(fname, **kwargs):
             if type == 'hgt':
                 search = type
             else:
-                polarization = os.path.os.path.basename(fname).split('_')[5][-4:]
+                polarization = os.path.os.path.basename(in_fp).split('_')[5][-4:]
                 if polarization == 'HHHH' or polarization == 'HVHV' or polarization == 'VVVV':
                         search = f'{type}_pwr'
                 else:
@@ -774,7 +778,7 @@ def read_uavsar(fname, **kwargs):
         dtype = np.float32
 
     # Read in binary data
-    data = np.fromfile(fname, dtype = dtype)
+    data = np.fromfile(in_fp, dtype = dtype)
 
     # Reshape it to match what the text file says the image is
     if type == 'slope':
@@ -796,6 +800,13 @@ def read_uavsar(fname, **kwargs):
         data[data==-10000] = np.nan
         if linear_to_dB:
             data = 10.0 * np.log10(data)
+            
+    # Apply 5x5 Lee Speckle Filter
+    if not anc and type != 'hgt':
+        if com:
+            data = lee_filter(np.real(data), 5) + np.imag(data)
+        else:
+            lee_filter(data, 5)
 
     if slopes:
         return slopes, desc, type, search
