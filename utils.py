@@ -602,7 +602,7 @@ def get_lat_lon(fname):
     return lonLat
 
 
-def read_uavsar(in_fps, ann_fps, pol_modes=None, linear_to_dB=False):
+def read_uavsar(in_fps, **kwargs):
     """
     Reads UAVSAR data. It is assumed that all inputted data is of the same file format.
 
@@ -623,6 +623,15 @@ def read_uavsar(in_fps, ann_fps, pol_modes=None, linear_to_dB=False):
     """
     
     from preprocessing.misc_utils import lee_filter
+    
+    if "ann_fps" in kwargs:
+        ann_fps = list(kwargs["ann_fps"])
+    if pol_modes in kwargs:
+        pol_modes = list(kwargs["pol_modes"])
+    else:
+        pol_modes = None
+    if "linear_to_dB" in kwargs:
+        linear_to_dB = kwargs["linear_to_dB"]
     
     data = []
     
