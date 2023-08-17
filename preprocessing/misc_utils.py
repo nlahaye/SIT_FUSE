@@ -12,10 +12,8 @@ import zarr
 import numpy as np
 from osgeo import osr, gdal
 from subprocess import DEVNULL, run, Popen, PIPE
-from scipy.ndimage import uniform_filter
-from scipy.ndimage import variance
 
-from utils import numpy_to_torch, read_yaml, get_read_func, get_lat_lon, read_uavsar, read_annotation
+from utils import numpy_to_torch, read_yaml, get_read_func, get_lat_lon, read_uavsar
 
 TIF_RE = "(\w+_\w+_)\w+(_\d+_\d+)_wgs84_fit.tif"
 MODIS_BAND_ORDER = ["vis01", "vis02", "vis03", "vis04", "vis05", "vis06", "vis07",  "bt20", "bt21", "bt22", "bt23", "bt24", "bt25", "vis26", "bt27", "bt28", "bt29", "bt30", "bt31", "bt32", "bt33", "bt34", "bt35", "bt36"]
@@ -46,30 +44,11 @@ def goes_to_geotiff(data_file):
 
 
 
-def lee_filter(img, size):
-    """
-        Lee Speckle Filter for synthetic aperature radar data.
-        
-        img: image data
-        size: size of Lee Speckle Filter window (optimal size is usually 5)
-    """
-    img_mean = uniform_filter(img, (size, size))
-    img_sqr_mean = uniform_filter(img**2, (size, size))
-    img_variance = img_sqr_mean - img_mean**2
-
-    overall_variance = variance(img)
-
-    img_weights = img_variance / (img_variance + overall_variance)
-    img_output = img_mean + img_weights * (img - img_mean)
-    return img_output
-
-
-
 
 def uavsar_to_geotiff(in_fp, out_dir=None, ann_fp=None, linear_to_dB=False):
     
     """
-    Converts a UAVSAR file to geotiff.
+    Converts UAVSAR data to geotiff.
 
     Args:
         in_fp (string): path to input binary file
@@ -93,61 +72,8 @@ def uavsar_to_geotiff(in_fp, out_dir=None, ann_fp=None, linear_to_dB=False):
     if os.path.isfile(out_dir):
         raise Exception('Provide filepath not the directory.')
 
-    data = read_uavsar(in_fp, ann_fp, linear_to_dB)
-    desc = read_annotation(ann_fp)
+    data, desc, type, search = read_uavsar(in_fp, ann_fp, linear_to_dB)
 
-    fname = os.path.os.path.basename(in_fp)
-    exts = fname.split('.')[1:]
-
-    # Terribly innefficient reuse of code from read_uavsar. Need to rewrite.
-    
-    if len(exts) == 2:
-        ext = exts[1]
-        type = exts[0]
-    elif len(exts) == 1:
-        type = ext = exts[0]
-    else:
-        raise ValueError('Unable to parse extensions')
-
-    # Check for slant range files and ancillary files
-    anc = None
-    if type == 'slope' or type == 'inc':
-        anc = True
-
-    if 'start time of acquisition for pass 1' in desc.keys():
-            mode = 'insar'
-            raise Exception('INSAR data currently not supported.')
-    else:
-        mode = 'polsar'
-
-    # Determine the correct file typing for searching data dictionary
-    if not anc:
-        if mode == 'polsar':
-            if type == 'hgt':
-                search = type
-            else:
-                polarization = os.path.os.path.basename(in_fp).split('_')[5][-4:]
-                if polarization == 'HHHH' or polarization == 'HVHV' or polarization == 'VVVV':
-                        search = f'{type}_pwr'
-                else:
-                    search = f'{type}_phase'
-                type = polarization
-
-        elif mode == 'insar':
-            if ext == 'grd':
-                if type == 'int':
-                    search = f'grd_phs'
-                else:
-                    search = 'grd'
-            else:
-                if type == 'int':
-                    search = 'slt_phs'
-                else:
-                    search = 'slt'
-            pass
-    else:
-        search = type
-            
     dtype = data.dtype
     if dtype is np.complex64:
         bands = 2
