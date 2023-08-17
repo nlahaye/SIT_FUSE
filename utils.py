@@ -24,8 +24,7 @@ matplotlib.use('agg')
 import matplotlib.pyplot as plt
 from CMAP import CMAP, CMAP_COLORS
 from glob import glob
-from scipy.ndimage import uniform_filter
-from scipy.ndimage import variance
+from preprocessing.misc_utils import lee_filter
 
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
 from dask_ml.preprocessing import StandardScaler as DaskStandardScaler
@@ -604,6 +603,230 @@ def get_lat_lon(fname):
     return lonLat
 
 
+def read_uavsar(in_fps, ann_fps, linear_to_dB=False):
+    """
+    Reads UAVSAR data. It is assumed that all inputted data is of the same file format.
+
+    Args:
+        in_fps (string): list of input binary file paths
+        ann_fps (string): list of UAVSAR annotation file paths
+        linear_to_dB (bool): convert linear amplitude units to decibels
+
+    Returns:
+        (data, desc, type, search): tuple containing information about the file
+
+        data: image data or list of image data of floats or complex values, or dict containing two arrays of slopes (north, east)
+        desc: the dictionary generated from the annotation file
+        type: the type of inputted file
+        search: the search term for relevant values inside the annotation dictionary
+    """
+    
+    data = []
+    
+    # print("Reading UAVSAR files...")
+    
+    for in_fp in in_fps:
+        if not os.path.os.path.exists(in_fp):
+            raise Exception(f"Failed to find file: {in_fp}")
+        fname = os.path.basename(in_fp)
+        id = "_".join(fname.split("_")[0:4])
+        # print(f"file: {in_fp}")
+        # print(f"match id: {id}")
+        ann_fp = None
+        for ann in ann_fps:
+            if id in os.path.basename(ann):
+                ann_fp = ann
+        if not ann_fp:
+            raise Exception(f"File {fname} does not have an associated annotation file.")
+        # print(f"matching ann file: {ann_fp}")
+    
+        exts = fname.split('.')[1:]
+
+        if len(exts) == 2:
+            ext = exts[1]
+            type = exts[0]
+        elif len(exts) == 1:
+            type = ext = exts[0]
+        else:
+            raise ValueError('Unable to parse extensions')
+        
+        # # Find annotation file in same directory if user did not provide one
+        # if not ann_fp:
+        #     if ext == 'grd' or ext == 'slc':
+        #         ann_fp = in_fp.replace(f'.{type}', '').replace(f'.{ext}', '.ann')
+        #     else:
+        #         ann_fp = in_fp.replace(f'.{ext}', '.ann')
+        #     if not os.path.os.path.exists(ann_fp):
+        #         search_base = '_'.join(os.path.os.path.basename(in_fp).split('.')[0].split('_')[:4])
+        #         search_full = os.path.os.path.join(os.path.dirname(in_fp), f'*{search_base}*.ann')
+        #         ann_search = glob(search_full)
+        #         if len(ann_search) == 1:
+        #             ann_fp = ann_search[0]
+        #         else:
+        #             raise Exception(f"No ann file or multiple ann files found in directory {search_full}. Please specify ann filepath.")
+        #     else:
+        #         raise Exception(f"No annotation file path specificed. Using {ann_fp}.")
+        
+        # Check for compatible extensions
+        if type == 'zip':
+            raise Exception('Cannot convert zipped directories. Unzip first.')
+        if type == 'dat' or type == 'kmz' or type == 'kml' or type == 'png' or type == 'tif':
+            raise Exception(f"Cannot handle {type} products")
+        if type == 'ann':
+            raise Exception('Cannot convert annotation files.')
+            
+        # Check for slant range files and ancillary files
+        anc = None
+        if type == 'slope' or type == 'inc':
+            anc = True
+
+        # Read in annotation file
+        desc = read_annotation(ann_fp)
+
+        if 'start time of acquisition for pass 1' in desc.keys():
+            mode = 'insar'
+            raise Exception('INSAR data currently not supported.')
+        else:
+            mode = 'polsar'
+
+        # Determine the correct file typing for searching data dictionary
+        if not anc:
+            if mode == 'polsar':
+                if type == 'hgt':
+                    search = type
+                else:
+                    polarization = os.path.os.path.basename(in_fp).split('_')[5][-4:]
+                    if polarization == 'HHHH' or polarization == 'HVHV' or polarization == 'VVVV':
+                            search = f'{type}_pwr'
+                    else:
+                        search = f'{type}_phase'
+                    type = polarization
+
+            elif mode == 'insar':
+                if ext == 'grd':
+                    if type == 'int':
+                        search = f'grd_phs'
+                    else:
+                        search = 'grd'
+                else:
+                    if type == 'int':
+                        search = 'slt_phs'
+                    else:
+                        search = 'slt'
+                pass
+        else:
+            search = type
+
+        # Pull the appropriate values from our annotation dictionary
+        nrow = desc[f'{search}.set_rows']['value']
+        ncol = desc[f'{search}.set_cols']['value']
+
+        # Set up datatypes
+        com_des = desc[f'{search}.val_frmt']['value']
+        com = False
+        if 'COMPLEX' in com_des:                                    
+            com = True
+        if com:
+            dtype = np.complex64
+        else:
+            dtype = np.float32
+
+        # Read in binary data
+        dat = np.fromfile(in_fp, dtype = dtype)
+
+        # Change zeros and -10,000 to nans and convert linear units to dB if specified
+        if com:
+            dat[dat==0+0*1j] = np.nan + np.nan * 1j
+            if linear_to_dB:
+                dat = 10.0 * np.log10(np.abs(np.real(dat))) + np.imag(dat) * 1j
+        else:
+            dat[dat==0] = np.nan
+            dat[dat==-10000] = np.nan
+            if linear_to_dB:
+                dat = 10.0 * np.log10(dat)
+                
+        # Reshape it to match what the text file says the image is
+        if type == 'slope':
+            slopes = {}
+            slopes['east'] = dat[::2].reshape(nrow, ncol)
+            slopes['north'] = dat[1::2].reshape(nrow, ncol)
+            dat = slopes
+        else:
+            slopes = None
+            dat = dat.reshape(nrow, ncol)
+                
+        # Apply 5x5 Lee Speckle Filter
+        if not anc and type != 'hgt':
+            if com:
+                dat = lee_filter(np.real(dat), 5) + np.imag(dat)
+            else:
+                lee_filter(dat, 5)
+
+        if len(in_fps) == 1:
+            return dat
+        else:
+            data.append(dat)
+            
+        dat = None
+    
+    return data
+
+
+def read_annotation(ann_file):
+    """
+    Reads a UAVSAR annotation file.
+
+    Args:
+        ann_file: path to the annotation file
+
+    Returns:
+        data: a dictionary of the annotation's contents, 
+            data[key] = {'value': value, 'units': units, 'comment': comment}
+    """
+    with open(ann_file) as fp:
+        lines = fp.readlines()
+        fp.close()
+    data = {}
+
+    # loop through the data and parse
+    for line in lines:
+
+        # Filter out all comments and remove any line returns
+        info = line.strip().split(';')
+        comment = info[-1].strip().lower()
+        info = info[0]
+        
+        # Ignore empty strings
+        if info and "=" in info:
+            d = info.strip().split('=')
+            name, value = d[0], d[1]
+            name_split = name.split('(')
+            key = name_split[0].strip().lower()
+            
+            # Isolate units encapsulated between '(' and ')'
+            if len(name_split) > 1:
+                lidx = name_split[-1].find('(') + 1
+                ridx = name_split[-1].find(')')
+                units = name_split[-1][lidx:ridx]
+            else:
+                units = None
+
+            value = value.strip()
+
+            # Cast the values that can be to numbers ###
+            if value.strip('-').replace('.', '').isnumeric():
+                if '.' in value:
+                    value = float(value)
+                else:
+                    value = int(value)
+
+            # Assign each entry as a dictionary with value and units
+            data[key] = {'value': value, 'units': units, 'comment': comment}
+
+    return data
+
+
+
 #TODO worldview
 def get_read_func(data_reader):
     if data_reader == "emit":
@@ -651,218 +874,3 @@ def get_read_func(data_reader):
    
     #TODO return BCDP reader
     return None
-
-def lee_filter(img, size):
-    img_mean = uniform_filter(img, (size, size))
-    img_sqr_mean = uniform_filter(img**2, (size, size))
-    img_variance = img_sqr_mean - img_mean**2
-
-    overall_variance = variance(img)
-
-    img_weights = img_variance / (img_variance + overall_variance)
-    img_output = img_mean + img_weights * (img - img_mean)
-    return img_output
-
-def read_uavsar(in_fp, ann_fp=None, linear_to_dB=False):
-    """
-    Reads UAVSAR data.
-
-    Args:
-        in_fp (string): path to input binary file
-        ann_fp (string): path to UAVSAR annotation file
-        linear_to_dB (bool): convert linear amplitude units to decibels
-
-    Returns:
-        (data, desc, type, search): tuple containing information about the file
-
-        data: image array of floats or complex values, or dict containing two arrays of slopes (north, east)
-        desc: the dictionary generated from the annotation file
-        type: the type of inputted file
-        search: the search term for relevant values inside the annotation dictionary
-    """
-
-    # Determine image type
-    if not os.path.os.path.exists(in_fp):
-        raise Exception(f"Input file path: {in_fp} does not exist.")
-    
-    fname = os.path.os.path.basename(in_fp)
-    exts = fname.split('.')[1:]
-    
-    if len(exts) == 2:
-        ext = exts[1]
-        type = exts[0]
-    elif len(exts) == 1:
-        type = ext = exts[0]
-    else:
-        raise ValueError('Unable to parse extensions')
-    
-    # Find annotation file in same directory if user did not provide one
-    if not ann_fp:
-        if ext == 'grd' or ext == 'slc':
-            ann_fp = in_fp.replace(f'.{type}', '').replace(f'.{ext}', '.ann')
-        else:
-            ann_fp = in_fp.replace(f'.{ext}', '.ann')
-        if not os.path.os.path.exists(ann_fp):
-            search_base = '_'.join(os.path.os.path.basename(in_fp).split('.')[0].split('_')[:4])
-            search_full = os.path.os.path.join(os.path.dirname(in_fp), f'*{search_base}*.ann')
-            ann_search = glob(search_full)
-            if len(ann_search) == 1:
-                ann_fp = ann_search[0]
-            else:
-                raise Exception(f"No ann file or multiple ann files found in directory {search_full}. Please specify ann filepath.")
-        else:
-            raise Exception(f"No annotation file path specificed. Using {ann_fp}.")
-    
-    # Check for compatible extensions
-    if type == 'zip':
-        raise Exception('Cannot convert zipped directories. Unzip first.')
-    if type == 'dat' or type == 'kmz' or type == 'kml' or type == 'png' or type == 'tif':
-        raise Exception(f"Cannot handle {type} products")
-    if type == 'ann':
-        raise Exception('Cannot convert annotation files.')
-        
-    # Check for slant range files and ancillary files
-    anc = None
-    if type == 'slope' or type == 'inc':
-        anc = True
-
-    # Read in annotation file
-    desc = read_annotation(ann_fp)
-
-    if 'start time of acquisition for pass 1' in desc.keys():
-        mode = 'insar'
-        raise Exception('INSAR data currently not supported.')
-    else:
-        mode = 'polsar'
-
-    # Determine the correct file typing for searching data dictionary
-    if not anc:
-        if mode == 'polsar':
-            if type == 'hgt':
-                search = type
-            else:
-                polarization = os.path.os.path.basename(in_fp).split('_')[5][-4:]
-                if polarization == 'HHHH' or polarization == 'HVHV' or polarization == 'VVVV':
-                        search = f'{type}_pwr'
-                else:
-                    search = f'{type}_phase'
-                type = polarization
-
-        elif mode == 'insar':
-            if ext == 'grd':
-                if type == 'int':
-                    search = f'grd_phs'
-                else:
-                    search = 'grd'
-            else:
-                if type == 'int':
-                    search = 'slt_phs'
-                else:
-                    search = 'slt'
-            pass
-    else:
-        search = type
-
-    # Pull the appropriate values from our annotation dictionary
-    nrow = desc[f'{search}.set_rows']['value']
-    ncol = desc[f'{search}.set_cols']['value']
-
-    # Set up datatypes
-    com_des = desc[f'{search}.val_frmt']['value']
-    com = False
-    if 'COMPLEX' in com_des:                                    
-        com = True
-    if com:
-        dtype = np.complex64
-    else:
-        dtype = np.float32
-
-    # Read in binary data
-    data = np.fromfile(in_fp, dtype = dtype)
-
-    # Reshape it to match what the text file says the image is
-    if type == 'slope':
-        data[data==-10000] = np.nan
-        slopes = {}
-        slopes['east'] = data[::2].reshape(nrow, ncol)
-        slopes['north'] = data[1::2].reshape(nrow, ncol)
-    else:
-        slopes = None
-        data = data.reshape(nrow, ncol)
-
-    # Change zeros and -10,000 to nans and convert linear units to dB if specified
-    if com:
-        data[data==0+0*1j] = np.nan + np.nan * 1j
-        if linear_to_dB:
-            data = 10.0 * np.log10(np.abs(np.real(data))) + np.imag(data) * 1j
-    else:
-        data[data==0] = np.nan
-        data[data==-10000] = np.nan
-        if linear_to_dB:
-            data = 10.0 * np.log10(data)
-            
-    # Apply 5x5 Lee Speckle Filter
-    if not anc and type != 'hgt':
-        if com:
-            data = lee_filter(np.real(data), 5) + np.imag(data)
-        else:
-            lee_filter(data, 5)
-
-    if slopes:
-        return slopes, desc, type, search
-    else:
-        return data, desc, type, search
-
-
-def read_annotation(ann_file):
-    """
-    Reads a UAVSAR annotation file.
-
-    Args:
-        ann_file: path to the annotation file
-
-    Returns:
-        data: a dictionary of the annotation's contents, 
-              data[key] = {'value': value, 'units': units, 'comment': comment}
-    """
-    with open(ann_file) as fp:
-        lines = fp.readlines()
-        fp.close()
-    data = {}
-
-    # loop through the data and parse
-    for line in lines:
-
-        # Filter out all comments and remove any line returns
-        info = line.strip().split(';')
-        comment = info[-1].strip().lower()
-        info = info[0]
-        
-        # Ignore empty strings
-        if info and "=" in info:
-            d = info.strip().split('=')
-            name, value = d[0], d[1]
-            name_split = name.split('(')
-            key = name_split[0].strip().lower()
-            
-            # Isolate units encapsulated between '(' and ')'
-            if len(name_split) > 1:
-                lidx = name_split[-1].find('(') + 1
-                ridx = name_split[-1].find(')')
-                units = name_split[-1][lidx:ridx]
-            else:
-                units = None
-
-            value = value.strip()
-
-            # Cast the values that can be to numbers ###
-            if value.strip('-').replace('.', '').isnumeric():
-                if '.' in value:
-                    value = float(value)
-                else:
-                    value = int(value)
-
-            # Assign each entry as a dictionary with value and units
-            data[key] = {'value': value, 'units': units, 'comment': comment}
-
-    return data
