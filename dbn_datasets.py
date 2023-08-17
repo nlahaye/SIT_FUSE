@@ -99,9 +99,9 @@ class DBNDataset(torch.utils.data.Dataset):
 
 		#Setup subsetting	  
 		if self.subset is None:
-   			self.subset = 1
+			self.subset = 1
 		self.current_subset = -1
-	
+
 		self.next_subset()
 
 

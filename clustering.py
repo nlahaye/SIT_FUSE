@@ -263,9 +263,9 @@ class RSClustering(object):
     
                     num_train_ex = int(self.train_sample_size/len(train_data))
                     for i in range(len(train_indices)):
-                        percent = train_indices[i].shape[0] / nvals
+                        percentage_of_dataset = train_indices[i].shape[0] / nvals
                         num_train_exs_of_type = round(percentage_of_dataset * num_train_ex)
-                        tmp = np.random.choice(train_inds[i], size=num_train_exs_of_type, replace=False)             
+                        tmp = np.random.choice(train_indices[i], size=num_train_exs_of_type, replace=False)             
              
                         if trn2 is None:
                             trn2 = da.concatenate(trn[tmp])
