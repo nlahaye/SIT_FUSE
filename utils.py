@@ -24,7 +24,6 @@ matplotlib.use('agg')
 import matplotlib.pyplot as plt
 from CMAP import CMAP, CMAP_COLORS
 from glob import glob
-from preprocessing.misc_utils import lee_filter
 
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
 from dask_ml.preprocessing import StandardScaler as DaskStandardScaler
@@ -623,6 +622,8 @@ def read_uavsar(in_fps, ann_fps, pol_modes=None, linear_to_dB=False):
         search: the search term for relevant values inside the annotation dictionary
     """
     
+    from preprocessing.misc_utils import lee_filter
+    
     data = []
     
     print("Reading UAVSAR files...")
@@ -749,7 +750,7 @@ def read_uavsar(in_fps, ann_fps, pol_modes=None, linear_to_dB=False):
         else:
             slopes = None
             dat = dat.reshape(nrow, ncol)
-                
+        
         # Apply 5x5 Lee Speckle Filter
         if not anc and type != 'hgt':
             if com:
