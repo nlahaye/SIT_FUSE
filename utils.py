@@ -626,7 +626,7 @@ def read_uavsar(in_fps, **kwargs):
     
     if "ann_fps" in kwargs:
         ann_fps = list(kwargs["ann_fps"])
-    if pol_modes in kwargs:
+    if "pol_modes" in kwargs:
         pol_modes = list(kwargs["pol_modes"])
     else:
         pol_modes = None
