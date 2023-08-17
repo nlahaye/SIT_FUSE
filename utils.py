@@ -607,8 +607,8 @@ def read_uavsar(in_fps, **kwargs):
     Reads UAVSAR data. It is assumed that all inputted data is of the same file format.
 
     Args:
-        in_fps (list(string)):  list of input binary file paths
-        ann_fps (list(string)): list of UAVSAR annotation file paths
+        in_fps (list(string) or string):  list of strings or string of input binary file paths
+        ann_fps (list(string) or string): list of or string of UAVSAR annotation file paths
         pol_modes (list(string)):   list of allowed polarization modes 
                                     to filter for (e.g. ['HHHH', 'HVHV', 'VVVV'])
         linear_to_dB (bool):    convert linear amplitude units to decibels
@@ -625,15 +625,23 @@ def read_uavsar(in_fps, **kwargs):
     from preprocessing.misc_utils import lee_filter
     
     if "ann_fps" in kwargs:
-        ann_fps = list(kwargs["ann_fps"])
+        ann_fps = kwargs["ann_fps"]
     if "pol_modes" in kwargs:
         pol_modes = list(kwargs["pol_modes"])
     else:
         pol_modes = None
     if "linear_to_dB" in kwargs:
         linear_to_dB = kwargs["linear_to_dB"]
+    else:
+        linear_to_dB = False
+
+    if isinstance(in_fps, str):
+        in_fps = [in_fps]
+    if isinstance(ann_fps, str):
+        ann_fps = [ann_fps]
     
     data = []
+    in_fps = list(in_fps)
     
     print("Reading UAVSAR files...")
     
@@ -777,7 +785,6 @@ def read_uavsar(in_fps, **kwargs):
         dat = None
     
     data = np.array(data)
-    print(data.shape)
     return data
 
 
