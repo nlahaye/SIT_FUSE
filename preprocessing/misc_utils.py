@@ -15,7 +15,8 @@ from subprocess import DEVNULL, run, Popen, PIPE
 from scipy.ndimage import uniform_filter
 from scipy.ndimage import variance
 
-from utils import numpy_to_torch, read_yaml, get_read_func, get_lat_lon, read_uavsar, read_annotation
+from utils import numpy_to_torch, read_yaml, get_read_func, get_lat_lon
+# from utils import read_uavsar, read_annotation
 
 TIF_RE = "(\w+_\w+_)\w+(_\d+_\d+)_wgs84_fit.tif"
 MODIS_BAND_ORDER = ["vis01", "vis02", "vis03", "vis04", "vis05", "vis06", "vis07",  "bt20", "bt21", "bt22", "bt23", "bt24", "bt25", "vis26", "bt27", "bt28", "bt29", "bt30", "bt31", "bt32", "bt33", "bt34", "bt35", "bt36"]
@@ -66,152 +67,152 @@ def lee_filter(img, size):
 
 
 
-def uavsar_to_geotiff(in_fp, out_dir=None, ann_fp=None, linear_to_dB=False):
+# def uavsar_to_geotiff(in_fp, out_dir=None, ann_fp=None, linear_to_dB=False):
     
-    """
-    Converts a UAVSAR file to geotiff.
+#     """
+#     Converts a UAVSAR file to geotiff.
 
-    Args:
-        in_fp (string): path to input binary file
-        out_dir (string): directory to save geotiff in
-        ann_fp (string): path to UAVSAR annotation file
-        linear_to_dB (bool): convert linear amplitude units to decibels
+#     Args:
+#         in_fp (string): path to input binary file
+#         out_dir (string): directory to save geotiff in
+#         ann_fp (string): path to UAVSAR annotation file
+#         linear_to_dB (bool): convert linear amplitude units to decibels
 
-    Returns:
-        (data, desc, type, out_fp): tuple containing information about the file
+#     Returns:
+#         (data, desc, type, out_fp): tuple containing information about the file
 
-        data: image array of floats or complex values, or dict containing two arrays of slopes (north, east)
-        desc: the dictionary generated from the annotation file
-        type: the type of inputted file
-        out_fp: the file path of the generated tiff
-    """
+#         data: image array of floats or complex values, or dict containing two arrays of slopes (north, east)
+#         desc: the dictionary generated from the annotation file
+#         type: the type of inputted file
+#         out_fp: the file path of the generated tiff
+#     """
 
-    if not out_dir:
-        out_dir = os.path.dirname(in_fp)
-    out_fp = os.path.join(out_dir, os.path.basename(in_fp)) + '.tiff'
+#     if not out_dir:
+#         out_dir = os.path.dirname(in_fp)
+#     out_fp = os.path.join(out_dir, os.path.basename(in_fp)) + '.tiff'
 
-    if os.path.isfile(out_dir):
-        raise Exception('Provide filepath not the directory.')
+#     if os.path.isfile(out_dir):
+#         raise Exception('Provide filepath not the directory.')
 
-    data = read_uavsar(in_fp, ann_fp, linear_to_dB)
-    desc = read_annotation(ann_fp)
+#     data = read_uavsar(in_fp, ann_fp, linear_to_dB)
+#     desc = read_annotation(ann_fp)
 
-    fname = os.path.os.path.basename(in_fp)
-    exts = fname.split('.')[1:]
+#     fname = os.path.os.path.basename(in_fp)
+#     exts = fname.split('.')[1:]
 
-    # Terribly innefficient reuse of code from read_uavsar. Need to rewrite.
+#     # Terribly innefficient reuse of code from read_uavsar. Need to rewrite.
     
-    if len(exts) == 2:
-        ext = exts[1]
-        type = exts[0]
-    elif len(exts) == 1:
-        type = ext = exts[0]
-    else:
-        raise ValueError('Unable to parse extensions')
+#     if len(exts) == 2:
+#         ext = exts[1]
+#         type = exts[0]
+#     elif len(exts) == 1:
+#         type = ext = exts[0]
+#     else:
+#         raise ValueError('Unable to parse extensions')
 
-    # Check for slant range files and ancillary files
-    anc = None
-    if type == 'slope' or type == 'inc':
-        anc = True
+#     # Check for slant range files and ancillary files
+#     anc = None
+#     if type == 'slope' or type == 'inc':
+#         anc = True
 
-    if 'start time of acquisition for pass 1' in desc.keys():
-            mode = 'insar'
-            raise Exception('INSAR data currently not supported.')
-    else:
-        mode = 'polsar'
+#     if 'start time of acquisition for pass 1' in desc.keys():
+#             mode = 'insar'
+#             raise Exception('INSAR data currently not supported.')
+#     else:
+#         mode = 'polsar'
 
-    # Determine the correct file typing for searching data dictionary
-    if not anc:
-        if mode == 'polsar':
-            if type == 'hgt':
-                search = type
-            else:
-                polarization = os.path.os.path.basename(in_fp).split('_')[5][-4:]
-                if polarization == 'HHHH' or polarization == 'HVHV' or polarization == 'VVVV':
-                        search = f'{type}_pwr'
-                else:
-                    search = f'{type}_phase'
-                type = polarization
+#     # Determine the correct file typing for searching data dictionary
+#     if not anc:
+#         if mode == 'polsar':
+#             if type == 'hgt':
+#                 search = type
+#             else:
+#                 polarization = os.path.os.path.basename(in_fp).split('_')[5][-4:]
+#                 if polarization == 'HHHH' or polarization == 'HVHV' or polarization == 'VVVV':
+#                         search = f'{type}_pwr'
+#                 else:
+#                     search = f'{type}_phase'
+#                 type = polarization
 
-        elif mode == 'insar':
-            if ext == 'grd':
-                if type == 'int':
-                    search = f'grd_phs'
-                else:
-                    search = 'grd'
-            else:
-                if type == 'int':
-                    search = 'slt_phs'
-                else:
-                    search = 'slt'
-            pass
-    else:
-        search = type
+#         elif mode == 'insar':
+#             if ext == 'grd':
+#                 if type == 'int':
+#                     search = f'grd_phs'
+#                 else:
+#                     search = 'grd'
+#             else:
+#                 if type == 'int':
+#                     search = 'slt_phs'
+#                 else:
+#                     search = 'slt'
+#             pass
+#     else:
+#         search = type
             
-    dtype = data.dtype
-    if dtype is np.complex64:
-        bands = 2
-    else:
-        bands = 1
+#     dtype = data.dtype
+#     if dtype is np.complex64:
+#         bands = 2
+#     else:
+#         bands = 1
 
-    driver = gdal.GetDriverByName("GTiff")
+#     driver = gdal.GetDriverByName("GTiff")
         
-    # If ground projected image, north up...
-    if type in {'grd', 'slope', 'inc'}: 
-        # Delta latitude and longitude
-        dlat = float(desc[f'{search}.row_mult']['value'])
-        dlon = float(desc[f'{search}.col_mult']['value'])
-        # Upper left corner coordinates
-        lat1 = float(desc[f'{search}.row_addr']['value'])
-        lon1 = float(desc[f'{search}.col_addr']['value'])
+#     # If ground projected image, north up...
+#     if type in {'grd', 'slope', 'inc'}: 
+#         # Delta latitude and longitude
+#         dlat = float(desc[f'{search}.row_mult']['value'])
+#         dlon = float(desc[f'{search}.col_mult']['value'])
+#         # Upper left corner coordinates
+#         lat1 = float(desc[f'{search}.row_addr']['value'])
+#         lon1 = float(desc[f'{search}.col_addr']['value'])
 
-        # Set up geotransform for gdal
-        srs = osr.SpatialReference()
-        # WGS84 Projection, spatial reference using the EPSG code (4326)
-        srs.ImportFromEPSG(4326)
-        t = [lon1, dlon, 0.0, lat1, 0.0, dlat]
+#         # Set up geotransform for gdal
+#         srs = osr.SpatialReference()
+#         # WGS84 Projection, spatial reference using the EPSG code (4326)
+#         srs.ImportFromEPSG(4326)
+#         t = [lon1, dlon, 0.0, lat1, 0.0, dlat]
 
-    if type is 'slope':
-            slope_fps = []
+#     if type is 'slope':
+#             slope_fps = []
             
-            for direction, arr in data.items():
-                slope_fp = out_fp.replace('.tiff',f'.{direction}.tiff')
-                print(f"saving to {slope_fp}.")
-                ds = driver.Create(slope_fp, 
-                                    ysize=arr.shape[0], 
-                                    xsize=arr.shape[1], 
-                                    bands=bands, 
-                                    eType=gdal.GDT_Float32)
-                ds.SetProjection(srs.ExportToWkt())
-                ds.SetGeoTransform(t)
-                ds.GetRasterBand(1).WriteArray(np.abs(data))
-                ds.GetRasterBand(1).SetNoDataValue(np.nan)
-                ds.FlushCache()
-                ds = None
-                slope_fps.append(slope_fp)
+#             for direction, arr in data.items():
+#                 slope_fp = out_fp.replace('.tiff',f'.{direction}.tiff')
+#                 print(f"saving to {slope_fp}.")
+#                 ds = driver.Create(slope_fp, 
+#                                     ysize=arr.shape[0], 
+#                                     xsize=arr.shape[1], 
+#                                     bands=bands, 
+#                                     eType=gdal.GDT_Float32)
+#                 ds.SetProjection(srs.ExportToWkt())
+#                 ds.SetGeoTransform(t)
+#                 ds.GetRasterBand(1).WriteArray(np.abs(data))
+#                 ds.GetRasterBand(1).SetNoDataValue(np.nan)
+#                 ds.FlushCache()
+#                 ds = None
+#                 slope_fps.append(slope_fp)
             
-            return desc, data, type, slope_fps     
-    else:
-        ds = driver.Create(out_fp, 
-                                ysize=data.shape[0], 
-                                xsize=data.shape[1], 
-                                bands=bands, 
-                                eType=gdal.GDT_Float32)
-        if type in {'grd', 'inc'}:
-            ds.SetProjection(srs.ExportToWkt())
-            ds.SetGeoTransform(t)
-        if bands is 2:
-            ds.GetRasterBand(1).WriteArray(np.abs(data))
-            ds.GetRasterBand(1).SetNoDataValue(np.nan)
-            ds.GetRasterBand(2).WriteArray(np.angle(data))
-            ds.GetRasterBand(2).SetNoDataValue(np.nan)
-        else:
-            ds.GetRasterBand(1).WriteArray(data)
-            ds.GetRasterBand(1).SetNoDataValue(np.nan)
+#             return desc, data, type, slope_fps     
+#     else:
+#         ds = driver.Create(out_fp, 
+#                                 ysize=data.shape[0], 
+#                                 xsize=data.shape[1], 
+#                                 bands=bands, 
+#                                 eType=gdal.GDT_Float32)
+#         if type in {'grd', 'inc'}:
+#             ds.SetProjection(srs.ExportToWkt())
+#             ds.SetGeoTransform(t)
+#         if bands is 2:
+#             ds.GetRasterBand(1).WriteArray(np.abs(data))
+#             ds.GetRasterBand(1).SetNoDataValue(np.nan)
+#             ds.GetRasterBand(2).WriteArray(np.angle(data))
+#             ds.GetRasterBand(2).SetNoDataValue(np.nan)
+#         else:
+#             ds.GetRasterBand(1).WriteArray(data)
+#             ds.GetRasterBand(1).SetNoDataValue(np.nan)
     
-    ds.FlushCache() # save tiffs
-    ds = None  # close the dataset
-    return data, desc, type, out_fp
+#     ds.FlushCache() # save tiffs
+#     ds = None  # close the dataset
+#     return data, desc, type, out_fp
 
 
 
