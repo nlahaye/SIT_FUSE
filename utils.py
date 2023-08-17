@@ -603,14 +603,16 @@ def get_lat_lon(fname):
     return lonLat
 
 
-def read_uavsar(in_fps, ann_fps, linear_to_dB=False):
+def read_uavsar(in_fps, ann_fps, pol_modes=None, linear_to_dB=False):
     """
     Reads UAVSAR data. It is assumed that all inputted data is of the same file format.
 
     Args:
-        in_fps (string): list of input binary file paths
-        ann_fps (string): list of UAVSAR annotation file paths
-        linear_to_dB (bool): convert linear amplitude units to decibels
+        in_fps (list(string)):  list of input binary file paths
+        ann_fps (list(string)): list of UAVSAR annotation file paths
+        pol_modes (list(string)):   list of allowed polarization modes 
+                                    to filter for (e.g. ['HHHH', 'HVHV', 'VVVV'])
+        linear_to_dB (bool):    convert linear amplitude units to decibels
 
     Returns:
         (data, desc, type, search): tuple containing information about the file
@@ -623,22 +625,32 @@ def read_uavsar(in_fps, ann_fps, linear_to_dB=False):
     
     data = []
     
-    # print("Reading UAVSAR files...")
+    print("Reading UAVSAR files...")
     
-    for in_fp in in_fps:
-        if not os.path.os.path.exists(in_fp):
-            raise Exception(f"Failed to find file: {in_fp}")
-        fname = os.path.basename(in_fp)
+    # Filter allowed polarization modes
+    if pol_modes:
+        tmp = []
+        for fp in in_fps:
+            if any(mode in os.path.basename(fp) for mode in pol_modes):
+                tmp.append(fp)
+        in_fps = tmp
+    
+    for fp in in_fps:
+        
+        # Locate file and matching annotation
+        if not os.path.os.path.exists(fp):
+            raise Exception(f"Failed to find file: {fp}")
+        fname = os.path.basename(fp)
         id = "_".join(fname.split("_")[0:4])
-        # print(f"file: {in_fp}")
-        # print(f"match id: {id}")
         ann_fp = None
         for ann in ann_fps:
             if id in os.path.basename(ann):
                 ann_fp = ann
         if not ann_fp:
             raise Exception(f"File {fname} does not have an associated annotation file.")
-        # print(f"matching ann file: {ann_fp}")
+        
+        print(f"file: {fp}")
+        print(f"matching ann file: {ann_fp}")
     
         exts = fname.split('.')[1:]
 
@@ -649,23 +661,6 @@ def read_uavsar(in_fps, ann_fps, linear_to_dB=False):
             type = ext = exts[0]
         else:
             raise ValueError('Unable to parse extensions')
-        
-        # # Find annotation file in same directory if user did not provide one
-        # if not ann_fp:
-        #     if ext == 'grd' or ext == 'slc':
-        #         ann_fp = in_fp.replace(f'.{type}', '').replace(f'.{ext}', '.ann')
-        #     else:
-        #         ann_fp = in_fp.replace(f'.{ext}', '.ann')
-        #     if not os.path.os.path.exists(ann_fp):
-        #         search_base = '_'.join(os.path.os.path.basename(in_fp).split('.')[0].split('_')[:4])
-        #         search_full = os.path.os.path.join(os.path.dirname(in_fp), f'*{search_base}*.ann')
-        #         ann_search = glob(search_full)
-        #         if len(ann_search) == 1:
-        #             ann_fp = ann_search[0]
-        #         else:
-        #             raise Exception(f"No ann file or multiple ann files found in directory {search_full}. Please specify ann filepath.")
-        #     else:
-        #         raise Exception(f"No annotation file path specificed. Using {ann_fp}.")
         
         # Check for compatible extensions
         if type == 'zip':
@@ -695,7 +690,7 @@ def read_uavsar(in_fps, ann_fps, linear_to_dB=False):
                 if type == 'hgt':
                     search = type
                 else:
-                    polarization = os.path.os.path.basename(in_fp).split('_')[5][-4:]
+                    polarization = os.path.os.path.basename(fp).split('_')[5][-4:]
                     if polarization == 'HHHH' or polarization == 'HVHV' or polarization == 'VVVV':
                             search = f'{type}_pwr'
                     else:
@@ -732,7 +727,7 @@ def read_uavsar(in_fps, ann_fps, linear_to_dB=False):
             dtype = np.float32
 
         # Read in binary data
-        dat = np.fromfile(in_fp, dtype = dtype)
+        dat = np.fromfile(fp, dtype = dtype)
 
         # Change zeros and -10,000 to nans and convert linear units to dB if specified
         if com:
@@ -763,12 +758,16 @@ def read_uavsar(in_fps, ann_fps, linear_to_dB=False):
                 lee_filter(dat, 5)
 
         if len(in_fps) == 1:
+            dat = np.array(dat)
+            print(dat.shape)
             return dat
         else:
             data.append(dat)
             
         dat = None
     
+    data = np.array(data)
+    print(data.shape)
     return data
 
 
