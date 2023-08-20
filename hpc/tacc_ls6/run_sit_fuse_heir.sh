@@ -1,11 +1,12 @@
 
 #!/bin/bash
 
-eval "$(conda shell.bash hook)"
-export PYTHONPATH=${PYTHONPATH}:$WORK/STI_FUSE/:$WORK/learnergy/
+export PYTHONPATH=${PYTHONPATH}:/app/rundir/SIT_FUSE/:/app/rundir/learnergy/
 export LD_LIBRARY_PATH=${CUDA_HOME}:${LD_LIBRARY_PATH}
 
-torchrun --nnodes=1 --nproc_per_node=1 dbn_learnergy.py --yaml ./config/dbn/modis_volcano_dbn_curiosity.yaml
+which torchrun
+cd /app/rundir/SIT_FUSE/
+torchrun --nnodes=1 --nproc_per_node=1 dbn_learnergy.py --yaml /app/rundir/config/dbn/modis_volcano_dbn_curiosity.yaml
 
 
 

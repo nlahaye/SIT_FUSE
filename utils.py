@@ -604,7 +604,7 @@ def get_lat_lon(fname):
 
 def read_uavsar(in_fps, **kwargs):
     """
-    Reads UAVSAR data. It is assumed that all inputted data is of the same file format.
+    Reads UAVSAR data.
 
     Args:
         in_fps (list(string) or string):  list of strings or string of input binary file paths
@@ -616,12 +616,12 @@ def read_uavsar(in_fps, **kwargs):
     Returns:
         (data, desc, type, search): tuple containing information about the file
 
-        data: image data or list of image data of floats or complex values, or dict containing two arrays of slopes (north, east)
+        data: image array of floats or complex values, or dict containing two arrays of slopes (north, east)
         desc: the dictionary generated from the annotation file
         type: the type of inputted file
         search: the search term for relevant values inside the annotation dictionary
     """
-    
+
     from preprocessing.misc_utils import lee_filter
     
     if "ann_fps" in kwargs:
@@ -645,104 +645,68 @@ def read_uavsar(in_fps, **kwargs):
     
     print("Reading UAVSAR files...")
     
-    # Filter allowed polarization modes
-    if pol_modes:
-        tmp = []
-        for fp in in_fps:
-            if any(mode in os.path.basename(fp) for mode in pol_modes):
-                tmp.append(fp)
-        in_fps = tmp
+    fname = os.path.os.path.basename(fname)
+    exts = fname.split('.')[1:]
     
-    for fp in in_fps:
-        
-        # Locate file and matching annotation
-        if not os.path.os.path.exists(fp):
-            raise Exception(f"Failed to find file: {fp}")
-        fname = os.path.basename(fp)
-        id = "_".join(fname.split("_")[0:4])
-        ann_fp = None
-        for ann in ann_fps:
-            if id in os.path.basename(ann):
-                ann_fp = ann
-        if not ann_fp:
-            raise Exception(f"File {fname} does not have an associated annotation file.")
-        
-        print(f"file: {fp}")
-        print(f"matching ann file: {ann_fp}")
+    if len(exts) == 2:
+        ext = exts[1]
+        type = exts[0]
+    elif len(exts) == 1:
+        type = ext = exts[0]
+    else:
+        raise ValueError('Unable to parse extensions')
     
-        exts = fname.split('.')[1:]
-
-        if len(exts) == 2:
-            ext = exts[1]
-            type = exts[0]
-        elif len(exts) == 1:
-            type = ext = exts[0]
+    # Find annotation file in same directory if user did not provide one
+    if not ann_fp:
+        if ext == 'grd' or ext == 'slc':
+            ann_fp = fname.replace(f'.{type}', '').replace(f'.{ext}', '.ann')
         else:
-            raise ValueError('Unable to parse extensions')
+            ann_fp = fname.replace(f'.{ext}', '.ann')
+        if not os.path.os.path.exists(ann_fp):
+            search_base = '_'.join(os.path.os.path.basename(fname).split('.')[0].split('_')[:4])
+            search_full = os.path.os.path.join(os.path.dirname(fname), f'*{search_base}*.ann')
+            ann_search = glob(search_full)
+            if len(ann_search) == 1:
+                ann_fp = ann_search[0]
+            else:
+                raise Exception(f"No ann file or multiple ann files found in directory {search_full}. Please specify ann filepath.")
+        else:
+            raise Exception(f"No annotation file path specificed. Using {ann_fp}.")
+    
+    # Check for compatible extensions
+    if type == 'zip':
+        raise Exception('Cannot convert zipped directories. Unzip first.')
+    if type == 'dat' or type == 'kmz' or type == 'kml' or type == 'png' or type == 'tif':
+        raise Exception(f"Cannot handle {type} products")
+    if type == 'ann':
+        raise Exception('Cannot convert annotation files.')
         
-        # Check for compatible extensions
-        if type == 'zip':
-            raise Exception('Cannot convert zipped directories. Unzip first.')
-        if type == 'dat' or type == 'kmz' or type == 'kml' or type == 'png' or type == 'tif':
-            raise Exception(f"Cannot handle {type} products")
-        if type == 'ann':
-            raise Exception('Cannot convert annotation files.')
-            
-        # Check for slant range files and ancillary files
-        anc = None
-        if type == 'slope' or type == 'inc':
-            anc = True
+    # Check for slant range files and ancillary files
+    anc = None
+    if type == 'slope' or type == 'inc':
+        anc = True
 
-        # Read in annotation file
-        desc = read_annotation(ann_fp)
+    # Read in annotation file
+    desc = read_annotation(ann_fp)
 
-        if 'start time of acquisition for pass 1' in desc.keys():
-            mode = 'insar'
-            raise Exception('INSAR data currently not supported.')
-        else:
-            mode = 'polsar'
+    if 'start time of acquisition for pass 1' in desc.keys():
+        mode = 'insar'
+        raise Exception('INSAR data currently not supported.')
+    else:
+        mode = 'polsar'
 
-        # Determine the correct file typing for searching data dictionary
-        if not anc:
-            if mode == 'polsar':
-                if type == 'hgt':
-                    search = type
+    # Determine the correct file typing for searching data dictionary
+    if not anc:
+        if mode == 'polsar':
+            if type == 'hgt':
+                search = type
+            else:
+                polarization = os.path.os.path.basename(fname).split('_')[5][-4:]
+                if polarization == 'HHHH' or polarization == 'HVHV' or polarization == 'VVVV':
+                        search = f'{type}_pwr'
                 else:
-                    polarization = os.path.os.path.basename(fp).split('_')[5][-4:]
-                    if polarization == 'HHHH' or polarization == 'HVHV' or polarization == 'VVVV':
-                            search = f'{type}_pwr'
-                    else:
-                        search = f'{type}_phase'
-                    type = polarization
-
-            elif mode == 'insar':
-                if ext == 'grd':
-                    if type == 'int':
-                        search = f'grd_phs'
-                    else:
-                        search = 'grd'
-                else:
-                    if type == 'int':
-                        search = 'slt_phs'
-                    else:
-                        search = 'slt'
-                pass
-        else:
-            search = type
-
-        # Pull the appropriate values from our annotation dictionary
-        nrow = desc[f'{search}.set_rows']['value']
-        ncol = desc[f'{search}.set_cols']['value']
-
-        # Set up datatypes
-        com_des = desc[f'{search}.val_frmt']['value']
-        com = False
-        if 'COMPLEX' in com_des:                                    
-            com = True
-        if com:
-            dtype = np.complex64
-        else:
-            dtype = np.float32
+                    search = f'{type}_phase'
+                type = polarization
 
         # Read in binary data
         dat = np.fromfile(fp, dtype = dtype)
@@ -797,7 +761,7 @@ def read_annotation(ann_file):
 
     Returns:
         data: a dictionary of the annotation's contents, 
-            data[key] = {'value': value, 'units': units, 'comment': comment}
+              data[key] = {'value': value, 'units': units, 'comment': comment}
     """
     with open(ann_file) as fp:
         lines = fp.readlines()
@@ -840,53 +804,3 @@ def read_annotation(ann_file):
             data[key] = {'value': value, 'units': units, 'comment': comment}
 
     return data
-
-
-
-#TODO worldview
-def get_read_func(data_reader):
-    if data_reader == "emit":
-        return read_emit
-    if data_reader == "misr_sim":
-        return read_misr_sim
-    if data_reader == "goes_netcdf":
-        return read_goes_netcdf
-    if data_reader == "s3_netcdf":
-        return read_s3_netcdf     
-    if data_reader == "s3_netcdf_geo":
-        return read_s3_netcdf_geo
-    if data_reader == "gtiff_multifile":
-        return read_gtiff_multifile_generic   
-    if data_reader == "landsat_gtiff":
-        return read_gtiff_multifile_generic
-    if data_reader == "s1_gtiff":
-        return read_gtiff_multifile_generic
-    if data_reader == "gtiff":
-        return read_gtiff_generic
-    if data_reader == "aviris_gtiff":
-        return read_gtiff_generic
-    if data_reader == "numpy":
-        return numpy_load
-    if data_reader == "zarr_to_numpy":
-        return numpy_from_zarr
-    if data_reader == "torch":
-        return torch_load
-    if data_reader == "s6_netcdf":
-        return read_s6_netcdf
-    if data_reader == "s6_netcdf_geo":
-        return read_s6_netcdf_geo
-    if data_reader == "trop_mod_xr":
-        return read_trop_mod_xr
-    if data_reader == "trop_mod_xr_geo":
-        return read_trop_mod_xr_geo
-    if data_reader == "trop_l1b":
-        return read_trop_l1b
-    if data_reader == "trop_l1b_geo":
-        return read_trop_l1b_geo
-    if data_reader == "nc_ungrid_geo":
-        return read_geo_nc_ungridded
-    if data_reader == "uavsar":
-        return read_uavsar
-   
-    #TODO return BCDP reader
-    return None
