@@ -602,62 +602,16 @@ def get_lat_lon(fname):
     return lonLat
 
 
-#TODO worldview
-def get_read_func(data_reader):
-    if data_reader == "emit":
-        return read_emit
-    if data_reader == "misr_sim":
-        return read_misr_sim
-    if data_reader == "goes_netcdf":
-        return read_goes_netcdf
-    if data_reader == "s3_netcdf":
-        return read_s3_netcdf     
-    if data_reader == "s3_netcdf_geo":
-        return read_s3_netcdf_geo
-    if data_reader == "gtiff_multifile":
-        return read_gtiff_multifile_generic   
-    if data_reader == "landsat_gtiff":
-        return read_gtiff_multifile_generic
-    if data_reader == "s1_gtiff":
-        return read_gtiff_multifile_generic
-    if data_reader == "gtiff":
-        return read_gtiff_generic
-    if data_reader == "aviris_gtiff":
-        return read_gtiff_generic
-    if data_reader == "numpy":
-        return numpy_load
-    if data_reader == "zarr_to_numpy":
-        return numpy_from_zarr
-    if data_reader == "torch":
-        return torch_load
-    if data_reader == "s6_netcdf":
-        return read_s6_netcdf
-    if data_reader == "s6_netcdf_geo":
-        return read_s6_netcdf_geo
-    if data_reader == "trop_mod_xr":
-        return read_trop_mod_xr
-    if data_reader == "trop_mod_xr_geo":
-        return read_trop_mod_xr_geo
-    if data_reader == "trop_l1b":
-        return read_trop_l1b
-    if data_reader == "trop_l1b_geo":
-        return read_trop_l1b_geo
-    if data_reader == "nc_ungrid_geo":
-        return read_geo_nc_ungridded
-    if data_reader == "uavsar":
-        return read_uavsar
-   
-    #TODO return BCDP reader
-    return None
-
-def read_uavsar(fname, **kwargs):
+def read_uavsar(in_fps, **kwargs):
     """
     Reads UAVSAR data.
 
     Args:
-        fname (string): path to input binary file
-        ann_fp (string): path to UAVSAR annotation file
-        linear_to_dB (bool): convert linear amplitude units to decibels
+        in_fps (list(string) or string):  list of strings or string of input binary file paths
+        ann_fps (list(string) or string): list of or string of UAVSAR annotation file paths
+        pol_modes (list(string)):   list of allowed polarization modes 
+                                    to filter for (e.g. ['HHHH', 'HVHV', 'VVVV'])
+        linear_to_dB (bool):    convert linear amplitude units to decibels
 
     Returns:
         (data, desc, type, search): tuple containing information about the file
@@ -667,19 +621,29 @@ def read_uavsar(fname, **kwargs):
         type: the type of inputted file
         search: the search term for relevant values inside the annotation dictionary
     """
+
+    from preprocessing.misc_utils import lee_filter
     
-    if "ann_fp" in kwargs:
-        ann_fp = kwargs["ann_fp"]
+    if "ann_fps" in kwargs:
+        ann_fps = kwargs["ann_fps"]
+    if "pol_modes" in kwargs:
+        pol_modes = list(kwargs["pol_modes"])
     else:
-        ann_fp = None
+        pol_modes = None
     if "linear_to_dB" in kwargs:
         linear_to_dB = kwargs["linear_to_dB"]
     else:
         linear_to_dB = False
 
-    # Determine image type
-    if not os.path.os.path.exists(fname):
-        raise Exception(f"Input file path: {fname} does not exist.")
+    if isinstance(in_fps, str):
+        in_fps = [in_fps]
+    if isinstance(ann_fps, str):
+        ann_fps = [ann_fps]
+    
+    data = []
+    in_fps = list(in_fps)
+    
+    print("Reading UAVSAR files...")
     
     fname = os.path.os.path.basename(fname)
     exts = fname.split('.')[1:]
@@ -744,63 +708,48 @@ def read_uavsar(fname, **kwargs):
                     search = f'{type}_phase'
                 type = polarization
 
-        elif mode == 'insar':
-            if ext == 'grd':
-                if type == 'int':
-                    search = f'grd_phs'
-                else:
-                    search = 'grd'
+        # Read in binary data
+        dat = np.fromfile(fp, dtype = dtype)
+
+        # Change zeros and -10,000 to nans and convert linear units to dB if specified
+        if com:
+            dat[dat==0+0*1j] = np.nan + np.nan * 1j
+            if linear_to_dB:
+                dat = 10.0 * np.log10(np.abs(np.real(dat))) + np.imag(dat) * 1j
+        else:
+            dat[dat==0] = np.nan
+            dat[dat==-10000] = np.nan
+            if linear_to_dB:
+                dat = 10.0 * np.log10(dat)
+                
+        # Reshape it to match what the text file says the image is
+        if type == 'slope':
+            slopes = {}
+            slopes['east'] = dat[::2].reshape(nrow, ncol)
+            slopes['north'] = dat[1::2].reshape(nrow, ncol)
+            dat = slopes
+        else:
+            slopes = None
+            dat = dat.reshape(nrow, ncol)
+        
+        # Apply 5x5 Lee Speckle Filter
+        if not anc and type != 'hgt':
+            if com:
+                dat = lee_filter(np.real(dat), 5) + np.imag(dat)
             else:
-                if type == 'int':
-                    search = 'slt_phs'
-                else:
-                    search = 'slt'
-            pass
-    else:
-        search = type
+                lee_filter(dat, 5)
 
-    # Pull the appropriate values from our annotation dictionary
-    nrow = desc[f'{search}.set_rows']['value']
-    ncol = desc[f'{search}.set_cols']['value']
-
-    # Set up datatypes
-    com_des = desc[f'{search}.val_frmt']['value']
-    com = False
-    if 'COMPLEX' in com_des:                                    
-        com = True
-    if com:
-        dtype = np.complex64
-    else:
-        dtype = np.float32
-
-    # Read in binary data
-    data = np.fromfile(fname, dtype = dtype)
-
-    # Reshape it to match what the text file says the image is
-    if type == 'slope':
-        data[data==-10000] = np.nan
-        slopes = {}
-        slopes['east'] = data[::2].reshape(nrow, ncol)
-        slopes['north'] = data[1::2].reshape(nrow, ncol)
-    else:
-        slopes = None
-        data = data.reshape(nrow, ncol)
-
-    # Change zeros and -10,000 to nans and convert linear units to dB if specified
-    if com:
-        data[data==0+0*1j] = np.nan + np.nan * 1j
-        if linear_to_dB:
-            data = 10.0 * np.log10(np.abs(np.real(data))) + np.imag(data) * 1j
-    else:
-        data[data==0] = np.nan
-        data[data==-10000] = np.nan
-        if linear_to_dB:
-            data = 10.0 * np.log10(data)
-
-    if slopes:
-        return slopes, desc, type, search
-    else:
-        return data, desc, type, search
+        if len(in_fps) == 1:
+            dat = np.array(dat)
+            print(dat.shape)
+            return dat
+        else:
+            data.append(dat)
+            
+        dat = None
+    
+    data = np.array(data)
+    return data
 
 
 def read_annotation(ann_file):
