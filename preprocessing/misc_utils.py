@@ -12,6 +12,8 @@ import zarr
 import numpy as np
 from osgeo import osr, gdal
 from subprocess import DEVNULL, run, Popen, PIPE
+from scipy.ndimage import uniform_filter
+from scipy.ndimage import variance
 
 from utils import numpy_to_torch, read_yaml, get_read_func, get_lat_lon
 # from utils import read_uavsar, read_annotation
@@ -43,6 +45,24 @@ def goes_to_geotiff(data_file):
 
     run_cmd(cmd)
 
+
+
+def lee_filter(img, size):
+    """
+        Lee Speckle Filter for synthetic aperature radar data.
+        
+        img: image data
+        size: size of Lee Speckle Filter window (optimal size is usually 5)
+    """
+    img_mean = uniform_filter(img, (size, size))
+    img_sqr_mean = uniform_filter(img**2, (size, size))
+    img_variance = img_sqr_mean - img_mean**2
+
+    overall_variance = variance(img)
+
+    img_weights = img_variance / (img_variance + overall_variance)
+    img_output = img_mean + img_weights * (img - img_mean)
+    return img_output
 
 
 
