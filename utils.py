@@ -804,3 +804,52 @@ def read_annotation(ann_file):
             data[key] = {'value': value, 'units': units, 'comment': comment}
 
     return data
+
+
+
+def get_read_func(data_reader):
+    if data_reader == "emit":
+        return read_emit
+    if data_reader == "misr_sim":
+        return read_misr_sim
+    if data_reader == "goes_netcdf":
+        return read_goes_netcdf
+    if data_reader == "s3_netcdf":
+        return read_s3_netcdf     
+    if data_reader == "s3_netcdf_geo":
+        return read_s3_netcdf_geo
+    if data_reader == "gtiff_multifile":
+        return read_gtiff_multifile_generic   
+    if data_reader == "landsat_gtiff":
+        return read_gtiff_multifile_generic
+    if data_reader == "s1_gtiff":
+        return read_gtiff_multifile_generic
+    if data_reader == "gtiff":
+        return read_gtiff_generic
+    if data_reader == "aviris_gtiff":
+        return read_gtiff_generic
+    if data_reader == "numpy":
+        return numpy_load
+    if data_reader == "zarr_to_numpy":
+        return numpy_from_zarr
+    if data_reader == "torch":
+        return torch_load
+    if data_reader == "s6_netcdf":
+        return read_s6_netcdf
+    if data_reader == "s6_netcdf_geo":
+        return read_s6_netcdf_geo
+    if data_reader == "trop_mod_xr":
+        return read_trop_mod_xr
+    if data_reader == "trop_mod_xr_geo":
+        return read_trop_mod_xr_geo
+    if data_reader == "trop_l1b":
+        return read_trop_l1b
+    if data_reader == "trop_l1b_geo":
+        return read_trop_l1b_geo
+    if data_reader == "nc_ungrid_geo":
+        return read_geo_nc_ungridded
+    if data_reader == "uavsar":
+        return read_uavsar
+   
+    #TODO return BCDP reader
+    return None

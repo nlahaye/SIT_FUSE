@@ -6,7 +6,7 @@ export LD_LIBRARY_PATH=${CUDA_HOME}:${LD_LIBRARY_PATH}
 
 which torchrun
 cd /app/rundir/SIT_FUSE/
-torchrun --nnodes=1 --nproc_per_node=1 dbn_learnergy.py --yaml /app/rundir/config/dbn/modis_volcano_dbn_curiosity.yaml
+torchrun --nnodes=1 --nproc_per_node=1 dbn_learnergy.py --yaml /app/rundir/config/dbn/uavsar_dbn.yaml
 
 
 
