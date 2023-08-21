@@ -806,7 +806,6 @@ def read_annotation(ann_file):
     return data
 
 
-
 def get_read_func(data_reader):
     if data_reader == "emit":
         return read_emit
