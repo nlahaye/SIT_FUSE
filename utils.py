@@ -645,68 +645,104 @@ def read_uavsar(in_fps, **kwargs):
     
     print("Reading UAVSAR files...")
     
-    fname = os.path.os.path.basename(fname)
-    exts = fname.split('.')[1:]
+    # Filter allowed polarization modes
+    if pol_modes:
+        tmp = []
+        for fp in in_fps:
+            if any(mode in os.path.basename(fp) for mode in pol_modes):
+                tmp.append(fp)
+        in_fps = tmp
     
-    if len(exts) == 2:
-        ext = exts[1]
-        type = exts[0]
-    elif len(exts) == 1:
-        type = ext = exts[0]
-    else:
-        raise ValueError('Unable to parse extensions')
-    
-    # Find annotation file in same directory if user did not provide one
-    if not ann_fp:
-        if ext == 'grd' or ext == 'slc':
-            ann_fp = fname.replace(f'.{type}', '').replace(f'.{ext}', '.ann')
-        else:
-            ann_fp = fname.replace(f'.{ext}', '.ann')
-        if not os.path.os.path.exists(ann_fp):
-            search_base = '_'.join(os.path.os.path.basename(fname).split('.')[0].split('_')[:4])
-            search_full = os.path.os.path.join(os.path.dirname(fname), f'*{search_base}*.ann')
-            ann_search = glob(search_full)
-            if len(ann_search) == 1:
-                ann_fp = ann_search[0]
-            else:
-                raise Exception(f"No ann file or multiple ann files found in directory {search_full}. Please specify ann filepath.")
-        else:
-            raise Exception(f"No annotation file path specificed. Using {ann_fp}.")
-    
-    # Check for compatible extensions
-    if type == 'zip':
-        raise Exception('Cannot convert zipped directories. Unzip first.')
-    if type == 'dat' or type == 'kmz' or type == 'kml' or type == 'png' or type == 'tif':
-        raise Exception(f"Cannot handle {type} products")
-    if type == 'ann':
-        raise Exception('Cannot convert annotation files.')
+    for fp in in_fps:
         
-    # Check for slant range files and ancillary files
-    anc = None
-    if type == 'slope' or type == 'inc':
-        anc = True
+        # Locate file and matching annotation
+        if not os.path.os.path.exists(fp):
+            raise Exception(f"Failed to find file: {fp}")
+        fname = os.path.basename(fp)
+        id = "_".join(fname.split("_")[0:4])
+        ann_fp = None
+        for ann in ann_fps:
+            if id in os.path.basename(ann):
+                ann_fp = ann
+        if not ann_fp:
+            raise Exception(f"File {fname} does not have an associated annotation file.")
+        
+        print(f"file: {fp}")
+        print(f"matching ann file: {ann_fp}")
+    
+        exts = fname.split('.')[1:]
 
-    # Read in annotation file
-    desc = read_annotation(ann_fp)
+        if len(exts) == 2:
+            ext = exts[1]
+            type = exts[0]
+        elif len(exts) == 1:
+            type = ext = exts[0]
+        else:
+            raise ValueError('Unable to parse extensions')
+        
+        # Check for compatible extensions
+        if type == 'zip':
+            raise Exception('Cannot convert zipped directories. Unzip first.')
+        if type == 'dat' or type == 'kmz' or type == 'kml' or type == 'png' or type == 'tif':
+            raise Exception(f"Cannot handle {type} products")
+        if type == 'ann':
+            raise Exception('Cannot convert annotation files.')
+            
+        # Check for slant range files and ancillary files
+        anc = None
+        if type == 'slope' or type == 'inc':
+            anc = True
 
-    if 'start time of acquisition for pass 1' in desc.keys():
-        mode = 'insar'
-        raise Exception('INSAR data currently not supported.')
-    else:
-        mode = 'polsar'
+        # Read in annotation file
+        desc = read_annotation(ann_fp)
 
-    # Determine the correct file typing for searching data dictionary
-    if not anc:
-        if mode == 'polsar':
-            if type == 'hgt':
-                search = type
-            else:
-                polarization = os.path.os.path.basename(fname).split('_')[5][-4:]
-                if polarization == 'HHHH' or polarization == 'HVHV' or polarization == 'VVVV':
-                        search = f'{type}_pwr'
+        if 'start time of acquisition for pass 1' in desc.keys():
+            mode = 'insar'
+            raise Exception('INSAR data currently not supported.')
+        else:
+            mode = 'polsar'
+
+        # Determine the correct file typing for searching data dictionary
+        if not anc:
+            if mode == 'polsar':
+                if type == 'hgt':
+                    search = type
                 else:
-                    search = f'{type}_phase'
-                type = polarization
+                    polarization = os.path.os.path.basename(fp).split('_')[5][-4:]
+                    if polarization == 'HHHH' or polarization == 'HVHV' or polarization == 'VVVV':
+                            search = f'{type}_pwr'
+                    else:
+                        search = f'{type}_phase'
+                    type = polarization
+
+            elif mode == 'insar':
+                if ext == 'grd':
+                    if type == 'int':
+                        search = f'grd_phs'
+                    else:
+                        search = 'grd'
+                else:
+                    if type == 'int':
+                        search = 'slt_phs'
+                    else:
+                        search = 'slt'
+                pass
+        else:
+            search = type
+
+        # Pull the appropriate values from our annotation dictionary
+        nrow = desc[f'{search}.set_rows']['value']
+        ncol = desc[f'{search}.set_cols']['value']
+
+        # Set up datatypes
+        com_des = desc[f'{search}.val_frmt']['value']
+        com = False
+        if 'COMPLEX' in com_des:                                    
+            com = True
+        if com:
+            dtype = np.complex64
+        else:
+            dtype = np.float32
 
         # Read in binary data
         dat = np.fromfile(fp, dtype = dtype)
