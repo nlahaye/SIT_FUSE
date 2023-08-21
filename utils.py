@@ -777,9 +777,6 @@ def read_uavsar(in_fps, **kwargs):
                 dat = lee_filter(np.real(dat), 5) + np.imag(dat)
             else:
                 lee_filter(dat, 5)
-                
-        if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
-                dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
 
         data.append(dat)
         if com:
@@ -789,7 +786,8 @@ def read_uavsar(in_fps, **kwargs):
         phase = None
     
     data = np.array(data)
-    print(data.shape)
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+        data = data[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
     return data
 
 
