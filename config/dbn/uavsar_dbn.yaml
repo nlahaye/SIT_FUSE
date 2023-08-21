@@ -59,8 +59,15 @@ data:
  output_subset_count: 10
  reader_type: "uavsar"
  reader_kwargs:
-    ann_fps: ["/work/09562/nleet/ls6/data/uavsar/fire-scenes/L-band/caldor_08200_21049_026_210831_L090_CX_01/uavsar.asf.alaska.edu_UA_caldor_08200_21049_026_210831_L090_CX_01_caldor_08200_21049_026_210831_L090_CX_01.ann"]
+    ann_fps: ["/work/09562/nleet/ls6/data/uavsar/fire-scenes/L-band/caldor_08200_21049_026_210831_L090_CX_01/uavsar.asf.alaska.edu_UA_caldor_08200_21049_026_210831_L090_CX_01_caldor_08200_21049_026_210831_L090_CX_01.ann"
+    "/work/09562/nleet/ls6/data/uavsar/fire-scenes/P-band/safire_14036_15102_007_150705_PL09043020_XX_01/safire_14036_15102_007_150705_PL09043020_05_XX_01.ann",
+    "/work/09562/nleet/ls6/data/uavsar/fire-scenes/L-band/caldor_26200_21048_013_210825_L090_CX_01/uavsar.asf.alaska.edu_UA_caldor_26200_21048_013_210825_L090_CX_01_caldor_26200_21048_013_210825_L090_CX_01.ann"
+    ]
     pol_modes: ['HHHH','HVHV','VVVV']
+    start_sample: 1000
+    end_sample: 4000
+    start_line: 1000
+    end_line: 4000
  chan_dim: 0
  delete_chans: []
  transform_default:
@@ -73,9 +80,12 @@ data:
 "/work/09562/nleet/ls6/data/uavsar/fire-scenes/L-band/caldor_08200_21049_026_210831_L090_CX_01/caldor_08200_21049_026_210831_L090HVHV_CX_01.grd",
 "/work/09562/nleet/ls6/data/uavsar/fire-scenes/L-band/caldor_08200_21049_026_210831_L090_CX_01/caldor_08200_21049_026_210831_L090VVVV_CX_01.grd"
 ]
- files_test: ["/work/09562/nleet/ls6/data/uavsar/fire-scenes/L-band/caldor_08200_21049_026_210831_L090_CX_01/caldor_08200_21049_026_210831_L090HHHH_CX_01.grd",
-"/work/09562/nleet/ls6/data/uavsar/fire-scenes/L-band/caldor_08200_21049_026_210831_L090_CX_01/caldor_08200_21049_026_210831_L090HVHV_CX_01.grd",
-"/work/09562/nleet/ls6/data/uavsar/fire-scenes/L-band/caldor_08200_21049_026_210831_L090_CX_01/caldor_08200_21049_026_210831_L090VVVV_CX_01.grd"
+ files_test: [["/work/09562/nleet/ls6/data/uavsar/fire-scenes/P-band/safire_14036_15102_007_150705_PL09043020_XX_01/safire_14036_15102_007_150705_PL09043020_05HVHV_XX_01.grd",
+"/work/09562/nleet/ls6/data/uavsar/fire-scenes/P-band/safire_14036_15102_007_150705_PL09043020_XX_01/safire_14036_15102_007_150705_PL09043020_05VVVV_XX_01.grd",
+"/work/09562/nleet/ls6/data/uavsar/fire-scenes/P-band/safire_14036_15102_007_150705_PL09043020_XX_01/safire_14036_15102_007_150705_PL09043020_05HHHH_XX_01.grd",]
+["/work/09562/nleet/ls6/data/uavsar/fire-scenes/L-band/caldor_26200_21048_013_210825_L090_CX_01/caldor_26200_21048_013_210825_L090HVHV_CX_01.grd",
+"/work/09562/nleet/ls6/data/uavsar/fire-scenes/L-band/caldor_26200_21048_013_210825_L090_CX_01/caldor_26200_21048_013_210825_L090HHHH_CX_01.grd",
+"/work/09562/nleet/ls6/data/uavsar/fire-scenes/L-band/caldor_26200_21048_013_210825_L090_CX_01/caldor_26200_21048_013_210825_L090VVVV_CX_01.grd"]
 ]
 
 
