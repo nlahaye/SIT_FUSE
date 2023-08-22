@@ -604,14 +604,17 @@ def get_lat_lon(fname):
 
 def read_uavsar(in_fps, **kwargs):
     """
-    Reads UAVSAR data.
+    Reads UAVSAR data. 
+    Complex-valued (unlike polarization) data will be split into separate phase and amplitude channels. 
 
     Args:
-        in_fps (list(string) or string):  list of strings or string of input binary file paths
-        ann_fps (list(string) or string): list of or string of UAVSAR annotation file paths
-        pol_modes (list(string)):   list of allowed polarization modes 
-                                    to filter for (e.g. ['HHHH', 'HVHV', 'VVVV'])
-        linear_to_dB (bool):    convert linear amplitude units to decibels
+        in_fps (list(string) or string):  list of strings (each file will be treated as a separate channel)
+                                          or string of data file paths
+        ann_fps (list(string) or string): list of or string of UAVSAR annotation file paths,
+                                          ann files will be automatically matched to data files
+        pol_modes (list(string)) (optional): list of allowed polarization modes 
+                                             to filter for (e.g. ['HHHH', 'HVHV', 'VVVV'])
+        linear_to_dB (bool) (optional): convert linear amplitude units to decibels
 
     Returns:
         (data, desc, type, search): tuple containing information about the file
@@ -623,9 +626,10 @@ def read_uavsar(in_fps, **kwargs):
     """
 
     from preprocessing.misc_utils import lee_filter
-    
+
     if "ann_fps" in kwargs:
         ann_fps = kwargs["ann_fps"]
+    
     if "pol_modes" in kwargs:
         pol_modes = list(kwargs["pol_modes"])
     else:
@@ -641,7 +645,6 @@ def read_uavsar(in_fps, **kwargs):
         ann_fps = [ann_fps]
     
     data = []
-    in_fps = list(in_fps)
     
     print("Reading UAVSAR files...")
     
@@ -746,18 +749,18 @@ def read_uavsar(in_fps, **kwargs):
 
         # Read in binary data
         dat = np.fromfile(fp, dtype = dtype)
-
-        # Change zeros and -10,000 to nans and convert linear units to dB if specified
         if com:
-            dat[dat==0+0*1j] = np.nan + np.nan * 1j
-            if linear_to_dB:
-                dat = 10.0 * np.log10(np.abs(np.real(dat))) + np.imag(dat) * 1j
-        else:
-            dat[dat==0] = np.nan
-            dat[dat==-10000] = np.nan
-            if linear_to_dB:
-                dat = 10.0 * np.log10(dat)
+            dat = np.abs(dat)
+            phase = np.angle(dat)
+            
+        # Change zeros and -10,000 to fillvalue and convert linear units to dB if specified
+        fillvalue = -9999.0
+        dat[dat==0] = fillvalue
+        dat[dat==-10000] = fillvalue
                 
+        if linear_to_dB:
+            dat = 10.0 * np.log10(dat)
+            
         # Reshape it to match what the text file says the image is
         if type == 'slope':
             slopes = {}
@@ -775,16 +778,16 @@ def read_uavsar(in_fps, **kwargs):
             else:
                 lee_filter(dat, 5)
 
-        if len(in_fps) == 1:
-            dat = np.array(dat)
-            print(dat.shape)
-            return dat
-        else:
-            data.append(dat)
+        data.append(dat)
+        if com:
+            data.append(phase)
             
         dat = None
+        phase = None
     
     data = np.array(data)
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+        data = data[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
     return data
 
 
