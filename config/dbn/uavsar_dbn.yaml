@@ -12,7 +12,7 @@ dbn:
  subset_training: -1 #10000000
  deep_cluster: 150
  overwrite_model: False
- tune_clust: False # True
+ tune_clust: True
  tune_dbn: False
  tune_scaler: False
  params:
