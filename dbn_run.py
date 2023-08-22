@@ -1,5 +1,6 @@
 # General imports
 import os
+import glob
 
 # Module imports
 import dbn_learnergy
@@ -31,8 +32,9 @@ def main(**kwargs):
     # Run Initial Feature Extraction & Top Level Clustering
     dbn_learnergy.run_dbn(dbnyml_conf)
     
-    if "dc_yaml" in kwargs:
-        dcyml_config = read_yaml(kwargs["dc_yaml"])
+    data_files = glob(os.path.join(out_dir, "*.data"))
+    clust_dict = {'data': {'filenames': data_files}}
+    print(data_files)
     
 
 
