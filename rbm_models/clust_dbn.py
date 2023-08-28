@@ -3,6 +3,7 @@ from typing import Optional, Tuple
 import sys
 
 import numpy as np
+import pandas as pd
 import copy
 
 import torch
@@ -93,8 +94,85 @@ class ClustDBN(Model):
 
         return y
 
+    def numpy_forward(self, x: np.ndarray) -> np.ndarray:
+        """Performs a forward pass over the data.
 
+        Args:
+            x: An input np.ndarray that will be converted to a tensor for computing the forward pass.
 
+        Returns:
+            (np.ndarray): An array containing the DBN's outputs.
+        """
+        numpy_to_torch_dtype_dict = {
+            np.dtype(np.bool)        : torch.bool,
+            np.dtype(np.uint8)       : torch.uint8,
+            np.dtype(np.int8)        : torch.int8,
+            np.dtype(np.int16)       : torch.int16,
+            np.dtype(np.int32)       : torch.int32,
+            np.dtype(np.int64)       : torch.int64,
+            np.dtype(np.float16)     : torch.float16,
+            np.dtype(np.float32)     : torch.float32,
+            np.dtype(np.float64)     : torch.float64,
+            np.dtype(np.complex64)   : torch.complex64,
+            np.dtype(np.complex128)  : torch.complex128
+        }
+        
+        dt = numpy_to_torch_dtype_dict[x.dtype]
+        t = torch.from_numpy(x).cuda()
+        y = self.dbn_trunk.forward(t)
+        if isinstance(y,list) or isinstance(y,tuple):
+            y = y[0]
+        
+        y = torch.as_tensor(self.scaler.transform(y), dtype = dt)
+        y = self.fc.forward(y)
+        if isinstance(y,list) or isinstance(y,tuple):
+            y = y[0]
+        y = y.detach().cpu().numpy()
+        
+        return y
+    
+    
+    def numpy_forward_image_wrap(self, x: np.ndarray) -> np.ndarray:
+        """Performs a forward pass over the data.
+
+        Args:
+            x: An input np.ndarray that will be converted to a tensor for computing the forward pass.
+
+        Returns:
+            (np.ndarray): An array containing the DBN's outputs.
+        """
+        x = np.array(x)
+        x = np.moveaxis(x, 0, 2)
+        x = np.reshape(x, (x.shape[0] * x.shape[1], x.shape[2]))
+        
+        numpy_to_torch_dtype_dict = {
+            np.dtype(np.bool)        : torch.bool,
+            np.dtype(np.uint8)       : torch.uint8,
+            np.dtype(np.int8)        : torch.int8,
+            np.dtype(np.int16)       : torch.int16,
+            np.dtype(np.int32)       : torch.int32,
+            np.dtype(np.int64)       : torch.int64,
+            np.dtype(np.float16)     : torch.float16,
+            np.dtype(np.float32)     : torch.float32,
+            np.dtype(np.float64)     : torch.float64,
+            np.dtype(np.complex64)   : torch.complex64,
+            np.dtype(np.complex128)  : torch.complex128
+        }
+        
+        dt = numpy_to_torch_dtype_dict[x.dtype]
+        t = torch.from_numpy(x).cuda()
+        y = self.dbn_trunk.forward(t)
+        if isinstance(y,list) or isinstance(y,tuple):
+            y = y[0]
+        
+        y = torch.as_tensor(self.scaler.transform(y), dtype = dt)
+        y = self.fc.forward(y)
+        if isinstance(y,list) or isinstance(y,tuple):
+            y = y[0]
+        y = y.detach().cpu().numpy()
+        
+        return y
+    
  
     def fit(
         self,

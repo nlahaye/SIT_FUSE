@@ -628,6 +628,8 @@ def read_uavsar(in_fps, desc_out=None, type_out=None, search_out=None, **kwargs)
 
     if "ann_fps" in kwargs:
         ann_fps = kwargs["ann_fps"]
+    else:
+        raise Exception("No annotation files specified.")
     
     if "pol_modes" in kwargs:
         pol_modes = list(kwargs["pol_modes"])
