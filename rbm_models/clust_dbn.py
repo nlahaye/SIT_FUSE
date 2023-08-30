@@ -94,7 +94,7 @@ class ClustDBN(Model):
 
         return y
 
-    def numpy_forward(self, x: np.ndarray) -> np.ndarray:
+    def forward_numpy(self, x: np.ndarray) -> np.ndarray:
         """Performs a forward pass over the data.
 
         Args:
@@ -132,11 +132,11 @@ class ClustDBN(Model):
         return y
     
     
-    def numpy_forward_image_wrap(self, x: np.ndarray) -> np.ndarray:
+    def numpy_forward_image(self, x: np.ndarray) -> np.ndarray:
         """Performs a forward pass over the data.
 
         Args:
-            x: An input np.ndarray that will be converted to a tensor for computing the forward pass.
+            x: An input np.ndarray image with dimensions (row, col, channel) will be converted to a tensor for computing the forward pass.
 
         Returns:
             (np.ndarray): An array containing the DBN's outputs.
@@ -171,6 +171,7 @@ class ClustDBN(Model):
             y = y[0]
         y = y.detach().cpu().numpy()
         
+        # y = np.expand_dims(y, 0)
         return y
     
  

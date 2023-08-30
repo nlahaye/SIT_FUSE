@@ -1,0 +1,66 @@
+
+gen_from_geotiffs: False
+
+data:
+ clust_reader_type: "uavsar"
+ reader_kwargs:
+  ann_fps: ["/work/09562/nleet/ls6/data/uavsar/fire-scenes/L-band/caldor_08200_21049_026_210831_L090_CX_01/uavsar.asf.alaska.edu_UA_caldor_08200_21049_026_210831_L090_CX_01_caldor_08200_21049_026_210831_L090_CX_01.ann",
+  "/work/09562/nleet/ls6/data/uavsar/fire-scenes/P-band/safire_14036_15102_007_150705_PL09043020_XX_01/safire_14036_15102_007_150705_PL09043020_05_XX_01.ann",
+  "/work/09562/nleet/ls6/data/uavsar/fire-scenes/L-band/caldor_26200_21048_013_210825_L090_CX_01/uavsar.asf.alaska.edu_UA_caldor_26200_21048_013_210825_L090_CX_01_caldor_26200_21048_013_210825_L090_CX_01.ann"
+  ]
+  pol_modes: ['HHHH','HVHV','VVVV']
+  start_sample: 2500
+  end_sample: 3000
+  start_line: 2500
+  end_line: 3000
+ subset_inds: [[], [],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
+ create_separate: False
+  
+ gtiff_data: [
+  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
+  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
+  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
+  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
+  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
+  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
+  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
+  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
+  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
+  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
+  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
+  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
+  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
+  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
+  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
+  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
+  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
+  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
+  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
+  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad']
+  
+ cluster_fnames: ["/data/nlahaye/output/Learnergy/DBN_GOES/file0_output.data.clustering_500clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES/file10_output.data.clustering_500clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES/file1_output.data.clustering_500clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES/file1_output_test.data.clustering_500clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES/file2_output.data.clustering_500clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES/file2_output_test.data.clustering_500clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES/file3_output.data.clustering_500clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES/file3_output_test.data.clustering_500clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES/file4_output.data.clustering_500clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES/file4_output_test.data.clustering_500clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES/file5_output.data.clustering_500clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES/file5_output_test.data.clustering_500clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES/file6_output.data.clustering_500clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES/file7_output.data.clustering_500clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES/file8_output.data.clustering_500clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GOES/file9_output.data.clustering_500clusters.zarr",
+]
+
+
+context:
+ apply_context: False
+ clusters: []  #64 #i.e. smoke clusters
+ name: "" #i.e. smoke
+ compare_truth: false
+ generate_union: false
+

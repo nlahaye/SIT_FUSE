@@ -1,6 +1,6 @@
 
 output:
- out_dir: "/work/09562/nleet/ls6/output"
+ out_dir: "/work/09562/nleet/ls6/output3"
  training_output: "output.data"
  training_mse: "rec_mse.data"
  testing_output: "output_test.data"
@@ -12,7 +12,7 @@ dbn:
  subset_training: -1 #10000000
  deep_cluster: 150
  overwrite_model: False
- tune_clust: True
+ tune_clust: False
  tune_dbn: False
  tune_scaler: False
  params:
@@ -51,7 +51,7 @@ data:
  num_loader_workers: 10
  scale_data: True
  pixel_padding: 0
- number_channels: 16
+ number_channels: 3
  fill_value: -9999.0
  valid_min: 0
  valid_max: 100000000
@@ -59,29 +59,31 @@ data:
  output_subset_count: 10
  reader_type: "uavsar"
  reader_kwargs:
-    ann_fps: ["/work/09562/nleet/ls6/data/uavsar/fire-scenes/L-band/caldor_08200_21049_026_210831_L090_CX_01/uavsar.asf.alaska.edu_UA_caldor_08200_21049_026_210831_L090_CX_01_caldor_08200_21049_026_210831_L090_CX_01.ann",
-    "/work/09562/nleet/ls6/data/uavsar/fire-scenes/P-band/safire_14036_15102_007_150705_PL09043020_XX_01/safire_14036_15102_007_150705_PL09043020_05_XX_01.ann",
-    "/work/09562/nleet/ls6/data/uavsar/fire-scenes/L-band/caldor_26200_21048_013_210825_L090_CX_01/uavsar.asf.alaska.edu_UA_caldor_26200_21048_013_210825_L090_CX_01_caldor_26200_21048_013_210825_L090_CX_01.ann"
-    ]
-    pol_modes: ['HHHH','HVHV','VVVV']
-    start_sample: 2500
-    end_sample: 3000
-    start_line: 2500
-    end_line: 3000
+   ann_fps: ["/work/09562/nleet/ls6/data/uavsar/fire-scenes/L-band/caldor_08200_21049_026_210831_L090_CX_01/uavsar.asf.alaska.edu_UA_caldor_08200_21049_026_210831_L090_CX_01_caldor_08200_21049_026_210831_L090_CX_01.ann",
+   "/work/09562/nleet/ls6/data/uavsar/fire-scenes/P-band/safire_14036_15102_007_150705_PL09043020_XX_01/safire_14036_15102_007_150705_PL09043020_05_XX_01.ann",
+   "/work/09562/nleet/ls6/data/uavsar/fire-scenes/L-band/caldor_26200_21048_013_210825_L090_CX_01/uavsar.asf.alaska.edu_UA_caldor_26200_21048_013_210825_L090_CX_01_caldor_26200_21048_013_210825_L090_CX_01.ann"
+   ]
+   pol_modes: ['HHHH','HVHV','VVVV']
+   # row
+   start_line: 2700 
+   end_line: 3900
+   # col
+   start_sample: 8600
+   end_sample: 10400
  chan_dim: 0
  delete_chans: []
  transform_default:
   chans: []
   transform: []
  
- files_train: ["/work/09562/nleet/ls6/data/uavsar/fire-scenes/L-band/caldor_08200_21049_026_210831_L090_CX_01/caldor_08200_21049_026_210831_L090HHHH_CX_01.grd",
-"/work/09562/nleet/ls6/data/uavsar/fire-scenes/L-band/caldor_08200_21049_026_210831_L090_CX_01/caldor_08200_21049_026_210831_L090HVHV_CX_01.grd",
-"/work/09562/nleet/ls6/data/uavsar/fire-scenes/L-band/caldor_08200_21049_026_210831_L090_CX_01/caldor_08200_21049_026_210831_L090VVVV_CX_01.grd"
-]
- files_test: ["/work/09562/nleet/ls6/data/uavsar/fire-scenes/L-band/caldor_26200_21048_013_210825_L090_CX_01/caldor_26200_21048_013_210825_L090HVHV_CX_01.grd",
-"/work/09562/nleet/ls6/data/uavsar/fire-scenes/L-band/caldor_26200_21048_013_210825_L090_CX_01/caldor_26200_21048_013_210825_L090HHHH_CX_01.grd",
+ files_train: [["/work/09562/nleet/ls6/data/uavsar/fire-scenes/L-band/caldor_08200_21049_026_210831_L090_CX_01/caldor_08200_21049_026_210831_L090HHHH_CX_01.grd",
+ "/work/09562/nleet/ls6/data/uavsar/fire-scenes/L-band/caldor_08200_21049_026_210831_L090_CX_01/caldor_08200_21049_026_210831_L090HVHV_CX_01.grd",
+ "/work/09562/nleet/ls6/data/uavsar/fire-scenes/L-band/caldor_08200_21049_026_210831_L090_CX_01/caldor_08200_21049_026_210831_L090VVVV_CX_01.grd"
+]]
+ files_test: [["/work/09562/nleet/ls6/data/uavsar/fire-scenes/L-band/caldor_26200_21048_013_210825_L090_CX_01/caldor_26200_21048_013_210825_L090HHHH_CX_01.grd",
+"/work/09562/nleet/ls6/data/uavsar/fire-scenes/L-band/caldor_26200_21048_013_210825_L090_CX_01/caldor_26200_21048_013_210825_L090HVHV_CX_01.grd",
 "/work/09562/nleet/ls6/data/uavsar/fire-scenes/L-band/caldor_26200_21048_013_210825_L090_CX_01/caldor_26200_21048_013_210825_L090VVVV_CX_01.grd"
-]
+]]
 
 # ["/work/09562/nleet/ls6/data/uavsar/fire-scenes/P-band/safire_14036_15102_007_150705_PL09043020_XX_01/safire_14036_15102_007_150705_PL09043020_05HVHV_XX_01.grd",
 # "/work/09562/nleet/ls6/data/uavsar/fire-scenes/P-band/safire_14036_15102_007_150705_PL09043020_XX_01/safire_14036_15102_007_150705_PL09043020_05VVVV_XX_01.grd",
