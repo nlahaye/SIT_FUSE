@@ -95,7 +95,7 @@ def uavsar_to_geotiff(in_fps, out_dir, **kwargs):
     type = None
     search = None
     
-    data = read_uavsar(in_fps, desc, type, search, kwargs)
+    data = read_uavsar(in_fps, desc, type, search, **kwargs)
     out_fps = []
     for dat, fp in zip(data, in_fps):
         
