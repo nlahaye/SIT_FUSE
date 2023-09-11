@@ -468,7 +468,7 @@ def run_dbn(yml_conf):
                 with open(os.path.join(out_dir, "fc_clust_scaler.pkl"), "wb") as f:
                     dump(final_model.scaler, f, True, pickle.HIGHEST_PROTOCOL)
             else:
-                final_mode.scaler = None
+                final_model.scaler = None
 
         #TODO: For now set all subsetting to 1 - will remove subsetting later. 
         #Maintain output_subset_count - is/will be used by DataLoader in generate_output
