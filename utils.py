@@ -124,55 +124,87 @@ def read_goes_netcdf(filenames, **kwargs):
     return dat
 
 
+
+def read_hysplit_netcdf_geo(hysplit_fname, **kwargs):
+
+        data1 = []
+        if os.path.isfile(hysplit_fname):
+                f = Dataset(hysplit_fname)
+                data_keys = ["lat", "lon"]
+                for i  in range(len(data_keys)):
+                    data1.append(f.variables[data_keys[i]][:])
+
+ 
+        dat = np.array(data1)        
+        if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+                dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+        return dat
+
+
+def read_hysplit_netcdf(hysplit_fname, **kwargs):
+        if os.path.isfile(hysplit_fname):
+                f = Dataset(hysplit_fname)
+                data_key = "smoke-col"
+                dat = f.variables[data_key][:]
+        
+        if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+                dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+        return dat
+
+
 def read_s3_netcdf(s3_dir, **kwargs):
-	data1 = []
-	bands = None
-	if "bands" in kwargs:
-		bands = kwargs["bands"]
-	if os.path.isdir(s3_dir):
-		for i in range(1,22):
-			if bands is None or i in bands:
-				data_key = "Oa" + str(i).zfill(2)+ "_radiance"
-				fname = os.path.join(s3_dir, data_key + ".nc")
-				f = Dataset(fname)
-				rad = f.variables[data_key]
-				data = rad[:]
-				valid_data_ind = np.where((data >= rad.valid_min) & (data <= rad.valid_max))
-				invalid_data_ind = np.where((data < rad.valid_min) & (data > rad.valid_max))
-				#data[valid_data_ind] = data[valid_data_ind] * rad.scale_factor + rad.add_offset
-				data[invalid_data_ind] = -9999.0
-				data1.append(data)
-	dat = np.array(data1)
-	if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
-		dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
-	return dat
+        data1 = []
+        bands = None
+        if "bands" in kwargs:
+                bands = kwargs["bands"]
+        if os.path.isdir(s3_dir):
+                for i in range(1,22):
+                        if bands is None or i in bands:
+                                data_key = "Oa" + str(i).zfill(2)+ "_radiance"
+                                fname = os.path.join(s3_dir, data_key + ".nc")
+                                f = Dataset(fname)
+                                rad = f.variables[data_key]
+                                data = rad[:]
+                                valid_data_ind = np.where((data >= rad.valid_min) & (data <= rad.valid_max))
+                                invalid_data_ind = np.where((data < rad.valid_min) & (data > rad.valid_max))
+                                #data[valid_data_ind] = data[valid_data_ind] * rad.scale_factor + rad.add_offset
+                                data[invalid_data_ind] = -9999.0
+                                data1.append(data)
+        dat = np.array(data1)
+        if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+                dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+        return dat
+
+
 
 def read_s3_netcdf_geo(s3_dir, **kwargs):
-	data1 = []
-	if os.path.isdir(s3_dir):
-		fname = os.path.join(s3_dir, "geo_coordinates.nc")
-		f = Dataset(fname)
+        data1 = []
+        if os.path.isdir(s3_dir):
+                fname = os.path.join(s3_dir, "geo_coordinates.nc")
+                f = Dataset(fname)
 
-		lat = f.variables["latitude"]
-		data = lat[:]
-		valid_data_ind = np.where((data >= lat.valid_min) & (data <= lat.valid_max))
-		invalid_data_ind = np.where((data < lat.valid_min) & (data > lat.valid_max))
-		#data[valid_data_ind] = data[valid_data_ind] * lat.scale_factor
-		data[invalid_data_ind] = -9999.0
-		data1.append(data)
+                lat = f.variables["latitude"]
+                data = lat[:]
+                valid_data_ind = np.where((data >= lat.valid_min) & (data <= lat.valid_max))
+                invalid_data_ind = np.where((data < lat.valid_min) & (data > lat.valid_max))
+                #data[valid_data_ind] = data[valid_data_ind] * lat.scale_factor
+                data[invalid_data_ind] = -9999.0
+                data1.append(data)
 
-		lon = f.variables["longitude"]
-		data = lon[:]
-		valid_data_ind = np.where((data >= lon.valid_min) & (data <= lon.valid_max))
-		invalid_data_ind = np.where((data < lon.valid_min) & (data > lon.valid_max))
-		#data[valid_data_ind] = data[valid_data_ind] * lon.scale_factor
-		data[invalid_data_ind] = -9999.0
-		data1.append(data)
+                lon = f.variables["longitude"]
+                data = lon[:]
+                valid_data_ind = np.where((data >= lon.valid_min) & (data <= lon.valid_max))
+                invalid_data_ind = np.where((data < lon.valid_min) & (data > lon.valid_max))
+                #data[valid_data_ind] = data[valid_data_ind] * lon.scale_factor
+                data[invalid_data_ind] = -9999.0
+                data1.append(data)
 
-	dat = np.array(data1)
-	if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
-		dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
-	return dat
+        dat = np.array(data1)
+        if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+                dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+        return dat
+
+
 
 def read_s6_netcdf(filename, **kwargs):
 	f = Dataset(filename)
@@ -789,7 +821,8 @@ def read_uavsar(in_fps, desc_out=None, type_out=None, search_out=None, **kwargs)
         phase = None
     
     data = np.array(data)
-    
+    if "clip" in kwargs and kwargs["clip"]:
+        data = np.clip(data, 1e-3, 1)
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
         data = data[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
     
@@ -900,6 +933,11 @@ def get_read_func(data_reader):
         return read_geo_nc_ungridded
     if data_reader == "uavsar":
         return read_uavsar
-   
+    if data_reader == "hysplit_netcdf":
+        return read_hysplit_netcdf
+    if data_reader == "hysplit_netcdf_geo":
+        return read_hysplit_netcdf_geo
+  
+ 
     #TODO return BCDP reader
     return None
