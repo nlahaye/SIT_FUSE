@@ -34,9 +34,11 @@ logger = logging.get_logger(__name__)
 
 class ClustDBN(Model):
 
-    def __init__(self, dbn_trunk, input_fc , n_classes, use_gpu=True, scaler = None):
+    def __init__(self, dbn_trunk, input_fc , n_classes, use_gpu=True, scaler = None, layered = False):
 
         super(ClustDBN, self).__init__(use_gpu=use_gpu)
+
+        self.layered = layered
 
         self.dbn_trunk = dbn_trunk
         self.input_fc = input_fc
@@ -84,7 +86,11 @@ class ClustDBN(Model):
         """
         #TODO fix for multi-head
         dt = x.dtype
-        y = self.dbn_trunk.forward(x)
+        #If Clustering is single layered or first layer in heirarchy
+        if not self.layered:
+            y = self.dbn_trunk.forward(x)
+        else:
+            y = x
         if isinstance(y,tuple):
             y = y[0]
  
