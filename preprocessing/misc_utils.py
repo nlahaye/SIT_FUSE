@@ -213,6 +213,39 @@ def lee_filter(img, size):
 
 
 
+def gtiff_to_gtiff_multfile(fname, n_channels, **kwargs):
+
+    if os.path.isfile(fname):
+        dat = gdal.Open(fname)
+        root, ext = os.path.splitext(fname)
+        geoTransform = dat.GetGeoTransform()
+        wkt = dat.GetProjection()
+        dat.FlushCache()
+        nx = 0
+        ny = 0
+        for i in range(n_channels):
+            dat_arr = dat.GetRasterBand((i+1)).ReadAsArray()
+            if i == 0:
+                nx = dat_arr.shape[1]
+                ny = dat_arr.shape[0]
+            dat.FlushCache()
+            out_fname = None
+            if "band_key" in kwargs:
+                out_fname = root + "_" + kwargs["band_key"] + str(i+1) + ext
+            else:
+                out_fname = root + "_BAND" + str(i+1) + ext
+
+            
+            out_ds = gdal.GetDriverByName("GTiff").Create(out_fname, nx, ny, 1, gdal.GDT_Float32)
+            out_ds.SetGeoTransform(geoTransform)
+            out_ds.SetProjection(wkt)
+            out_ds.GetRasterBand(1).WriteArray(dat_arr)
+            out_ds.FlushCache()
+            out_ds = None
+            del dat_arr
+        dat.FlushCache()
+        dat = None            
+
 
 #Assumes each set of tiffs will be moved to a separate directory
 def gen_polar_2_grid_cmds(exe_location, data_files, location_files, instruments, out_dirs):
