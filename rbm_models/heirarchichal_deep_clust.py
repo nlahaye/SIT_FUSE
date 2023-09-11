@@ -55,36 +55,56 @@ from joblib import dump, load
 
 class HeirClust(Model):
   
-    def __init__(self, base_clust, train_data, n_classes, use_gpu=True):
+    def __init__(self, base_clust, train_data, n_classes, use_gpu=True, min_samples = 1000, gauss_stdevs = [0.01,0.001,0.0], layered = False):
         super(HeirClust, self).__init__(use_gpu=use_gpu)
 
         self.base_clust = base_clust
-    
+
+        self.layered = layered
+
+        #For Nesting
+        self.dbn_trunk = self.base_clust.dbn_trunk
+        self.input_fc = self.base_clust.input_fc
+        self.scaler  = None
+     
         self.local_rank = 0
         if "LOCAL_RANK" in os.environ.keys():
                 self.local_rank = int(os.environ["LOCAL_RANK"])
- 
-        self.generate_label_set(train_data)
 
+
+        self.n_classes = n_classes
+        self.min_samples = min_samples
+        self.gauss_stdevs = gauss_stdevs
+ 
+
+        self.generate_label_set(train_data)
 
         self.clust_tree = {"0": {"-1": self.base_clust}, "1": {}}
 
         
-    def fit(self, train_data):
+    def fit(self, train_data, epochs = 15, tune_subtrees = None):
         count = 0
+
+        if tune_subtrees is not None:
+            for i in range(len(tune_subtrees)):
+                tune_subtrees[i] = str(torch.as_tensor(tune_subtrees[i]))
+
+
+        print("TUNE_SUBTREES", tune_subtrees)
         for key in self.lab_full.keys():
             count = count + 1
             print("LABEL", key, len(self.lab_full[key])) 
-            if len(self.lab_full[key]) < 5000:
+            if len(self.lab_full[key]) < self.min_samples:
                 self.clust_tree["1"][key] = None
                 continue
+            elif tune_subtrees is not None and key not in tune_subtrees:
+                continue 
 
             print("TRAINING MODEL ", str(count), " / ", str(len(self.lab_full.keys())))
 
             use_gpu = True
-            n_classes = 15
-            self.clust_tree["1"][key] = ClustDBN(self.base_clust.dbn_trunk, self.base_clust.input_fc, n_classes,
-               use_gpu, None)
+            self.clust_tree["1"][key] = ClustDBN(self.base_clust.dbn_trunk, self.base_clust.input_fc, self.n_classes,
+               use_gpu, None, self.layered)
             self.clust_tree["1"][key].fc.train()
             self.clust_tree["1"][key].dbn_trunk.eval()
             self.clust_tree["1"][key].fc = DDP(self.clust_tree["1"][key].fc, device_ids=[self.local_rank], output_device=self.local_rank)
@@ -93,11 +113,11 @@ class HeirClust(Model):
             print("HERE SUBSET STATS", train_data.data_full[self.lab_full[key]].min(), train_data.data_full[self.lab_full[key]].max(), train_data.data_full[self.lab_full[key]].mean(), train_data.data_full[self.lab_full[key]].std())
             train_subset.init_from_array(train_data.data_full[self.lab_full[key]], train_data.targets_full[self.lab_full[key]], train_data.scaler)
             sampler = DistributedSampler(train_subset, shuffle=True)
-            batch_size = min(100, int(train_subset.data_full.shape[0] / 15))
+            batch_size = max(700, self.min_samples)
             loader = DataLoader(train_subset, batch_size=batch_size, shuffle=False,
                 sampler=sampler, num_workers = 10, pin_memory = False, drop_last=True)
             gpu_usage()
-            self.clust_tree["1"][key].fit(train_subset, batch_size, 15, loader, sampler, [0.001, 0.0001, 0.00001, 0.000001, 0.0], 1.0) #TODO
+            self.clust_tree["1"][key].fit(train_subset, batch_size, epochs, loader, sampler, self.gauss_stdevs)#TODO
             self.clust_tree["1"][key].eval()
             self.clust_tree["1"][key].fc.eval()
             #self.clust_tree["1"][key] = self.clust_tree["1"][key].cpu()
@@ -110,7 +130,7 @@ class HeirClust(Model):
         count = 0 
         self.lab_full = {}
         while(count == 0 or data.has_next_subset() or (data.subset > 1 and data.current_subset > (data.subset-2))):
-            batch_size = min(100, int(data.data_full.shape[0] / 15))
+            batch_size = max(700, self.min_samples)
  
             output_sze = data.data_full.shape[0]
             append_remainder = int(batch_size - (output_sze % batch_size))
@@ -144,7 +164,9 @@ class HeirClust(Model):
                 lab = self.base_clust.forward(dat_dev)
                 if isinstance(lab, list):
                     lab = lab[0]
-                lab = torch.argmax(lab, axis = 1)
+                #If previous layer is top layer / otherwise argmax happens in forward function
+                if lab.shape[1] > 1:
+                    lab = torch.argmax(lab, axis = 1)
                 if use_gpu == True:
                     lab = lab.detach().cpu()                 
                 dat_dev = dat_dev.detach().cpu()
@@ -194,9 +216,13 @@ class HeirClust(Model):
         if isinstance(y,list):
             y = y[0]
 
+
         tmp_full = torch.zeros((y.shape[0], 1), device=y.device)
         for i in range(y.shape[0]):
-            tmp = torch.argmax(y[i])
+            if y.shape[1] > 1:
+                tmp = torch.argmax(y[i])
+            else:
+                tmp = y[i]
             tmp2 = str(tmp.detach().cpu())
             tmp3 = tmp.detach().cpu()
             #print(tmp2, self.clust_tree["1"].keys())
@@ -209,9 +235,9 @@ class HeirClust(Model):
                 #print("HERE ARGMAX", torch.argmax(tmp, dim=1), (5*tmp))
                 tmp = torch.argmax(tmp, dim=1) 
                 #print("HERE TMP", tmp2, tmp)
-                tmp = tmp + (15*tmp3)
+                tmp = tmp + (self.n_classes*tmp3)
             else:
-                tmp = (15*tmp3)
+                tmp = (self.n_classes*tmp3)
             tmp_full[i] = tmp
 
         #print("HERE OUTPUT ", torch.unique(tmp_full), tmp_full.shape)
@@ -240,7 +266,6 @@ class HeirClust(Model):
         return state_dict  
 
     def load_model(self, state_dict):
-        n_classes = 15
         use_gpu = True
         print("LOADING MODEL")
         for lab1 in self.clust_tree.keys():
@@ -249,8 +274,8 @@ class HeirClust(Model):
             for lab2 in self.lab_full.keys():
                 self.clust_tree[lab1][lab2] = None
                 if lab2 in state_dict[lab1].keys():
-                    self.clust_tree[lab1][lab2] = ClustDBN(self.base_clust.dbn_trunk, self.base_clust.input_fc, n_classes,
-                        use_gpu, self.base_clust.scaler)
+                    self.clust_tree[lab1][lab2] = ClustDBN(self.base_clust.dbn_trunk, self.base_clust.input_fc, self.n_classes,
+                        use_gpu, self.base_clust.scaler, self.layered)
                     self.clust_tree[lab1][lab2].fc = DDP(self.clust_tree[lab1][lab2].fc, device_ids=[self.local_rank], output_device=self.local_rank)
                     self.clust_tree[lab1][lab2].load_state_dict(state_dict[lab1][lab2]["model"])
                     self.clust_tree[lab1][lab2].scaler = load(state_dict[lab1][lab2]["scaler"])
