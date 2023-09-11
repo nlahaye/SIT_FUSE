@@ -213,6 +213,38 @@ def filled_array(x, fill=0.):
         return None
 
 
+def forward_numpy(x, model):
+        """Performs a forward pass over the data.
+
+        Args:
+            x: An input np.ndarray that will be converted to a tensor for computing the forward pass.
+
+        Returns:
+            (np.ndarray): An array containing the DBN's outputs.
+        """
+        numpy_to_torch_dtype_dict = {
+            np.dtype(np.bool)        : torch.bool,
+            np.dtype(np.uint8)       : torch.uint8,
+            np.dtype(np.int8)        : torch.int8,
+            np.dtype(np.int16)       : torch.int16,
+            np.dtype(np.int32)       : torch.int32,
+            np.dtype(np.int64)       : torch.int64,
+            np.dtype(np.float16)     : torch.float16,
+            np.dtype(np.float32)     : torch.float32,
+            np.dtype(np.float64)     : torch.float64,
+            np.dtype(np.complex64)   : torch.complex64,
+            np.dtype(np.complex128)  : torch.complex128
+        }
+
+        dt = numpy_to_torch_dtype_dict[x.dtype]
+        t = torch.from_numpy(x).cuda()
+        y = model.forward(t)
+        y = y.detach().cpu().numpy()
+
+        return y
+
+
+
 def most_frequent_labels(data):
     """
     Args: 
@@ -374,7 +406,7 @@ def main(**kwargs):
     feature_names = ['HHHH', 'HVHV', 'VVVV']
     
     plot_by_freq = True
-    labels_by_freq = most_frequent_labels(model.forward_numpy(data_test))
+    labels_by_freq = most_frequent_labels(forward_numpy(data_test, model))
     print("Most significant labels: ", labels_by_freq)
     
     if plot_by_freq:
