@@ -117,6 +117,9 @@ def run_dbn(yml_conf):
     model_fname = yml_conf["output"]["model"]
     model_file = os.path.join(out_dir, model_fname)
     heir_model_file = os.path.join(out_dir, "heir_" + model_fname)
+    heir_model_tiers = yml_conf["dbn"]["heir_tiers"]
+       
+ 
     training_output = yml_conf["output"]["training_output"]
     training_mse = yml_conf["output"]["training_mse"]
     testing_output = yml_conf["output"]["testing_output"]
@@ -196,6 +199,14 @@ def run_dbn(yml_conf):
     targets_fname = os.path.join(out_dir, "train_data.indices.npy")
     data_fname = os.path.join(out_dir, "train_data.npy")
 
+
+    heir_min_samples = yml_conf["dbn"]["training"]["heir_cluster_min_samples"]
+    heir_gauss_stdevs = yml_conf["dbn"]["training"]["heir_cluster_gauss_noise_stdev"]
+    heir_epochs = yml_conf["dbn"]["training"]["heir_epochs"]
+    heir_tune_subtrees = yml_conf["dbn"]["training"]["heir_tune_subtrees"]
+    heir_tune_subtree_list = yml_conf["dbn"]["training"]["heir_tune_subtree_list"]
+    n_heir_classes = yml_conf["dbn"]["training"]["heir_deep_cluster"]
+
     if os.path.exists(targets_fname) and os.path.exists(data_fname):
         preprocess_train = False
 
@@ -274,18 +285,34 @@ def run_dbn(yml_conf):
         final_model.fc.load_state_dict(torch.load(model_file + "_fc_clust.ckpt"))
 
     dist.barrier()
-    heir_clust = HeirClust(final_model, x2, 5, use_gpu=use_gpu)
 
+
+    heir_clust = None 
+
+    for tiers in range(0,heir_model_tiers):
+
+        print("HEIRARCHICAL TIER ", str(tiers + 1))
+
+        heir_mdl_file = heir_model_file + ""
+        if tiers > 0:
+            heir_mdl_file = heir_model_file + "_" + str(tiers)
  
-    if not os.path.exists(heir_model_file + ".ckpt") or overwrite_model: 
-        heir_clust.fit(x2)
+        print(heir_mdl_file)
+        if not os.path.exists(heir_mdl_file + ".ckpt") or overwrite_model: 
+            heir_clust = HeirClust(final_model, x2, n_heir_classes, use_gpu=use_gpu, min_samples=heir_min_samples, gauss_stdevs = heir_gauss_stdevs)
+            heir_clust.fit(x2, epochs=heir_epochs)
 
-        state_dict = heir_clust.get_state_dict(out_dir) #TODO
-        torch.save(state_dict, heir_model_file + ".ckpt")
-    else:
-        heir_dict = torch.load(heir_model_file + ".ckpt")
-        heir_clust.load_model(heir_dict)
+            state_dict = heir_clust.get_state_dict(out_dir) #TODO
+            torch.save(state_dict, heir_mdl_file + ".ckpt")
+        else:
+            heir_clust = HeirClust(final_model, x2, n_heir_classes, use_gpu=use_gpu, min_samples=heir_min_samples, gauss_stdevs = heir_gauss_stdevs)
+            heir_dict = torch.load(heir_mdl_file + ".ckpt")
+            heir_clust.load_model(heir_dict)
 
+            if heir_tune_subtrees:
+                heir_clust.fit(x2, epochs = heir_epochs, tune_subtrees =  heir_tune_subtree_list)        
+            
+        final_model = heir_clust
 
 
     #TODO: For now set all subsetting to 1 - will remove subsetting later. 
@@ -307,7 +334,7 @@ def run_dbn(yml_conf):
 
         #TODO update arguments/signatures
 
-        fname_begin = os.path.basename(fbase) + ".heir_clust"
+        fname_begin = os.path.basename(fbase) + ".heir_clust" + str(heir_model_tiers)
         x3 = DBNDataset()
         x3.read_and_preprocess_data([data_test[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
             fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scaler=scaler, scale = scale_data, \
