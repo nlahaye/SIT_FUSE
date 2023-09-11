@@ -634,33 +634,34 @@ def get_lat_lon(fname):
     return lonLat
 
 
-def read_uavsar(in_fps, **kwargs):
+def read_uavsar(in_fps, desc_out=None, type_out=None, search_out=None, **kwargs):
     """
     Reads UAVSAR data. 
-    Complex-valued (unlike polarization) data will be split into separate phase and amplitude channels. 
 
     Args:
         in_fps (list(string) or string):  list of strings (each file will be treated as a separate channel)
                                           or string of data file paths
-        ann_fps (list(string) or string): list of or string of UAVSAR annotation file paths,
+        desc_out (optional): if specified, is set to the annotation description of the files converted 
+        type_out (optional): if specified, is set to the filetype of the files converted 
+        search_out (optional): if specified, is set to the search keyword used to search the .ann file
+        kwargs:
+            ann_fps (list(string) or string): list of or string of UAVSAR annotation file paths,
                                           ann files will be automatically matched to data files
-        pol_modes (list(string)) (optional): list of allowed polarization modes 
-                                             to filter for (e.g. ['HHHH', 'HVHV', 'VVVV'])
-        linear_to_dB (bool) (optional): convert linear amplitude units to decibels
+            pol_modes (list(string)) (optional): list of allowed polarization modes 
+                                                    to filter for (e.g. ['HHHH', 'HVHV', 'VVVV'])
+            linear_to_dB (bool) (optional): convert linear amplitude units to decibels
 
     Returns:
-        (data, desc, type, search): tuple containing information about the file
-
-        data: image array of floats or complex values, or dict containing two arrays of slopes (north, east)
-        desc: the dictionary generated from the annotation file
-        type: the type of inputted file
-        search: the search term for relevant values inside the annotation dictionary
+        data: numpy array of shape (channels, lines, samples) 
+              Complex-valued (unlike polarization) data will be split into separate phase and amplitude channels. 
     """
 
     from preprocessing.misc_utils import lee_filter
 
     if "ann_fps" in kwargs:
         ann_fps = kwargs["ann_fps"]
+    else:
+        raise Exception("No annotation files specified.")
     
     if "pol_modes" in kwargs:
         pol_modes = list(kwargs["pol_modes"])
@@ -802,6 +803,8 @@ def read_uavsar(in_fps, **kwargs):
         else:
             slopes = None
             dat = dat.reshape(nrow, ncol)
+            if com:
+                phase = phase.reshape(nrow, ncol)
         
         # Apply 5x5 Lee Speckle Filter
         if not anc and type != 'hgt':
@@ -822,6 +825,14 @@ def read_uavsar(in_fps, **kwargs):
         data = np.clip(data, 1e-3, 1)
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
         data = data[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+    
+    if search_out:
+        search_out = search
+    if desc_out:
+        desc_out = desc
+    if type_out:
+        type_out = type
+    
     return data
 
 
