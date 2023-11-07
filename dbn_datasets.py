@@ -6,6 +6,8 @@ This software may be subject to U.S. export control laws. By accepting this soft
 applicable U.S. export laws and regulations. User has the responsibility to obtain export licenses, or other export authority as may be 
 required before exporting such information to foreign countries or providing access to foreign persons.
 """
+from osgeo import osr, gdal
+
 import os
 import numpy as np
 import random
@@ -19,7 +21,7 @@ import argparse
 import sys
 sys.setrecursionlimit(4500)
 
-from utils import numpy_to_torch, read_yaml, get_read_func, get_scaler
+from utils import read_yaml, get_read_func, get_scaler
 
 import pickle
 from joblib import load, dump
@@ -57,6 +59,7 @@ class DBNDataset(torch.utils.data.Dataset):
 		#Set class attributes
 		self.data_full = data_full
 		self.targets_full = targets_full
+		self.increment = 0
 
 		self.train_indices = None
 		self.scaler = scaler
@@ -87,6 +90,7 @@ class DBNDataset(torch.utils.data.Dataset):
 		#Load in npy files and set class attributes
 		self.data_full = np.load(data_filename)
 		self.targets_full = np.load(indices_filename)
+		self.increment = 0
 
 		self.train_indices = None
 		self.scale = False
@@ -105,7 +109,7 @@ class DBNDataset(torch.utils.data.Dataset):
 		self.next_subset()
 
 
-	def read_and_preprocess_data(self, filenames, read_func, read_func_kwargs, pixel_padding, delete_chans, valid_min, valid_max, fill_value = -9999, chan_dim = 0, transform_chans = [], transform_values = [], scaler = None, scale=False, transform=None, subset=None, train_scaler = False, subset_training = -1, stratify_data = None):
+	def read_and_preprocess_data(self, filenames, read_func, read_func_kwargs, pixel_padding, delete_chans, valid_min, valid_max, fill_value = -999999, chan_dim = 0, transform_chans = [], transform_values = [], scaler = None, scale=False, transform=None, subset=None, train_scaler = False, subset_training = -1, stratify_data = None):
 		"""
 		High level initialization function for data ingestion, preprocessesing, and Dataset initialization. Data gets read in in file x channel x line x sample dimensionality and gets preprocessed/changed into n_samples x n_features dimensionality. 
 	
@@ -116,7 +120,7 @@ class DBNDataset(torch.utils.data.Dataset):
 		:param delete_chans: list of channels to be deleted pror to preprocessing. Can be empty.
 		:param valid_min: Minimum valid value in data. Anything less will be set to a fill value and not used.
 		:param valid_max: Maximum valid value in data. Anything greater  will be set to a fill value and not used.
-			:param fill_value: Optional fill value to be used for bad/unusample samples/pixeld. Default value is -9999.
+			:param fill_value: Optional fill value to be used for bad/unusample samples/pixeld. Default value is -999999.
 			:param chan_dim: Optional dimension of index that represents channels/bands. Default value is 0.
 		:param transform_chans: Optional channels to have special transforms applied to pixels out of expected ranges prior to filling. Default value is empty list ([]).
 		:param transform_values: Optional values associated with transform_chans. Values to be used for out of range samples in each of the channels specified in transform_chans. Default value is empty list ([]).
@@ -166,6 +170,7 @@ class DBNDataset(torch.utils.data.Dataset):
 
 		strat_local = []
 		data_local = []
+		self.increment = 0
 		for i in range(0, len(self.filenames)):
 			#Read data in one file at a time
 			if (type(self.filenames[i]) == str and os.path.exists(self.filenames[i])) or (type(self.filenames[i]) is list and os.path.exists(self.filenames[i][0])):
@@ -178,6 +183,7 @@ class DBNDataset(torch.utils.data.Dataset):
 				#If single channel, 2D data, transform into 3D (setting 3rd dimension to 1)
 				if dat.ndim == 2:
 					dat = np.expand_dims(dat, self.chan_dim)
+				self.increment = dat.ndim - 3
 				#Setup data to use for stratification
 				if self.stratify_data is not None:
 					strat_data = self.stratify_data["reader"](self.stratify_data["filename"][i], \
@@ -185,7 +191,7 @@ class DBNDataset(torch.utils.data.Dataset):
 				#Apply channel-specific transformations, if any. 		
 				for t in range(len(self.transform_chans)):
 					slc = [slice(None)] * dat.ndim
-					slc[self.chan_dim] = slice(self.transform_chans[t], self.transform_chans[t]+1)
+					slc[self.chan_dim+self.increment] = slice(self.transform_chans[t], self.transform_chans[t]+1)
 					tmp = dat[tuple(slc)]
 					if self.valid_min is not None:
 						inds = np.where(tmp < self.valid_min - 0.00000000005) 
@@ -199,19 +205,26 @@ class DBNDataset(torch.utils.data.Dataset):
 					del tmp
 							
 				#Delete channels set to be unused in config	
-				dat = np.delete(dat, self.delete_chans, self.chan_dim)
+				dat = np.delete(dat, self.delete_chans, self.chan_dim+self.increment)
 
 				#Set all other values outside of specified valid range to fill
 				if self.valid_min is not None:
-					dat[np.where(dat < self.valid_min - 0.00000000005)] = -9999
+					dat[np.where(dat < self.valid_min - 0.00000000005)] = -999999
 				if self.valid_max is not None:	
-					dat[np.where(dat > self.valid_max - 0.00000000005)] = -9999
+					dat[np.where(dat > self.valid_max - 0.00000000005)] = -999999
 				if self.fill_value is not None:
-					dat[np.where(dat == self.fill_value)] = -9999
+					dat[np.where(dat == self.fill_value)] = -999999
 				#Move specified channel dimension to 3rd position for uniformity
-				dat = np.moveaxis(dat, self.chan_dim, 2)
+				dat = np.moveaxis(dat, self.chan_dim+self.increment, 2+self.increment)
+				print("HERE", dat.shape, len(data_local))                                 
 				#Append data and stratification data from current files to full set
-				data_local.append(dat)
+				if dat.ndim == 3:
+					data_local.append(dat)
+				else:
+					if len(data_local) == 0:
+						data_local = dat
+					else:
+						data_local = np.concatenate((data_local, dat), axis=0)
 				if strat_data is not None:
 					#TODO Generalize to multi-class
 					strat_data = strat_data.astype(np.int32)
@@ -220,23 +233,28 @@ class DBNDataset(torch.utils.data.Dataset):
 					strat_local.append(strat_data)
 
 		#del dat
-		self.chan_dim = 2
+		self.chan_dim = 2+self.increment
 		if self.scale:
 			#Train scaler if applicable
 			if self.scaler is None or self.train_scaler:
 				self.training = True
 				self.__train_scaler__(data_local)
+		if self.subset_training >= 0:
+			self.training = True
 
-			#If scale == True do per-channel scaling on all valid pixels
+
+		if self.scale: #do per-channel scaling on all valid pixels
 			for r in range(len(data_local)):	
 				subd = data_local[r]
 				shape = copy.deepcopy(subd.shape)
-				subd = subd.reshape(-1, shape[self.chan_dim])
-				inds = np.where(subd <= -9998)
+				subd = subd.reshape(-1, shape[self.chan_dim-self.increment])
+				inds = np.where(subd <= -999998)
 				subd = self.scaler.transform(subd)
-				subd[inds] = -9999
+				subd[inds] = -999999
 				subd = subd.reshape(shape)
 				data_local[r] = subd
+ 
+
 
 		dim1 = 0
 		dim2 = 1
@@ -267,7 +285,7 @@ class DBNDataset(torch.utils.data.Dataset):
 			sub_data_total = sub_data_total.reshape((sub_data_total.shape[0]*sub_data_total.shape[1], -1))		
 
 			#No sample is used that contains a fill value
-			del_inds = np.where(sub_data_total <= -9998)[0]
+			del_inds = np.where(sub_data_total <= -999998)[0]
 			sub_data_total = np.delete(sub_data_total, del_inds, 0)
 			tgts = np.delete(tgts, del_inds, 1)
 
@@ -289,7 +307,10 @@ class DBNDataset(torch.utils.data.Dataset):
 
 		#Format as downstream processes expect
 		self.targets[0] = np.swapaxes(self.targets[0], 0, 1)
-
+		self.data_full = None
+		if self.data[0].shape[0] == 0:
+			return
+		print(self.data[0].shape, self.targets[0].shape)
 		#Shuffle samples, indices, and (if applicable) stratification data together
 		if len(self.stratify_training) > 0:
 			c = list(zip(self.data[0], self.targets[0], self.stratify_training[0]))
@@ -306,7 +327,6 @@ class DBNDataset(torch.utils.data.Dataset):
 		self.data_full = np.array(self.data).astype(np.float32)
 		self.targets_full = np.copy(self.targets).astype(np.int16)
 
-
 		#Subset data for training and/or stratify
 		if self.training and self.subset_training > 0:
 			if len(self.stratify_training) > 0:
@@ -321,6 +341,8 @@ class DBNDataset(torch.utils.data.Dataset):
 
 		print("STATS", self.data_full.min(), self.data_full.max(), self.data_full.mean(), self.data_full.std())
 
+		if self.data_full is None or self.data_full.shape[0] == 0:
+			return
 		#Setup subsetting
 		self.next_subset()
  
@@ -422,8 +444,14 @@ class DBNDataset(torch.utils.data.Dataset):
 		for r in range(len(data)):
 			subd = data[r]
 			shape = subd.shape
-			self.scaler.partial_fit(subd[np.where(subd > -9999)].reshape(-1, shape[self.chan_dim]))
-
+			for c in range(subd.shape[2]):
+				print(subd[:,:,c].min(), subd[:,:,c].max(), subd[:,:,c].mean(), subd[:,:,c].std(), r, c)
+			mn = np.argmin(subd, axis=self.chan_dim-self.increment)
+			yy,xx = np.meshgrid(np.linspace(0,subd.shape[1]-1,subd.shape[1]).astype(np.int32), np.linspace(0,subd.shape[0]-1,subd.shape[0]).astype(np.int32))
+			indices = np.where(subd[xx.ravel(),yy.ravel(),mn.ravel()].reshape(shape[0],shape[1],1) > -999999)
+			subd = subd[indices[0], indices[1],:].reshape(-1, shape[self.chan_dim-self.increment])
+			self.scaler.partial_fit(subd)
+ 
 	def __len__(self):
 		"""
 		Overriding of Dataset internal function __len__.
@@ -444,8 +472,8 @@ class DBNDataset(torch.utils.data.Dataset):
 			index = index.tolist()
 
 		sample = self.data[index]
-		#if self.transform:
-		#	sample = self.transform(sample)
+		if self.transform is not None:
+			sample = self.transform(sample)
 
 		#sample = sample * 1e10
 		#sample = sample.astype(np.int32)
@@ -509,8 +537,12 @@ def main(yml_fpath):
 
 	use_gpu_pre = subset_training = yml_conf["dbn"]["training"]["use_gpu_preprocessing"]
 
-	scaler, scaler_train = get_scaler(scaler_type, cuda = use_gpu_pre)
-
+	if os.path.exists(scaler_fname):
+		scaler = load(scaler_fname)
+		scaler_train = False
+	else:
+		scaler, scaler_train = get_scaler(scaler_type, cuda = use_gpu_pre)
+ 
 	subset_training = yml_conf["dbn"]["subset_training"]
  
 	os.environ['PREPROCESS_GPU'] = str(int(use_gpu_pre))
@@ -530,7 +562,7 @@ def main(yml_fpath):
 	x2.read_and_preprocess_data(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
 			valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
 			transform_values=transform_values, scaler = scaler, train_scaler = scaler_train, scale = scale_data, \
-			transform=numpy_to_torch, subset=subset_count, subset_training = subset_training, stratify_data=stratify_data)
+			transform=None, subset=subset_count, subset_training = subset_training, stratify_data=stratify_data)
  
 	if x2.train_indices is not None:
 		np.save(os.path.join(out_dir, "train_indices"), x2.train_indices)
