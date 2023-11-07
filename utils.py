@@ -234,7 +234,7 @@ def read_gk2a_netcdf_geo(filename, **kwargs):
     f = Dataset(filename)
     lat = f.variables["lat"]
     lon = f.variables["lon"]
-    dat = np.array([lat, lon)
+    dat = np.array([lat, lon])
 
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
             dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
