@@ -85,7 +85,7 @@ class HeirClust(Model):
     def fit(self, train_data, epochs = 15, tune_subtrees = None):
         count = 0
 
-        if tune_subtrees is not None:
+        if tune_subtrees is not None and len(tune_subtrees)  > 0:
             for i in range(len(tune_subtrees)):
                 tune_subtrees[i] = str(torch.as_tensor(tune_subtrees[i]))
 
@@ -97,7 +97,7 @@ class HeirClust(Model):
             if len(self.lab_full[key]) < self.min_samples:
                 self.clust_tree["1"][key] = None
                 continue
-            elif tune_subtrees is not None and key not in tune_subtrees:
+            elif tune_subtrees is not None and len(tune_subtrees) > 0 and key not in tune_subtrees:
                 continue 
 
             print("TRAINING MODEL ", str(count), " / ", str(len(self.lab_full.keys())))
@@ -117,7 +117,11 @@ class HeirClust(Model):
             loader = DataLoader(train_subset, batch_size=batch_size, shuffle=False,
                 sampler=sampler, num_workers = 10, pin_memory = False, drop_last=True)
             gpu_usage()
-            self.clust_tree["1"][key].fit(train_subset, batch_size, epochs, loader, sampler, self.gauss_stdevs)#TODO
+            div = round((10 *  (0.5* (np.log(train_subset.data_full.shape[0]) - np.log(self.min_samples)))) / 10)
+            if div < 1:
+                div = 1
+            n_epochs = int(epochs / div)
+            self.clust_tree["1"][key].fit(train_subset, batch_size, n_epochs, loader, sampler, self.gauss_stdevs)#TODO
             self.clust_tree["1"][key].eval()
             self.clust_tree["1"][key].fc.eval()
             #self.clust_tree["1"][key] = self.clust_tree["1"][key].cpu()
