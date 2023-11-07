@@ -73,7 +73,11 @@ class ClustDBN(Model):
         for x_batch, _ in tqdm(batches):
             x_batch = x_batch.to(self.dbn_trunk.torch_device, non_blocking = True)
             with torch.no_grad():
-                self.scaler.partial_fit(self.dbn_trunk(x_batch))
+                tmp = self.dbn_trunk(x_batch)
+                if len(tmp.shape) == 4:
+                    tmp = torch.flatten(nn.functional.adaptive_max_pool2d(tmp, (1,1)), start_dim=1)
+                    print("HERE SCALER FIT", tmp.shape)
+                self.scaler.partial_fit(tmp)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Performs a forward pass over the data.
@@ -94,7 +98,12 @@ class ClustDBN(Model):
             y = x
         if isinstance(y,tuple):
             y = y[0]
- 
+
+        if len(y.shape) == 4:
+                    y = nn.functional.adaptive_max_pool2d(y, (1,1))
+        y = torch.flatten(y, start_dim=1)
+
+
         y = torch.as_tensor(self.scaler.transform(y), dtype = dt)
         y = self.fc.forward(y)
 
@@ -165,6 +174,12 @@ class ClustDBN(Model):
                         if isinstance(y,tuple):
                             y = y[0]
                             y2 = y2[0]
+                        if len(y.shape) == 4:
+                            y = nn.functional.adaptive_max_pool2d(y, (1,1))
+                            y2 = nn.functional.adaptive_max_pool2d(y2, (1,1))
+
+                        y = torch.flatten(y, start_dim = 1)
+                        y2 = torch.flatten(y2, start_dim = 1)
                         y = torch.flatten(torch.as_tensor(self.scaler.transform(y), dtype=dt), start_dim = 1)
                         y = y.to(self.dbn_trunk.torch_device, non_blocking = True)
                         y2 = torch.flatten(torch.as_tensor(self.scaler.transform(y2), dtype=dt), start_dim = 1)
