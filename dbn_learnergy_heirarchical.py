@@ -34,7 +34,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader, TensorDataset
 from torch.utils.data.distributed import DistributedSampler
 #from torch.nn import DataParallel as DDP
-from learnergy.models.deep import DBN, ResidualDBN
+from learnergy.models.deep import DBN, ResidualDBN, ConvDBN
 
 
 #from rbm_models.fcn_dbn import DBNUnet
@@ -55,7 +55,7 @@ from joblib import dump, load
 from dbn_datasets import DBNDataset
 from dbn_datasets_conv import DBNDatasetConv 
 #from utils_cupy import numpy_to_torch, read_yaml, get_read_func, get_scaler
-from utils import numpy_to_torch, read_yaml, get_read_func, get_scaler
+from utils import read_yaml, get_read_func, get_scaler
 
 #Input Parsing
 import yaml
@@ -132,6 +132,8 @@ def run_dbn(yml_conf):
     use_gpu_pre = yml_conf["dbn"]["training"]["use_gpu_preprocessing"]
     device_ids = yml_conf["dbn"]["training"]["device_ids"] 
 
+    conv = yml_conf["dbn"]["conv"]
+ 
     temp = None
     nesterov_accel = None
     model_type = None
@@ -167,12 +169,16 @@ def run_dbn(yml_conf):
 
     generate_train_output = yml_conf["output"]["generate_train_output"]
 
-    if "FCDBN" in model_type[0]:
+    padding = None
+    stride = None
+    if conv:
         tile = yml_conf["data"]["tile"]
         tile_size = yml_conf["data"]["tile_size"]
         tile_step = yml_conf["data"]["tile_step"]
         temp = tuple(yml_conf["dbn"]["params"]["temp"])
-        fcn = True
+        stride = yml_conf["dbn"]["params"]["stride"]
+        padding = yml_conf["dbn"]["params"]["padding"]
+        conv = True
     else:
         temp = tuple(yml_conf["dbn"]["params"]["temp"])
     nesterov_accel = tuple(yml_conf["dbn"]["params"]["nesterov_accel"])
@@ -186,6 +192,8 @@ def run_dbn(yml_conf):
     cluster_lambda = yml_conf["dbn"]["training"]["cluster_lambda"]
     epochs = yml_conf["dbn"]["training"]["epochs"]
  
+    gen_output = yml_conf["output"]["generate_output"]
+
  
     stratify_data = None
     if "stratify_data" in yml_conf["dbn"]["training"]:
@@ -210,9 +218,9 @@ def run_dbn(yml_conf):
     if os.path.exists(targets_fname) and os.path.exists(data_fname):
         preprocess_train = False
 
-
-   
-    scaler = load(scaler_fname)
+ 
+    if os.path.exists(scaler_fname): 
+        scaler = load(scaler_fname)
     scaler_train = False
 
     os.environ['PREPROCESS_GPU'] = str(int(use_gpu_pre))
@@ -233,27 +241,49 @@ def run_dbn(yml_conf):
             strat_read_func = get_read_func(stratify_data["reader"]) 
             stratify_data["reader"] = strat_read_func
 
-        x2 = DBNDataset()
-        x2.read_and_preprocess_data(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
-            valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
-            transform_values=transform_values, scaler = scaler, train_scaler = scaler_train, scale = scale_data, \
-            transform=numpy_to_torch, subset=subset_count, subset_training = subset_training, stratify_data=stratify_data)
+ 
+        if not conv:
+            x2 = DBNDataset()
+            x2.read_and_preprocess_data(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
+                valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
+                transform_values=transform_values, scaler = scaler, train_scaler = scaler_train, scale = scale_data, \
+                transform=None, subset=subset_count, subset_training = subset_training, stratify_data=stratify_data)
+        else:
+            x2 = DBNDatasetConv()
+            x2.read_and_preprocess_data(data_train, read_func, data_reader_kwargs, delete_chans=delete_chans, \
+                 valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
+                 transform_values=transform_values, transform=None, subset=subset_count, tile=tile, tile_size=tile_size, tile_step=tile_step,
+                 subset_training = subset_training)
     else:
-        x2 = DBNDataset()
-        x2.read_data_preprocessed(data_fname, targets_fname, scaler)
-
+        if not conv:
+            x2 = DBNDataset()
+            x2.read_data_preprocessed(data_fname, targets_fname, scaler)
+        else:
+            x2 = DBNDatasetConv()
+            x2.read_data_preprocessed(data_fname, targets_fname, scaler)
+ 
     if x2.train_indices is not None:
         np.save(os.path.join(out_dir, "train_indices"), x2.train_indices)
  
     #Generate model
-    chunk_size = 1
-    for i in range(1,pixel_padding+1):
-        chunk_size = chunk_size + (8*i)
+    if not conv:
+        chunk_size = 1
+        for i in range(1,pixel_padding+1):
+            chunk_size = chunk_size + (8*i)
+    else:
+        chunk_size = (x2.data_full.shape[2],x2.data_full.shape[3]) #TODO generalize
+        #chunk_size = x2.data_full.shape[x2.chan_dim+1] 
+
 
     #TODO random sample in test, fix for generic case for commit
-    new_dbn = DBN(model=model_type, n_visible=x2.data_full.shape[1], n_hidden=dbn_arch, steps=gibbs_steps, \
-        learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=use_gpu)
- 
+    if not conv:
+        new_dbn = DBN(model=model_type, n_visible=x2.data_full.shape[1], n_hidden=dbn_arch, steps=gibbs_steps, \
+            learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=use_gpu)
+    else:
+        new_dbn = ConvDBN(model=model_type, visible_shape=chunk_size, filter_shape = dbn_arch[1], n_filters = dbn_arch[0], \
+        n_channels=number_channel, stride=stride, padding=padding, steps=gibbs_steps, learning_rate=learning_rate, momentum=momentum, \
+        decay=decay, use_gpu=use_gpu, maxpooling=[False]) 
+
     if use_gpu:
         torch.cuda.manual_seed_all(SEED)
         device = torch.device("cuda:{}".format(local_rank))
@@ -272,7 +302,18 @@ def run_dbn(yml_conf):
             with open(os.path.join(out_dir, "fc_clust_scaler.pkl"), "rb") as f:
                 clust_scaler = load(f)
 
-    clust_dbn = ClustDBN(new_dbn, dbn_arch[-1], auto_clust, True, clust_scaler) #TODO parameterize
+    if not conv:
+            clust_dbn = ClustDBN(new_dbn, dbn_arch[-1], auto_clust, True, clust_scaler) #TODO parameterize
+    else:
+            if "LOCAL_RANK" in os.environ.keys():
+                dbn_hidden = new_dbn.models[-1].module.hidden_shape
+                dbn_filters = new_dbn.models[-1].module.n_filters
+            else:
+                #dbn_hidden = new_dbn.models[-1].hidden_shape
+                dbn_filters = new_dbn.models[-1].n_filters
+            visible_shape  = dbn_filters
+            clust_dbn = ClustDBN(new_dbn, visible_shape, auto_clust, True, clust_scaler)
+
     clust_dbn.fc = DDP(clust_dbn.fc, device_ids=[local_rank], output_device=local_rank)
     final_model = clust_dbn
     final_model.eval()
@@ -309,11 +350,14 @@ def run_dbn(yml_conf):
             heir_dict = torch.load(heir_mdl_file + ".ckpt")
             heir_clust.load_model(heir_dict)
 
-            if heir_tune_subtrees:
+            if heir_tune_subtrees and tiers == (heir_model_tiers - 1):
                 heir_clust.fit(x2, epochs = heir_epochs, tune_subtrees =  heir_tune_subtree_list)        
             
         final_model = heir_clust
 
+    if not gen_output:
+        return
+ 
 
     #TODO: For now set all subsetting to 1 - will remove subsetting later. 
     #Maintain output_subset_count - is/will be used by DataLoader in generate_output
@@ -335,12 +379,24 @@ def run_dbn(yml_conf):
         #TODO update arguments/signatures
 
         fname_begin = os.path.basename(fbase) + ".heir_clust" + str(heir_model_tiers)
-        x3 = DBNDataset()
-        x3.read_and_preprocess_data([data_test[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
-            fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scaler=scaler, scale = scale_data, \
-            transform=transform,  subset=subset_count)
+        if not conv:
+            x3 = DBNDataset()
+            x3.read_and_preprocess_data([data_test[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
+                fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scaler=scaler, scale = scale_data, \
+                transform=transform,  subset=subset_count)
+        else:
+           x3 = DBNDatasetConv()
+           x3.read_and_preprocess_data([data_test[t]], read_func, data_reader_kwargs,  delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
+               fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, transform = transform, \
+               subset=output_subset_count, tile=tile, tile_size=tile_size, tile_step=tile_step)
+           x3.scaler = None 
+
+        if x3.data_full is None or x3.data_full.shape[0] == 0:
+                continue
+
         generate_output(x3, heir_clust, use_gpu, out_dir, fname_begin + testing_output, testing_mse, output_subset_count, (not use_gpu_pre))
     
+
  
     x2 = None
     #Generate output from training datasets. Doing it this way, because generating all at once creates memory issues
@@ -350,12 +406,23 @@ def run_dbn(yml_conf):
             while isinstance(fbase, list):
                 fbase = fbase[0]
 
-            fname_begin = os.path.basename(fbase) + ".heir_clust"
-            x2 = DBNDataset()
-            x2.read_and_preprocess_data([data_train[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, \
-               valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, \
-               scaler = scaler, scale = scale_data, transform=numpy_to_torch, subset=subset_count)
-            generate_output(x2, heir_clust, use_gpu, out_dir, fname_begin + training_output, training_mse, output_subset_count, (not use_gpu_pre))
+            fname_begin = os.path.basename(fbase) + ".heir_clust"  + str(heir_model_tiers)
+            if not conv:
+                x2 = DBNDataset()
+                x2.read_and_preprocess_data([data_train[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, \
+                   valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, \
+                   scaler = scaler, scale = scale_data, transform=None, subset=subset_count)
+            else:
+                x2 = DBNDatasetConv()
+                x2.read_and_preprocess_data([data_train[t]], read_func, data_reader_kwargs,  delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
+                    fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, transform = transform, \
+                    subset=output_subset_count, tile=tile, tile_size=tile_size, tile_step=tile_step)
+                x2.scaler = None
+ 
+            if x2.data_full is None or x2.data_full.shape[0] == 0:
+                continue
+
+            generate_output(x2, heir_clust, use_gpu, out_dir, fname_begin + training_output, training_mse, output_subset_count, (not use_gpu_pre)) 
 
     if "LOCAL_RANK" in os.environ.keys():
         cleanup_ddp() 
@@ -379,7 +446,7 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, output_subs
 
     ind = 0
     while(count == 0 or dat.has_next_subset() or (dat.subset > 1 and dat.current_subset > (dat.subset-2))):
-        output_batch_size = min(5000, int(dat.data_full.shape[0] / 5))
+        output_batch_size = min(5000, max(int(dat.data_full.shape[0] / 5), dat.data_full.shape[0]))
 
         output_sze = dat.data_full.shape[0]
         append_remainder = int(output_batch_size - (output_sze % output_batch_size))
