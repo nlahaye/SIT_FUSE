@@ -132,14 +132,14 @@ class DBNDatasetConv(DBNDataset):
 			window_size[dim2] = self.tile_size[1]
 			tile_step_final[dim1] = self.tile_step[0]
 			tile_step_final[dim2] = self.tile_step[1]
-			tile_step_final[self.chan_dim] = data_local[0].shape[self.chan_dim]*2
-			window_size[self.chan_dim] = data_local[0].shape[self.chan_dim]*2
+			tile_step_final[self.chan_dim] = data_local[0].shape[self.chan_dim]#*2
+			window_size[self.chan_dim] = data_local[0].shape[self.chan_dim]#*2
 			window_size = tuple(window_size)
 		for r in range(len(data_local)):
 			count = 0
 			last_count = len(self.data)
 			sub_data_total = []
-			data_local[r] = np.concatenate((sobel(data_local[r], axis=(dim1,dim2)), data_local[r]), axis=self.chan_dim)
+			#data_local[r] = np.concatenate((sobel(data_local[r], axis=(dim1,dim2)), data_local[r]), axis=self.chan_dim)
 			
 			#TODO - 0 imputation - fix with mean later
 			data_local[r][np.where(data_local[r] <= -9999)] = 0.0	
@@ -182,26 +182,25 @@ class DBNDatasetConv(DBNDataset):
 		del self.data
 		del self.targets
 
+
+		if self.subset_training > 0:
+			self.data_full = self.data_full[:self.subset_training,:,:,:]
+			self.targets_full = self.data_full[:self.subset_training,:,:]
+
 		self.chan_dim = 1
 		if self.transform == None:
 			mean_per_channel = []
 			std_per_channel = []
 
  
-			if self.subset_training > 0:
-				self.data_full = self.data_full[:self.subset_training,:,:,:]
-				self.targets_full = self.data_full[:self.subset_training,:,:]
-			for chan in range(0,self.n_chans):
-				mean_per_channel.append(0.0)
-				std_per_channel.append(1.0)
-			for chan in range(self.n_chans, self.data_full.shape[self.chan_dim]):
+			for chan in range(0, self.data_full.shape[self.chan_dim]):
 				#TODO slice to make more generic
 				subd = self.data_full[:,chan,:,:]
 				inds = np.where(subd <= -9999)
 				inds2 = np.where(subd > -9999)
 				mean_per_channel.append(np.squeeze(subd[inds2].mean()))
 				std_per_channel.append(np.squeeze(subd[inds2].std()))
-				subd[inds] = mean_per_channel[chan-self.n_chans]
+				subd[inds] = mean_per_channel[chan]
 				self.data_full[:,chan,:,:] = subd
 
 			transform_norm = torch.nn.Sequential(
