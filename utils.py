@@ -11,6 +11,8 @@ import yaml
 import cv2
 import os
 import numpy as np
+import rioxarray
+from shapely.geometry import mapping
 import xarray as xr
 import dask.array as da
 from netCDF4 import Dataset
@@ -24,9 +26,13 @@ matplotlib.use('agg')
 import matplotlib.pyplot as plt
 from CMAP import CMAP, CMAP_COLORS
 from glob import glob
+from scipy.interpolate import griddata
+from pyhdf import SD
 
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
 from dask_ml.preprocessing import StandardScaler as DaskStandardScaler
+
+from preprocessing.misc_utils import lee_filter
 
 def torch_to_numpy(trch):
         return trch.numpy()
@@ -74,6 +80,84 @@ def read_emit(filename, **kwargs):
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
                 dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
     return dat
+
+def read_viirs_oc(filename, **kwargs):
+
+    vrs = ["Rrs_410", "Rrs_443", "Rrs_486", "Rrs_551", "Rrs_671"]
+
+    f = Dataset(filename)
+    f.set_auto_maskandscale(False)
+    data1 = []
+    for i in range(len(vrs)):
+        ref = f.groups["geophysical_data"].variables[vrs[i]]
+        data = ref[:].astype(np.float32)
+        valid_data_ind = np.where((data >= ref.valid_min) & (data <= ref.valid_max))
+        invalid_data_ind = np.where((data < ref.valid_min) | (data > ref.valid_max))
+        data[valid_data_ind] = data[valid_data_ind] * ref.scale_factor + ref.add_offset
+        data[invalid_data_ind] = -999999.0
+        data1.append(data)
+    dat = np.array(data1).astype(np.float32)
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+        dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+    return dat
+
+
+def read_modis_oc(filename, **kwargs):
+
+    vrs = ["Rrs_412", "Rrs_443", "Rrs_469", "Rrs_488", "Rrs_531", "Rrs_547", "Rrs_555", "Rrs_645", "Rrs_667", "Rrs_678"]
+
+    f = Dataset(filename)
+    f.set_auto_maskandscale(False)
+    data1 = []
+    for i in range(len(vrs)):
+        ref = f.groups["geophysical_data"].variables[vrs[i]]
+        data = ref[:].astype(np.float32)
+        valid_data_ind = np.where((data >= ref.valid_min) & (data <= ref.valid_max))
+        invalid_data_ind = np.where((data < ref.valid_min) | (data > ref.valid_max))
+        data[valid_data_ind] = data[valid_data_ind] * ref.scale_factor + ref.add_offset
+        data[invalid_data_ind] = -999999.0
+        data1.append(data)
+    dat = np.array(data1).astype(np.float32)
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+        dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+    return dat
+
+
+
+
+def read_modis_sr(filename, **kwargs):
+
+    data1 = []
+    base_path = "" #grid1km/Data_Fields/"
+    ds=SD.SD(filename)
+    for i in range(1,13):
+        data_path = base_path + "Sur_refl" + str(i)
+        print(data_path)
+        r = ds.select(data_path)
+        attrs = r.attributes(full=1)
+        valid_range = attrs["valid_range"][0]
+        scale_factor = attrs["scale_factor"][0]
+        fill = attrs["_FillValue"][0]
+        dat = r.get()
+        print(valid_range, scale_factor, fill, data_path)
+
+        print(dat.shape, fill, valid_range[0], valid_range[1])
+        dat[np.where(dat < valid_range[0])] = fill
+        dat[np.where(dat > valid_range[1])] = fill
+        inds = np.where(dat == fill)
+        dat = dat.astype(np.float32)
+        dat = dat * scale_factor
+        dat[inds] = -999999
+        data1.append(dat)
+    data1 = np.array(data1).astype(np.float32)
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+                data1 = data1[:,:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+
+
+    data1 = np.swapaxes(data1, 0,1)
+    print(data1.shape, "HERE")
+    return data1
 
 
 def read_misr_sim(filename, **kwargs):
@@ -123,6 +207,41 @@ def read_goes_netcdf(filenames, **kwargs):
     print(dat.shape)
     return dat
 
+def read_gk2a_netcdf(filenames, **kwargs):
+    data1 = []
+    for j in range(0, len(filenames)):
+        f = Dataset(filenames[j])
+
+        rad = f.variables['image_pixel_values'][:]
+        f.close()
+        f = None
+        data1.append(rad)
+    refShp = data1[0].shape
+    for k in range(0, len(data1)):
+            shp = data1[k].shape
+            print(shp, refShp)
+            if shp[0] != refShp[0] or shp[1] != refShp[1]:
+                data1[k] = cv2.resize(data1[k], (refShp[1],refShp[0]), interpolation=cv2.INTER_CUBIC)
+    dat = np.array(data1)
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+        dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+    print(dat.shape)
+    return dat
+
+def read_gk2a_netcdf_geo(filename, **kwargs):
+
+    f = Dataset(filename)
+    lat = f.variables["lat"]
+    lon = f.variables["lon"]
+    dat = np.array([lat[500:1721,500:1721], lon[500:1721,500:1721]])
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+            dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+    return dat
+
+
+
 
 
 def read_hysplit_netcdf_geo(hysplit_fname, **kwargs):
@@ -163,12 +282,17 @@ def read_s3_netcdf(s3_dir, **kwargs):
                                 data_key = "Oa" + str(i).zfill(2)+ "_radiance"
                                 fname = os.path.join(s3_dir, data_key + ".nc")
                                 f = Dataset(fname)
+                                f.set_auto_maskandscale(False)
                                 rad = f.variables[data_key]
-                                data = rad[:]
+                                data = rad[:].astype(np.float32)
+                                print(rad.valid_min,  rad.valid_max, rad.scale_factor, rad.add_offset, data.min(), data.max())
                                 valid_data_ind = np.where((data >= rad.valid_min) & (data <= rad.valid_max))
-                                invalid_data_ind = np.where((data < rad.valid_min) & (data > rad.valid_max))
-                                #data[valid_data_ind] = data[valid_data_ind] * rad.scale_factor + rad.add_offset
-                                data[invalid_data_ind] = -9999.0
+                                invalid_data_ind = np.where((data < rad.valid_min) | (data > rad.valid_max))
+                                data[valid_data_ind] = data[valid_data_ind] * rad.scale_factor + rad.add_offset
+                                data[invalid_data_ind] = -999999.0
+                                print(data[valid_data_ind].min(), data[valid_data_ind].max(), data[valid_data_ind].mean(), data[valid_data_ind].std())
+                                print(data[valid_data_ind].min()/rad.scale_factor, data[valid_data_ind].max()/rad.scale_factor, data[valid_data_ind].mean()/rad.scale_factor, data[valid_data_ind].std()/rad.scale_factor)
+                                print(data.min(), data.max(),"\n\n\n")
                                 data1.append(data)
         dat = np.array(data1)
         if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
@@ -242,11 +366,20 @@ def read_gtiff_multifile_generic(files, **kwargs):
     data1 = []
     for j in range(0, len(files)):
         dat1 = gdal.Open(files[j]).ReadAsArray()
+        print(dat1.shape, len(data1))
+        if len(data1) > 0:
+            print(dat1.shape, data1[0].shape)
+        if len(data1) > 0:
+            if dat1.shape[0] != data1[0].shape[0] or dat1.shape[1] != data1[0].shape[1]:
+                print(dat1.shape, data1[0].shape)
+                dat1 = cv2.resize(dat1, (data1[0].shape[1], data1[0].shape[0]), interpolation=cv2.INTER_CUBIC)
+
         if len(data1) == 0 or len(dat1.shape) == 2:
             data1.append(dat1)
         else:
             data1[0] = np.concatenate((data1[0], dat1), axis=0)
-    dat = np.array(data1)
+        print(dat1.shape)
+    dat = np.array(data1).astype(np.float32)
     if len(dat.shape) == 4:
         dat = np.squeeze(dat)
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
@@ -459,7 +592,85 @@ def insitu_hab_to_tif(filename, **kwargs):
             )
         out_grd["Karenia"].rio.to_raster(rst_fname)
 
+
+# Define function to interpolate sampled data to grid.
+def interp_to_grid(u, xc, yc, new_lons, new_lats):
+    new_points = np.stack(np.meshgrid(new_lons, new_lats), axis = 2).reshape((new_lats.size * new_lons.size, 2))
+    z = griddata((xc, yc), u, (new_points[:,0], new_points[:,1]), method = 'nearest', fill_value = np.nan)
+    out = z.reshape((new_lons.size, new_lats.size))
+    return out 
+
  
+def read_trop_red_sif_nc(flename, **kwargs):
+    print(flename)
+    ncfile = Dataset(flename)
+    sif = ncfile['sif'][:]
+    #sif_sigma = ncfile['sif_sigma'][:]
+    #sif_dc = ncfile['sif_dc'][:]
+    lon = ncfile['lon'][:]
+    lat = ncfile['lat'][:]
+    epoch_time = ncfile['TIME'][:]
+    #n = ncfile['n'][:]
+    print(epoch_time)
+ 
+    # Convert epoch to datetime
+    time = pd.to_datetime(epoch_time, unit="s", origin="unix")
+    n = lon.shape[0]
+
+    print(sif.shape, lon.shape, lat.shape, epoch_time.shape)
+    # Convert to xarray
+    sif_raw_init = xr.Dataset(
+        data_vars=dict(
+            sif=(["n"], sif),
+            #sif_sigma=(["lat", "lon", "time"], sif_sigma),
+            #sif_dc=(["lat", "lon", "time"], sif_dc),
+        ),
+        coords=dict(
+            lon=(["n"], lon),
+            lat=(["n"], lat),
+        ),
+        attrs=dict(description="TROPOMI - SIF from FraLab"),
+    )
+
+
+    # Create some dummy grid on which to interpolate. - grid size = MODIS OC L2
+    _new_lats = np.linspace(lat.min(), lat.max(), 1354)
+    _new_lons = np.linspace(lon.min(), lon.max(), 2030)
+    new_lons = xr.DataArray(_new_lons, dims = "lon", coords = {"lon": _new_lons})
+    new_lats = xr.DataArray(_new_lats, dims = "lat", coords = {"lat": _new_lats})
+ 
+    sif_raw = xr.apply_ufunc(interp_to_grid,
+                     sif, lat, lon, new_lats, new_lons,
+                     vectorize = True,
+                     dask = "parallelized",
+                     input_core_dims = [['n'],['n'],['n'],["lat"],["lon"]],
+                     output_core_dims = [['lat', 'lon']],
+    )
+
+    sif_raw.rio.set_spatial_dims(x_dim="lon", y_dim="lat", inplace=True)
+    sif_raw.rio.write_crs("epsg:4326", inplace=True)
+     
+    sif_temp = sif_raw
+
+    if "mask_shp" in kwargs:
+        mask = gpd.read_file(kwargs["mask_shp"], crs="epsg:4326")
+        sif_temp = sif_temp.rio.clip(mask.geometry.apply(mapping), mask.crs, drop=False)
+
+    if "start_time" in  kwargs and "end_time" in kwargs:
+        sif_temp = sif_raw.sel(time=slice(kwargs["start_time"], kwargs["end_time"]))
+    if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs:
+        sif_temp = sif_temp.sel(**{'lon' : slice(kwargs["start_lon"], kwargs["end_lon"]), 'lat': slice(kwargs["start_lat"], kwargs["start_lat"])})
+
+    sif_temp = sif_temp.to_numpy()
+    #sif_temp = np.moveaxis(sif_temp, 2, 0)
+    sif_temp[np.where(np.isnan(sif_temp))] = -999999
+    inds = np.where(sif_temp < -900 - 0.00000000005)
+    sif_temp[inds] = -999999
+
+    
+    print(sif_temp.max(), sif_temp)
+    return sif_temp
+
 
 def read_trop_mod_xr(flename, **kwargs):
 
@@ -485,6 +696,7 @@ def read_trop_mod_xr(flename, **kwargs):
         x = sif_temp.variables[var]
         if var == "sif":
            x = x.to_numpy()
+           print(x.shape)
            x = np.moveaxis(x, 2, 0) 
            x[np.where(np.isnan(x))] = -999999
         else:
@@ -634,6 +846,21 @@ def get_lat_lon(fname):
     return lonLat
 
 
+def read_s1(files, **kwargs):
+ 
+    dat = read_gtiff_multifile_generic(files, **kwargs)
+
+    for i in range(dat.shape[0]):
+        #dat[i] = lee_filter(dat[i], 5)
+        dat[i] = 10*np.log(dat[i])
+        print(dat.shape, dat[i].min(), dat[i].max(), dat[i].mean(), dat[i].std())
+     
+
+    #if "clip" in kwargs and kwargs["clip"]:
+    #    dat = np.clip(dat, 1e-3, 1)
+
+    return dat
+
 def read_uavsar(in_fps, desc_out=None, type_out=None, search_out=None, **kwargs):
     """
     Reads UAVSAR data. 
@@ -656,7 +883,6 @@ def read_uavsar(in_fps, desc_out=None, type_out=None, search_out=None, **kwargs)
               Complex-valued (unlike polarization) data will be split into separate phase and amplitude channels. 
     """
 
-    from preprocessing.misc_utils import lee_filter
 
     if "ann_fps" in kwargs:
         ann_fps = kwargs["ann_fps"]
@@ -811,8 +1037,7 @@ def read_uavsar(in_fps, desc_out=None, type_out=None, search_out=None, **kwargs)
             if com:
                 dat = lee_filter(np.real(dat), 5) + np.imag(dat)
             else:
-                lee_filter(dat, 5)
-
+                dat = lee_filter(dat, 5)
         data.append(dat)
         if com:
             data.append(phase)
@@ -906,7 +1131,7 @@ def get_read_func(data_reader):
     if data_reader == "landsat_gtiff":
         return read_gtiff_multifile_generic
     if data_reader == "s1_gtiff":
-        return read_gtiff_multifile_generic
+        return read_s1
     if data_reader == "gtiff":
         return read_gtiff_generic
     if data_reader == "aviris_gtiff":
@@ -929,6 +1154,8 @@ def get_read_func(data_reader):
         return read_trop_l1b
     if data_reader == "trop_l1b_geo":
         return read_trop_l1b_geo
+    if data_reader == "trop_nc":
+        return read_trop_red_sif_nc
     if data_reader == "nc_ungrid_geo":
         return read_geo_nc_ungridded
     if data_reader == "uavsar":
@@ -937,7 +1164,16 @@ def get_read_func(data_reader):
         return read_hysplit_netcdf
     if data_reader == "hysplit_netcdf_geo":
         return read_hysplit_netcdf_geo
-  
- 
+    if data_reader == "gk2a_netcdf":
+        return read_gk2a_netcdf  
+    if data_reader == "gk2a_netcdf_geo":
+        return read_gk2a_netcdf_geo
+    if data_reader == "modis_sr":
+        return read_modis_sr
+    if data_reader == "viirs_oc":
+        return read_viirs_oc 
+    if data_reader == "modis_oc":
+        return read_modis_oc
+
     #TODO return BCDP reader
     return None
