@@ -168,11 +168,19 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 		metadata=dat.GetMetadata()
 		geoTransform = dat.GetGeoTransform()
 		wkt = dat.GetProjection()
+		gcpcount = dat.GetGCPCount()
+		gcp = None
+		gcpproj = None
+		if gcpcount > 0:
+			gcp = dat.GetGCPs()
+			gcpproj = dat.GetGCPProjection()
 		dat.FlushCache()
 		dat = None			
  
 		classes = np.unique(dbnDat1)
 		outDat = np.zeros((ny,nx), dtype=np.int32)
+		#dbnDat1 = dbnDat1 / 1000.0
+		dbnDat1 = dbnDat1.astype(np.int32)
 		if len(subset_inds[p]) > 0:
 			outDat[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = dbnDat1
 		else:
@@ -187,6 +195,8 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 		out_ds.SetMetadata(metadata)
 		out_ds.SetGeoTransform(geoTransform)
 		out_ds.SetProjection(wkt)
+		if gcpcount > 0:
+			out_ds.SetGCPs(gcp, gcpproj)
 		out_ds.GetRasterBand(1).WriteArray(outDat)
 		out_ds.FlushCache()
 		out_ds = None 
@@ -230,6 +240,8 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 			out_ds.SetGeoTransform(geoTransform)
 			out_ds.SetMetadata(metadata)
 			out_ds.SetProjection(wkt)
+			if gcpcount > 0:
+				out_ds.SetGCPs(gcp, gcpproj)
 			out_ds.GetRasterBand(1).WriteArray(outDatFull)
 			out_ds.FlushCache()
 			out_ds = None
@@ -240,6 +252,8 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 				out_ds.SetGeoTransform(geoTransform)
 				out_ds.SetMetadata(metadata)
 				out_ds.SetProjection(wkt)
+				if gcpcount > 0:
+					out_ds.SetGCPs(gcp, gcpproj)
 
 				inds = np.where(unionCount == 0)
 				unionCount[inds] = 1
@@ -287,6 +301,8 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 				out_ds.SetGeoTransform(geoTransform)
 				out_ds.SetMetadata(metadata)
 				out_ds.SetProjection(wkt)
+				if gcpcount > 0:
+					out_ds.SetGCPs(gcp, gcpproj)
 				out_ds.GetRasterBand(1).WriteArray(outDatFull)
 				out_ds.FlushCache()
 				out_ds = None
@@ -311,7 +327,7 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
  
 
 
-def generate_separate_from_full(gtiff_data, apply_context, context_clusters, context_name, create_separate=True, generate_union=False):
+def generate_separate_from_full(gtiff_data, apply_context, context_clusters, context_name, create_separate=True, generate_union=False, cluster_dependencies={}):
         outUnion = None
         unionCount = None
         for p in range(len(gtiff_data)):
@@ -326,6 +342,12 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
                 geoTransform = dat.GetGeoTransform()
                 metadata = dat.GetMetadata()
                 wkt = dat.GetProjection()
+                gcpcount = dat.GetGCPCount()
+                gcp = None
+                gcpproj = None
+                if gcpcount > 0:
+                    gcp = dat.GetGCPs()
+                    gcpproj = dat.GetGCPProjection()
                 dat.FlushCache()
                 dat = None
 
@@ -362,6 +384,8 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
                         out_ds.SetGeoTransform(geoTransform)
                         out_ds.SetMetadata(metadata)
                         out_ds.SetProjection(wkt)
+                        if gcpcount > 0:
+                            out_ds.SetGCPs(gcp, gcpproj)
                         out_ds.GetRasterBand(1).WriteArray(outDatFull)
                         out_ds.FlushCache()
                         out_ds = None
@@ -372,6 +396,8 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
                                 out_ds.SetGeoTransform(geoTransform)
                                 out_ds.SetMetadata(metadata)
                                 out_ds.SetProjection(wkt)
+                                if gcpcount > 0:
+                                    out_ds.SetGCPs(gcp, gcpproj)
  
                                 inds = np.where(unionCount == 0)
                                 unionCount[inds] = 1
@@ -406,6 +432,8 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
                         out_ds.SetGeoTransform(geoTransform)
                         out_ds.SetMetadata(metadata)
                         out_ds.SetProjection(wkt)
+                        if gcpcount > 0:
+                            out_ds.SetGCPs(gcp, gcpproj)
                         out_ds.GetRasterBand(1).WriteArray(outDatFull)
                         out_ds.FlushCache()
                         out_ds = None
