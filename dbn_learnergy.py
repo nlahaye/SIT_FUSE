@@ -34,7 +34,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader, TensorDataset
 from torch.utils.data.distributed import DistributedSampler
 #from torch.nn import DataParallel as DDP
-from learnergy.models.deep import DBN, ResidualDBN
+from learnergy.models.deep import DBN, ResidualDBN, ConvDBN
 from torch.utils.data.distributed import DistributedSampler
 
 
@@ -140,7 +140,9 @@ def run_dbn(yml_conf):
     decay = None
     normalize_learnergy = None
     batch_normalize = None
-    fcn = False
+    conv = False
+    padding = None
+    stride = None
     tile = False
     tile_size = None 
     tile_step = None
@@ -165,12 +167,15 @@ def run_dbn(yml_conf):
 
     generate_train_output = yml_conf["output"]["generate_train_output"]
 
-    if "FCDBN" in model_type[0]:
+    conv = yml_conf["dbn"]["conv"]
+    if conv:
         tile = yml_conf["data"]["tile"]
         tile_size = yml_conf["data"]["tile_size"]
         tile_step = yml_conf["data"]["tile_step"]
         temp = tuple(yml_conf["dbn"]["params"]["temp"])
-        fcn = True
+        stride = yml_conf["dbn"]["params"]["stride"]
+        padding = yml_conf["dbn"]["params"]["padding"]
+        conv = True
     else:
         temp = tuple(yml_conf["dbn"]["params"]["temp"])
     nesterov_accel = tuple(yml_conf["dbn"]["params"]["nesterov_accel"])
@@ -184,6 +189,7 @@ def run_dbn(yml_conf):
     cluster_lambda = yml_conf["dbn"]["training"]["cluster_lambda"]
     epochs = yml_conf["dbn"]["training"]["epochs"]
  
+    gen_output = yml_conf["output"]["generate_output"]
  
     stratify_data = None
     if "stratify_data" in yml_conf["dbn"]["training"]:
@@ -224,7 +230,7 @@ def run_dbn(yml_conf):
     if subset_count > 1: 
         print("WARNING: Making subset count > 1 for training data may lead to suboptimal results")
 
-    if not fcn:
+    if not conv:
         #TODO stratify conv data
 
         if preprocess_train: 
@@ -236,7 +242,7 @@ def run_dbn(yml_conf):
             x2.read_and_preprocess_data(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
                 valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
                 transform_values=transform_values, scaler = scaler, train_scaler = scaler_train, scale = scale_data, \
-                transform=numpy_to_torch, subset=subset_count, subset_training = subset_training, stratify_data=stratify_data)
+                transform=None, subset=subset_count, subset_training = subset_training, stratify_data=stratify_data)
         else:
             x2 = DBNDataset()
             x2.read_data_preprocessed(data_fname, targets_fname, scaler)
@@ -262,7 +268,7 @@ def run_dbn(yml_conf):
         np.save(os.path.join(out_dir, "train_indices"), x2.train_indices)
  
     #Generate model
-    if not fcn:
+    if not conv:
         chunk_size = 1
         for i in range(1,pixel_padding+1):
             chunk_size = chunk_size + (8*i)
@@ -271,13 +277,14 @@ def run_dbn(yml_conf):
         #chunk_size = x2.data_full.shape[x2.chan_dim+1] 
 
     #TODO random sample in test, fix for generic case for commit
-    if not fcn:
+    if not conv:
         #ResidualDBN?
         new_dbn = DBN(model=model_type, n_visible=x2.data_full.shape[1], n_hidden=dbn_arch, steps=gibbs_steps, \
             learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=use_gpu)
     else:
-        new_dbn = DBNUnet(model=model_type,visible_shape=chunk_size, in_channels=number_channel*2, steps=gibbs_steps, \
-            out_channels=auto_clust, learning_rate=learning_rate, momentum=momentum, decay=decay, use_gpu=use_gpu)
+        new_dbn = ConvDBN(model=model_type, visible_shape=chunk_size, filter_shape = dbn_arch[1], n_filters = dbn_arch[0], \
+        n_channels=number_channel, stride=stride, padding=padding, steps=gibbs_steps, learning_rate=learning_rate, momentum=momentum, \
+        decay=decay, use_gpu=use_gpu, maxpooling=[False])
  
     if use_gpu:
         torch.cuda.manual_seed_all(SEED)
@@ -302,7 +309,7 @@ def run_dbn(yml_conf):
         count = 0
         pl = None
         while(count == 0 or x2.has_next_subset()):
-            if fcn:
+            if conv:
                 mse = \
                     new_dbn.fit(x2, batch_size=batch_size, epochs=epochs,
                         is_distributed = True, num_loader_workers = num_loader_workers, pin_memory=(not use_gpu_pre)) #int(os.cpu_count() / 3))
@@ -322,14 +329,16 @@ def run_dbn(yml_conf):
                     plt.savefig(os.path.join(out_dir, "mse_plot_layer" + str(i) + ".png"))
                     plt.clf()
                     if pl is not None:
-                        converge.plot( new_dbn.models[i].module._history['pl'],
-                            labels=['log-PL'], title='Log-PL', subtitle='Model: Restricted Boltzmann Machine')
-                        plt.savefig(os.path.join(out_dir, "log-pl_plot_layer" + str(i) + ".png"))
-                        plt.clf()
-                    converge.plot( new_dbn.models[i].module._history['time'],
-                        labels=['time (s)'], title='Training Time', subtitle='Model: Restricted Boltzmann Machine')
-                    plt.savefig(os.path.join(out_dir, "time_plot_layer" + str(i) + ".png"))
-                    plt.clf()
+                        if 'pl' in new_dbn.models[i].module._history:
+                            converge.plot( new_dbn.models[i].module._history['pl'],
+                                labels=['log-PL'], title='Log-PL', subtitle='Model: Restricted Boltzmann Machine')
+                            plt.savefig(os.path.join(out_dir, "log-pl_plot_layer" + str(i) + ".png"))
+                            plt.clf()
+                        if 'time' in new_dbn.models[i].module._history:
+                            converge.plot( new_dbn.models[i].module._history['time'],
+                                labels=['time (s)'], title='Training Time', subtitle='Model: Restricted Boltzmann Machine')
+                            plt.savefig(os.path.join(out_dir, "time_plot_layer" + str(i) + ".png"))
+                            plt.clf()
 
     final_model = new_dbn
     if auto_clust > 0:
@@ -345,8 +354,18 @@ def run_dbn(yml_conf):
         if os.path.exists(os.path.join(out_dir, "fc_clust_scaler.pkl")) and not overwrite_model:
                 with open(os.path.join(out_dir, "fc_clust_scaler.pkl"), "rb") as f:
                     clust_scaler = load(f)
-
-        clust_dbn = ClustDBN(new_dbn, dbn_arch[-1], auto_clust, True, clust_scaler) #TODO parameterize
+ 
+        if not conv:
+            clust_dbn = ClustDBN(new_dbn, dbn_arch[-1], auto_clust, True, clust_scaler) #TODO parameterize
+        else:
+            if "LOCAL_RANK" in os.environ.keys():
+                dbn_hidden = new_dbn.models[-1].module.hidden_shape
+                dbn_filters = new_dbn.models[-1].module.n_filters
+            else:
+                #dbn_hidden = new_dbn.models[-1].hidden_shape
+                dbn_filters = new_dbn.models[-1].n_filters
+            visible_shape  = dbn_filters 
+            clust_dbn = ClustDBN(new_dbn, visible_shape, auto_clust, True, clust_scaler)
         clust_dbn.fc = DDP(clust_dbn.fc, device_ids=[local_rank], output_device=local_rank)
         final_model = clust_dbn
         if not os.path.exists(model_file + "_fc_clust.ckpt") or overwrite_model:
@@ -373,12 +392,7 @@ def run_dbn(yml_conf):
             if tune_dbn:
                 count = 0
                 while(count == 0 or x2.has_next_subset()):
-                    if fcn:
-                      mse = \
-                        final_model.dbn_trunk.fit(x2, batch_size=batch_size, epochs=epochs,
-                            is_distributed = True, num_loader_workers = num_loader_workers, pin_memory=(not use_gpu_pre)) #int(os.cpu_count() / 3))
-                    else:
-                      mse, pl = \
+                    mse, pl = \
                         final_model.dbn_trunk.fit(x2, batch_size=batch_size, epochs=epochs,
                             is_distributed = True, num_loader_workers = num_loader_workers, pin_memory=(not use_gpu_pre)) #int(os.cpu_count() / 3))
                     count = count + 1
@@ -400,6 +414,7 @@ def run_dbn(yml_conf):
                              drop_last=True)
 
                     count = 0
+                    final_model.fit_scaler = True
                     while(count == 0 or x2.has_next_subset()):
                         final_model.fit(dataset2, cluster_batch_size, cluster_epochs, loader, sampler, cluster_gauss_noise_stdev, cluster_lambda)
                         count = count + 1
@@ -414,12 +429,7 @@ def run_dbn(yml_conf):
             if tune_dbn:
                 count = 0
                 while(count == 0 or x2.has_next_subset()):
-                    if fcn:
-                        mse = \
-                        final_model.fit(x2, batch_size=batch_size, epochs=epochs,
-                            is_distributed = True, num_loader_workers = num_loader_workers, pin_memory=(not use_gpu_pre)) #int(os.cpu_count() / 3))
-                    else:
-                        mse, pl = \
+                    mse, pl = \
                             final_model.fit(x2, batch_size=batch_size, epochs=epochs,
                                 is_distributed = True, num_loader_workers = num_loader_workers, pin_memory=(not use_gpu_pre)) #int(os.cpu_count() / 3))
                     count = count + 1
@@ -435,13 +445,14 @@ def run_dbn(yml_conf):
         if not os.path.exists(model_file + ".ckpt") or overwrite_model:
             for i in range(len(new_dbn.models)):
                 if not isinstance(new_dbn.models[i], torch.nn.MaxPool2d):
-                    if fcn:
-                        converge.plot(new_dbn.models[i].module._history['mse'], new_dbn.models[i].module._history['time'], 
-                            labels=['MSE', 'time (s)'], title='convergence over dataset', subtitle='Model: Restricted Boltzmann Machine')
-                    else:
+                    if 'pl' in new_dbn.models[i].module._history:
                         converge.plot(new_dbn.models[i].module._history['mse'], new_dbn.models[i].module._history['pl'],
-                            new_dbn.models[i].module._history['time'], labels=['MSE', 'log-PL', 'time (s)'],
-                            title='convergence over dataset', subtitle='Model: Restricted Boltzmann Machine')
+                                new_dbn.models[i].module._history['time'], labels=['MSE', 'log-PL', 'time (s)'],
+                                title='convergence over dataset', subtitle='Model: Restricted Boltzmann Machine')
+                    else:
+                        converge.plot(new_dbn.models[i].module._history['mse'], new_dbn.models[i].module._history['time'],
+                                labels=['MSE', 'time (s)'],
+                                title='convergence over dataset', subtitle='Model: Restricted Boltzmann Machine')
                     plt.savefig(os.path.join(out_dir, "convergence_plot_layer" + str(i) + ".png"))
     
 
@@ -453,7 +464,7 @@ def run_dbn(yml_conf):
             else:
                 torch.save(final_model.state_dict(), model_file + ".ckpt")
 
-            if fcn:
+            if conv:
                 torch.save(x2.transform.state_dict(), os.path.join(out_dir, "dbn_data_transform.ckpt"))
 
  
@@ -470,6 +481,9 @@ def run_dbn(yml_conf):
             else:
                 final_model.scaler = None
 
+
+        if not gen_output:
+            return
         #TODO: For now set all subsetting to 1 - will remove subsetting later. 
         #Maintain output_subset_count - is/will be used by DataLoader in generate_output
         #Generate test datasets
@@ -488,19 +502,22 @@ def run_dbn(yml_conf):
                 fbase = fbase[0]
 
             fname_begin = os.path.basename(fbase) + ".clust"
-            if not fcn:
+            if not conv:
                 x3 = DBNDataset()
                 x3.read_and_preprocess_data([data_test[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
                     fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scaler=scaler, scale = scale_data, \
-				transform=transform,  subset=subset_count)
+				transform=transform,  subset=output_subset_count)
             else:
                 x3 = DBNDatasetConv()
                 x3.read_and_preprocess_data([data_test[t]], read_func, data_reader_kwargs,  delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
                 fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, transform = transform, \
-                subset=subset_count, tile=tile, tile_size=tile_size, tile_step=tile_step)
+                subset=output_subset_count, tile=tile, tile_size=tile_size, tile_step=tile_step)
                 x3.scaler = None
 
-            generate_output(x3, final_model, use_gpu, out_dir, fname_begin + testing_output, testing_mse, output_subset_count, (not use_gpu_pre), fcn)
+            if x3.data_full is None or x3.data_full.shape[0] == 0:
+                continue
+ 
+            generate_output(x3, final_model, use_gpu, out_dir, fname_begin + testing_output, testing_mse, output_subset_count, (not use_gpu_pre), conv)
     
  
         x2 = None
@@ -513,24 +530,26 @@ def run_dbn(yml_conf):
                     fbase = fbase[0]
 
                 fname_begin = os.path.basename(fbase) + ".clust"
-                if not fcn:
+                if not conv:
                     x2 = DBNDataset()
                     x2.read_and_preprocess_data([data_train[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, \
                        valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, \
-                       scaler = scaler, scale = scale_data, transform=numpy_to_torch, subset=subset_count)
+                       scaler = scaler, scale = scale_data, transform=None, subset=output_subset_count)
                 else:
                     x2 = DBNDatasetConv()
                     x2.read_and_preprocess_data([data_train[t]], read_func, data_reader_kwargs,  delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
                         fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, transform = transform, \
-                        subset=subset_count, tile=tile, tile_size=tile_size, tile_step=tile_step)
+                        subset=output_subset_count, tile=tile, tile_size=tile_size, tile_step=tile_step)
                     x2.scaler = None 
  
-                generate_output(x2, final_model, use_gpu, out_dir, fname_begin + training_output, training_mse, output_subset_count, (not use_gpu_pre), fcn)
+                if x2.data_full is None or x2.data_full.shape[0] == 0:
+                    continue
+                generate_output(x2, final_model, use_gpu, out_dir, fname_begin + training_output, training_mse, output_subset_count, (not use_gpu_pre), conv)
 
     if "LOCAL_RANK" in os.environ.keys():
         cleanup_ddp() 
  
-def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, output_subset_count, pin_mem = False, fcn = False):
+def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, output_subset_count, pin_mem = False, conv = False):
     output_full = None
     count = 0
     dat.current_subset = -1
@@ -546,20 +565,23 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, output_subs
 
     ind = 0
     while(count == 0 or dat.has_next_subset() or (dat.subset > 1 and dat.current_subset > (dat.subset-2))):
-        output_batch_size = min(5000, int(dat.data_full.shape[0] / 5))
+        output_batch_size = min(5000, max(int(dat.data_full.shape[0] / 5), dat.data_full.shape[0]))
 
-        output_sze = dat.data_full.shape[0]
-        append_remainder = int(output_batch_size - (output_sze % output_batch_size))
+        print("HERE GENERATING OUTPUT", output_batch_size, output_subset_count, dat.current_subset, dat.subset)
+  
+        if count == 0:
+            output_sze = dat.data_full.shape[0]
+            append_remainder = int(output_batch_size - (output_sze % output_batch_size))
 
-        if isinstance(dat.data_full,torch.Tensor):
-            dat.data_full = torch.cat((dat.data_full,dat.data_full[0:append_remainder]))
-            dat.targets_full = torch.cat((dat.targets_full,dat.targets_full[0:append_remainder]))
-        else:
-            dat.data_full = np.concatenate((dat.data_full,dat.data_full[0:append_remainder]))
-            dat.targets_full = np.concatenate((dat.targets_full,dat.targets_full[0:append_remainder]))
+            if isinstance(dat.data_full,torch.Tensor):
+                dat.data_full = torch.cat((dat.data_full,dat.data_full[0:append_remainder]))
+                dat.targets_full = torch.cat((dat.targets_full,dat.targets_full[0:append_remainder]))
+            else:
+                dat.data_full = np.concatenate((dat.data_full,dat.data_full[0:append_remainder]))
+                dat.targets_full = np.concatenate((dat.targets_full,dat.targets_full[0:append_remainder]))
 
-        dat.current_subset = -1
-        dat.next_subset()
+            dat.current_subset = -1
+            dat.next_subset()
 
         test_loader = DataLoader(dat, batch_size=output_batch_size, shuffle=False, \
         num_workers = 0, drop_last = False, pin_memory = pin_mem) 
@@ -572,6 +594,7 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, output_subs
             output = mdl.forward(dat_dev)  
             if isinstance(output, list):
                 output = output[0] #TODO improve usage uf multi-headed output after single-headed approach validated
+            output = torch.unsqueeze(torch.argmax(output, axis = 1), axis=1) 
 
             if use_gpu == True:
                 output = output.detach().cpu()
@@ -582,10 +605,7 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, output_subs
             del dev_ds
 
             if output_full is None:
-                if not fcn:
-                    output_full = torch.zeros(dat.data_full.shape[0], output.shape[1], dtype=torch.float32)
-                else:
-                    output_full = torch.zeros(dat.data_full.shape[0], dat.data_full.shape[1], output.shape[2], dtype=torch.float32)       
+                output_full = torch.zeros(dat.data_full.shape[0], output.shape[1], dtype=torch.float32)
             ind1 = ind2 
             ind2 += dat_dev.shape[0]
             if ind2 > output_full.shape[0]:
