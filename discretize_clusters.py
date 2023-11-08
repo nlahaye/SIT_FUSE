@@ -47,7 +47,7 @@ def plot_clusters(coord, labels, output_basename, min_clust, max_clust, pixel_pa
 
         da.to_zarr(data2,output_basename + "_" + str(n_clusters_local) + "clusters.zarr", overwrite=True)
         img = plt.imshow(data, vmin=-1, vmax=max_clust)
-        print("HERE CLUSTERS MIN MAX MEAN STD", data.min(), data.max(), data.mean(), data.std())
+        print("HERE CLUSTERS MIN MAX MEAN STD", data.min(), data.max(), data.mean(), data.std(), data.shape)
         cmap = ListedColormap(CMAP_COLORS[0:int(max_clust - (-1) + 1)])
         img.set_cmap(cmap)
         plt.colorbar()
@@ -56,7 +56,9 @@ def plot_clusters(coord, labels, output_basename, min_clust, max_clust, pixel_pa
 
         file_ext = ".no_geo"
         fname = output_basename + "_" + str(n_clusters_local) + "clusters" + file_ext + ".tif"
-        out_ds = gdal.GetDriverByName("GTiff").Create(fname, data.shape[1], data.shape[0], 1, gdal.GDT_Int32)
+        data = (data/1000).astype(np.float32)
+ 
+        out_ds = gdal.GetDriverByName("GTiff").Create(fname, data.shape[1], data.shape[0], 1, gdal.GDT_Float32)
         out_ds.GetRasterBand(1).WriteArray(data)
         out_ds.FlushCache()
         out_ds = None
