@@ -350,7 +350,7 @@ def run_dbn(yml_conf):
             heir_dict = torch.load(heir_mdl_file + ".ckpt")
             heir_clust.load_model(heir_dict)
 
-            if heir_tune_subtrees and tiers == (heir_model_tiers - 1):
+            if heir_tune_subtrees:
                 heir_clust.fit(x2, epochs = heir_epochs, tune_subtrees =  heir_tune_subtree_list)        
             
         final_model = heir_clust

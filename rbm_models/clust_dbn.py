@@ -20,8 +20,15 @@ import learnergy.utils.exception as e
 from learnergy.models.bernoulli import RBM
 from learnergy.utils import logging
 
-from cuml.preprocessing import MinMaxScaler, StandardScaler
- 
+import importlib
+cuml_loader = importlib.util.find_spec('cuml')
+cuml_avail = cuml_loader is not None 
+
+if cuml_avail:
+    from cuml.preprocessing import MinMaxScaler, StandardScaler
+else:
+    from sklearn.preprocessing import MinMaxScaler, StandardScaler
+
 import scipy
 from sys import float_info
 
@@ -71,7 +78,9 @@ class ClustDBN(Model):
 
     def train_scaler(self, batches):
         for x_batch, _ in tqdm(batches):
-            x_batch = x_batch.to(self.dbn_trunk.torch_device, non_blocking = True)
+            global cuml_avail
+            if cuml_avail:
+                x_batch = x_batch.to(self.dbn_trunk.torch_device, non_blocking = True)
             with torch.no_grad():
                 tmp = self.dbn_trunk(x_batch)
                 if len(tmp.shape) == 4:
@@ -102,9 +111,13 @@ class ClustDBN(Model):
         if len(y.shape) == 4:
                     y = nn.functional.adaptive_max_pool2d(y, (1,1))
         y = torch.flatten(y, start_dim=1)
-
-
-        y = torch.as_tensor(self.scaler.transform(y), dtype = dt)
+ 
+        global cuml_avail
+        if cuml_avail:
+            y = torch.as_tensor(self.scaler.transform(y), dtype = dt)
+        else:
+           y = torch.from_numpy(self.scaler.transform(y.cpu().numpy()), dtype = dt) 
+           y = y.to(self.dbn_trunk.torch_device, non_blocking = True)
         y = self.fc.forward(y)
 
         return y
@@ -180,9 +193,14 @@ class ClustDBN(Model):
 
                         y = torch.flatten(y, start_dim = 1)
                         y2 = torch.flatten(y2, start_dim = 1)
-                        y = torch.flatten(torch.as_tensor(self.scaler.transform(y), dtype=dt), start_dim = 1)
+                        global cuml_avail
+                        if cuml_avail:
+                            y = torch.flatten(torch.as_tensor(self.scaler.transform(y), dtype=dt), start_dim = 1)
+                            y2 = torch.flatten(torch.as_tensor(self.scaler.transform(y2), dtype=dt), start_dim = 1)
+                        else:
+                            y = torch.flatten(torch.from_numpy(self.scaler.transform(y.cpu().numpy()), dtype=dt), start_dim = 1)
+                            y2 = torch.flatten(torch.from_numpy(self.scaler.transform(y2.cpu().numpy()), dtype=dt), start_dim = 1)
                         y = y.to(self.dbn_trunk.torch_device, non_blocking = True)
-                        y2 = torch.flatten(torch.as_tensor(self.scaler.transform(y2), dtype=dt), start_dim = 1)
                         if noise_stdev > 0.0:
                             y2 = y2 + torch.from_numpy(rng.normal(0,noise_stdev,\
                                 y2.shape[1]*y2.shape[0]).reshape(y2.shape[0],\

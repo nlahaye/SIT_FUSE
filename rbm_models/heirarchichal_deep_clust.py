@@ -23,7 +23,14 @@ import learnergy.utils.exception as e
 from learnergy.models.bernoulli import RBM
 from learnergy.utils import logging
 
-from cuml.preprocessing import MinMaxScaler, StandardScaler
+import importlib
+cuml_loader = importlib.util.find_spec('cuml')
+cuml_avail = cuml_loader is not None
+
+if cuml_avail:
+    from cuml.preprocessing import MinMaxScaler, StandardScaler
+else:
+    from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 
 from dbn_datasets import DBNDataset
@@ -87,7 +94,7 @@ class HeirClust(Model):
 
         if tune_subtrees is not None and len(tune_subtrees)  > 0:
             for i in range(len(tune_subtrees)):
-                tune_subtrees[i] = str(torch.as_tensor(tune_subtrees[i]))
+                tune_subtrees[i] = str(torch.as_tensor(float(tune_subtrees[i])))
 
 
         print("TUNE_SUBTREES", tune_subtrees)
