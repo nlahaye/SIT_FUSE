@@ -42,6 +42,7 @@ def plot_clusters(coord, labels, output_basename, min_clust, max_clust, pixel_pa
 
         print("FINISHED WITH LABEL ASSIGNMENT")
         print("FINAL DATA TO DASK")
+        data = (data/1000).astype(np.float32)
         data2 = da.from_array(data)
         #del data
 
@@ -56,7 +57,6 @@ def plot_clusters(coord, labels, output_basename, min_clust, max_clust, pixel_pa
 
         file_ext = ".no_geo"
         fname = output_basename + "_" + str(n_clusters_local) + "clusters" + file_ext + ".tif"
-        data = (data/1000).astype(np.float32)
  
         out_ds = gdal.GetDriverByName("GTiff").Create(fname, data.shape[1], data.shape[0], 1, gdal.GDT_Float32)
         out_ds.GetRasterBand(1).WriteArray(data)
