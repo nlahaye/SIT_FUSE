@@ -33,6 +33,7 @@ import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader, TensorDataset
 from torch.utils.data.distributed import DistributedSampler
+from torchvision import transforms
 #from torch.nn import DataParallel as DDP
 from learnergy.models.deep import DBN, ResidualDBN, ConvDBN
 
@@ -237,7 +238,7 @@ def run_dbn(yml_conf):
 
 
     if preprocess_train: 
-        if stratify_data is not None:
+        if stratify_data is not None and "kmeans" not in stratify_data:
             strat_read_func = get_read_func(stratify_data["reader"]) 
             stratify_data["reader"] = strat_read_func
 
@@ -259,8 +260,17 @@ def run_dbn(yml_conf):
             x2 = DBNDataset()
             x2.read_data_preprocessed(data_fname, targets_fname, scaler)
         else:
+            transform = None
+            if os.path.exists(os.path.join(out_dir, "dbn_data_transform.ckpt")):
+                state_dict = torch.load(os.path.join(out_dir, "dbn_data_transform.ckpt"))
+                print(state_dict)
+                transform = torch.nn.Sequential(
+                    transforms.Normalize(state_dict["mean_per_channel"], state_dict["std_per_channel"])
+                )
+
             x2 = DBNDatasetConv()
-            x2.read_data_preprocessed(data_fname, targets_fname, scaler)
+            x2.read_data_preprocessed(data_fname, targets_fname, transform=transform)
+
  
     if x2.train_indices is not None:
         np.save(os.path.join(out_dir, "train_indices"), x2.train_indices)
@@ -280,9 +290,10 @@ def run_dbn(yml_conf):
         new_dbn = DBN(model=model_type, n_visible=x2.data_full.shape[1], n_hidden=dbn_arch, steps=gibbs_steps, \
             learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=use_gpu)
     else:
+        mp = [False]*len(dbn_arch[1])
         new_dbn = ConvDBN(model=model_type, visible_shape=chunk_size, filter_shape = dbn_arch[1], n_filters = dbn_arch[0], \
         n_channels=number_channel, stride=stride, padding=padding, steps=gibbs_steps, learning_rate=learning_rate, momentum=momentum, \
-        decay=decay, use_gpu=use_gpu, maxpooling=[False]) 
+        decay=decay, use_gpu=use_gpu, maxpooling=mp) 
 
     if use_gpu:
         torch.cuda.manual_seed_all(SEED)
@@ -309,9 +320,9 @@ def run_dbn(yml_conf):
                 dbn_hidden = new_dbn.models[-1].module.hidden_shape
                 dbn_filters = new_dbn.models[-1].module.n_filters
             else:
-                #dbn_hidden = new_dbn.models[-1].hidden_shape
+                dbn_hidden = new_dbn.models[-1].hidden_shape
                 dbn_filters = new_dbn.models[-1].n_filters
-            visible_shape  = dbn_filters
+            visible_shape  = dbn_filters * dbn_hidden[0] * dbn_hidden[1]
             clust_dbn = ClustDBN(new_dbn, visible_shape, auto_clust, True, clust_scaler)
 
     clust_dbn.fc = DDP(clust_dbn.fc, device_ids=[local_rank], output_device=local_rank)
@@ -350,7 +361,7 @@ def run_dbn(yml_conf):
             heir_dict = torch.load(heir_mdl_file + ".ckpt")
             heir_clust.load_model(heir_dict)
 
-            if heir_tune_subtrees:
+            if heir_tune_subtrees and tiers == (heir_model_tiers-1):
                 heir_clust.fit(x2, epochs = heir_epochs, tune_subtrees =  heir_tune_subtree_list)        
             
         final_model = heir_clust
@@ -363,13 +374,15 @@ def run_dbn(yml_conf):
     #Maintain output_subset_count - is/will be used by DataLoader in generate_output
     #Generate test datasets
     x3 = None
-    scaler = None
+    #scaler = None
     fname_begin = "file"
     if auto_clust > 0:
         fname_begin = fname_begin +"_clust"
     scaler = x2.scaler
+    print(scaler)
     transform = x2.transform
     del x2
+    print(scaler)
     for t in range(0, len(data_test)):
 	
         fbase = data_test[t]
@@ -389,7 +402,6 @@ def run_dbn(yml_conf):
            x3.read_and_preprocess_data([data_test[t]], read_func, data_reader_kwargs,  delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
                fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, transform = transform, \
                subset=output_subset_count, tile=tile, tile_size=tile_size, tile_step=tile_step)
-           x3.scaler = None 
 
         if x3.data_full is None or x3.data_full.shape[0] == 0:
                 continue
@@ -417,7 +429,6 @@ def run_dbn(yml_conf):
                 x2.read_and_preprocess_data([data_train[t]], read_func, data_reader_kwargs,  delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
                     fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, transform = transform, \
                     subset=output_subset_count, tile=tile, tile_size=tile_size, tile_step=tile_step)
-                x2.scaler = None
  
             if x2.data_full is None or x2.data_full.shape[0] == 0:
                 continue

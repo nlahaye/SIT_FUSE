@@ -33,6 +33,7 @@ import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader, TensorDataset
 from torch.utils.data.distributed import DistributedSampler
+from torchvision import transforms
 #from torch.nn import DataParallel as DDP
 from learnergy.models.deep import DBN, ResidualDBN, ConvDBN
 from torch.utils.data.distributed import DistributedSampler
@@ -234,7 +235,7 @@ def run_dbn(yml_conf):
         #TODO stratify conv data
 
         if preprocess_train: 
-            if stratify_data is not None:
+            if stratify_data is not None and "kmeans" not in stratify_data:
                 strat_read_func = get_read_func(stratify_data["reader"]) 
                 stratify_data["reader"] = strat_read_func
 
@@ -256,14 +257,14 @@ def run_dbn(yml_conf):
         else:
            transform = None
            if os.path.exists(os.path.join(out_dir, "dbn_data_transform.ckpt")):
+               state_dict = torch.load(os.path.join(out_dir, "dbn_data_transform.ckpt"))
                transform = torch.nn.Sequential(
-                                transforms.Normalize(mean_per_channel, std_per_channel)
+                                transforms.Normalize(state_dict["mean_per_channel"], state_dict["std_per_channel"])
                         )            
-               transform.load_state_dict(torch.load(os.path.join(out_dir, "dbn_data_transform.ckpt")))
-
            x2 = DBNDatasetConv()
            x2.read_data_preprocessed(data_fname, targets_fname, transform=transform)
 
+    print(x2.data_full.shape)
     if x2.train_indices is not None:
         np.save(os.path.join(out_dir, "train_indices"), x2.train_indices)
  
@@ -282,9 +283,10 @@ def run_dbn(yml_conf):
         new_dbn = DBN(model=model_type, n_visible=x2.data_full.shape[1], n_hidden=dbn_arch, steps=gibbs_steps, \
             learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=use_gpu)
     else:
+        mp = [False]*len(dbn_arch[1])
         new_dbn = ConvDBN(model=model_type, visible_shape=chunk_size, filter_shape = dbn_arch[1], n_filters = dbn_arch[0], \
         n_channels=number_channel, stride=stride, padding=padding, steps=gibbs_steps, learning_rate=learning_rate, momentum=momentum, \
-        decay=decay, use_gpu=use_gpu, maxpooling=[False])
+        decay=decay, use_gpu=use_gpu, maxpooling=mp)
  
     if use_gpu:
         torch.cuda.manual_seed_all(SEED)
@@ -319,7 +321,6 @@ def run_dbn(yml_conf):
                         is_distributed = True, num_loader_workers = num_loader_workers, pin_memory=(not use_gpu_pre)) #int(os.cpu_count() / 3))
             count = count + 1
             x2.next_subset()
-        new_dbn.eval() 
         dist.barrier()
         if local_rank == 0:
             for i in range(len(new_dbn.models)):	
@@ -362,9 +363,9 @@ def run_dbn(yml_conf):
                 dbn_hidden = new_dbn.models[-1].module.hidden_shape
                 dbn_filters = new_dbn.models[-1].module.n_filters
             else:
-                #dbn_hidden = new_dbn.models[-1].hidden_shape
+                dbn_hidden = new_dbn.models[-1].hidden_shape
                 dbn_filters = new_dbn.models[-1].n_filters
-            visible_shape  = dbn_filters 
+            visible_shape  = dbn_filters * dbn_hidden[0] * dbn_hidden[1]
             clust_dbn = ClustDBN(new_dbn, visible_shape, auto_clust, True, clust_scaler)
         clust_dbn.fc = DDP(clust_dbn.fc, device_ids=[local_rank], output_device=local_rank)
         final_model = clust_dbn
@@ -387,8 +388,10 @@ def run_dbn(yml_conf):
            final_model.fc.eval()
     if os.path.exists(model_file + ".ckpt") and not overwrite_model:
         print("Loading pre-existing model")
+        print("HERE INIT PARAMS", final_model.dbn_trunk.state_dict())
         if auto_clust > 0:
             final_model.dbn_trunk.load_state_dict(torch.load(model_file + ".ckpt"))
+            print("FINAL PARAMS", final_model.dbn_trunk.state_dict())
             if tune_dbn:
                 count = 0
                 while(count == 0 or x2.has_next_subset()):
@@ -397,7 +400,6 @@ def run_dbn(yml_conf):
                             is_distributed = True, num_loader_workers = num_loader_workers, pin_memory=(not use_gpu_pre)) #int(os.cpu_count() / 3))
                     count = count + 1
                     x2.next_subset()
-                final_model.dbn_trunk.eval()
                 torch.save(final_model.dbn_trunk.state_dict(), model_file + ".ckpt") 
 
             if os.path.exists(model_file + "_fc_clust.ckpt") and not overwrite_model:
@@ -420,9 +422,28 @@ def run_dbn(yml_conf):
                         count = count + 1
                         x2.next_subset()
                     final_model.eval()
+                    final_model.dbn_trunk.eval()
                     final_model.fc.eval() 
                     torch.save(final_model.fc.state_dict(), model_file + "_fc_clust.ckpt")
+            else:
+                dataset2 = TensorDataset(x2.data, x2.targets)
+                loader = None
+                is_distributed = True
+                if is_distributed:
+                    sampler = DistributedSampler(dataset2, shuffle=True)
+                    loader = DataLoader(dataset2, batch_size=cluster_batch_size, shuffle=False,
+                        sampler=sampler, num_workers = num_loader_workers, pin_memory = (not use_gpu_pre),
+                        drop_last=True)
 
+
+                count = 0
+                while(count == 0 or x2.has_next_subset()):
+                    final_model.fit(dataset2, cluster_batch_size, cluster_epochs, loader, sampler, cluster_gauss_noise_stdev, cluster_lambda)
+                    count = count + 1
+                    x2.next_subset()
+                final_model.eval()
+                final_model.fc.eval()
+                final_model.dbn_trunk.eval()
         else:
             final_model.load_state_dict(torch.load(model_file + ".ckpt"))
 
@@ -463,13 +484,13 @@ def run_dbn(yml_conf):
                 torch.save(final_model.fc.state_dict(), model_file + "_fc_clust.ckpt")
             else:
                 torch.save(final_model.state_dict(), model_file + ".ckpt")
-
-            if conv:
+ 
+            if conv and not os.path.exists(os.path.join(out_dir, "dbn_data_transform.ckpt")):
                 torch.save(x2.transform.state_dict(), os.path.join(out_dir, "dbn_data_transform.ckpt"))
 
  
             #Save scaler
-            if hasattr(x2, "scaler") and x2.scaler is not None:
+            if hasattr(x2, "scaler") and x2.scaler is not None and not os.path.exists(os.path.join(out_dir, "dbn_scaler.pkl")):
                 with open(os.path.join(out_dir, "dbn_scaler.pkl"), "wb") as f:
                     dump(x2.scaler, f, True, pickle.HIGHEST_PROTOCOL)
             else:
