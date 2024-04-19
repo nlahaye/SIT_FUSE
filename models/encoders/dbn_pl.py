@@ -61,13 +61,13 @@ class DBN_PL(pl.LightningModule):
             samples = (
                 (batch - torch.mean(batch, 0, True))
                     / (torch.std(batch, 0, True) + 1e-6)
-                )
+                ).detach()
 
         samples = samples.reshape(len(samples), self.model.n_visible)
 
         # Performs the Gibbs sampling procedure
         _, _, _, _, visible_states = self.model.gibbs_sampling(samples)
-        visible_states = visible_states
+        visible_states = visible_states.detach()
 
         loss = torch.mean(self.model.energy(samples)) - torch.mean(
             self.model.energy(visible_states)
@@ -75,8 +75,8 @@ class DBN_PL(pl.LightningModule):
 
         batch_mse = torch.div(
             torch.sum(torch.pow(samples - visible_states, 2)), batch.shape[0] 
-        )
-        batch_pl = self.model.pseudo_likelihood(samples)
+        ).detach()
+        batch_pl = self.model.pseudo_likelihood(samples).detach()
         self.log('train_loss', loss, sync_dist=True)
         self.log('train_batch_mse',  batch_mse, sync_dist=True)
         self.log('train_batch_pl', batch_pl, sync_dist=True)        
@@ -94,13 +94,13 @@ class DBN_PL(pl.LightningModule):
             samples = (
                 (batch - torch.mean(batch, 0, True))
                     / (torch.std(batch, 0, True) + 1e-6)
-                )
+                ).detach()
 
         samples = samples.reshape(len(samples), self.model.n_visible)
 
         # Performs the Gibbs sampling procedure
         _, _, _, _, visible_states = self.model.gibbs_sampling(samples)
-        visible_states = visible_states
+        visible_states = visible_states.detach()
 
         loss = torch.mean(self.model.energy(samples)) - torch.mean(
             self.model.energy(visible_states)
@@ -108,9 +108,9 @@ class DBN_PL(pl.LightningModule):
 
         batch_mse = torch.div(
             torch.sum(torch.pow(samples - visible_states, 2)), batch.shape[0]
-        )
+        ).detach()
         print(self.model.device, samples.device)
-        batch_pl = self.model.pseudo_likelihood(samples)
+        batch_pl = self.model.pseudo_likelihood(samples).detach()
         self.log('val_loss', loss, sync_dist=True)
         self.log('val_batch_mse',  batch_mse, sync_dist=True)
         self.log('val_batch_pl', batch_pl, sync_dist=True) 
