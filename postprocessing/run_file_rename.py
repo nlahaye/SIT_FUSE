@@ -18,39 +18,12 @@ from pandas import DataFrame as df
 from skimage.util import view_as_windows
 from copy import deepcopy
 
-def rename_files(start_date, clusters_dir, n_clusters, files_test, files_train):
+def rename_files(start_date, clusters_dir):
 
     for ind in range(0, 900):
 
-        input_fname = os.path.join(os.path.dirname(files_train[0]), "sif_finalday_" + str(ind))
-        clust_fname_init = os.path.join(clusters_dir, "file")
-        dat_ind = -1
-
-        dat_train = False
-        dat_test = False
-
-        try:
-            dat_ind = files_train.index(input_fname)
-            dat_train = True
-        except ValueError:
-            dat_ind = -1
-
-        if dat_ind == -1:
-            try:
-                dat_ind = files_test.index(input_fname)
-            except ValueError:
-                continue
-
-        if dat_train:
-            clust_fname = clust_fname_init + str(dat_ind) + "_output.data.clustering_" + \
-                str(n_clusters) + "clusters.zarr.karenia_brevis_bloom.tif"
-            dqi_fname = clust_fname_init + str(dat_ind) + "_output.data.clustering_" + \
-                str(n_clusters) + "clusters.zarr.karenia_brevis_bloom.DQI.tif"
-        else:
-            clust_fname = clust_fname_init + str(dat_ind) + "_output_test.data.clustering_" + \
-                str(n_clusters) + "clusters.zarr.karenia_brevis_bloom.tif"
-            dqi_fname = clust_fname_init + str(dat_ind) + "_output_test.data.clustering_" + \
-                str(n_clusters) + "clusters.zarr.karenia_brevis_bloom.DQI.tif"
+        clust_fname = os.path.join(clusters_dir, "sif_finalday_" + str(ind) + ".karenia_brevis_bloom.tif")
+        dqi_fname = os.path.join(clusters_dir, "sif_finalday_" + str(ind) + ".karenia_brevis_bloom.DQI.tif")
 
         if not os.path.exists(clust_fname):
             clust_fname = clust_fname + "f"
@@ -72,9 +45,7 @@ def main(yml_fpath):
     yml_conf = read_yaml(yml_fpath)
     #Run 
     start_date = datetime.datetime.strptime( yml_conf['start_date'], '%Y-%m-%d')
-    rename_files(start_date, yml_conf['clusters_dir'], yml_conf['clusters'], 
-                yml_conf['files_test'],
-                yml_conf['files_train'])
+    rename_files(start_date, yml_conf['clusters_dir']) 
 
 if __name__ == '__main__':
 

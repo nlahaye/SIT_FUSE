@@ -20,12 +20,15 @@ import datetime
 from pprint import pprint
 
 DATE_RE = ".*(\d{8}).*"
+
+fname_res = ["(sif_finalday_\d+).*karenia_brevis_bloom.tif", ".*(\d{8}).*karenia_brevis_bloom.tif"]
  
-def merge_datasets(num_classes, paths, fname_str, out_dir, base_index = 0): 
+def merge_datasets(num_classes, paths, fname_str, out_dir, re_index = 0, base_index = 0): 
     for root, dirs, files in os.walk(paths[base_index]):
         for fle in files:
             if fname_str in fle:
-                fname = os.path.join(out_dir, fle)
+                new_fname_root = re.search(fname_res[re_index], fle).group(1)
+                fname = os.path.join(out_dir, new_fname_root + "_" + fname_str)
                 dqi_fname = os.path.splitext(fname)[0] + ".DQI.tif"
                 data = None
                 qual = None
@@ -34,7 +37,7 @@ def merge_datasets(num_classes, paths, fname_str, out_dir, base_index = 0):
                     qual = gdal.Open(dqi_fname).ReadAsArray()
                 fle1 = os.path.join(root, fle)
                 dat1 = gdal.Open(fle1)
-                tmp = dat1.ReadAsArray()
+                tmp = dat1.ReadAsArray()  
                 if data is None:
                     imgData1 = np.zeros(tmp.shape) - 1
                 else:
@@ -86,6 +89,8 @@ def merge_datasets(num_classes, paths, fname_str, out_dir, base_index = 0):
                 out_ds.GetRasterBand(1).WriteArray(dqi)
                 out_ds.FlushCache()
                 out_ds = None
+
+
 
 
 #assumes rename to having date in filename
@@ -184,7 +189,7 @@ def main(yml_fpath):
     if yml_conf["gen_daily"]:
         for i in range(len(yml_conf['input_paths'])):
             merge_datasets(yml_conf['num_classes'], yml_conf['input_paths'], 
-                yml_conf['fname_str'], yml_conf['out_dir'], i) 
+                yml_conf['fname_str'], yml_conf['out_dir'], yml_conf['re_index'], i) 
     if yml_conf["gen_monthly"]:
         merge_monthly(yml_conf['dirname'], yml_conf['max_dqi'], yml_conf['max_class'])  
  

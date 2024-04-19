@@ -28,70 +28,81 @@ def generate_cluster_masks_no_geo(data_reader, data_reader_kwargs, subset_inds, 
     
         total = []
         totalTruth = []
-        outUnion = None
-        unionCount = None
+        outUnionFull = None
         for p in range(len(cluster_data)):
+            outUnion = None
             print("FNAME1", cluster_data[p])
 
-            dbnDat1 = read_func(cluster_data[p], **data_reader_kwargs).astype(np.int32)
+            dbnDat1 = read_func(cluster_data[p], **data_reader_kwargs).astype(np.float32)
             classes = np.unique(dbnDat1)
-            outDat = np.zeros((ny,nx), dtype=np.int32)
+            outDat = np.zeros((ny,nx), dtype=np.float32)
  
             if apply_context:
-               outDat = np.zeros(dbnDat1.shape, dtype=np.int32)
-               inds = np.where(dbnDat1 < 0)
-               outDat[inds] = -1
-               if generate_union > 0 and outUnion is None:
-                   #union cases assume input scenes are all the same size        
-                   outUnion = np.zeros((ny,nx), dtype=np.int32)
-                   unionCount = np.zeros((ny,nx), dtype=np.int32)
+               #TODO fix union generation to work for multi-context applications
+               if generate_union > 0:
+                   if outUnionFull is None:
+                       outUnionFull = np.zeros((ny,nx), dtype=np.float32)
+                   outUnion = np.zeros(dbnDat1.shape, dtype=np.float32) 
 
                if not isinstance(context_clusters[0], list):
                        tmp = []
                        tmp.append(context_clusters)
                        context_clusters = tmp
+               if not isinstance(context_name, list):
+                       context_name = [context_name]
                for j in range(len(context_clusters)):
+                       outDat = np.zeros(dbnDat1.shape, dtype=np.float32)
+                       outDat2 = np.zeros(dbnDat1.shape, dtype=np.float32)
+                       inds = np.where(dbnDat1 < 0)
+                       outDat[inds] = -1
+                       outDat2[inds] = -1
                        for i in range(len(context_clusters[j])):
                            clss = context_clusters[j][i]
                            ind = np.where(dbnDat1 == clss)
-                           if context_clusters[j][i] in cluster_dependencies:
+                           if cluster_dependencies is not None and context_clusters[j][i] in cluster_dependencies:
+                                                print("HERE", context_clusters[j][i], cluster_dependencies[context_clusters[j][i]])
                                                 ind = apply_dependencies(cluster_dependencies[context_clusters[j][i]], ind, dbnDat1)
 
                            outDat[ind] = (j+1)
-                           if generate_union > 0 and outUnion is not None:
-                               outUnion[ind] = outUnion[ind] + (j+1)
-                               unionCount[ind] = unionCount[ind] + 1
+                           outDat2[ind] = clss
+                           if generate_union > 0:
+                               outUnion[ind] = 1   
+  
+                       inds = np.where((outDat < 0) & (dbnDat1 >= 0))
+                       outDat[inds] = 0
+                       outDat2[inds] = 0
+                       outDatFull = np.zeros((ny,nx), dtype=np.float32) - 1
+                       outDatFull2 = np.zeros((ny,nx), dtype=np.float32) - 1
+                       if len(subset_inds[p]) > 0:
+                            outDatFull[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = outDat
+                            outDatFull2[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = outDat2
+                       else:
+                            outDatFull = outDat
+                            outDatFull2 = outDat2
+                       file_ext = "." + context_name[j]
     
-               inds = np.where((outDat < 0) & (dbnDat1 >= 0))
-               outDat[inds] = 0
-               outDatFull = np.zeros((ny,nx), dtype=np.int32) - 1
-               if len(subset_inds[p]) > 0:
-                    outDatFull[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = outDat
-               else:
-                    outDatFull = outDat
-               file_ext = "." + context_name
-    
-               fname = cluster_data[p] + file_ext + ".zarr"
-               zarr.save(fname,outDatFull)
-               img = plt.imshow(outDatFull, vmin=-1, vmax=1)
-               plt.savefig(fname + ".png", dpi=400, bbox_inches='tight')
+                       fname = cluster_data[p] + file_ext + ".zarr"
+                       zarr.save(fname,outDatFull)
+                       img = plt.imshow(outDatFull, vmin=-1, vmax=1)
+                       plt.savefig(fname + ".png", dpi=400, bbox_inches='tight')
 
-               if generate_union > 0 and p == len(cluster_data)-1:
-                                fname = os.path.join(os.path.dirname(cluster_data[p]), context_name + ".Union.zarr")
+                       fname = cluster_data[p] + file_ext + ".FullColor.zarr"
+                       zarr.save(fname,outDatFull2)
+                       img = plt.imshow(outDatFull2, vmin=-1, vmax=1)
+                       plt.savefig(fname + ".png", dpi=400, bbox_inches='tight')
+ 
+                       if generate_union > 0:
+                                fname = os.path.join(os.path.dirname(cluster_data[p]), context_name[j] + ".Union.zarr")
 
-                                inds = np.where(unionCount == 0)
-                                unionCount[inds] = 1
-                                outUnion = np.divide(outUnion,unionCount).astype(np.int32)
-    
-                                outUnionFull = None
                                 if len(subset_inds[p]) > 0:
-                                    outUnionFull[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = outUnion
+                                    outUnionFull[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = \
+                                        outUnionFull[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] + outUnion
                                 else:
-                                    outUnionFull = outUnion
+                                    outUnionFull = outUnionFull + outUnion
                                 inds = np.where(outUnionFull <= 0)
                                 outUnionFull[inds] = 0
-                                #inds = np.where(outUnionFull > 0)
-                                #outUnionFull[inds] = 1
+                                inds = np.where(outUnionFull > 0)
+                                outUnionFull[inds] = 1
                                 zarr.save(fname,outUnionFull)
                                 img = plt.imshow(outDatFull, vmin=-1, vmax=1)
                                 plt.savefig(fname + ".png", dpi=400, bbox_inches='tight')
@@ -99,7 +110,7 @@ def generate_cluster_masks_no_geo(data_reader, data_reader_kwargs, subset_inds, 
 
             if create_separate:
                             for i in range(len(classes)):
-                                    outDat = np.zeros((ny,nx), dtype=np.int32) - 1
+                                    outDat = np.zeros((ny,nx), dtype=np.float32) - 1
                                     clss = classes[i]
                                     ind = np.where(dbnDat1 == clss)
                                     outDat[ind] = 1
@@ -107,7 +118,7 @@ def generate_cluster_masks_no_geo(data_reader, data_reader_kwargs, subset_inds, 
                                     outDat[inds] = 0
                                     file_ext = ".cluster_class" + str(clss)
 
-                                    outDatFull = np.zeros((ny,nx), dtype=np.int32) - 1
+                                    outDatFull = np.zeros((ny,nx), dtype=np.float32) - 1
                                     if len(subset_inds[p]) > 0:
                                             outDatFull[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = outDat
                                     else:
@@ -126,15 +137,15 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 
 	total = []
 	totalTruth = []
-	outUnion = None
-	unionCount = None
+	outUnionFull = None
+	outUnionFull2 = None
 	for p in range(len(cluster_data)):
-
+		outUnion = None
 		if not os.path.exists(cluster_data[p]):
 			continue		
 
-		dbnDat1 = read_func(cluster_data[p], **data_reader_kwargs).astype(np.int32)
-		#dbnDat1 = np.flipud(dbnDat1)
+		dbnDat1 = read_func(cluster_data[p], **data_reader_kwargs).astype(np.float32)
+		#dbnDat1 = np.fliplr(dbnDat1)
 		dat = gdal.Open(gtiff_data[p])
 		imgData = dat.ReadAsArray()
 
@@ -178,9 +189,10 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 		dat = None			
  
 		classes = np.unique(dbnDat1)
-		outDat = np.zeros((ny,nx), dtype=np.int32)
+		outDat = np.zeros((ny,nx), dtype=np.float32)
 		#dbnDat1 = dbnDat1 / 1000.0
-		dbnDat1 = dbnDat1.astype(np.int32)
+		dbnDat1 = dbnDat1.astype(np.float32)
+		print(outDat.shape, subset_inds, dbnDat1.shape)
 		if len(subset_inds[p]) > 0:
 			outDat[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = dbnDat1
 		else:
@@ -191,7 +203,7 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 		outDat[inds] = -1
 		file_ext = ".full_geo"
 		fname = cluster_data[p] + file_ext + ".tif"
-		out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Int32)
+		out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
 		out_ds.SetMetadata(metadata)
 		out_ds.SetGeoTransform(geoTransform)
 		out_ds.SetProjection(wkt)
@@ -200,89 +212,128 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 		out_ds.GetRasterBand(1).WriteArray(outDat)
 		out_ds.FlushCache()
 		out_ds = None 
+		outDat3 = outDat
 
 
 		if apply_context:
-			outDat = np.zeros(dbnDat1.shape, dtype=np.int32)
-			inds = np.where(imgData < 0)
-			outDat[inds] = -1
-			if generate_union > 0 and outUnion is None:
-				#union cases assume input scenes are all the same size
-				outUnion = np.zeros(dbnDat1.shape, dtype=np.int32) 	
-				unionCount = np.zeros(dbnDat1.shape, dtype=np.int32) 
+                        #TODO fix union generation to work for multi-context applications
+			if generate_union > 0:
+				if outUnionFull is None:
+					outUnionFull = np.zeros((ny,nx), dtype=np.float32)
+					outUnionFull2 = np.zeros((ny,nx), dtype=np.float32)
+				outUnion = np.zeros(dbnDat1.shape, dtype=np.float32) 	
 
 			if not isinstance(context_clusters[0], list):
 				tmp = []
 				tmp.append(context_clusters)
 				context_clusters = tmp
+			if not isinstance(context_name, list):
+				context_name = [context_name]
 			for j in range(len(context_clusters)):
+				outDat = np.zeros(dbnDat1.shape, dtype=np.float32)
+				inds = np.where(imgData < 0)
+				outDat[inds] = -1
+
+				outDat2 = np.zeros(dbnDat1.shape, dtype=np.float32)
+				inds = np.where(imgData < 0)
+				outDat2[inds] = -1
+
 				for i in range(len(context_clusters[j])):
 					clss = context_clusters[j][i]
 					ind = np.where(dbnDat1 == clss)
-					if context_clusters[j][i] in cluster_dependencies:
+					if cluster_dependencies is not None and context_clusters[j][i] in cluster_dependencies:
+						print("HERE", context_clusters[j][i], cluster_dependencies[context_clusters[j][i]])
 						ind = apply_dependencies(cluster_dependencies[context_clusters[j][i]], ind, dbnDat1)
 					outDat[ind] = (j+1)
-					if generate_union > 0 and outUnion is not None:
-						outUnion[ind] = outUnion[ind] + (j+1)
-						unionCount[ind] = unionCount[ind] + 1
+					outDat2[ind] = clss
+					if generate_union > 0:
+						outUnion[ind] = 1
 
-			inds = np.where((outDat[0:dbnDat1.shape[0],0: dbnDat1.shape[1]] < 0) & (dbnDat1 >= 0))
-			outDat[inds] = 0
-			outDatFull = np.zeros(imgData.shape, dtype=np.int32) - 1
-			if len(subset_inds[p]) > 0:
-				outDatFull[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = outDat
-			else:
-				outDatFull = outDat
-			file_ext = "." + context_name
-
-			fname = cluster_data[p] + file_ext + ".tif"
-			out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Int32)
-			out_ds.SetGeoTransform(geoTransform)
-			out_ds.SetMetadata(metadata)
-			out_ds.SetProjection(wkt)
-			if gcpcount > 0:
-				out_ds.SetGCPs(gcp, gcpproj)
-			out_ds.GetRasterBand(1).WriteArray(outDatFull)
-			out_ds.FlushCache()
-			out_ds = None
-
-			if generate_union > 0 and p == len(cluster_data)-1:
-				fname = os.path.join(os.path.dirname(cluster_data[p]), context_name + ".Union.tif")
-				out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Int32)
+				inds = np.where((outDat[0:dbnDat1.shape[0],0: dbnDat1.shape[1]] < 0) & (dbnDat1 >= 0))
+				outDat[inds] = 0
+				outDat2[inds] = 0
+				outDatFull = np.zeros(imgData.shape, dtype=np.float32) - 1
+				outDatFull2 = np.zeros(imgData.shape, dtype=np.float32) - 1
+				if len(subset_inds[p]) > 0:
+					outDatFull[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = outDat
+					outDatFull2[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = outDat2
+				else:
+					outDatFull = outDat
+					outDatFull2 = outDat2
+				file_ext = "." + context_name[j]
+ 
+				fname = cluster_data[p] + file_ext + ".tif"
+				out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
 				out_ds.SetGeoTransform(geoTransform)
 				out_ds.SetMetadata(metadata)
 				out_ds.SetProjection(wkt)
 				if gcpcount > 0:
 					out_ds.SetGCPs(gcp, gcpproj)
-
-				inds = np.where(unionCount == 0)
-				unionCount[inds] = 1
-				outUnion = np.divide(outUnion,unionCount).astype(np.int32)
-
-				outUnionFull = None
-				if len(subset_inds[p]) > 0:
-					outUnionFull[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = outUnion
-				else:
-					outUnionFull = outUnion
-				inds = np.where(outUnionFull <= 0)
-				outUnionFull[inds] = 0 
-				#inds = np.where(outUnionFull > 0)
-				#outUnionFull[inds] = 1
-				out_ds.GetRasterBand(1).WriteArray(outUnionFull) 
+				out_ds.GetRasterBand(1).WriteArray(outDatFull)
+				out_ds.FlushCache()
+				out_ds = None
+	
+				fname = cluster_data[p] + file_ext + ".FullColor.tif"
+				out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
+				out_ds.SetGeoTransform(geoTransform)
+				out_ds.SetMetadata(metadata)
+				out_ds.SetProjection(wkt)
+				if gcpcount > 0:
+					out_ds.SetGCPs(gcp, gcpproj)
+				out_ds.GetRasterBand(1).WriteArray(outDatFull2)
 				out_ds.FlushCache()
 				out_ds = None
 
-			if compare:
-				totalTruth.extend(np.ravel(imgData))
-				total.extend(np.ravel(outDatFull))
-				cm = confusion_matrix(np.ravel(imgData), np.ravel(outDat), labels = [0,1])
-				cm2 = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-				pprint(cm)
-				pprint(cm2) 
+				if generate_union > 0:
+					fname = os.path.join(os.path.dirname(cluster_data[0]), context_name[j] + ".Union.tif")
+					out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
+					out_ds.SetGeoTransform(geoTransform)
+					out_ds.SetMetadata(metadata)
+					out_ds.SetProjection(wkt)
+					if gcpcount > 0:
+						out_ds.SetGCPs(gcp, gcpproj)
+                                
+					print("HERE SUBSETTING", p, len(subset_inds[p]), subset_inds[p], outUnionFull.shape, outUnion.shape)
+					if len(subset_inds[p]) > 0:
+						outUnionFull[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = \
+						outUnionFull[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] + outUnion
+
+						outUnionFull2 = outUnionFull2 + outDat3
+						#outUnionFull2[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = \
+						#outUnionFull2[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] + outDat3					
+					else:
+						outUnionFull = outUnionFull + outUnion
+					inds = np.where(outUnionFull <= 0)
+					outUnionFull[inds] = 0 
+					inds = np.where(outUnionFull > 0)
+					outUnionFull[inds] = 1
+					out_ds.GetRasterBand(1).WriteArray(outUnionFull)
+					out_ds.FlushCache()
+					out_ds = None
+		
+					fname = os.path.join(os.path.dirname(cluster_data[0]), context_name[j] + ".Union.FullColor.tif")
+					out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
+					out_ds.SetGeoTransform(geoTransform)
+					out_ds.SetMetadata(metadata)
+					out_ds.SetProjection(wkt)
+					if gcpcount > 0:
+						out_ds.SetGCPs(gcp, gcpproj)
+					out_ds.GetRasterBand(1).WriteArray(outUnionFull2)
+					out_ds.FlushCache()
+					out_ds = None
+
+
+				if compare:
+					totalTruth.extend(np.ravel(imgData))
+					total.extend(np.ravel(outDatFull))
+					cm = confusion_matrix(np.ravel(imgData), np.ravel(outDat), labels = [0,1])
+					cm2 = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+					pprint(cm)
+					pprint(cm2) 
 
 		if create_separate:
 			for i in range(len(classes)):
-				outDat = np.zeros(dbnDat1.shape, dtype=np.int32) - 1
+				outDat = np.zeros(dbnDat1.shape, dtype=np.float32) - 1
 				clss = classes[i]
 				ind = np.where(dbnDat1 == clss)
 				outDat[ind] = 1
@@ -290,14 +341,14 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 				outDat[inds] = 0
 				file_ext = ".cluster_class" + str(clss)
  
-				outDatFull = np.zeros(imgData.shape, dtype=np.int32) - 1
+				outDatFull = np.zeros(imgData.shape, dtype=np.float32) - 1
 				if len(subset_inds[p]) > 0:
 					outDatFull[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = outDat
 				else:
 					outDatFull = outDat
  
 				fname = cluster_data[p] + file_ext + ".tif"
-				out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Int32)
+				out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
 				out_ds.SetGeoTransform(geoTransform)
 				out_ds.SetMetadata(metadata)
 				out_ds.SetProjection(wkt)
@@ -328,17 +379,17 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 
 
 def generate_separate_from_full(gtiff_data, apply_context, context_clusters, context_name, create_separate=True, generate_union=False, cluster_dependencies={}):
-        outUnion = None
-        unionCount = None
+        outUnionFull = None
         for p in range(len(gtiff_data)):
+                outUnion = None
                 print(gtiff_data[p])
 
                 dat = gdal.Open(gtiff_data[p])
-                imgData = dat.ReadAsArray().astype(np.int32)
+                imgData = dat.ReadAsArray().astype(np.float32)
                 if len(imgData.shape) > 2:
                         imgData = np.squeeze(imgData[0,:,:])
-                nx = max(dbnDat1.shape[1],imgData.shape[1])
-                ny = max(dbnDat1.shape[0],imgData.shape[0])
+                nx = imgData.shape[1]
+                ny = imgData.shape[0]
                 geoTransform = dat.GetGeoTransform()
                 metadata = dat.GetMetadata()
                 wkt = dat.GetProjection()
@@ -354,66 +405,82 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
                 classes = np.unique(imgData)
  
                 if apply_context:
-                        outDatFull = np.zeros((ny,nx), dtype=np.int32) - 1
-                        if generate_union > 0 and outUnion is None:
-                                #union cases assume input scenes are all the same size
-                                outUnion = np.zeros((ny,nx), dtype=np.int32) - 1
-                                unionCount = np.zeros((ny,nx), dtype=np.int32)
+
+                        #TODO fix union generation to work for multi-context applications
+                        if generate_union > 0:
+                                if outUnionFull is None:
+                                        outUnionFull = np.zeros((ny,nx), dtype=np.float32)
+                                outUnion = np.zeros(dbnDat1.shape, dtype=np.float32)
 
                         if not isinstance(context_clusters[0], list):
                             tmp = []
                             tmp.append(context_clusters)
                             context_clusters = tmp
+                        if not isinstance(context_name, list):
+                            context_name = [context_name]
                         for j in range(len(context_clusters)):
+                            outDatFull = np.zeros((ny,nx), dtype=np.float32) - 1
+                            outDatFull2 = np.zeros((ny,nx), dtype=np.float32) - 1
+ 
                             for i in range(len(context_clusters[j])):
                                 clss = context_clusters[j][i]
                                 ind = np.where(imgData == clss)
-                                if context_clusters[j][i] in cluster_dependencies:
-                                                ind = apply_dependencies(cluster_dependencies[context_clusters[j][i]], ind, dbnDat1)	
+                                if cluster_dependencies is not None and context_clusters[j][i] in cluster_dependencies:
+                                                print("HERE", context_clusters[j][i], cluster_dependencies[context_clusters[j][i]])
+                                                ind = apply_dependencies(cluster_dependencies[context_clusters[j][i]], ind, imgData)	
                                 outDatFull[ind] = (j+1)
-                                if generate_union > 0 and outUnion is not None:
-                                    outUnion[ind] = outUnion[ind] + 1
-                                    unionCount[ind] = unionCount[ind] + 1
+                                outDatFull2[ind] = clss
+                                if generate_union > 0:
+                                    outUnion[ind] = 1
 
-                        inds = np.where((outDatFull < 0) & (imgData >= 0))
-                        outDatFull[inds] = 0
-                        file_ext = "." + context_name
+                            inds = np.where((outDatFull < 0) & (imgData >= 0))
+                            outDatFull[inds] = 0
+                            outDatFull2[inds] = 0
+                            file_ext = "." + context_name[j]
 
-                        fname = os.path.splitext(gtiff_data[p])[0] + file_ext + ".tif"
-                        out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Int32)
-                        out_ds.SetGeoTransform(geoTransform)
-                        out_ds.SetMetadata(metadata)
-                        out_ds.SetProjection(wkt)
-                        if gcpcount > 0:
-                            out_ds.SetGCPs(gcp, gcpproj)
-                        out_ds.GetRasterBand(1).WriteArray(outDatFull)
-                        out_ds.FlushCache()
-                        out_ds = None
-                         
-                        if generate_union > 0 and p == len(gtiff_data)-1:
-                                fname = os.path.join(os.path.dirname(gtiff_data[p]), context_name + ".Union.tif")
-                                out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Int32)
+                            fname = os.path.splitext(gtiff_data[p])[0] + file_ext + ".tif"
+                            out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
+                            out_ds.SetGeoTransform(geoTransform)
+                            out_ds.SetMetadata(metadata)
+                            out_ds.SetProjection(wkt)
+                            if gcpcount > 0:
+                                out_ds.SetGCPs(gcp, gcpproj)
+                            out_ds.GetRasterBand(1).WriteArray(outDatFull)
+                            out_ds.FlushCache()
+                            out_ds = None
+                        
+                            fname = os.path.splitext(gtiff_data[p])[0] + file_ext + ".FullColor.tif"
+                            out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
+                            out_ds.SetGeoTransform(geoTransform)
+                            out_ds.SetMetadata(metadata)
+                            out_ds.SetProjection(wkt)
+                            if gcpcount > 0:
+                                out_ds.SetGCPs(gcp, gcpproj)
+                            out_ds.GetRasterBand(1).WriteArray(outDatFull2)
+                            out_ds.FlushCache()
+                            out_ds = None
+
+ 
+                            if generate_union > 0:
+                                fname = os.path.join(os.path.dirname(gtiff_data[p]), context_name[j] + ".Union.tif")
+                                out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
                                 out_ds.SetGeoTransform(geoTransform)
                                 out_ds.SetMetadata(metadata)
                                 out_ds.SetProjection(wkt)
                                 if gcpcount > 0:
                                     out_ds.SetGCPs(gcp, gcpproj)
- 
-                                inds = np.where(unionCount == 0)
-                                unionCount[inds] = 1
-                                outUnion = np.divide(outUnion,unionCount,dtype=np.int32)
 
 
-                                outUnionFull = None
                                 if len(subset_inds[p]) > 0:
-                                        outUnionFull[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = outUnion
+                                        outUnionFull[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = \
+                                        outUnionFull[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] + outUnion
                                 else:
                                         outUnionFull = outUnion
 
                                 inds = np.where(outUnionFull <= 0)
                                 outUnionFull[inds] = 0
-                                #inds = np.where(outUnionFull > 0)
-                                #outUnionFull[inds] = 1
+                                inds = np.where(outUnionFull > 0)
+                                outUnionFull[inds] = 1
                                 out_ds.GetRasterBand(1).WriteArray(outUnionFull)
                                 out_ds.FlushCache()
                                 out_ds = None
@@ -421,14 +488,14 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
 
                 if create_separate:
                     for i in range(len(classes)):
-                        outDatFull = np.zeros((ny,nx), dtype=np.int32) - 1
+                        outDatFull = np.zeros((ny,nx), dtype=np.float32) - 1
                         clss = classes[i]
                         ind = np.where(imgData == clss)
                         outDatFull[ind] = 1
                         file_ext = ".cluster_class" + str(clss)
 
                         fname = gtiff_data[p] + file_ext + ".tif"
-                        out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Int32)
+                        out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
                         out_ds.SetGeoTransform(geoTransform)
                         out_ds.SetMetadata(metadata)
                         out_ds.SetProjection(wkt)

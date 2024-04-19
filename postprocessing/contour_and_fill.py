@@ -42,11 +42,14 @@ def main(yml_fpath):
 
     for i in range(len(data_fnames)):
         dat = gdal.Open(data_fnames[i])
-        imgData = dat.ReadAsArray() 
-
-        imgData[np.where(imgData < 0)] = 0
+        imgData = dat.ReadAsArray().astype(np.float32)
+ 
+        imgData[np.where(imgData < 0)] = 0 
         imgData[np.where(imgData > 0)] = 1       
-        imgData = imgData.astype(np.uint8)
+        imgData = imgData.astype(np.uint8) * 255
+        #imgData = imgData.astype(np.uint8)
+        
+
 
         if apply_msk:
             mask= gdal.Open(mask_fname).ReadAsArray()
@@ -79,7 +82,7 @@ def main(yml_fpath):
             write_zarr(data_fnames[i] + ".ImFill_Invert.zarr", im_floodfill_inv.astype(np.int32))
         # Combine the two images to get the foreground.
         im_out = imgData | im_floodfill_inv
-        if yml_conf["remove_singles"]:
+        if yml_conf["remove_singles_2"]:
             im_out = dip.MajorityVote(im_out > 0)
             im_out = np.asarray(im_out - dip.GetSinglePixels(im_out > 0))
         if wrt_geotiff:
@@ -114,23 +117,34 @@ def main(yml_fpath):
         # -1 signifies drawing all contours
  
         final_contours = []
+        max_contour = -1
+        max_contour_final_ind = -1
         for j in range(0,len(contours)):
             if contour_min_size > 0 and len(contours[j]) < contour_min_size:
                 continue
+            if max_contour < 0:
+                max_contour = j
+                max_contour_final_ind = len(final_contours)
+            if len(contours[max_contour]) < len(contours[j]):
+                max_contour = j
+                max_contour_final_ind = len(final_contours)
             final_contours.append(contours[j])
-            zeros = np.zeros(edged.shape)
-            cv2.drawContours(zeros, contours[j], -1, 1, 3)
-            print(zeros.min(), zeros.max(),len(contours[j]), data_fnames[i] + ".Contours" + str(j) + ".tif")
-            if wrt_geotiff:
-                write_geotiff(dat, zeros, data_fnames[i] + ".Contours" + str(j) + ".tif") 
-            else:
-                write_zarr(data_fnames[i] + ".Contours.zarr", zeros)
         zeros = np.zeros(edged.shape)
         cv2.drawContours(zeros, final_contours, -1, 1, thickness=cv2.FILLED)
         if wrt_geotiff:
             write_geotiff(dat, zeros, data_fnames[i] + ".Contours.tif") 
         else:
             write_zarr(data_fnames[i] + ".Contours.zarr", zeros)
+
+        if len(final_contours) < 1:
+            continue
+        zeros = np.zeros(edged.shape)
+        cv2.drawContours(zeros, [final_contours[max_contour_final_ind]], -1, 1, thickness=cv2.FILLED)
+        if wrt_geotiff:
+            write_geotiff(dat, zeros, data_fnames[i] + ".Max_Contour.tif")
+        else:
+            write_zarr(data_fnames[i] + ".Max_Contour.tif", zeros) 
+ 
 
 
 def write_geotiff(dat, imgData, fname):
@@ -139,10 +153,18 @@ def write_geotiff(dat, imgData, fname):
     ny = imgData.shape[0]
     geoTransform = dat.GetGeoTransform()
     wkt = dat.GetProjection()
+    gcpcount = dat.GetGCPCount()
+    gcp = None
+    gcpproj = None
+    if gcpcount > 0:
+        gcp = dat.GetGCPs()
+        gcpproj = dat.GetGCPProjection()
     out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Byte)
     print(fname)
     out_ds.SetGeoTransform(geoTransform)
     out_ds.SetProjection(wkt)
+    if gcpcount > 0:
+        out_ds.SetGCPs(gcp, gcpproj)
     out_ds.GetRasterBand(1).WriteArray(imgData)
     out_ds.FlushCache()
     out_ds = None
