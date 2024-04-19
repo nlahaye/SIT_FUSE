@@ -1,0 +1,13 @@
+ 
+input_paths: ["/data/nlahaye/output/Learnergy/DBN_TERMODIS_TROP_OC_GULF_OF_MEXICO/", "/data/nlahaye/output/Learnergy/DBN_S3B_OC_TROP_ONLY_AUTO_CLUST_PAD_GULF_OF_MEXICO/", "/data/nlahaye/output/Learnergy/DBN_TERMODIS_ONLY_OC_GULF_OF_MEXICO/"]
+
+ 
+ 
+fname_str: "karenia_brevis_bloom.tif"
+out_dir: "/data/nlahaye/output/MERGED_ALGAL_TERRA_MODIS_GULF_OF_MEXICO_02162024/"
+num_classes: 5
+re_index: 1
+
+gen_daily: true
+gen_monthly: false
+

@@ -1,0 +1,32 @@
+
+
+data:
+
+ contour_filename: [
+"/data/nlahaye/output/Learnergy/DBN_GOES_NEW_PAD/OR_ABI-L1b-RadC-M6C01_G17_s20192181816196_e20192181818569_c20192181819009.nc.heir_clust2output_test.data_7949900clusters.zarr.smoke.tif.Max_Contour.tif",
+"/data/nlahaye/output/Learnergy/DBN_GOES_NEW_PAD/OR_ABI-L1b-RadC-M6C01_G17_s20192181926196_e20192181928569_c20192181929007.nc.heir_clust2output_test.data_7949700clusters.zarr.smoke.tif.Max_Contour.tif",
+"/data/nlahaye/output/Learnergy/DBN_GOES_NEW_PAD/OR_ABI-L1b-RadC-M6C01_G17_s20192191821196_e20192191823569_c20192191824007.nc.heir_clust2output.data_7949900clusters.zarr.smoke.tif.Max_Contour.tif",
+"/data/nlahaye/output/Learnergy/DBN_GOES_NEW_PAD/OR_ABI-L1b-RadC-M6C01_G17_s20192191931196_e20192191933569_c20192191934019.nc.heir_clust2output.data_7949900clusters.zarr.smoke.tif.Max_Contour.tif"
+]
+ 
+ filename: [
+"/data/nlahaye/output/Learnergy/DBN_GOES_NEW_PAD/OR_ABI-L1b-RadC-M6C01_G17_s20192181816196_e20192181818569_c20192181819009.nc.heir_clust2output_test.data_7949900clusters.zarr.smoke.FullColor.tif",
+"/data/nlahaye/output/Learnergy/DBN_GOES_NEW_PAD/OR_ABI-L1b-RadC-M6C01_G17_s20192181926196_e20192181928569_c20192181929007.nc.heir_clust2output_test.data_7949700clusters.zarr.smoke.FullColor.tif",
+"/data/nlahaye/output/Learnergy/DBN_GOES_NEW_PAD/OR_ABI-L1b-RadC-M6C01_G17_s20192191821196_e20192191823569_c20192191824007.nc.heir_clust2output.data_7949900clusters.zarr.smoke.FullColor.tif",
+"/data/nlahaye/output/Learnergy/DBN_GOES_NEW_PAD/OR_ABI-L1b-RadC-M6C01_G17_s20192191931196_e20192191933569_c20192191934019.nc.heir_clust2output.data_7949900clusters.zarr.smoke.FullColor.tif"
+]
+
+ mask_filename: [
+"/data/nlahaye/output/Learnergy/DBN_GOES_NEW_PAD/OR_ABI-L1b-RadC-M6C01_G17_s20192181816196_e20192181818569_c20192181819009.nc.heir_clust2output_test.data_7949900clusters.zarr.smoke.tif",
+"/data/nlahaye/output/Learnergy/DBN_GOES_NEW_PAD/OR_ABI-L1b-RadC-M6C01_G17_s20192181926196_e20192181928569_c20192181929007.nc.heir_clust2output_test.data_7949700clusters.zarr.smoke.tif",
+"/data/nlahaye/output/Learnergy/DBN_GOES_NEW_PAD/OR_ABI-L1b-RadC-M6C01_G17_s20192191821196_e20192191823569_c20192191824007.nc.heir_clust2output.data_7949900clusters.zarr.smoke.tif",
+"/data/nlahaye/output/Learnergy/DBN_GOES_NEW_PAD/OR_ABI-L1b-RadC-M6C01_G17_s20192191931196_e20192191933569_c20192191934019.nc.heir_clust2output.data_7949900clusters.zarr.smoke.tif"
+]
+
+ reader_type: "gtiff"
+ reader_kwargs:
+  None:
+ 
+remove_singles: True
+write_geotiff: True
+

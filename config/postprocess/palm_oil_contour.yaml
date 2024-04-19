@@ -1,12 +1,25 @@
 
 
 data:
- #filename: ["/data/nlahaye/remoteSensing/Palm_Oil/Contour_Test/Palm_Oil_Test_V2.tif"]
- filename: ["/data/nlahaye/output/Learnergy/DBN_PALM_OIL_3/file0_output_test.data.clustering_100clusters.zarr.palm_oil.tif"]
+ filename: [
+"/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h0v1.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_high.tif",
+"/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h0v2.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_high.tif",
+"/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h1v0.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_high.tif",
+"/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h1v1.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_high.tif",
+"/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h1v2.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_high.tif",
+"/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h1v3.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_high.tif",
+"/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h2v0.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_high.tif",
+"/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h2v1.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_high.tif",
+"/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h2v2.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_high.tif",
+"/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h2v3.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_high.tif",
+"/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h4v2.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_high.tif",
+"/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h4v3.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_high.tif"
+] 
  reader_type: "gtiff"
  reader_kwargs:
   None:
 
 remove_singles: True
+remove_singles_2: True
 write_geotiff: True
-
+contour_min_size: 20

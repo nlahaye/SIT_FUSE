@@ -1,0 +1,35 @@
+
+dbf: True
+dbf_list: [
+["/data/nlahaye/output/DBFs/MASTER/Background_DBFs/Background_1981719_08_Output.dbf",
+"/data/nlahaye/output/DBFs/MASTER/Background_DBFs/Background_1981719_06_Output.dbf",
+"/data/nlahaye/output/DBFs/MASTER/Background_DBFs/Background_1981719_10_Output.dbf",
+"/data/nlahaye/output/DBFs/MASTER/Background_DBFs/Background_1981719_05_Output.dbf",
+"/data/nlahaye/output/DBFs/MASTER/Background_DBFs/Background_1981719_02_Output.dbf",
+"/data/nlahaye/output/DBFs/MASTER/Background_DBFs/Background_1981720_09_Output.dbf",
+"/data/nlahaye/output/DBFs/MASTER/Background_DBFs/Background_1981719_07_Output.dbf"],
+["/data/nlahaye/output/DBFs/MASTER/Fire_DBFs/Fire_1981719_07_Output.dbf",
+"/data/nlahaye/output/DBFs/MASTER/Fire_DBFs/Fire_1981719_08_Output.dbf",
+"/data/nlahaye/output/DBFs/MASTER/Fire_DBFs/Fire_1981719_02_Output.dbf",
+"/data/nlahaye/output/DBFs/MASTER/Fire_DBFs/Fire_1981719_10_Output.dbf",
+"/data/nlahaye/output/DBFs/MASTER/Fire_DBFs/Fire_1981720_09_Output.dbf",
+"/data/nlahaye/output/DBFs/MASTER/Fire_DBFs/Fire_1981719_05_Output.dbf",
+"/data/nlahaye/output/DBFs/MASTER/Fire_DBFs/Fire_1981720_07_Output.dbf",
+"/data/nlahaye/output/DBFs/MASTER/Fire_DBFs/Fire_1981721_02_Output.dbf",
+"/data/nlahaye/output/DBFs/MASTER/Fire_DBFs/Fire_1981719_06_Output.dbf",
+"/data/nlahaye/output/DBFs/MASTER/Fire_DBFs/Fire_1981721_05_Output.dbf"],
+["/data/nlahaye/output/DBFs/MASTER/Burn_Scar_DBFs/Burn_Scar_1981719_05_Output.dbf",
+"/data/nlahaye/output/DBFs/MASTER/Burn_Scar_DBFs/Burn_Scar_1981719_02_Output.dbf",
+"/data/nlahaye/output/DBFs/MASTER/Burn_Scar_DBFs/Burn_Scar_1981719_06_Output.dbf"],
+["/data/nlahaye/output/DBFs/MASTER/Smoke_DBFs/Smoke_1981719_05_Output.dbf",
+"/data/nlahaye/output/DBFs/MASTER/Smoke_DBFs/Smoke_1981719_06_Output.dbf",
+"/data/nlahaye/output/DBFs/MASTER/Smoke_DBFs/Smoke_1981719_10_Output.dbf",
+"/data/nlahaye/output/DBFs/MASTER/Smoke_DBFs/Smoke_1981720_07_Output.dbf",
+"/data/nlahaye/output/DBFs/MASTER/Smoke_DBFs/Smoke_1981719_02_Output.dbf",
+"/data/nlahaye/output/DBFs/MASTER/Smoke_DBFs/Smoke_1981721_05_Output.dbf",
+"/data/nlahaye/output/DBFs/MASTER/Smoke_DBFs/Smoke_1981721_02_Output.dbf",
+"/data/nlahaye/output/DBFs/MASTER/Smoke_DBFs/Smoke_1981719_07_Output.dbf",
+"/data/nlahaye/output/DBFs/MASTER/Smoke_DBFs/Smoke_1981720_09_Output.dbf",
+"/data/nlahaye/output/DBFs/MASTER/Smoke_DBFs/Smoke_1981719_08_Output.dbf"]]
+
+

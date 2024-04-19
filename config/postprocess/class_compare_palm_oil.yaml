@@ -1,10 +1,11 @@
 
 
 init_data: 
- - palm_oil: "/data/nlahaye/remoteSensing/Palm_Oil_Test_V2.Filled.tif"
+ - palm_oil: "/data/nlahaye/remoteSensing/Palm_Oil_Test_V2.tif"
 
-new_data : [["/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST/ucayali_condensed_stacks_2020_h1v1.tiff.clustoutput_test.data_500clusters.zarr.full_geo.tif"]]
+new_data : [["/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h1v1.tif.heir_clust1output_test.data_77995clusters.zarr.full_geo.tif"]]
 
+dbf: False
 
 class_order: ["palm_oil"]
 
@@ -20,7 +21,7 @@ out_ext: ["DBN_PALM_OIL"]
 
 clust_ext: ["CLUST_INIT"]
 
-log_fname: "/data/nlahaye/output/Learnergy/DBN_PALM_OIL_3/Agreement_Log"
+log_fname: "/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/Agreement_Log"
 
 no_retrieval_init: [-3]
 no_retrieval_new: [-1]

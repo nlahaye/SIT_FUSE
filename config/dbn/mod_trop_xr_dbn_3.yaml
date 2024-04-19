@@ -13,7 +13,7 @@ dbn:
   #model_type: 'gaussian_relu' "variance_gaussian"
   model_type: ["gaussian_selu"] #, 'gaussian_relu_dropout', 'gaussian_relu_dropout'] #'variance_gaussian_dropout' "gaussian_dropout"
   #model_type: "variance_gaussian"
-  dbn_arch: [300] #[2000] [250, 500, 2000] #, 2000]
+  dbn_arch: [1200] #[2000] [250, 500, 2000] #, 2000]
   gibbs_steps: [2] #, 7, 7] #, 10] #, 25]
   learning_rate: [0.00001] #, 0.0001, 0.0001] #, 0.01] #, 0.01]
   momentum: [0.95] #, 0.95, 0.95] #, 0.95] #, 0.95]

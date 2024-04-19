@@ -1,0 +1,69 @@
+
+low_res:
+ data:
+  valid_min: 0.0000001
+  valid_max: 100000000
+  reader_type: "zarr_to_numpy"
+  reader_kwargs:
+   no_arg: ''
+  geo_reader_type: "gk2a_netcdf_geo"
+  geo_reader_kwargs:
+   start_line: 1100
+   start_sample: 1300
+   end_line: 1731
+   end_sample: 1921
+  filenames: [
+"/data/nlahaye/output/Learnergy/DBN_GK2A_CLIPPED_7/gk2a_ami_le1b_sw038_ea020lc_202203050100.nc.heir_clust2output.data_17842500clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GK2A_CLIPPED_7/gk2a_ami_le1b_sw038_ea020lc_202203050110.nc.heir_clust2output_test.data_17842500clusters.zarr"
+]
+  geo_filenames: [
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc"
+]
+  chan_dim: 0
+  geo_coord_dim: 0
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+high_res:
+ data:
+  valid_min: 0.0
+  valid_max: 100000000
+  reader_type: "numpy"
+  reader_kwargs:
+   no_arg: "no_arg"
+  geo_reader_type: "numpy"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: []
+  geo_filenames: []
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+fusion:
+ projection_id: 4326
+ description: "Generating GK2A GeoTiffs"
+ area_id: "S. Korea"
+ projection_proj4:
+  proj: "longlat"
+  datum: "WGS84" 
+ final_resolution: 0.005
+ projection_units: "degrees"
+ resample_radius: 5000
+ resample_n_neighbors: 64
+ resample_n_procs: 10
+ resample_epsilon: 1.6
+ use_bilinear: False
+       
+output_files: [
+"/data/nlahaye/output/Learnergy/DBN_GK2A_CLIPPED_7/gk2a_ami_le1b_sw038_ea020lc_202203050100.nc.heir_clust2output.data_17842500clusters.zarr.full_egeo.tif",
+"/data/nlahaye/output/Learnergy/DBN_GK2A_CLIPPED_7/gk2a_ami_le1b_sw038_ea020lc_202203050110.nc.heir_clust2output_test.data_17842500clusters.zarr.full_geo.tif"
+
+]
+
+
+

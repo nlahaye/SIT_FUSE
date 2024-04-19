@@ -1,5 +1,5 @@
 output:
- out_dir: "/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_NEW/"
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_S6_GARONNE_NEW_2/"
  training_output: "output.data"
  training_mse: "rec_mse.data"
  testing_output: "output_test.data"
@@ -12,7 +12,7 @@ dbn:
  tune_clust: False
  tune_dbn: False
  tune_scaler: False
- deep_cluster: 120
+ deep_cluster: 500
  overwrite_model: False
  params:
   #model_type: 'gaussian_relu' "variance_gaussian"
@@ -37,17 +37,17 @@ dbn:
   batch_size: 128
   epochs: [30] #[8] #, 1, 1] #, 5] #, 10]
   cluster_batch_size: 700
-  cluster_epochs: 25
-  cluster_gauss_noise_stdev: [0.00001, 0.000001, 0.0]
+  cluster_epochs: 18
+  cluster_gauss_noise_stdev: [0.01,0.001,0.0] #[0.00001, 0.000001, 0.0]
   cluster_lambda: 1.0
 
 scaler:
- name: "maxabs"
+ name: "standard"
 
 data:
  num_loader_workers: 10
  scale_data: True
- pixel_padding: 1
+ pixel_padding: 0
  number_channels: 1
  fill_value: -9999.0
  valid_min: -100.0

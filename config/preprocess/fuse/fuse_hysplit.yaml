@@ -1,0 +1,62 @@
+
+low_res:
+ data:
+  valid_min: -100.0
+  valid_max: 1000000
+  reader_type: "hysplit_netcdf"
+  reader_kwargs:
+    None:  
+  geo_reader_type: "hysplit_netcdf_geo"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: [
+"/data/nlahaye/remoteSensing/HYSPLIT/smoke-col.QB.20230607.nc"
+]
+  geo_filenames: [
+"/data/nlahaye/remoteSensing/HYSPLIT/smoke-col.QB.20230607.nc"
+]
+  chan_dim: 0
+  geo_coord_dim: 0
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+high_res:
+ data:
+  valid_min: 0.0
+  valid_max: 100000000
+  reader_type: "numpy"
+  reader_kwargs:
+   no_arg: "no_arg"
+  geo_reader_type: "numpy"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: []
+  geo_filenames: []
+  chan_dim: 0
+  geo_coord_dim: 0
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+fusion:
+ projection_id: 4326
+ description: "Generating HySPLIT GeoTiffs"
+ area_id: "CONUS"
+ projection_proj4:
+  proj: "longlat"
+  datum: "WGS84" 
+ final_resolution: 0.15
+ projection_units: "degrees"
+ resample_radius: 50000
+ resample_n_neighbors: 8
+ resample_n_procs: 10
+ resample_epsilon: 1.6
+ use_bilinear: True 
+       
+output_files: ["/data/nlahaye/remoteSensing/HYSPLIT/smoke-col.QB.20230607.nc.tif"]
+
+
+
+
+

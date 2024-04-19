@@ -1,11 +1,12 @@
 
-input_paths: ["/data/nlahaye/output/Learnergy/DBN_L2_TROP_MOD/", "/data/nlahaye/output/Learnergy/DBN_TROP_SIF_ONLY/","/data/nlahaye/output/Learnergy/DBN_TROP_MODIS_ONLY/"]
-fname_str: "karenia_brevis_bloom"
-out_dir: "/data/nlahaye/output/MERGED_ALGAL_3/"
+input_paths: ["/data/nlahaye/output/Learnergy/DBN_MOD_TROP_AUTO_CLUST_4_PAD/", "/data/nlahaye/output/Learnergy/DBN_MOD_TROP_AUTO_CLUST_TROP_ONLY_4_PAD/", "/data/nlahaye/output/Learnergy/DBN_MOD_TROP_AUTO_CLUST_MODIS_ONLY_4_PAD/"]
+
+fname_str: "karenia_brevis_bloom.tif"
+out_dir: "/data/nlahaye/output/MERGED_ALGAL_011824/"
 num_classes: 5
 
-
-dirname: "/data/nlahaye/output/MERGED_ALGAL_3/"
+ 
+dirname: "/data/nlahaye/output/MERGED_ALGAL_011824/"
 max_dqi: 2
 max_class: 5
 gen_daily: false

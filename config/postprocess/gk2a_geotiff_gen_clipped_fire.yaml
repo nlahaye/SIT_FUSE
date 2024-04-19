@@ -1,0 +1,28 @@
+
+gen_from_geotiffs: false
+
+data:
+ clust_reader_type: "zarr_to_numpy"
+ reader_kwargs:
+   no_arg: "no_arg" 
+ subset_inds: [[1100,1731,1300,1921],
+ [1100,1731,1300,1921]]
+ create_separate: false
+ gtiff_data: [
+"/data/nlahaye/output/Learnergy/DBN_GK2A_CLIPPED_7/gk2a_ami_le1b_sw038_ea020lc_202203050100.nc.heir_clust2output.data_17842500clusters.zarr.full_geo.tif",
+"/data/nlahaye/output/Learnergy/DBN_GK2A_CLIPPED_7/gk2a_ami_le1b_sw038_ea020lc_202203050110.nc.heir_clust2output_test.data_17842500clusters.zarr.full_geo.tif"
+]
+
+ 
+ cluster_fnames: [
+"/data/nlahaye/output/Learnergy/DBN_GK2A_CLIPPED_7/gk2a_ami_le1b_sw038_ea020lc_202203050100.nc.heir_clust2output.data_17842500clusters.zarr", 
+"/data/nlahaye/output/Learnergy/DBN_GK2A_CLIPPED_7/gk2a_ami_le1b_sw038_ea020lc_202203050110.nc.heir_clust2output_test.data_17842500clusters.zarr"
+]
+
+context:
+ apply_context: true
+ clusters: [16491150]
+ name: "fire"
+ compare_truth: false
+ generate_union: false
+

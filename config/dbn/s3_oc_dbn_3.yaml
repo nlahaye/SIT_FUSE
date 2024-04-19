@@ -1,0 +1,377 @@
+
+output:
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_S3B_OC_TROP_INIT/"
+ training_output: "output.data"
+ training_mse: "rec_mse.data"
+ testing_output: "output_test.data"
+ testing_mse: "rec_mse_test.data"
+ model: "dbn"
+ generate_train_output: True
+ generate_output: True
+
+dbn:
+ conv: False
+ subset_training: 2000000
+ deep_cluster: 800
+ heir_tiers: 2
+ overwrite_model: False
+ tune_clust: False
+ tune_dbn: False
+ tune_scaler: False
+ params:
+  model_type: ["gaussian_selu"] #, 'gaussian_relu_dropout', 'gaussian_relu_dropout'] #'variance_gaussian_dropout' "gaussian_dropout"
+  dbn_arch: [2000] #[2000] [250, 500, 2000] #, 2000]
+  gibbs_steps: [1] #, 7, 7] #, 10] #, 25]
+  learning_rate: [0.00001] #, 0.0001, 0.0001] #, 0.01] #, 0.01]
+  momentum: [0.95] #, 0.95, 0.95] #, 0.95] #, 0.95]
+  decay: [0.0001] #, 0.0001, 0.0001] #, 0.0001] #, 0.0001]
+  temp: [1.0] #, 1.0, 1.0] [0.9, 0.75, 0.5] #, 1.0] #, 0.5] #, 0.5] 
+  nesterov_accel: [True]
+  normalize_learnergy: [False]
+  batch_normalize: [False]
+
+ training:
+  use_gpu: True
+  use_gpu_preprocessing: False
+  world_size: 1
+  rank: 0
+  device_ids: ["5"]
+  batch_size: 1000
+  epochs: [10] #[40] #[8] #, 1, 1] #, 5] #, 10]
+  cluster_batch_size: 1000
+  cluster_epochs: 30
+  cluster_gauss_noise_stdev: [0.01] #[0.001, 0.0001, 0.00001, 0.000001, 0.0]
+  cluster_lambda: 1.0
+
+  heir_cluster_min_samples: 1000
+  heir_cluster_gauss_noise_stdev: [0.01] #[0.001, 0.0001, 0.00001, 0.000001, 0.0]
+  heir_epochs: 30
+  heir_tune_subtrees: False
+  heir_tune_subtree_list: []
+  heir_deep_cluster: 150
+
+scaler:
+ name: "standard"
+
+data:
+ tile: True
+ tile_size: [3,3,32]
+ tile_step: [1,1,32]
+ num_loader_workers: 10
+ scale_data: True
+ pixel_padding: 1
+ number_channels: 13
+ fill_value: -999999.0
+ valid_min: -10000.0
+ valid_max: 6400000
+ subset_count: 1
+ output_subset_count: 1
+ reader_type: "oc_and_trop"
+ reader_kwargs: 
+  mask_shp: "/data/nlahaye/remoteSensing/Lakes/glwd_1.shp"
+ chan_dim: 0
+ delete_chans: []
+ transform_default:
+  chans: []
+  transform: []
+
+ files_train: [
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180910.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-10_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180920.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-20_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180724.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-24_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180717.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-17_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180709.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-09_ungridded.nc"]
+]
+
+ files_test: [
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180910.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-10_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180920.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-20_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180922.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-22_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180729.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-29_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180924.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-24_ungridded.nc"],
+##"/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180715.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-03_ungridded.nc"],
+#["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180717.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-17_ungridded.nc"],
+#["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180709.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-09_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180812.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-12_ungridded.nc"],
+#["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180724.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-24_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180726.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-26_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180704.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-04_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180725.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-25_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180619.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-19_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180821.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-21_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180923.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-23_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180901.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-01_ungridded.nc"],
+##"/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180629.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-03_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180917.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-17_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180814.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-14_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180703.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-03_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180627.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-27_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180627.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-27_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180815.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-15_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180827.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-27_ungridded.nc"],
+##"/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180628.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-03_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180714.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-14_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180915.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-15_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180628.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-28_ungridded.nc"],
+##"/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180710.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-03_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180719.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-19_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180716.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-16_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180813.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-13_ungridded.nc"],
+##"/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180715.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-03_ungridded.nc"],
+##"/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180730.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-03_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180717.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-17_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180902.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-02_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180819.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-19_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180803.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-03_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180827.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-27_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180627.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-27_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180718.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-18_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180730.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-30_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180923.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-23_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180721.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-21_ungridded.nc"],
+##"/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180725.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-03_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180930.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-30_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180921.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-21_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180909.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-09_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180913.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-13_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180914.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-14_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180621.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-21_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180918.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-18_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180707.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-07_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180819.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-19_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180720.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-20_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180921.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-21_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180722.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-22_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180714.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-14_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180805.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-05_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180807.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-07_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180818.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-18_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180806.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-06_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180711.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-11_ungridded.nc"],
+##"/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180629.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-03_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180729.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-29_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180629.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-29_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180915.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-15_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180825.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-25_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180906.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-06_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180718.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-18_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180915.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-15_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180620.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-20_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180709.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-09_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180704.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-04_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180820.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-20_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180917.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-17_ungridded.nc"],
+##"/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180618.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-03_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180821.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-21_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180919.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-19_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20181001.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-10-01_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180713.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-13_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180621.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-21_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180728.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-28_ungridded.nc"],
+##"/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180624.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-03_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180703.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-03_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180815.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-15_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180916.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-16_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180922.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-22_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180820.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-20_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180805.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-05_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180623.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-23_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20181001.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-10-01_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180711.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-11_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180706.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-06_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180817.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-17_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180712.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-12_ungridded.nc"],
+##"/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180704.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-03_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180723.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-23_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180923.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-23_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180903.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-03_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180804.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-04_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180622.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-22_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180624.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-24_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180630.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-30_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180814.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-14_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180623.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-23_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180626.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-26_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180705.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-05_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180629.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-29_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180905.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-05_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180908.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-08_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180925.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-25_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180625.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-25_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180702.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-02_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180911.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-11_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180903.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-03_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180905.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-05_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180927.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-27_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180803.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-03_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180710.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-10_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180707.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-07_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180701.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-01_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180822.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-22_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180831.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-31_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180914.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-14_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180716.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-16_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180831.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-31_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180731.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-31_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180904.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-04_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180829.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-29_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180826.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-26_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180823.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-23_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180918.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-18_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180805.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-05_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180715.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-15_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180726.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-26_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180710.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-10_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180625.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-25_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180706.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-06_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180617.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-17_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180727.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-27_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180820.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-20_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180907.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-07_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180801.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-01_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180729.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-29_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180714.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-14_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180619.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-19_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180819.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-19_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180905.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-05_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180709.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-09_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180822.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-22_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180719.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-19_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180904.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-04_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180618.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-18_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180825.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-25_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180703.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-03_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180618.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-18_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180719.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-19_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180624.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-24_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180724.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-24_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180623.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-23_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180704.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-04_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180709.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-09_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180725.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-25_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180626.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-26_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180919.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-19_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180930.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-30_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180910.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-10_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180713.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-13_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180823.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-23_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180909.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-09_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180810.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-10_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180713.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-13_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180817.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-17_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180705.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-05_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180926.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-26_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180928.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-28_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180906.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-06_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180725.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-25_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180802.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-02_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180630.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-30_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180617.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-17_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180622.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-22_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180926.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-26_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180621.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-21_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180829.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-29_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180809.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-09_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180818.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-18_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180809.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-09_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180912.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-12_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180731.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-31_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180803.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-03_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180702.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-02_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180628.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-28_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180712.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-12_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180622.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-22_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180815.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-15_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180730.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-30_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180723.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-23_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180715.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-15_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180826.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-26_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180724.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-24_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180810.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-10_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180723.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-23_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180920.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-20_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180810.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-10_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180902.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-02_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180714.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-14_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180821.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-21_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180907.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-07_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180718.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-18_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180828.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-28_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180816.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-16_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180816.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-16_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180916.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-16_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180927.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-27_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180730.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-30_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180830.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-30_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180708.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-08_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180721.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-21_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180628.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-28_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180929.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-29_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180625.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-69-25_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180708.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-08_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180911.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-11_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180623.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-06_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20181001.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-10-01_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180705.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-05_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180804.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-04_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180913.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-13_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180720.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-20_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180908.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-08_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180921.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-21_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180708.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-08_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180720.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-20_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180720.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-20_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180707.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-07_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180831.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-31_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180812.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-12_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180619.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-19_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180630.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-30_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180728.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-28_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180910.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-10_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180722.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-22_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180912.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-12_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180924.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-24_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180916.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-16_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180618.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-18_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180922.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-22_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180824.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-24_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180813.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-13_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180802.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-02_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180830.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-30_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180808.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-08_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180825.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-25_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180822.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-22_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180824.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-24_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180928.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-28_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180701.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-01_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180702.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-02_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180929.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-29_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180811.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-11_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180619.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-19_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180806.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-06_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180826.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-26_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180828.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-28_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180620.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-06-20_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180727.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-27_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180918.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-18_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180807.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-07_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180720.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-20_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180801.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-01_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180927.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-27_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180926.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-26_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180811.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-11_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180814.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-14_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180925.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-09_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180830.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-30_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180808.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-08_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180809.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-09_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180804.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-08-04_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180907.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-07_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180901.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-01_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180704.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-07-04_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180911.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-11_ungridded.nc"],
+["/data/nlahaye/remoteSensing/Multi_Year_WQ/S3B_OLCI_ERRNT.20180906.L3m.DAY.","/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/TROPO_SIF_2018-09-06_ungridded.nc"],
+]
+
+
+

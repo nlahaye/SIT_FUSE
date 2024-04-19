@@ -1,0 +1,14 @@
+
+
+
+
+data:
+ filename: ["/data/nlahaye/output/Learnergy/DBN_S1_8_2/Water.Union.tif"]
+ reader_type: "gtiff"
+ reader_kwargs:
+  None:
+
+contour_min_size: -1
+remove_singles: True
+write_geotiff: True
+ 

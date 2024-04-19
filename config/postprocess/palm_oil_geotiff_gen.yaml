@@ -8,22 +8,44 @@ data:
  subset_inds: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
  create_separate: False
   
- gtiff_data: ["/data/nlahaye/remoteSensing/Palm_Oil/ucayali_condensed_stacks_2020_h1v1.tiff"]
- #cluster_fnames: ["/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_GRBM/file_clust0_output_test.data_500clusters.zarr"]
- cluster_fnames: ["/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST/ucayali_condensed_stacks_2020_h1v1.tiff.clustoutput_test.data_150clusters.zarr"]
+ gtiff_data: [
+"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h0v1.tif",
+"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h0v2.tif",
+"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h1v0.tif",
+"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h1v1.tif",
+"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h1v2.tif",
+"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h1v3.tif",
+"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h2v0.tif",
+"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h2v1.tif",
+"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h2v2.tif",
+"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h2v3.tif",
+"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h4v3.tif",
+"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h4v3.tif"]
+
+ cluster_fnames: [
+"/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h0v1.tif.heir_clust1output_test.data_77995clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h0v2.tif.heir_clust1output_test.data_77995clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h1v0.tif.heir_clust1output_test.data_77995clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h1v1.tif.heir_clust1output_test.data_77995clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h1v2.tif.heir_clust1output_test.data_77995clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h1v3.tif.heir_clust1output_test.data_77995clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h2v0.tif.heir_clust1output_test.data_77995clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h2v1.tif.heir_clust1output_test.data_77995clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h2v2.tif.heir_clust1output_test.data_77995clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h2v3.tif.heir_clust1output_test.data_77995clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h4v2.tif.heir_clust1output_test.data_77995clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h4v3.tif.heir_clust1output_test.data_77995clusters.zarr"
+]
  
 context: 
  apply_context: True
- clusters: [120,127,213,300,418,440]  #64 #i.e. smoke clusters
- name: "palm_oil" #i.e. smoke
+ clusters: [8.639, 21.652, 44.087, 0.757, 8.661, 65.412, 35.182, 39.38, 20.575, 56.632, 8.615, 6.296, 43.781, 39.311, 39.357]
+ #8.82, 8.839, 22.638, 26.004, 26.086, 33.153, 40.925, 55.902, 55.915, 55.925, 55.931, 55.994, 57.095]
+  
+
+ name: "palm_oil_high" #i.e. smoke
  compare_truth: false
  generate_union: false
  cluster_dependencies:
-  120: [127,213,300,418,440]
-  127: [120,213,300,418,440]
-  213: [120,127,300,418,440]
-  300: [120,127,213,418,440]
-  418: [120,127,213,300,440]
-  440: [120,127,213,300,418]
 
 

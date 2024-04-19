@@ -1,0 +1,16 @@
+
+xl_fname: '/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/InSitu/W_FL_Karenia_brevis_abundance_2002-2021.04.05.updated.csv'
+#/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/InSitu/W_FL_Karenia_brevis_abundance_2002-2021.04.05.xlsx'
+start_date: "2018-06-17"
+end_date: "2018-09-29"
+clusters: 8000000
+ 
+clusters_dir: '/data/nlahaye/output/Learnergy/DBN_S3B_OC_ONLY_C_FLA/'
+radius_degrees: 0.0225
+#0.045 degrees = 5km
+global_max: 10000000
+ranges: [0,1000,10000,100000,1000000,10000000]
+
+
+
+

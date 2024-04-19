@@ -1,0 +1,30 @@
+
+gen_from_geotiffs: false
+
+data:
+ clust_reader_type: "zarr_to_numpy"
+ reader_kwargs:
+   no_arg: "no_arg" 
+ subset_inds: [[5000,7396,0,1500],[5000,7396,0,1500],[],[],[],[],[],[]]
+ create_separate: False
+   
+ gtiff_data: [
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_011431_11_242b_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_011431_11_242b_3B_AnalyticMS_clip.tif"
+] 
+
+
+ cluster_fnames: [
+"/data/nlahaye/output/Learnergy/DBN_PLANET_KOREA_CLIPPED_NEW_PAD_STRAT/20220305_011431_11_242b_3B_AnalyticMS_clip.tif.heir_clust2output_test.data_7649700clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_PLANET_KOREA_CLIPPED_NEW_PAD_STRAT/20220305_011431_11_242b_3B_AnalyticMS_clip.tif.heir_clust2output.data_7649700clusters.zarr"
+]
+
+
+ 
+context:
+ apply_context: false
+ clusters: [676500, 1735400, 7040000, 7020000] #i.e. smoke clusters
+ name: "fire" #i.e. smoke
+ compare_truth: false
+ generate_union: false
+

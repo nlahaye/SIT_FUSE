@@ -1,0 +1,15 @@
+
+
+data:
+ filenames: [
+#"/data/nlahaye/output/Learnergy/DBN_CALDOR_3/caldor_08200_21049_026_210831_L090HVHV_CX_01.grd.heir_clust2output.data",
+#"/data/nlahaye/output/Learnergy/DBN_CALDOR_3/caldor_26200_21048_013_210825_L090HVHV_CX_01.grd.heir_clust2output_test.data"
+#"/data/nlahaye/output/Learnergy/DBN_CALDOR_3/caldor_08200_21049_026_210831_L090HVHV_CX_01.grd.clustoutput.data",
+#"/data/nlahaye/output/Learnergy/DBN_CALDOR_3/caldor_26200_21048_013_210825_L090HVHV_CX_01.grd.clustoutput_test.data"
+"/data/nlahaye/output/Learnergy/DBN_CALDOR_3/caldor_08200_21049_026_210831_L090HVHV_CX_01.grd.heir_clust1output.data",
+"/data/nlahaye/output/Learnergy/DBN_CALDOR_3/caldor_26200_21048_013_210825_L090HVHV_CX_01.grd.heir_clust1output_test.data"
+] 
+ 
+
+
+

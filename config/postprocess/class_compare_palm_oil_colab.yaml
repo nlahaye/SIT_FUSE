@@ -1,0 +1,40 @@
+
+
+init_data: 
+ - palm_oil: "/data/nlahaye/remoteSensing/Palm_Oil_Test_V2.Filled.tif"
+
+new_data : [["/home/nlahaye/palm_oil_colab/ucayali_condensed_stacks_2020_h1v1.tiff.clustoutput_test.data_500clusters.zarr.full_geo.tif"]]
+
+
+class_order: ["palm_oil"]
+
+good_vals: 
+ palm_oil: [1,0]
+
+map_vals:
+ palm_oil:
+  1: 1
+  0: 0
+
+out_ext: ["DBN_PALM_OIL"]
+
+clust_ext: ["CLUST_INIT"]
+
+log_fname: "/home/nlahaye/palm_oil_colab/Agreement_Log"
+
+no_retrieval_init: [-3]
+no_retrieval_new: [-1]
+
+labels: 
+ palm_oil: [0,1]
+ total_mask: [0,1]
+
+gradient_increase: 0.003
+
+gradient:
+ palm_oil: 
+  1: 0.0
+  0: 0.0
+
+class_mask_gen_func: "none"
+

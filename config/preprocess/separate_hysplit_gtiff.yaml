@@ -1,0 +1,15 @@
+
+
+fnames : [ 
+"/data/nlahaye/remoteSensing/HYSPLIT/smoke-col.QB.20230607.nc.tif"
+]
+
+number_channels: 24
+
+kwargs:
+ band_key: "TIME"
+ 
+
+
+
+

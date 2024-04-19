@@ -1,0 +1,81 @@
+
+gen_from_geotiffs: false
+
+data:
+ clust_reader_type: "zarr_to_numpy"
+ reader_kwargs:
+   no_arg: "no_arg" 
+
+ subset_inds: [[3170,11352,2059,10280]]
+#[5523,13543,9602,11602],[5523,13543,7602,9602],[5523,13543,5602,7602],[5523,13543,3602,5602],[5523,13543,1602,3602],[5523,13543,0,1602]]
+ create_separate: false
+
+
+ gtiff_data: [
+#"/data/nlahaye/remoteSensing/S1/S1A_IW_GRDH_1SDV_20230920T060120_20230920T060145_050407_0611D3_B141.SAFE/measurement/s1a-iw-grd-vh-20230920t060120-20230920t060145-050407-0611d3-002.tiff",
+#"/data/nlahaye/remoteSensing/S1/S1A_IW_GRDH_1SDV_20230925T060930_20230925T060955_050480_06145D_B0CD.SAFE/measurement/s1a-iw-grd-vv-20230925t060930-20230925t060955-050480-06145d-001.tiff",
+##"/data/nlahaye/remoteSensing/S1/S1A_IW_GRDH_1SDV_20230925T060905_20230925T060930_050480_06145D_7720.SAFE/measurement/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff",
+##"/data/nlahaye/remoteSensing/S1/S1A_IW_GRDH_1SDV_20230925T060905_20230925T060930_050480_06145D_7720.SAFE/measurement/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff",
+##"/data/nlahaye/remoteSensing/S1/S1A_IW_GRDH_1SDV_20230925T060905_20230925T060930_050480_06145D_7720.SAFE/measurement/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff",
+##"/data/nlahaye/remoteSensing/S1/S1A_IW_GRDH_1SDV_20230925T060905_20230925T060930_050480_06145D_7720.SAFE/measurement/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff",
+"/data/nlahaye/remoteSensing/S1/S1A_IW_GRDH_1SDV_20230925T060905_20230925T060930_050480_06145D_7720.SAFE/measurement/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff"
+#"/data/nlahaye/remoteSensing/S1/S1A_IW_GRDH_1SDV_20230925T060905_20230925T060930_050480_06145D_7720.SAFE/measurement/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff",
+#"/data/nlahaye/remoteSensing/S1/S1A_IW_GRDH_1SDV_20230920T060055_20230920T060120_050407_0611D3_BA0D.SAFE/measurement/s1a-iw-grd-vv-20230920t060055-20230920t060120-050407-0611d3-001.tiff"
+]
+
+ cluster_fnames: [
+#"/data/nlahaye/output/Learnergy/DBN_S1/s1a-iw-grd-vh-20230920t060120-20230920t060145-050407-0611d3-002.tiff.heir_clust1output_test.data_79696clusters.zarr",
+#"/data/nlahaye/output/Learnergy/DBN_S1/s1a-iw-grd-vv-20230925t060930-20230925t060955-050480-06145d-001.tiff.heir_clust1output_test.data_79698clusters.zarr",
+#"/data/nlahaye/output/Learnergy/DBN_S1/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff.heir_clust1output_test.data_79694clusters.zarr" #,
+#"/data/nlahaye/output/Learnergy/DBN_S1/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff.heir_clust1output_test.data_79696clusters.zarr" #,
+#"/data/nlahaye/output/Learnergy/DBN_S1/s1a-iw-grd-vv-20230920t060055-20230920t060120-050407-0611d3-001.tiff.heir_clust1output_test.data_79698clusters.zarr"
+##"/data/nlahaye/output/Learnergy/DBN_S1_2_2/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff.heir_clust1output_test.data_79698clusters.zarr",
+##"/data/nlahaye/output/Learnergy/DBN_S1_3_2/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff.heir_clust1output_test.data_79698clusters.zarr",
+##"/data/nlahaye/output/Learnergy/DBN_S1_4_2/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff.heir_clust1output_test.data_79698clusters.zarr",
+##"/data/nlahaye/output/Learnergy/DBN_S1_5_2/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff.heir_clust1output_test.data_79698clusters.zarr",
+##"/data/nlahaye/output/Learnergy/DBN_S1_6_2/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff.heir_clust1output_test.data_79698clusters.zarr",
+##"/data/nlahaye/output/Learnergy/DBN_S1_7_2/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff.heir_clust1output_test.data_79698clusters.zarr"
+#"/data/nlahaye/output/Learnergy/DBN_S1_8/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff.heir_clust1output_test.data_78129clusters.zarr"
+"/data/nlahaye/output/Learnergy/DBN_S1_3_LAYER/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff.heir_clust1output_test.data_78793clusters.zarr",
+]
+
+context:
+ generate_union: False
+ apply_context: False
+ clusters: [6.214, 6.277, 10.526, 18.903, 28.337, 32.767, 34.859, 36.880, 37.717, 38.762, 41.045, 42.802, 50.423, 56.767, 58.838, 58.847, 67.811, 67.875, 69.740, 73.135, 73.149, 76.709, 78.122] #, 27.043, 36.874, 36.887, 38.912, 38.929, 38.937, 77.929]
+ 
+
+ name: "Water" #i.e. smoke
+ compare_truth: false
+ cluster_dependencies:
+  #77.929: [6.214, 6.277, 10.526, 18.903, 28.337, 32.767, 34.859, 36.880, 37.717, 38.762, 41.045, 42.802, 50.423, 56.767, 58.838, 67.811, 67.875, 69.740, 73.135, 73.149, 76.709, 78.122]
+  #38.912: [6.214, 6.277, 10.526, 18.903, 28.337, 32.767, 34.859, 36.880, 37.717, 38.762, 41.045, 42.802, 50.423, 56.767, 58.838, 67.811, 67.875, 69.740, 73.135, 73.149, 76.709, 78.122]
+  #38.937: [6.214, 6.277, 10.526, 18.903, 28.337, 32.767, 34.859, 36.880, 37.717, 38.762, 41.045, 42.802, 50.423, 56.767, 58.838, 67.811, 67.875, 69.740, 73.135, 73.149, 76.709, 78.122]
+  #36.887: [6.214, 6.277, 10.526, 18.903, 28.337, 32.767, 34.859, 36.880, 37.717, 38.762, 41.045, 42.802, 50.423, 56.767, 58.838, 67.811, 67.875, 69.740, 73.135, 73.149, 76.709, 78.122]
+  #36.874: [6.214, 6.277, 10.526, 18.903, 28.337, 32.767, 34.859, 36.880, 37.717, 38.762, 41.045, 42.802, 50.423, 56.767, 58.838, 67.811, 67.875, 69.740, 73.135, 73.149, 76.709, 78.122]
+  #38.929: [6.214, 6.277, 10.526, 18.903, 28.337, 32.767, 34.859, 36.880, 37.717, 38.762, 41.045, 42.802, 50.423, 56.767, 58.838, 67.811, 67.875, 69.740, 73.135, 73.149, 76.709, 78.122]
+  #27.043: [6.214, 6.277, 10.526, 18.903, 28.337, 32.767, 34.859, 36.880, 37.717, 38.762, 41.045, 42.802, 50.423, 56.767, 58.838, 67.811, 67.875, 69.740, 73.135, 73.149, 76.709, 78.122]
+  42.802: [28.337, 56.767]
+  58.847: [28.337, 56.767]
+  38.762: [28.337, 56.767]
+  36.88:  [28.337, 56.767]
+  73.149: [28.337, 56.767]
+  18.903: [28.337, 56.767]
+  41.045: [28.337, 56.767]
+  58.838: [28.337, 56.767]
+  32.767: [28.337, 56.767]
+  10.526: [28.337, 56.767]
+  6.214:  [28.337, 56.767]
+  6.277:  [28.337, 56.767]
+  34.859: [28.337, 56.767]
+  37.717: [28.337, 56.767]
+  50.423: [28.337, 56.767]
+  67.811: [28.337, 56.767]
+  67.875: [28.337, 56.767]
+  69.740: [28.337, 56.767]
+  73.135: [28.337, 56.767]
+  76.709: [28.337, 56.767]
+  78.122: [28.337, 56.767]
+
+
+

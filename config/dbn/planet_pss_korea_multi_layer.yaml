@@ -1,0 +1,177 @@
+output:
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_PLANET_KOREA_MULTI_LAYER/"
+ training_output: "output.data"
+ training_mse: "rec_mse.data"
+ testing_output: "output_test.data"
+ testing_mse: "rec_mse_test.data"
+ generate_train_output: False
+ generate_output: False
+ model: "dbn"
+
+dbn:
+ conv: False
+ subset_training: 2000000
+ deep_cluster: 800
+ heir_tiers: 1
+ overwrite_model: False
+ tune_clust: False
+ tune_dbn: False
+ tune_scaler: False
+ params:
+  model_type: ["gaussian_selu", "gaussian_selu"]
+  dbn_arch: [2000, 1000] #[2000] [250, 500, 2000] #, 2000]
+  gibbs_steps: [1,1] #, 7, 7] #, 10] #, 25]
+  learning_rate: [0.00001, 0.00001] #, 0.0001, 0.0001] #, 0.01] #, 0.01]
+  momentum: [0.95, 0.95] #, 0.95, 0.95] #, 0.95] #, 0.95]
+  decay: [0.0001, 0.0001] #, 0.0001, 0.0001] #, 0.0001] #, 0.0001]
+  temp: [1.0, 1.0] #, 1.0, 1.0] [0.9, 0.75, 0.5] #, 1.0] #, 0.5] #, 0.5] 
+  nesterov_accel: [True, True]
+  normalize_learnergy: [False, True]
+  batch_normalize: [False, False]
+
+ training:
+  use_gpu: True
+  use_gpu_preprocessing: False
+  world_size: 1
+  rank: 0
+  device_ids: ["1"]
+  batch_size: 1000
+  epochs: [10, 10] #[15] #[8] #, 1, 1] #, 5] #, 10]
+  cluster_batch_size: 1000
+  cluster_epochs: 30
+  cluster_gauss_noise_stdev: [0.01] #[0.001, 0.0001, 0.00001, 0.000001, 0.0]
+  cluster_lambda: 1.0
+
+  heir_cluster_min_samples: 1000
+  heir_cluster_gauss_noise_stdev: [0.01] #[0.001, 0.0001, 0.00001, 0.000001, 0.0]
+  heir_epochs: 30
+  heir_tune_subtrees: False
+  heir_tune_subtree_list: []
+  heir_deep_cluster: 100
+  stratify_data:
+   kmeans: True
+
+scaler:
+ name: "standard"
+
+
+data:
+ num_loader_workers: 10
+ scale_data: True
+ pixel_padding: 0
+ number_channels: 4
+ fill_value: 0.0
+ valid_min: 0.0000001
+ valid_max: 100000000
+ subset_count: 1
+ output_subset_count: 1
+ reader_type: "gtiff"
+ reader_kwargs:
+   None: "none"
+ chan_dim: 0
+ delete_chans: []
+ transform_default:
+  chans: []
+  transform: []
+
+ files_train: [
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_011431_11_242b_3B_AnalyticMS_clip.tif"
+]
+
+ files_test: [
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_011431_11_242b_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_011424_22_242b_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_011426_51_242b_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_011428_81_242b_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_011433_41_242b_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_011435_71_242b_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_011438_00_242b_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_011440_30_242b_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_012030_17_2458_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_012032_64_2458_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_012035_12_2458_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_012037_59_2458_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_012040_07_2458_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_012042_54_2458_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_014048_1034_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_014049_1034_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_014049_1_1034_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_014050_1034_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_014051_1034_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_014052_1034_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_014053_1034_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_014054_1034_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_014055_1034_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_014056_1034_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_014057_1034_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_014058_1034_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_014059_1034_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_014100_1034_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_014101_1034_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_014102_1034_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_014103_1034_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_015013_0f17_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_015014_0f17_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_015015_0f17_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_015016_0f17_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_015017_0f17_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_015018_0f17_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_015019_0f17_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_015020_0f17_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_015021_0f17_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_020539_67_2414_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_020541_96_2414_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_020546_55_2414_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_020548_84_2414_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_020551_13_2414_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_020555_72_2414_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220306_010956_94_2460_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220306_010959_41_2460_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220306_011416_82_2430_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220306_011419_29_2430_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220306_011421_77_2430_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220306_011424_24_2430_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220306_011426_72_2430_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220306_011429_19_2430_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220306_011431_66_2430_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220306_011608_26_2427_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220306_011610_55_2427_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220306_011612_85_2427_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220306_020441_15_2403_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220306_020443_44_2403_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220306_020445_74_2403_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220306_020448_03_2403_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220306_020450_32_2403_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220306_020452_61_2403_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220306_020454_91_2403_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220306_020613_22_2274_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220306_020615_52_2274_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220306_020617_83_2274_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220306_024604_69_1066_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220306_024606_19_1066_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220306_024607_69_1066_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220306_024609_19_1066_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220306_024610_69_1066_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220306_024612_19_1066_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220307_014143_1025_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220307_014144_1025_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220307_014145_1025_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220307_014146_1025_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220307_014147_1025_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220307_025045_71_105d_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220307_025047_21_105d_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220307_025048_71_105d_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220307_025050_21_105d_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220307_025051_71_105d_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220307_025053_21_105d_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220307_025054_71_105d_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220307_025056_21_105d_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220307_025057_71_105d_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220307_025059_21_105d_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220307_025100_71_105d_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220307_025102_21_105d_3B_AnalyticMS_clip.tif"
+]
+
+
+
+

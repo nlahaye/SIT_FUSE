@@ -1,0 +1,48 @@
+
+
+
+data_fnames: ["/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/MYD021KM.A2023173.0710.061.2023173191118.hdf",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/MYD021KM.A2023173.1820.061.2023174152109.hdf",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/MYD021KM.A2023174.0615.061.2023174190906.hdf",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/MYD021KM.A2023174.0750.061.2023174191052.hdf",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/MYD021KM.A2023174.0755.061.2023174190917.hdf",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/MYD021KM.A2023174.1725.061.2023175152338.hdf",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/MYD021KM.A2023174.1900.061.2023175153512.hdf",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/MYD021KM.A2023174.1905.061.2023175153925.hdf",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/MYD021KM.A2023175.0655.061.2023175192045.hdf",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/MYD021KM.A2023175.0835.061.2023175191958.hdf",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/MYD021KM.A2023175.1805.061.2023176151742.hdf"]
+ 
+loc_fnames: ["/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/MYD03.A2023173.0710.061.2023173152636.hdf",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/MYD03.A2023173.1820.061.2023174151434.hdf",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/MYD03.A2023174.0615.061.2023174152413.hdf",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/MYD03.A2023174.0750.061.2023174152526.hdf",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/MYD03.A2023174.0755.061.2023174165234.hdf",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/MYD03.A2023174.1725.061.2023175150614.hdf",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/MYD03.A2023174.1900.061.2023175152255.hdf",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/MYD03.A2023174.1905.061.2023175152512.hdf",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/MYD03.A2023175.0655.061.2023175153053.hdf",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/MYD03.A2023175.0835.061.2023175164620.hdf",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/MYD03.A2023175.1805.061.2023176151128.hdf"]
+
+ 
+instruments: ["modis_l1b", "modis_l1b", "modis_l1b", "modis_l1b", "modis_l1b", "modis_l1b", "modis_l1b", "modis_l1b", "modis_l1b", "modis_l1b", "modis_l1b"]
+
+
+out_dirs: [
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/",
+"/data/nlahaye/remoteSensing/CSDSA/MODIS_VIIRS_Canada/"
+]
+
+exe_location: "/home/nlahaye/CSPP/polar2grid_v_3_0/bin/polar2grid.sh"
+
+

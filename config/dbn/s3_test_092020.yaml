@@ -1,0 +1,85 @@
+
+output:
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_S3_092020/"
+ training_output: "output.data"
+ training_mse: "rec_mse.data"
+ testing_output: "output_test.data"
+ testing_mse: "rec_mse_test.data"
+ model: "dbn"
+ generate_train_output: True
+
+dbn:
+ conv: False
+ subset_training: 10000000
+ deep_cluster: 800
+ heir_tiers: 1
+ overwrite_model: False
+ tune_clust: False
+ tune_dbn: False
+ tune_scaler: False
+ params:
+  model_type: ["gaussian_selu"] #, 'gaussian_relu_dropout', 'gaussian_relu_dropout'] #'variance_gaussian_dropout' "gaussian_dropout"
+  dbn_arch: [2000] #[2000] [250, 500, 2000] #, 2000]
+  gibbs_steps: [15] #, 7, 7] #, 10] #, 25]
+  learning_rate: [0.0001] #, 0.0001, 0.0001] #, 0.01] #, 0.01]
+  momentum: [0.0] #, 0.95, 0.95] #, 0.95] #, 0.95]
+  decay: [0.0001] #, 0.0001, 0.0001] #, 0.0001] #, 0.0001]
+  temp: [1.0] #, 1.0, 1.0] [0.9, 0.75, 0.5] #, 1.0] #, 0.5] #, 0.5] 
+  nesterov_accel: [False]
+  normalize_learnergy: [False]
+  batch_normalize: [False]
+
+ training:
+  use_gpu: True
+  use_gpu_preprocessing: False
+  world_size: 1
+  rank: 0
+  device_ids: ["0"]
+  batch_size: 128
+  epochs: [30] #[40] #[8] #, 1, 1] #, 5] #, 10]
+  cluster_batch_size: 700
+  cluster_epochs: 18
+  cluster_gauss_noise_stdev: [0.01] #[0.001, 0.0001, 0.00001, 0.000001, 0.0]
+  cluster_lambda: 1.0
+
+  heir_cluster_min_samples: 1000
+  heir_cluster_gauss_noise_stdev: [0.01] #[0.001, 0.0001, 0.00001, 0.000001, 0.0]
+  heir_epochs: 18
+  heir_tune_subtrees: False
+  heir_tune_subtree_list: []
+  heir_deep_cluster: 100
+
+scaler:
+ name: "standard"
+
+data:
+ tile: True
+ tile_size: [3,3,32]
+ tile_step: [1,1,32]
+ num_loader_workers: 10
+ scale_data: True
+ pixel_padding: 0
+ number_channels: 21
+ fill_value: -999999.0
+ valid_min: -100.0
+ valid_max: 64000
+ subset_count: 1
+ output_subset_count: 1
+ reader_type: "s3_netcdf"
+ reader_kwargs:
+  no_arg: "no_arg"
+ chan_dim: 0
+ delete_chans: []
+ transform_default:
+  chans: []
+  transform: []
+
+ files_train: [
+"/data/nlahaye/remoteSensing/S3/S3A_OL_1_EFR____20200906T174110_20200906T174410_20200907T214743_0179_062_269_2340_LN1_O_NT_002.SEN3",
+"/data/nlahaye/remoteSensing/S3/S3A_OL_1_EFR____20200908T182948_20200908T183248_20200909T220703_0180_062_298_2340_LN1_O_NT_002.SEN3"]
+
+ files_test: [
+"/data/nlahaye/remoteSensing/S3/S3B_OL_1_EFR____20200907T181635_20200907T181935_20200908T214254_0179_043_141_2340_LN1_O_NT_002.SEN3",
+"/data/nlahaye/remoteSensing/S3/S3B_OL_1_EFR____20200908T175024_20200908T175324_20200909T224149_0179_043_155_2340_LN1_O_NT_002.SEN3"
+]
+

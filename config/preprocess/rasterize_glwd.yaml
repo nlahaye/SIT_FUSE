@@ -1,0 +1,7 @@
+
+
+pixel_size: 0.001
+raster_fn: ["/data/nlahaye/remoteSensing/Lakes/glwd_1.tif"]
+vector_fn: ["/data/nlahaye/remoteSensing/Lakes/glwd_1.shp"]
+nodata: -9999
+

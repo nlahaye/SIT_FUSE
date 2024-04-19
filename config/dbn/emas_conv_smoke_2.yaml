@@ -1,0 +1,114 @@
+
+
+
+
+data:
+ tile: True #True
+ tile_size: [5,5,3] #34
+ tile_step: [1,1,3] #34
+ num_loader_workers: 32
+ scale_data: True
+ pixel_padding: 1
+ number_channels: 3 #34
+ fill_value: -9999.0
+ valid_min:  -900.0
+ valid_max: 100000000
+ subset_count: 1
+ output_subset_count: 1
+ reader_type: "numpy"
+ reader_kwargs:
+  no_arg: "no_arg"
+ chan_dim: 0
+ delete_chans: [3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37] #[25,26,36,37]
+ transform_default:
+  chans: []
+  transform: []
+
+
+ files_train: [
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_10_20190806_1858_1910_V02_Georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19911_10_20190807_2004_2016_V02_georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19911_09_20190807_1947_2002_V02_georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19912_07_20190808_1806_1821_V02_georeferenced_scaled.tif.npy',
+]
+
+ files_test: [
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19911_05_20190807_1817_1833_V02_georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_06_20190806_1815_1824_V02_Georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19912_07_20190808_1806_1821_V02_georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_21_20190806_2111_2125_V02_Georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_19_20190806_2035_2048_V02_Georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19911_08_20190807_1928_1942_V02_georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19911_12_20190807_2039_2051_V02_georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19911_11_20190807_2021_2035_V02_georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_17_20190806_2000_2010_V02_Georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_16_20190806_1941_1956_V02_Georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_13_20190806_1923_1925_V02_Georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_20_20190806_2052_2106_V02_Georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_06_20190806_1815_1824_V02_Georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_08_20190806_1834_1846_V02_Georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_18_20190806_2018_2031_V02_Georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_15_20190806_1931_1938_V02_Georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_14_20190806_1926_1929_V02_Georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_10_20190806_1858_1910_V02_Georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19911_10_20190807_2004_2016_V02_georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19911_09_20190807_1947_2002_V02_georeferenced_scaled.tif.npy']
+
+scaler:
+ name: "standard" 
+
+output:
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_eMAS_SMOKE_STRAT_CONV/"
+ training_output: "output.data"
+ training_mse: "rec_mse.data"
+ testing_output: "output_test.data"
+ testing_mse: "rec_mse_test.data"
+ generate_train_output: True
+ generate_output: True
+ model: "dbn"
+
+dbn:
+ conv: True
+ subset_training: 2000000
+ deep_cluster: 800
+ heir_tiers: 1
+ overwrite_model: False
+ tune_clust: False
+ tune_dbn: False
+ tune_scaler: False
+ params:
+  model_type: ["gaussian", "gaussian", "gaussian"] #, 'gaussian_relu_dropout', 'gaussian_relu_dropout'] #'variance_gaussian_dropout' "gaussian_dropout"
+  dbn_arch: [[100,500,300],[[3,3],[3,3],[3,3]]] #[2000] [250, 500, 2000] #, 2000]
+  gibbs_steps: [3,3,3] #, 7, 7] #, 10] #, 25]
+  learning_rate: [0.000005,0.000005,0.000005] #, 0.0001, 0.0001] #, 0.01] #, 0.01]
+  momentum: [0.95,0.95,0.95] #, 0.95, 0.95] #, 0.95] #, 0.95]
+  decay: [0.0001,0.0001,0.0001] #, 0.0001, 0.0001] #, 0.0001] #, 0.0001]
+  temp: [1.0,1.0,1.0] #, 1.0, 1.0] [0.9, 0.75, 0.5] #, 1.0] #, 0.5] #, 0.5] 
+  nesterov_accel: [True,True,True]
+  normalize_learnergy: [False,True,True]
+  batch_normalize: [True,True,True]
+  stride: [1,1,1]
+  padding: [1,1,1]
+
+
+ training:
+  use_gpu: True
+  use_gpu_preprocessing: False
+  world_size: 1
+  rank: 0
+  device_ids: ["1"]
+  batch_size: 1000
+  epochs: [10,10,10] #[15] #[8] #, 1, 1] #, 5] #, 10]
+  cluster_batch_size: 1000
+  cluster_epochs: 30
+  cluster_gauss_noise_stdev: [0.01] #[0.001, 0.0001, 0.00001, 0.000001, 0.0]
+  cluster_lambda: 1.0
+
+  heir_cluster_min_samples: 1000
+  heir_cluster_gauss_noise_stdev: [0.01] #[0.001, 0.0001, 0.00001, 0.000001, 0.0]
+  heir_epochs: 30
+  heir_tune_subtrees: False
+  heir_tune_subtree_list: []
+  heir_deep_cluster: 150
+  stratify_data:
+   kmeans: True

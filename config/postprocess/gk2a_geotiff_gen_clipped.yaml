@@ -1,0 +1,36 @@
+
+gen_from_geotiffs: false
+
+data:
+ clust_reader_type: "zarr_to_numpy"
+ reader_kwargs:
+   no_arg: "no_arg" 
+ subset_inds: [[],[],[2900,3500,2366,3000],
+ [2900,3500, 2366,3000]]
+#[500,1721,500,1721],
+ #[500,1721,500,1721],
+ #[500,1721,500,1721],
+ #[500,1721,500,1721]]
+ create_separate: true
+ gtiff_data: [
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/00/gk2a_ami_le1b_ir087_ea020lc_202203060020.nc.tif",
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/00/gk2a_ami_le1b_ir087_ea020lc_202203060020.nc.tif"
+#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/00/gk2a_ami_le1b_ir087_ea020lc_202203060020.nc.tif",
+#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/00/gk2a_ami_le1b_ir087_ea020lc_202203060020.nc.tif",
+#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/00/gk2a_ami_le1b_ir087_ea020lc_202203060020.nc.tif",
+#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/00/gk2a_ami_le1b_ir087_ea020lc_202203060020.nc.tif"
+]
+
+ 
+ cluster_fnames: [
+"/data/nlahaye/output/Learnergy/DBN_GK2A_CLIPPED_9_PAD/gk2a_ami_le1b_vi004_ea010lc_202203050110.nc.heir_clust2output_test.data_7769900clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_GK2A_CLIPPED_9_PAD/gk2a_ami_le1b_vi004_ea010lc_202203050100.nc.heir_clust2output.data_7769900clusters.zarr"
+]
+
+context:
+ apply_context: false
+ clusters: [] #i.e. smoke clusters
+ name: "" #i.e. smoke
+ compare_truth: false
+ generate_union: false
+

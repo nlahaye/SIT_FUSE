@@ -1,0 +1,29 @@
+
+gen_from_geotiffs: false
+
+data:
+ clust_reader_type: "zarr_to_numpy"
+ reader_kwargs:
+   no_arg: "no_arg" 
+ subset_inds: [[5001,7399,1,1502],[],[],[],[],[],[],[]]
+ create_separate: false
+ 
+  
+ gtiff_data: [
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_011431_11_242b_3B_AnalyticMS_clip.tif"
+]
+
+
+ cluster_fnames: [
+"/data/nlahaye/output/Learnergy/DBN_PLANET_KOREA_CLIPPED/20220305_011431_11_242b_3B_AnalyticMS_clip.tif.heir_clust2output_test.data_7930000clusters.zarr"
+]
+
+
+ 
+context:
+ apply_context: true
+ clusters: [0, 1670000, 2942000, 2948900] #i.e. smoke clusters
+ name: "smoke" #i.e. smoke
+ compare_truth: false
+ generate_union: false
+

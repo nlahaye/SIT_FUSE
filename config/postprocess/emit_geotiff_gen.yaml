@@ -1,0 +1,68 @@
+
+gen_from_geotiffs: False
+
+data:
+ clust_reader_type: "zarr_to_numpy"
+ reader_kwargs:
+   no_arg: "no_arg" 
+ subset_inds: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
+ create_separate: False
+
+ 
+ gtiff_data: [
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_10_20190806_1858_1910_V02_Georeferenced_scaled_fdi_030.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_13_20190806_1923_1925_V02_Georeferenced_scaled_fdi_030.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_14_20190806_1926_1929_V02_Georeferenced_scaled_fdi_030.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_21_20190806_2111_2125_V02_Georeferenced_scaled_fdi_030.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_06_20190806_1815_1824_V02_Georeferenced_scaled_fdi_030.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_08_20190806_1834_1846_V02_Georeferenced_scaled_fdi_030.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_14_20190806_1926_1929_V02_Georeferenced_scaled_fdi_030.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_15_20190806_1931_1938_V02_Georeferenced_scaled_fdi_030.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_16_20190806_1941_1956_V02_Georeferenced_scaled_fdi_030.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_17_20190806_2000_2010_V02_Georeferenced_scaled_fdi_030.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_18_20190806_2018_2031_V02_Georeferenced_scaled_fdi_030.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_19_20190806_2035_2048_V02_Georeferenced_scaled_fdi_030.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_20_20190806_2052_2106_V02_Georeferenced_scaled_fdi_030.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_21_20190806_2111_2125_V02_Georeferenced_scaled_fdi_030.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19911_05_20190807_1817_1833_V02_georeferenced_scaled_fdi_030.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19911_08_20190807_1928_1942_V02_georeferenced_scaled_fdi_030.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19911_09_20190807_1947_2002_V02_georeferenced_scaled_fdi_030.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19911_10_20190807_2004_2016_V02_georeferenced_scaled_fdi_030.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19911_11_20190807_2021_2035_V02_georeferenced_scaled_fdi_030.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19911_12_20190807_2039_2051_V02_georeferenced_scaled_fdi_030.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19912_07_20190808_1806_1821_V02_georeferenced_scaled_fdi_030.tif"
+]
+
+ 
+ cluster_fnames: [
+"/data/nlahaye/output/Learnergy/DBN_eMAS/eMASL1B_19910_10_20190806_1858_1910_V02_Georeferenced_scaled.tif.npy.clustoutput_test.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_eMAS/eMASL1B_19910_13_20190806_1923_1925_V02_Georeferenced_scaled.tif.npy.clustoutput_test.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_eMAS/eMASL1B_19910_14_20190806_1926_1929_V02_Georeferenced_scaled.tif.npy.clustoutput_test.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_eMAS/eMASL1B_19910_21_20190806_2111_2125_V02_Georeferenced_scaled.tif.npy.clustoutput_test.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_eMAS/eMASL1B_19910_06_20190806_1815_1824_V02_Georeferenced_scaled.tif.npy.clustoutput_test.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_eMAS/eMASL1B_19910_08_20190806_1834_1846_V02_Georeferenced_scaled.tif.npy.clustoutput_test.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_eMAS/eMASL1B_19910_14_20190806_1926_1929_V02_Georeferenced_scaled.tif.npy.clustoutput_test.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_eMAS/eMASL1B_19910_15_20190806_1931_1938_V02_Georeferenced_scaled.tif.npy.clustoutput_test.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_eMAS/eMASL1B_19910_16_20190806_1941_1956_V02_Georeferenced_scaled.tif.npy.clustoutput_test.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_eMAS/eMASL1B_19910_17_20190806_2000_2010_V02_Georeferenced_scaled.tif.npy.clustoutput_test.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_eMAS/eMASL1B_19910_18_20190806_2018_2031_V02_Georeferenced_scaled.tif.npy.clustoutput_test.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_eMAS/eMASL1B_19910_19_20190806_2035_2048_V02_Georeferenced_scaled.tif.npy.clustoutput_test.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_eMAS/eMASL1B_19910_20_20190806_2052_2106_V02_Georeferenced_scaled.tif.npy.clustoutput_test.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_eMAS/eMASL1B_19910_21_20190806_2111_2125_V02_Georeferenced_scaled.tif.npy.clustoutput_test.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_eMAS/eMASL1B_19911_05_20190807_1817_1833_V02_georeferenced_scaled.tif.npy.clustoutput_test.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_eMAS/eMASL1B_19911_08_20190807_1928_1942_V02_georeferenced_scaled.tif.npy.clustoutput_test.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_eMAS/eMASL1B_19911_09_20190807_1947_2002_V02_georeferenced_scaled.tif.npy.clustoutput_test.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_eMAS/eMASL1B_19911_10_20190807_2004_2016_V02_georeferenced_scaled.tif.npy.clustoutput_test.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_eMAS/eMASL1B_19911_11_20190807_2021_2035_V02_georeferenced_scaled.tif.npy.clustoutput_test.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_eMAS/eMASL1B_19911_12_20190807_2039_2051_V02_georeferenced_scaled.tif.npy.clustoutput_test.data_5000clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_eMAS/eMASL1B_19912_07_20190808_1806_1821_V02_georeferenced_scaled.tif.npy.clustoutput_test.data_5000clusters.zarr"
+]
+
+
+context: 
+ apply_context: False
+ clusters: [7,99,913, 572,2207,1032]  #64 #i.e. smoke clusters
+ name: "smoke" #i.e. smoke
+ compare_truth: False
+ generate_union: False
+

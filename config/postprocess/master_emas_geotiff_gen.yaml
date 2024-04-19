@@ -8,11 +8,11 @@ data:
  subset_inds: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
  create_separate: False
 
- 
- gtiff_data: ["/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_10_20190806_1858_1910_V02_Georeferenced_scaled_fdi_030.tif",
-"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_19_20190806_2035_2048_V02_Georeferenced_scaled_fdi_030.tif"]
- cluster_fnames: ["/data/nlahaye/output/Learnergy/DBN_MASTER_EMAS_FUSE/file_clust0_output_test.data_800clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_MASTER_EMAS_FUSE/file_clust0_output.data_800clusters.zarr"]   
+  
+ gtiff_data: ["/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_19_20190806_2035_2048_V02_Georeferenced_scaled_fdi_030.tif",
+"/data/nlahaye/remoteSensing/eMAS/detect_030/eMASL1B_19910_10_20190806_1858_1910_V02_Georeferenced_scaled_fdi_030.tif"]
+ cluster_fnames: ["/data/nlahaye/output/Learnergy/DBN_MASTER_EMAS_FUSE/MASTER_EMAS_Fuse2.npy.heir_clust2output.data_7999900clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MASTER_EMAS_FUSE/MASTER_EMAS_Fuse1.npy.heir_clust2output_test.data_7999900clusters.zarr"]
 
 
 context: 

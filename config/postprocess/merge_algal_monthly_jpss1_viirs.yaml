@@ -1,0 +1,15 @@
+
+input_paths: ["/data/nlahaye/output/Learnergy/DBN_JPSS1_VIIRS_TROP_OC_GULF_OF_MEXICO/", "/data/nlahaye/output/Learnergy/DBN_S3B_OC_TROP_ONLY_AUTO_CLUST_PAD_GULF_OF_MEXICO/", "/data/nlahaye/output/Learnergy/DBN_JPSS1_VIIRS_ONLY_OC_GULF_OF_MEXICO/"]
+ 
+fname_str: "karenia_brevis_bloom.tif"
+out_dir: "/data/nlahaye/output/MERGED_ALGAL_JPSS1_VIIRS_GULF_OF_MEXICO_02162024/"
+num_classes: 5
+re_index: 1
+
+gen_daily: false
+gen_monthly: true
+
+dirname: "/data/nlahaye/output/MERGED_ALGAL_JPSS1_VIIRS_GULF_OF_MEXICO_02162024/"
+max_dqi: 2
+max_class: 5
+

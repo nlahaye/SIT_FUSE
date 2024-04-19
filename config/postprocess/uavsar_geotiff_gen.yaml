@@ -17,43 +17,15 @@ data:
  create_separate: False
   
  gtiff_data: [
-  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
-  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
-  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
-  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
-  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
-  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
-  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
-  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
-  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
-  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
-  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
-  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
-  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
-  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
-  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
-  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
-  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
-  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
-  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad',
-  'NETCDF:"/data/nlahaye/remoteSensing/GOES/OR_ABI-L1b-RadC-M6C04_G17_s20192201821196_e20192201823569_c20192201824001.nc":Rad']
-  
- cluster_fnames: ["/data/nlahaye/output/Learnergy/DBN_GOES/file0_output.data.clustering_500clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES/file10_output.data.clustering_500clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES/file1_output.data.clustering_500clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES/file1_output_test.data.clustering_500clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES/file2_output.data.clustering_500clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES/file2_output_test.data.clustering_500clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES/file3_output.data.clustering_500clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES/file3_output_test.data.clustering_500clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES/file4_output.data.clustering_500clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES/file4_output_test.data.clustering_500clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES/file5_output.data.clustering_500clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES/file5_output_test.data.clustering_500clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES/file6_output.data.clustering_500clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES/file7_output.data.clustering_500clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES/file8_output.data.clustering_500clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_GOES/file9_output.data.clustering_500clusters.zarr",
+
+
+
+] 
+
+ 
+ cluster_fnames: [
+"/data/nlahaye/output/Learnergy/DBN_CALDOR_3/caldor_08200_21049_026_210831_L090HVHV_CX_01.grd.heir_clust2output.data_7609600clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_CALDOR_3/caldor_26200_21048_013_210825_L090HVHV_CX_01.grd.heir_clust2output_test.data_7609600clusters.zarr"
 ]
 
 

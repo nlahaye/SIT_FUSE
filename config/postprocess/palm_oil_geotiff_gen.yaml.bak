@@ -1,0 +1,29 @@
+
+gen_from_geotiffs: False
+
+data:
+ clust_reader_type: "zarr_to_numpy"
+ reader_kwargs:
+   no_arg: "no_arg" 
+ subset_inds: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
+ create_separate: False
+  
+ gtiff_data: ["/data/nlahaye/remoteSensing/Palm_Oil/ucayali_condensed_stacks_2020_h1v1.tiff"]
+ #cluster_fnames: ["/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_GRBM/file_clust0_output_test.data_500clusters.zarr"]
+ cluster_fnames: ["/data/nlahaye/output/Learnergy/DBN_PALM_OIL_AUTO_CLUST_NEW/ucayali_condensed_stacks_2020_h1v1.tiff.clustoutput_test.data_150clusters.zarr"]
+ 
+context: 
+ apply_context: False
+ clusters: [120,127,213,300,418,440]  #64 #i.e. smoke clusters
+ name: "palm_oil" #i.e. smoke
+ compare_truth: false
+ generate_union: false
+ cluster_dependencies:
+  120: [127,213,300,418,440]
+  127: [120,213,300,418,440]
+  213: [120,127,300,418,440]
+  300: [120,127,213,418,440]
+  418: [120,127,213,300,440]
+  440: [120,127,213,300,418]
+
+

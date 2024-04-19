@@ -1,0 +1,63 @@
+init_data: 
+ - fire: "/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981719_02_20190806_1851_1900_V01_georeferenced_mir_350.tif"
+ - fire: "/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981719_05_20190806_2033_2039_V01_georeferenced_mir_350.tif"
+ - fire: "/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981719_06_20190806_2153_2156_V01_georeferenced_mir_350.tif"
+ - fire: "/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981719_07_20190806_2226_2231_V01_georeferenced_mir_350.tif"
+ - fire: "/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981719_08_20190806_2249_2259_V01_georeferenced_mir_350.tif"
+ - fire: "/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981719_10_20190807_0042_0050_V01_georeferenced_mir_350.tif"
+ - fire: "/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981720_07_20190808_0055_0103_V01_georeferenced_mir_350.tif"
+ - fire: "/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981720_09_20190808_0237_0238_V01_georeferenced_mir_350.tif"
+ #- fire: "/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981721_01_20190809_0113_0117_V01_georeferenced_mir_350.tif"
+ - fire: "/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981721_02_20190809_0120_0121_V01_georeferenced_mir_350.tif"
+ - fire: "/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981721_05_20190809_0219_0226_V01_georeferenced_mir_350.tif"
+
+dbf: False
+
+new_data : [
+["/data/nlahaye/output/Learnergy/DBN_MASTER_PAD_MULTI_LAYER/MASTERL1B_1981719_02_20190806_1851_1900_V01_georeferenced.tif.npy.heir_clust1output.data_78291clusters.zarr.full_geo.tif"],
+["/data/nlahaye/output/Learnergy/DBN_MASTER_PAD_MULTI_LAYER/MASTERL1B_1981719_05_20190806_2033_2039_V01_georeferenced.tif.npy.heir_clust1output.data_78291clusters.zarr.full_geo.tif"],
+["/data/nlahaye/output/Learnergy/DBN_MASTER_PAD_MULTI_LAYER/MASTERL1B_1981719_06_20190806_2153_2156_V01_georeferenced.tif.npy.heir_clust1output_test.data_78220clusters.zarr.full_geo.tif"],
+["/data/nlahaye/output/Learnergy/DBN_MASTER_PAD_MULTI_LAYER/MASTERL1B_1981719_07_20190806_2226_2231_V01_georeferenced.tif.npy.heir_clust1output_test.data_78291clusters.zarr.full_geo.tif"],
+["/data/nlahaye/output/Learnergy/DBN_MASTER_PAD_MULTI_LAYER/MASTERL1B_1981719_08_20190806_2249_2259_V01_georeferenced.tif.npy.heir_clust1output.data_78291clusters.zarr.full_geo.tif"],
+["/data/nlahaye/output/Learnergy/DBN_MASTER_PAD_MULTI_LAYER/MASTERL1B_1981719_10_20190807_0042_0050_V01_georeferenced.tif.npy.heir_clust1output_test.data_78291clusters.zarr.full_geo.tif"],
+["/data/nlahaye/output/Learnergy/DBN_MASTER_PAD_MULTI_LAYER/MASTERL1B_1981720_07_20190808_0055_0103_V01_georeferenced.tif.npy.heir_clust1output_test.data_78291clusters.zarr.full_geo.tif"],
+["/data/nlahaye/output/Learnergy/DBN_MASTER_PAD_MULTI_LAYER/MASTERL1B_1981720_09_20190808_0237_0238_V01_georeferenced.tif.npy.heir_clust1output_test.data_78254clusters.zarr.full_geo.tif"],
+#["/data/nlahaye/output/Learnergy/DBN_MASTER_PAD_MULTI_LAYER/MASTERL1B_1981721_01_20190809_0113_0117_V01_georeferenced.tif.npy.heir_clust1output_test.data_78291clusters.zarr.full_geo.tif"],
+["/data/nlahaye/output/Learnergy/DBN_MASTER_PAD_MULTI_LAYER/MASTERL1B_1981721_02_20190809_0120_0121_V01_georeferenced.tif.npy.heir_clust1output_test.data_78291clusters.zarr.full_geo.tif"],
+["/data/nlahaye/output/Learnergy/DBN_MASTER_PAD_MULTI_LAYER/MASTERL1B_1981721_05_20190809_0219_0226_V01_georeferenced.tif.npy.heir_clust1output_test.data_78291clusters.zarr.full_geo.tif"]
+]
+
+
+class_order: ["fire"]
+
+good_vals: 
+ fire: [1,0]
+
+map_vals:
+ fire:
+  1: 1
+  0: 0
+
+out_ext: ["DBN_MASTER_FIRE_1", "DBN_MASTER_FIRE_2", "DBN_MASTER_FIRE_3", "DBN_MASTER_FIRE_4", "DBN_MASTER_FIRE_5", "DBN_MASTER_FIRE_6",
+ "DBN_MASTER_FIRE_7", "DBN_MASTER_FIRE_8", "DBN_MASTER_FIRE_9", "DBN_MASTER_FIRE_10", "DBN_MASTER_FIRE_11", "DBN_MASTER_FIRE_12", "DBN_MASTER_FIRE_13", "DBN_MASTER_FIRE_14", "DBN_MASTER_FIRE_15", "DBN_MASTER_FIRE_16"]
+
+clust_ext: ["CLUST_INIT"]
+
+log_fname: "/data/nlahaye/output/Learnergy/DBN_MASTER_PAD_MULTI_LAYER/Agreement_Log"
+
+no_retrieval_init: [-3]
+no_retrieval_new: [-1]
+
+labels: 
+ fire: [0,1]
+ total_mask: [0,1]
+
+gradient_increase: 0.003
+
+gradient:
+ fire: 
+  1: 0.0
+  0: 0.0
+
+class_mask_gen_func: "none"
+
