@@ -28,6 +28,11 @@ from CMAP import CMAP, CMAP_COLORS
 from glob import glob
 from scipy.interpolate import griddata
 from pyhdf import SD
+from datetime import datetime
+import regionmask
+import h5py
+from collections import OrderedDict
+ocean_basins_50 =  regionmask.defined_regions.natural_earth_v5_0_0.ocean_basins_50 
 
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
 from dask_ml.preprocessing import StandardScaler as DaskStandardScaler
@@ -35,11 +40,20 @@ from dask_ml.preprocessing import StandardScaler as DaskStandardScaler
 from preprocessing.misc_utils import lee_filter
 
 def torch_to_numpy(trch):
-        return trch.numpy()
+    dat = trch.numpy()
 
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+                dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+
+    return dat
+    
 def numpy_to_torch(npy):
-        return torch.from_numpy(npy)
+    dat = torch.from_numpy(npy)
 
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+                dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+
+    return dat
 
 def read_yaml(fpath_yaml):
     yml_conf = None
@@ -49,27 +63,42 @@ def read_yaml(fpath_yaml):
 
 
 def torch_load(filename, **kwargs):
-    return torch.load(filename)
+    dat = torch.load(filename)
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+                dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+    return dat
 
 def numpy_load(filename, **kwargs):
 
-    data = np.load(filename)
+    dat = np.load(filename)
 
     if "bands" in kwargs:
         bands = kwargs["bands"]
         chan_dim = kwargs["chan_dim"]        
         
-        data = np.moveaxis(data, chan_dim, 2)
-        data = data[:,:,bands]
-        data = np.moveaxis(data, 2, chan_dim)
+        dat = np.moveaxis(dat, chan_dim, 2)
+        dat = dat[:,:,bands]
+        dat = np.moveaxis(dat, 2, chan_dim)
 
-    return data
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+                dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+
+    return dat
 
 def zarr_load(filename, **kwargs):
-    return da.from_zarr(filename)
+    dat = da.from_zarr(filename)
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+                dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+    return dat
 
 def numpy_from_zarr(filename, **kwargs):
-    return np.array(zarr_load(filename).compute())
+    dat = np.array(zarr_load(filename).compute())
+    
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+                dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+    return dat
 
 
 def read_emit(filename, **kwargs):
@@ -81,45 +110,263 @@ def read_emit(filename, **kwargs):
                 dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
     return dat
 
-def read_viirs_oc(filename, **kwargs):
 
-    vrs = ["Rrs_410", "Rrs_443", "Rrs_486", "Rrs_551", "Rrs_671"]
+def read_s3_oc(filename, **kwargs):
 
-    f = Dataset(filename)
-    f.set_auto_maskandscale(False)
-    data1 = []
+    vrs = ["CHL.chlor_a", "KD.Kd_490", "RRS.aot_865", "RRS.angstrom"]
+    #,"RRS.Rrs_400","RRS.Rrs_412","RRS.Rrs_443","RRS.Rrs_490","RRS.Rrs_510","RRS.Rrs_560","RRS.Rrs_620","RRS.Rrs_665","RRS.Rrs_674","RRS.Rrs_681", "RRS.Rrs_709"]
+ 
+    data1 = None
     for i in range(len(vrs)):
-        ref = f.groups["geophysical_data"].variables[vrs[i]]
+        flename = filename + vrs[i] + ".4km.nc"
+        print(flename)
+        f = Dataset(flename)
+        f.set_auto_maskandscale(False)
+        start_ind = 4
+        if "KD" in vrs[i]:
+            start_ind = 3
+        ref = f.variables[vrs[i][start_ind:]]
         data = ref[:].astype(np.float32)
-        valid_data_ind = np.where((data >= ref.valid_min) & (data <= ref.valid_max))
-        invalid_data_ind = np.where((data < ref.valid_min) | (data > ref.valid_max))
-        data[valid_data_ind] = data[valid_data_ind] * ref.scale_factor + ref.add_offset
-        data[invalid_data_ind] = -999999.0
-        data1.append(data)
-    dat = np.array(data1).astype(np.float32)
+        try:
+            valid_data_ind = np.where((data >= ref.valid_min) & (data <= ref.valid_max))
+            invalid_data_ind = np.where((data < ref.valid_min) | (data > ref.valid_max))
+            try:
+                data[valid_data_ind] = data[valid_data_ind] * ref.scale_factor 
+            except AttributeError:
+                pass
+            try:
+                 data[valid_data_ind] = data[valid_data_ind] + ref.add_offset
+            except AttributeError:
+                pass
+            data[invalid_data_ind] = -999999.0
+        except AttributeError:
+            pass
+        print(data.shape)
+        if data1 is None:
+            data1 = np.zeros((len(vrs), data.shape[0], data.shape[1]))
+        data1[i] = data
+    dat = data1.astype(np.float32)
+
+    if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs:
+        loc = read_oc_geo(filename)
+        lat = loc[0]
+        lon = loc[1]
+        print(lat.shape, lon.shape, dat.shape)
+        inds1 = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]))
+        inds2 = np.where((lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
+        lat = lat[inds1]
+        lon = lon[inds2]
+
+        nind2, nind1 = np.meshgrid(inds2, inds1)
+        dat = dat[:, nind1,nind2]
+
+    #TODO Mask via shapefile
+
+    tmp1 = None
+    tmp2 = None 
+    if "mask_oceans" in kwargs:
+        land_temp = ocean_basins_50.mask(lon, lat)
+        land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
+        tmp1 = land_temp.isnull().to_numpy().astype(np.bool_)
+
+    final_mask = None
+    if tmp1 is not None and tmp2 is not None:
+        final_mask = xr.apply_ufunc(np.logical_and, tmp1, tmp2, vectorize=True, dask="parallelized",\
+            input_core_dims=[[],[]], output_core_dims=[[],[]])
+    elif tmp1 is not None:
+        final_mask = tmp1
+    elif tmp2 is not None:
+        final_mask = tmp2
+
+    if final_mask is not None:
+        print(final_mask)
+        dat[:,final_mask] = -999999
+
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
         dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
     return dat
 
 
-def read_modis_oc(filename, **kwargs):
 
-    vrs = ["Rrs_412", "Rrs_443", "Rrs_469", "Rrs_488", "Rrs_531", "Rrs_547", "Rrs_555", "Rrs_645", "Rrs_667", "Rrs_678"]
+def read_viirs_oc(filename, **kwargs):
 
-    f = Dataset(filename)
-    f.set_auto_maskandscale(False)
+    vrs = ["CHL.chlor_a", "KD.Kd_490", "PAR.par", "PIC.pic", "POC.poc", "RRS.aot_862", "RRS.angstrom"]
+    vrs2 = ["CHL.chlor_a", "KD.Kd_490", "PAR.par", "PIC.pic", "POC.poc", "RRS.aot_868", "RRS.angstrom"]
+
+    #"RRS.aot_862", "RRS.Rrs_410", "RRS.Rrs_443", "RRS.Rrs_486", "RRS.Rrs_551", "RRS.Rrs_671"]
+
     data1 = []
     for i in range(len(vrs)):
-        ref = f.groups["geophysical_data"].variables[vrs[i]]
+        if 'JPSS1' in filename:
+            vrs = vrs2
+
+        flename = filename + vrs[i] + ".4km.nc"
+        f = Dataset(flename)
+        f.set_auto_maskandscale(False)
+        start_ind = 4
+        if "KD" in vrs[i]:
+            start_ind = 3
+        ref = f.variables[vrs[i][start_ind:]]
         data = ref[:].astype(np.float32)
-        valid_data_ind = np.where((data >= ref.valid_min) & (data <= ref.valid_max))
-        invalid_data_ind = np.where((data < ref.valid_min) | (data > ref.valid_max))
-        data[valid_data_ind] = data[valid_data_ind] * ref.scale_factor + ref.add_offset
+        try:
+            valid_data_ind = np.where((data >= ref.valid_min) & (data <= ref.valid_max))
+            invalid_data_ind = np.where((data < ref.valid_min) | (data > ref.valid_max))
+            try:
+                data[valid_data_ind] = data[valid_data_ind] * ref.scale_factor
+            except AttributeError:
+                pass
+            try:
+                 data[valid_data_ind] = data[valid_data_ind] + ref.add_offset
+            except AttributeError:
+                pass
+        except AttributeError:
+            pass
         data[invalid_data_ind] = -999999.0
         data1.append(data)
     dat = np.array(data1).astype(np.float32)
+
+    if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs: 
+        loc = read_oc_geo(filename)
+        lat = loc[0]
+        lon = loc[1]
+        print(lat.shape, lon.shape, dat.shape)
+        inds1 = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]))
+        inds2 = np.where((lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
+        lat = lat[inds1]
+        lon = lon[inds2]
+        nind1, nind2 = np.meshgrid(inds2, inds1)
+        dat = dat[:, nind1,nind2]
+
+
+    #TODO Mask via shapefile
+
+    tmp1 = None
+    tmp2 = None
+    if "mask_oceans" in kwargs:
+        land_temp = ocean_basins_50.mask(lon, lat)
+        land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
+        tmp1 = land_temp.isnull().to_numpy().astype(np.bool_)
+
+    final_mask = None
+    if tmp1 is not None and tmp2 is not None:
+        final_mask = xr.apply_ufunc(np.logical_and, tmp1, tmp2, vectorize=True, dask="parallelized",\
+            input_core_dims=[[],[]], output_core_dims=[[],[]])
+    elif tmp1 is not None:
+        final_mask = tmp1
+    elif tmp2 is not None:
+        final_mask = tmp2
+
+    if final_mask is not None:
+        print(final_mask)
+        dat[:,final_mask] = -999999
+
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
         dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+    return dat
+
+
+def read_oc_geo(filename, **kwargs):
+
+    vrs = ["lat", "lon"]
+
+    f = Dataset(filename + "CHL.chlor_a.4km.nc")
+    f.set_auto_maskandscale(False)
+    data1 = []
+    for i in range(len(vrs)):
+        ref = f.variables[vrs[i]]
+        data = ref[:].astype(np.float32)
+        valid_data_ind = np.where((data >= ref.valid_min) & (data <= ref.valid_max))
+        invalid_data_ind = np.where((data < ref.valid_min) | (data > ref.valid_max))
+        data[invalid_data_ind] = -999999.0
+        data1.append(data)
+    #longr, latgr = np.meshgrid(data1[1], data1[0])
+    #dat = np.array([longr, latgr]).astype(np.float32)
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+        data1[0] = data1[0][kwargs["start_line"]:kwargs["end_line"]]
+        data1[1] = data1[1][kwargs["start_sample"]:kwargs["end_sample"]]
+        #dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+    return data1
+
+
+def read_modis_oc(filename, **kwargs):
+
+    vrs = ["CHL.chlor_a", "FLH.ipar", "FLH.nflh", "KD.Kd_490", "PAR.par", "PIC.pic", "POC.poc", "RRS.aot_869", "RRS.angstrom"]
+    #, "RRS.Rrs_412", "RRS.Rrs_443", "RRS.Rrs_469", "RRS.Rrs_488", "RRS.Rrs_531", "RRS.Rrs_547", "RRS.Rrs_555", "RRS.Rrs_645", "RRS.Rrs_667", "RRS.Rrs_678"]
+
+    data1 = []
+    for i in range(len(vrs)):
+        flename = filename + vrs[i] + ".4km.nc"
+        print(flename)
+        f = Dataset(flename)
+        f.set_auto_maskandscale(False)
+        start_ind = 4
+        if "KD" in vrs[i]:
+            start_ind = 3
+        ref = f.variables[vrs[i][start_ind:]]
+        data = ref[:].astype(np.float32)
+        try:
+            valid_data_ind = np.where((data >= ref.valid_min) & (data <= ref.valid_max))
+            invalid_data_ind = np.where((data < ref.valid_min) | (data > ref.valid_max))
+            try:
+                data[valid_data_ind] = data[valid_data_ind] * ref.scale_factor 
+            except AttributeError:
+                pass
+            try:
+                 data[valid_data_ind] = data[valid_data_ind] + ref.add_offset
+            except AttributeError:
+                pass
+        except AttributeError:
+            pass
+        data[invalid_data_ind] = -999999.0
+        data1.append(data)
+        #if i == 0:
+        #    plt.imshow(data)
+        #    plt.savefig(filename + "CHLOR_FULL.png")
+    dat = np.array(data1).astype(np.float32)
+
+    loc = read_oc_geo(filename)
+    lat = loc[0]
+    lon = loc[1]
+    print(lat.shape, lon.shape, dat.shape)
+    if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs: 
+        inds1 = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]))
+        inds2 = np.where((lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
+        lat = lat[inds1]
+        lon = lon[inds2]
+        nind1, nind2 = np.meshgrid(inds2, inds1)
+        dat = dat[:, nind1,nind2]
+
+    #TODO Mask via shapefile
+
+    tmp1 = None
+    tmp2 = None
+    if "mask_oceans" in kwargs:
+        land_temp = ocean_basins_50.mask(lon, lat)
+        land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
+        tmp1 = land_temp.isnull().to_numpy().astype(np.bool_)
+
+    final_mask = None
+    if tmp1 is not None and tmp2 is not None:
+        final_mask = xr.apply_ufunc(np.logical_and, tmp1, tmp2, vectorize=True, dask="parallelized",\
+            input_core_dims=[[],[]], output_core_dims=[[],[]])
+    elif tmp1 is not None:
+        final_mask = tmp1
+    elif tmp2 is not None:
+        final_mask = tmp2
+
+    if final_mask is not None:
+        print(final_mask)
+        dat[:,final_mask] = -999999
+
+
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+        dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+
+    #plt.imshow(np.squeeze(dat[0]))
+    #plt.savefig(filename + "CHLOR_SUBSET.png")
+    #plt.clf() 
+
     return dat
 
 
@@ -401,9 +648,14 @@ def read_gtiff_generic(flename, **kwargs):
 
 
 #TODO generalize pieces for other tasks
-def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n_clusters, radius_degrees, ranges, global_max, files_test, files_train):
+def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n_clusters, radius_degrees, ranges, global_max, input_file_type):
+ 
     print(insitu_fname)
-    insitu_df = pd.read_excel(insitu_fname)
+    insitu_df = None
+    if 'xlsx' in insitu_fname:
+        insitu_df = pd.read_excel(insitu_fname)
+    elif 'csv' in insitu_fname:
+        insitu_df = pd.read_csv(insitu_fname)
     # Format Datetime Stamp
     insitu_df['Datetime'] = pd.to_datetime(insitu_df['Sample Date'])
     insitu_df.set_index('Datetime')
@@ -411,9 +663,9 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
     # Shorten Karenia Column Name
     insitu_df.rename(columns={"Karenia brevis abundance (cells/L)":'Karenia'}, inplace=True)
     
-    insitu_df = insitu_df[(insitu_df['Sample Date'] >= start_date) & (insitu_df['Sample Date'] <= end_date)] 
+    insitu_df = insitu_df[(insitu_df['Datetime'] >= start_date) & (insitu_df['Datetime'] <= end_date)] 
 
-    uniques = np.unique(insitu_df['Sample Date'].values)
+    uniques = sorted(np.unique(insitu_df['Datetime'].values))
 
     #TODO
     #subset by date - start and end day of SIF 
@@ -421,33 +673,38 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
 
     final_hist_data = []
     ind = 1
-    for date in uniques:
+    for dateind in range(len(uniques)):
+        date = uniques[dateind]
         #    find associated cluster
-        input_fname = os.path.join(os.path.dirname(files_train[0]), "sif_finalday_" + str(ind))
+        if "sif" in input_file_type:
+            clust_fname = os.path.join(os.path.join(clusters_dir, "sif_finalday_" + str(ind) + ".heir_clust1output*data*clusters.zarr.tif"))
+        else:
+            if "S3B" in input_file_type:     
+                clust_fname = os.path.join(os.path.join(clusters_dir, "S3B_OLCI_ERRNT." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".heir_clust1output*data*clusters.zarr.tif"))
+            elif "S3A" in input_file_type:
+                clust_fname = os.path.join(os.path.join(clusters_dir, "S3A_OLCI_ERRNT." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".heir_clust1output*data*clusters.zarr.tif"))
+            elif "SNPP_VIIRS" in input_file_type:
+                clust_fname = os.path.join(os.path.join(clusters_dir, "SNPP_VIIRS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".heir_clust1output*data*clusters.zarr.tif"))
+            elif "JPSS1_VIIRS" in input_file_type:
+                clust_fname = os.path.join(os.path.join(clusters_dir, "JPSS1_VIIRS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".heir_clust1output*data*clusters.zarr.tif"))
+            elif "AQUA_MODIS" in input_file_type:
+                clust_fname = os.path.join(os.path.join(clusters_dir, "AQUA_MODIS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".heir_clust1output*data*clusters.zarr.tif"))
+            elif "TERRA_MODIS" in input_file_type:
+                clust_fname = os.path.join(os.path.join(clusters_dir, "TERRA_MODIS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".heir_clust1output*data*clusters.zarr.tif"))
+
         ind = ind + 1
-        clust_fname = os.path.join(clusters_dir, "file")
-        dat_ind = -1
+
+        print(clust_fname)
 
         dat_train = False
         dat_test = False
 
-        try:
-            dat_ind = files_train.index(input_fname)
-            dat_train = True
-        except ValueError:
-            dat_ind = -1
-
-        if dat_ind == -1:
-            try:
-                dat_ind = files_test.index(input_fname)
-            except ValueError:
-                continue
-       
-        if dat_train:
-            clust_fname = clust_fname + str(dat_ind) + "_output.data.clustering_" + str(n_clusters) + "clusters.zarr.tif"
-        else:
-            clust_fname = clust_fname + str(dat_ind) + "_output_test.data.clustering_" + str(n_clusters) + "clusters.zarr.tif"
+        clust_fname = glob(clust_fname)
+        print(clust_fname)
         
+        if len(clust_fname) < 1:
+            continue     
+        clust_fname = clust_fname[0]
         if not os.path.exists(clust_fname):
             clust_fname = clust_fname + "f"
             if not os.path.exists(clust_fname):
@@ -456,7 +713,9 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         clust = gdal.Open(clust_fname)
         lonLat = get_lat_lon(clust_fname)
         clust = clust.ReadAsArray()
-               
+        clust = clust * 1000
+        clust = clust.astype(np.int32)               
+        print(np.unique(clust))
  
         lat = lonLat[:,:,0].reshape(clust.shape[0]*clust.shape[1])
         lon = lonLat[:,:,1].reshape(clust.shape[0]*clust.shape[1])
@@ -467,7 +726,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         clust = clust[inds_clust]
 
         gdf = gpd.GeoDataFrame(clust, geometry=gpd.GeoSeries.from_xy(lon, lat), crs=4326)
-        subset = insitu_df[(insitu_df['Sample Date'] == date)]
+        subset = insitu_df[(insitu_df['Datetime'] == date)]
         gdf_insitu = gpd.GeoDataFrame(subset["Karenia"], geometry=gpd.GeoSeries.from_xy(subset['Longitude'], subset['Latitude']), crs=4326)
 
         #gdf_proj = gdf.to_crs({"init": "EPSG:3857"})
@@ -481,6 +740,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
             neighbours = []
             for index2, poi2 in gdf.iterrows():
                 if abs(poi2.geometry.distance(poi.geometry)) < radius_degrees:
+                    print(poi.geometry, poi2.geometry, poi2.geometry.distance(poi.geometry))
                     neighbours.append(index2)
             #print(poi.geometry)
             #x = poi.geometry.buffer(0.011) #.unary_union
@@ -489,40 +749,51 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
             #inds = gdf[~neighbours.is_empty]
             #print(index, poi)
             #print(inds, len(inds), len(clust))
+            print(len(neighbours))
             if len(neighbours) < 1:
                 continue
             clusters = clust[neighbours]
-            clusters_index = []
-            for c in range(n_clusters+1):
-                clusters_index.append((c in clusters))
-            hist_data.append(clusters_index)
-            for j in range(len(clusters_index)):
-                if clusters_index[j]:
-                    hist_data[-1][j] = poi["Karenia"]
-                else:
-                    hist_data[-1][j] = -1
+            clusters_index = [np.nan]*n_clusters
+            clusts = np.unique(clusters).astype(np.int32)
+            print(clusts, len(clusters_index))
+            for c in clusts:
+                clusters_index[c] = (c in clusters)
+            hist_data.append(np.array(clusters_index))
+            good_inds = np.where(np.isfinite(clusters_index))
+            bad_inds = np.where(np.isnan(clusters_index))
+            print(good_inds)
+            #for j in range(len(clusters_index)):
+            hist_data[-1][good_inds] = poi["Karenia"]
+            hist_data[-1][bad_inds] = -1
+            #for j in good_inds[0]:
+            #    if clusters_index[j]:
+            #        hist_data[-1][j] = poi["Karenia"]
+            #    else:
+            #        hist_data[-1][j] = -1
 
         final_hist_data.extend(hist_data)
-    fnl = np.array(final_hist_data)
+    fnl = np.array(final_hist_data, dtype=np.float32)
     fnl = np.swapaxes(fnl, 0,1)
     print(fnl.shape, fnl.max())
     ranges[-1] = max(ranges[-1], global_max)
     algal = [[] for _ in range(len(ranges)-1)]
     for i in range(fnl.shape[0]):
         hist, bins = np.histogram(fnl[i], bins=ranges, density=False)
+        if max(hist) < 1:
+            continue
         mx1 = np.argmax(hist)
         if mx1 == 0:
             sm = np.sum(hist[1:])
             if sm >= hist[0]:
                 mx1 = np.argmax(hist[1:])
-        algal[mx1].append(i)
+        algal[mx1].append(i / 1000.0)
         print(bins, hist,i)
         plt.ylim(0, 50)
         plt.bar([k*2 for k in range(len(bins[:-1]))],hist, width=1, linewidth=1, align="center")
         plt.show()
         plt.savefig("TEST_HIST_" + str(i) + ".png") 
         plt.clf()
-    print(algal)    
+    print("HERE FINAL", algal)
 
     
 
@@ -534,7 +805,11 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
 def insitu_hab_to_tif(filename, **kwargs):
 
     print(filename)
-    insitu_df = pd.read_excel(filename)
+    insitu_df = None
+    if '.xlsx' in filename:
+        insitu_df = pd.read_excel(filename)
+    else:
+        insitu_df = pd.read_csv(filename)
     # Format Datetime Stamp
     insitu_df['Datetime'] = pd.to_datetime(insitu_df['Sample Date'])
     insitu_df.set_index('Datetime')
@@ -549,9 +824,9 @@ def insitu_hab_to_tif(filename, **kwargs):
     #                       (insitu_df['Sample Date'] < '2019-03-01')]
     #insitu_subDepth = insitu_subTime[insitu_subTime['Sample Depth (m)'] < 1]
  
-    uniques = np.unique(insitu_df['Sample Date'].values)
+    uniques = np.unique(insitu_df['Datetime'].values)
     for date in uniques:
-        subset = insitu_df[(insitu_df['Sample Date'] == date)]
+        subset = insitu_df[(insitu_df['Datetime'] == date)]
         print(subset.head)
         subset.drop(['Sample Date', 'Datetime', 'Sample Depth (m)', 'County'], inplace=True, axis=1)
         gdf = gpd.GeoDataFrame(subset, geometry=gpd.GeoSeries.from_xy(subset['Longitude'], subset['Latitude']), crs=4326)
@@ -593,84 +868,248 @@ def insitu_hab_to_tif(filename, **kwargs):
         out_grd["Karenia"].rio.to_raster(rst_fname)
 
 
+
 # Define function to interpolate sampled data to grid.
-def interp_to_grid(u, xc, yc, new_lons, new_lats):
+def interp_to_grid(u, yc, xc, new_lats, new_lons):
     new_points = np.stack(np.meshgrid(new_lons, new_lats), axis = 2).reshape((new_lats.size * new_lons.size, 2))
-    z = griddata((xc, yc), u, (new_points[:,0], new_points[:,1]), method = 'nearest', fill_value = np.nan)
-    out = z.reshape((new_lons.size, new_lats.size))
+    z = griddata((yc, xc), u, (new_points[:,1], new_points[:,0]), method = 'cubic', fill_value = np.nan)
+    out = z.reshape((new_lats.size, new_lons.size))
     return out 
 
- 
-def read_trop_red_sif_nc(flename, **kwargs):
-    print(flename)
-    ncfile = Dataset(flename)
-    sif = ncfile['sif'][:]
-    #sif_sigma = ncfile['sif_sigma'][:]
-    #sif_dc = ncfile['sif_dc'][:]
-    lon = ncfile['lon'][:]
-    lat = ncfile['lat'][:]
-    epoch_time = ncfile['TIME'][:]
-    #n = ncfile['n'][:]
-    print(epoch_time)
- 
-    # Convert epoch to datetime
-    time = pd.to_datetime(epoch_time, unit="s", origin="unix")
-    n = lon.shape[0]
 
-    print(sif.shape, lon.shape, lat.shape, epoch_time.shape)
+def sort_by_array(arr, arr_sort, dim):
+    """
+    Sort array(s) by the values of another array along a dimension
+    
+    Parameters
+    ----------
+    arr : xarray DataArray or Dataset
+        The field(s) to be sorted
+    dim : str
+        Dimension in arr to sort along
+    """
+
+    SORT_DIM = "i"
+
+    sort_axis = arr_sort.get_axis_num(dim)
+    sort_inds = arr_sort.argsort(axis=sort_axis)
+    # Replace dim with dummy dim and drop coordinates since
+    # they're no longer correct
+    print(sort_inds)
+    print(sort_inds.rename({dim: SORT_DIM}))
+    sort_inds = sort_inds.rename({dim: SORT_DIM}).drop(SORT_DIM)
+    
+    return arr.isel({dim: sort_inds})
+
+
+def wrapped_log_and(x1,x2):
+    return np.logical_and(x1, x2)
+
+def apply_log_and_along_axis(x1,x2,axis=-1):
+    return np.apply_along_axis(wrapped_log_and, x1, x2)
+
+
+def read_sif(trop_fname, **kwargs):
+
+    ds = xr.open_dataset(trop_fname, decode_times=False)
+
+    if "ungridded" in trop_fname: 
+        sif_df = ds.to_dataframe()
+        if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs:
+            sif_df = sif_df[(sif_df['lat'] >= kwargs["start_lat"]-2) & (sif_df['lat'] <= kwargs["end_lat"]+2) &\
+                (sif_df['lon'] >= kwargs["start_lon"]-2) & (sif_df['lon'] <= kwargs["end_lon"]+2)]
+
+        gdf = gpd.GeoDataFrame(sif_df, geometry=gpd.GeoSeries.from_xy(sif_df["lon"], sif_df["lat"]), crs=4326)
+        if(gdf.empty):
+            return None
+        sif_raw = make_geocube(vector_data=gdf,
+                measurements=["sif"],
+                output_crs=4326,
+                resolution=(-0.083,0.083)#,
+                #fill = np.nan,
+                #interpolate_na_method="cubic"
+            )
+
+        #plt.imshow(sif_raw["sif"])
+        #plt.savefig(trop_fname + ".IMG.FIRST.png")
+        #plt.clf()   
+ 
+        sif_raw = sif_raw.rename({'x': 'lon','y': 'lat'})
+        #sif_raw.rio.set_spatial_dims("lat", "lon", inplace=True)
+        #sif_raw = sif_raw.sortby("lat").sortby("lon")
+        tmp =  np.flipud(sif_raw["sif"].to_numpy()) #np.flipud(np.fliplr(sif_raw["sif"].to_numpy()))
+        tmp = np.fliplr(tmp)
+        sif_raw = xr.DataArray(tmp,\
+            coords={'lat': sif_raw.lat.data,'lon': sif_raw.lon.data},\
+            dims=["lat", "lon"]) 
+
+        #plt.imshow(sif_raw)
+        #plt.savefig(trop_fname + ".IMG.SECOND.png")
+        #plt.clf()
+        print("RAW", sif_raw) 
+
+    return sif_raw
+
+
+def clip_and_save_trop(fnames, **kwargs):
+    
+    for fname in fnames:
+        print(fname[1])
+        sif_raw = read_sif(fname[1], **kwargs)
+        if sif_raw is None:
+            continue
+        out_fname = fname[1].replace("ungridded", "clipped_c_fla")
+        print(out_fname)
+        sif_raw.to_netcdf(out_fname)
+
+
+def read_oc_and_trop(fnames, **kwargs):
+
+    print(fnames)
+    trop_fname = fnames[1]
+    oc_fname = fnames[0]
+
+    dat1 = None
+    oc_lat = None
+    oc_lon = None
+    print(oc_fname, trop_fname)
+    if "VIIRS" in oc_fname or "viirs" in oc_fname:
+        dat1 = read_viirs_oc(oc_fname, **kwargs)
+    elif "MODIS" in oc_fname or "modis" in oc_fname:
+        dat1 = read_modis_oc(oc_fname, **kwargs)
+    elif "S3" in oc_fname or "s3" in oc_fname:
+        dat1 = read_s3_oc(oc_fname, **kwargs)
+    print("HERE DAT", dat1.shape) 
+
+    loc = read_oc_geo(oc_fname)
+    lat = loc[0]
+    lon = loc[1]
+    if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs:
+        print(lat.shape, lon.shape, dat1.shape)
+        inds1 = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]))
+        inds2 = np.where((lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
+        lat = lat[inds1]
+        lon = lon[inds2]
+ 
+        nind1, nind2 = np.meshgrid(inds2, inds1)
+
+    print("HERE DAT", dat1.shape)
+    sif_raw = read_sif(trop_fname, **kwargs)
+    if sif_raw is None:
+        return None
+
     # Convert to xarray
-    sif_raw_init = xr.Dataset(
-        data_vars=dict(
-            sif=(["n"], sif),
-            #sif_sigma=(["lat", "lon", "time"], sif_sigma),
-            #sif_dc=(["lat", "lon", "time"], sif_dc),
-        ),
-        coords=dict(
-            lon=(["n"], lon),
-            lat=(["n"], lat),
-        ),
-        attrs=dict(description="TROPOMI - SIF from FraLab"),
-    )
+    data_vrs = {}
+    dat1[np.where(dat1 < -900000)] = np.nan
+    oc_xr = xr.Dataset(coords=dict(lon=(["x"],lon),\
+        lat=(["y"],lat)))
+
+    for i in range(dat1.shape[0]):
+        oc_xr["oc_" + str(i)] = (['y', 'x'],  dat1[i])
+        print("INIT OC STATS", i, np.nanmin(dat1[i]), np.nanmean(dat1[i]), np.nanmax(dat1[i]), np.nanstd(dat1[i]))
 
 
-    # Create some dummy grid on which to interpolate. - grid size = MODIS OC L2
-    _new_lats = np.linspace(lat.min(), lat.max(), 1354)
-    _new_lons = np.linspace(lon.min(), lon.max(), 2030)
-    new_lons = xr.DataArray(_new_lons, dims = "lon", coords = {"lon": _new_lons})
-    new_lats = xr.DataArray(_new_lats, dims = "lat", coords = {"lat": _new_lats})
+    oc_xr = oc_xr.rename({'x': 'lon','y': 'lat'})
+
+    plt.clf()
+    oc_xr2 = [] 
+    for i in range(dat1.shape[0]):
+        oc_xr2.append(oc_xr["oc_" + str(i)])
+
+    #sif_aoi = sif_raw["sif"]
+    #sif_aoi = sif_raw.sel(**{"lat":slice(lat.min(), lat.max()), "lon":slice(lon.min(), lon.max())})
+    #sif_aoi = sif_aoi.interp_like(oc_xr2[0], method="nearest") #, assume_sorted=True, method_non_numeric="none")
+    #plt.imshow(sif_aoi)
+    #plt.savefig(trop_fname + ".LOW_RES.IMG.png")
+    #plt.clf()
+    #print(lat.shape, lon.shape)
+    #plt.imshow(sif_raw)
+    #plt.savefig(trop_fname + ".NO_MASK.IMG.png")
+    #plt.clf()
+    sif_aoi_2 = sif_raw.interp_like(oc_xr2[0], method="nearest") #, assume_sorted=True, method_non_numeric="none")
+    sif_aoi_2 = sif_aoi_2.reindex(lat=lat, lon=lon, method="nearest", tolerance=0.045)
  
-    sif_raw = xr.apply_ufunc(interp_to_grid,
-                     sif, lat, lon, new_lats, new_lons,
-                     vectorize = True,
-                     dask = "parallelized",
-                     input_core_dims = [['n'],['n'],['n'],["lat"],["lon"]],
-                     output_core_dims = [['lat', 'lon']],
-    )
+    #plt.imshow(sif_aoi_2)
+    #plt.savefig(trop_fname + ".REINDEXED_NO_MASK.IMG.png")
+    #plt.clf()
 
-    sif_raw.rio.set_spatial_dims(x_dim="lon", y_dim="lat", inplace=True)
-    sif_raw.rio.write_crs("epsg:4326", inplace=True)
-     
-    sif_temp = sif_raw
+    #tmp =  np.flipud(sif_aoi.to_numpy()) #np.flipud(np.fliplr(sif_raw["sif"].to_numpy()))
+    #tmp = np.fliplr(tmp)
+    #sif_aoi = xr.DataArray(tmp,\
+    #coords={'lat': sif_aoi.lat.data,'lon': sif_aoi.lon.data},\
+    #dims=["lat", "lon"])
+ 
+    print(sif_aoi_2)
+    print(oc_xr)
+    #sif_aoi = sif_aoi.dropna(dim="lat", how="all")
+    #sif_aoi = sif_aoi.dropna(dim="lon", how="all")
+    print(sif_aoi_2) 
+    print(oc_xr2[0])
 
+    sif_aoi_2.rio.set_spatial_dims("lat", "lon", inplace=True)
+    sif_aoi_2.rio.write_crs("epsg:4326", inplace=True)
+    tmp2 = None
     if "mask_shp" in kwargs:
         mask = gpd.read_file(kwargs["mask_shp"], crs="epsg:4326")
-        sif_temp = sif_temp.rio.clip(mask.geometry.apply(mapping), mask.crs, drop=False)
+        sif_temp = sif_aoi_2.rio.clip(mask.geometry.apply(mapping), mask.crs, drop=False)
+        print("HERE ", np.unique(sif_temp))
+        tmp2 = sif_temp.isnull().to_numpy().astype(np.bool_)
+    tmp1 = None
 
-    if "start_time" in  kwargs and "end_time" in kwargs:
-        sif_temp = sif_raw.sel(time=slice(kwargs["start_time"], kwargs["end_time"]))
-    if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs:
-        sif_temp = sif_temp.sel(**{'lon' : slice(kwargs["start_lon"], kwargs["end_lon"]), 'lat': slice(kwargs["start_lat"], kwargs["start_lat"])})
+    if "mask_oceans" in kwargs:
+        land_temp = ocean_basins_50.mask(sif_aoi_2)
+        print(sif_aoi_2)
+        print(land_temp, land_temp.min(), land_temp.max())
+        land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
+        #final_mask = ((land_temp.isnull()) & (sif_temp.isnull())).to_numpy()
+        tmp1 = land_temp.isnull().to_numpy().astype(np.bool_)
 
-    sif_temp = sif_temp.to_numpy()
-    #sif_temp = np.moveaxis(sif_temp, 2, 0)
-    sif_temp[np.where(np.isnan(sif_temp))] = -999999
-    inds = np.where(sif_temp < -900 - 0.00000000005)
-    sif_temp[inds] = -999999
+    final_mask = None
+    if tmp1 is not None and tmp2 is not None:
+        final_mask = xr.apply_ufunc(np.logical_and, tmp1, tmp2, vectorize=True, dask="parallelized", input_core_dims=[[],[]], output_core_dims=[[],[]])
+    elif tmp1 is not None:
+        final_mask = tmp1
+    elif tmp2 is not None:
+        final_mask = tmp2
+                
+    sif_aoi = np.array(sif_aoi_2.to_numpy())
+    print(sif_aoi.shape)
+    #sif_aoi = np.fliplr(np.rot90(sif_aoi, 1))
+    #sif_aoi = np.rot90(sif_aoi, 3)
+    #tmp = np.array(oc_xr2)
+    #print(tmp.shape, sif_aoi.shape)
+    #sif_aoi = cv2.resize(sif_aoi, (tmp.shape[2], tmp.shape[1]), interpolation=cv2.INTER_CUBIC)
+    #print(sif_aoi.shape, (tmp.shape[1], tmp.shape[2]))
+    if final_mask is not None:
+        print(final_mask)
+        sif_aoi[final_mask] = -999999
 
-    
-    print(sif_temp.max(), sif_temp)
-    return sif_temp
+    #sif_aoi = np.swapaxes(sif_aoi, 0,1)
+    print("HERE SHAPE", dat1.shape, sif_aoi)
+    dat2 = oc_xr2
+    #for i in range(dat1.shape[0]):
+    #    dat2.append(oc_xr2["oc_" + str(i)].to_numpy())
+    #    print("FINAL OC STATS", i, np.nanmin(dat2), np.nanmean(dat2), np.nanmax(dat2), np.nanstd(dat2))
+    dat2 = np.array(dat2)
+    dat2[np.where(np.isnan(dat2))] = -999999
+    #sif_aoi = cv2.resize(sif_aoi, (dat2.shape[1], dat2.shape[2]), interpolation=cv2.INTER_CUBIC)
+    sif_aoi = np.expand_dims(sif_aoi, axis=0)
+    #sif_aoi = np.flip(sif_aoi, axis=1)
+    #plt.imshow(np.squeeze(sif_aoi), vmin=-10, vmax=10)
+    #plt.savefig(trop_fname + ".IMG.png")
+    #plt.clf()
+    #plt.imshow(np.squeeze(dat2[0,:,:]), vmin=-10, vmax=10)
+    #plt.savefig(trop_fname + ".DAT.IMG.png")
+    #plt.clf()
+    print(sif_aoi.shape, dat2.shape)
+    dat2 = np.concatenate((dat2, sif_aoi), axis=0)     #(dat2,np.swapaxes(sif_aoi, 1,2)), axis=0)
+    dat2[np.where(np.isnan(dat2))] = -999999
+    print("END OC READ", dat2.shape, dat2.min(), dat2.max(), dat2.mean(), dat2.std())
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+                dat2 = dat2[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+    return dat2
 
+ 
 
 def read_trop_mod_xr(flename, **kwargs):
 
@@ -846,9 +1285,88 @@ def get_lat_lon(fname):
     return lonLat
 
 
+def read_mspi(fname, **kwargs):
+
+        data_fields = OrderedDict([
+           #("355nm_band" ,{"Data" : ["I"], "QC" : [["I.mask"]]}),
+           #("380nm_band" , {"Data" : ["I"], "QC" : [["I.mask"]]}),
+           ("445nm_band" , {"Data" : ["I"], "QC" : [["I.mask"]]}),
+           #("470nm_band" , {"Data" : ["I", "IPOL"], "QC" : [["I.mask"], ["Q.mask", "U.mask"]]}),
+           ("470nm_band" , {"Data" : ["I"], "QC" : [["I.mask"]]}),
+           ("555nm_band" , {"Data" : ["I"], "QC" : [["I.mask"]]}),
+           ("660nm_band" , {"Data" : ["I"], "QC" : [["I.mask"]]}),
+           ("865nm_band" , {"Data" : ["I"], "QC" : [["I.mask"]]}),
+           #("660nm_band" , {"Data" : ["I", "IPOL"], "QC" : [["I.mask"], ["Q.mask", "U.mask"]]}),
+           #("865nm_band" , {"Data" : ["I", "IPOL"], "QC" : [["I.mask"], ["Q.mask", "U.mask"]]}),
+           ("935nm_band" , {"Data" : ["I"], "QC" : [["I.mask"]]})])
+
+        f = h5py.File(fname, 'r')
+        data = []
+        mask = []
+        for band, band_data in data_fields.items():
+                print(band)
+                for i in range(len(band_data["Data"])):
+                        dat = f['HDFEOS']['GRIDS'][band]['Data Fields'][band_data["Data"][i]][:]
+                        for j in range(len(band_data["QC"][i])):
+                                data.append(dat)
+                                print(i, j, dat.shape)
+                                mask.append(f['HDFEOS']['GRIDS'][band]['Data Fields'][band_data["QC"][i][j]][:])
+
+
+        data = np.array(data)
+        mask = np.array(mask)
+        print(data.shape, mask.shape)
+        inds = np.where(np.any(mask == 0, axis = 0) == True)
+        print(mask[:,inds[0], inds[1]])
+        fill = -999999
+        data[:,inds[0], inds[1]] = fill
+ 
+        if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+            data = data[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+        return data
+
+
+def read_mspi_geo(fname, **kwargs):
+
+        data_fields = OrderedDict([
+           #("355nm_band" ,{"Data" : ["I"], "QC" : [["I.mask"]]}),
+           #("380nm_band" , {"Data" : ["I"], "QC" : [["I.mask"]]}),
+           ("445nm_band" , {"Data" : ["I"], "QC" : [["I.mask"]]}),
+           #("470nm_band" , {"Data" : ["I", "IPOL"], "QC" : [["I.mask"], ["Q.mask", "U.mask"]]}),
+           ("470nm_band" , {"Data" : ["I"], "QC" : [["I.mask"]]}),
+           ("555nm_band" , {"Data" : ["I"], "QC" : [["I.mask"]]}),    
+           ("660nm_band" , {"Data" : ["I"], "QC" : [["I.mask"]]}),
+           ("865nm_band" , {"Data" : ["I"], "QC" : [["I.mask"]]}),
+           #("660nm_band" , {"Data" : ["I", "IPOL"], "QC" : [["I.mask"], ["Q.mask", "U.mask"]]}),
+           #("865nm_band" , {"Data" : ["I", "IPOL"], "QC" : [["I.mask"], ["Q.mask", "U.mask"]]}),
+           ("935nm_band" , {"Data" : ["I"], "QC" : [["I.mask"]]})])
+
+        f = h5py.File(fname, 'r')
+        print(fname)
+        geo = []
+        #geo.append(f['HDFEOS']['GRIDS']['Ancillary']['Data Fields']['XDim'][:])
+        x = np.expand_dims(f['HDFEOS']['GRIDS']['Ancillary']['Data Fields']['XDim'][:], 0)
+        y = np.expand_dims(f['HDFEOS']['GRIDS']['Ancillary']['Data Fields']['YDim'][:], 1)
+        print("GEO1", x.shape, y.shape)
+        x = np.repeat(x,y.shape[0],axis=0)
+        y = np.repeat(y,x.shape[1],axis=1)
+        print(x.shape, y.shape, "GEO", x)
+        geo = [x,y]
+        #geo.append(f['HDFEOS']['GRIDS']['Ancillary']['Data Fields']['YDim'][:])
+        print(geo[0].shape)
+        geo = np.array(geo)
+        print(geo.shape)
+
+ 
+        if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+            geo = geo[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+        return geo
+
+
 def read_s1(files, **kwargs):
  
     dat = read_gtiff_multifile_generic(files, **kwargs)
+    dat = np.flipud(dat)
 
     for i in range(dat.shape[0]):
         #dat[i] = lee_filter(dat[i], 5)
@@ -1046,6 +1564,7 @@ def read_uavsar(in_fps, desc_out=None, type_out=None, search_out=None, **kwargs)
         phase = None
     
     data = np.array(data)
+    print(data.shape)
     if "clip" in kwargs and kwargs["clip"]:
         data = np.clip(data, 1e-3, 1)
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
@@ -1174,6 +1693,20 @@ def get_read_func(data_reader):
         return read_viirs_oc 
     if data_reader == "modis_oc":
         return read_modis_oc
+    if data_reader == "s3_oc":
+        return read_s3_oc
+    if data_reader == "viirs_oc_geo":
+        return read_oc_geo
+    if data_reader == "modis_oc_geo":
+        return read_oc_geo
+    if data_reader == "s3_oc_geo":
+        return read_oc_geo
+    if data_reader == "oc_and_trop":
+        return read_oc_and_trop
+    if data_reader == "mspi":
+        return read_mspi
+    if data_reader == "mspi_geo":
+        return read_mspi_geo
 
     #TODO return BCDP reader
     return None
