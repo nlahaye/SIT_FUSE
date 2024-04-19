@@ -30,19 +30,22 @@ def plot_clusters(coord, labels, output_basename, min_clust, max_clust, pixel_pa
         max_dim2 = max(coord[:,2])
         strt_dim1 = 0
         strt_dim2 = 0
- 
 
         #1 subtracted to separate No Data from areas that have cluster value 0.
-        data = np.zeros((((int)(max_dim1-strt_dim1)+1+pixel_padding), ((int)(max_dim2-strt_dim2)+pixel_padding+1))) - 1 
+        data = np.zeros((((int)(max_dim1)+1+pixel_padding), ((int)(max_dim2)+pixel_padding+1))) - 1 
         labels = np.array(labels)
         print("ASSIGNING LABELS", min_clust, max_clust)
         print(data.shape, labels.shape, coord.shape)
         for i in range(labels.shape[0]):
             data[coord[i,1], coord[i,2]] = labels[i]
+            #print(data.shape, coord[i,1], coord[i,2], labels[i], max_dim1, max_dim2)
 
         print("FINISHED WITH LABEL ASSIGNMENT")
         print("FINAL DATA TO DASK")
-        data = (data/1000).astype(np.float32)
+        data = data.astype(np.float32)
+        print(data)
+        data = (data/1000.0).astype(np.float32)
+        print(data)
         data2 = da.from_array(data)
         #del data
 
@@ -57,7 +60,8 @@ def plot_clusters(coord, labels, output_basename, min_clust, max_clust, pixel_pa
 
         file_ext = ".no_geo"
         fname = output_basename + "_" + str(n_clusters_local) + "clusters" + file_ext + ".tif"
- 
+
+        print("HERE", data.min(), data.max(), data.mean(), data.std(), data.shape) 
         out_ds = gdal.GetDriverByName("GTiff").Create(fname, data.shape[1], data.shape[0], 1, gdal.GDT_Float32)
         out_ds.GetRasterBand(1).WriteArray(data)
         out_ds.FlushCache()
@@ -89,7 +93,8 @@ def main(yml_fpath):
             max_cluster = disc_data.max() #TODO this better!!!
             del data    
 
-        print(np.unique(disc_data).shape, "UNIQUE LABELS")
+        print(np.unique(disc_data).shape, "UNIQUE LABELS", np.unique(disc_data))
+        #print(indices)
         plot_clusters(indices, np.squeeze(disc_data), dat[i], min_cluster, max_cluster)
 
 
