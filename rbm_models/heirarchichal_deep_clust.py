@@ -94,7 +94,7 @@ class HeirClust(Model):
 
         if tune_subtrees is not None and len(tune_subtrees)  > 0:
             for i in range(len(tune_subtrees)):
-                tune_subtrees[i] = str(torch.as_tensor(float(tune_subtrees[i])))
+                tune_subtrees[i] = str(float(tune_subtrees[i]))
 
 
         print("TUNE_SUBTREES", tune_subtrees)
@@ -193,10 +193,11 @@ class HeirClust(Model):
                 lab_unq = torch.unique(lab)
                 for l in lab_unq:
                     inds = torch.where(lab == l)
-                    if str(l) in self.lab_full.keys():
-                        self.lab_full[str(l)] = torch.cat((self.lab_full[str(l)],(inds[0] + ind1)))
+                    key = str(l.detach().cpu().numpy())
+                    if key in self.lab_full.keys():
+                        self.lab_full[key] = torch.cat((self.lab_full[key],(inds[0] + ind1)))
                     else:
-                        self.lab_full[str(l)] = inds[0] + ind1
+                        self.lab_full[key] = inds[0] + ind1
 
                 ind = ind + 1
                 count = count + 1
@@ -228,28 +229,38 @@ class HeirClust(Model):
             y = y[0]
 
 
-        tmp_full = torch.zeros((y.shape[0], 1), device=y.device)
-        for i in range(y.shape[0]):
-            if y.shape[1] > 1:
-                tmp = torch.argmax(y[i])
-            else:
-                tmp = y[i]
-            tmp2 = str(tmp.detach().cpu())
-            tmp3 = tmp.detach().cpu()
-            #print(tmp2, self.clust_tree["1"].keys())
-            if tmp2 in self.clust_tree["1"].keys() and self.clust_tree["1"][tmp2] is not None:
-                tmp = self.clust_tree["1"][tmp2].forward(torch.unsqueeze(x[i],dim=0))
+        tmp_full = torch.zeros((y.shape[0], 1), device=y.device, dtype=torch.int64)
+        #for i in range(y.shape[0]):
+        tmp = y
+        if y.ndim > 1 and y.shape[1] > 1:
+            tmp = torch.argmax(y, dim=1)
+        #else:
+        #    tmp = y[i]
+        f = lambda x: str(x)
+        tmp2 = np.vectorize(f)(tmp.detach().cpu())
+        tmp3 = tmp
+        #tmp2 = str(tmp.detach().cpu())
+        keys = np.unique(tmp2)
+        for key in keys:
+            inds = np.where(tmp2 == key)
+            if key in self.clust_tree["1"].keys() and self.clust_tree["1"][key] is not None:
+                tmp = self.clust_tree["1"][key].forward(x[inds]) #torch.unsqueeze(x[inds],dim=0))
                 if isinstance(tmp,tuple):
                     tmp = tmp[0]
                 if isinstance(tmp,list):
                     tmp = tmp[0]
-                #print("HERE ARGMAX", torch.argmax(tmp, dim=1), (5*tmp))
-                tmp = torch.argmax(tmp, dim=1) 
-                #print("HERE TMP", tmp2, tmp)
-                tmp = tmp + (self.n_classes*tmp3)
+
+                #tmp = np.asarray(tmp)
+                #if isinstance(tmp,tuple):
+                #    tmp = tmp[0]
+                #if isinstance(tmp,list):
+                #    tmp = tmp[0]
+                tmp = torch.unsqueeze(torch.argmax(tmp, dim=1), dim=1) 
+                tmp[:,0] = tmp[:,0] + (self.n_classes*tmp3[inds[0]])
             else:
-                tmp = (self.n_classes*tmp3)
-            tmp_full[i] = tmp
+                tmp = torch.unsqueeze((self.n_classes*tmp3[inds[0]]), dim=1)
+            #print(tmp.shape, tmp_full.shape, inds)
+            tmp_full[inds] = tmp
 
         #print("HERE OUTPUT ", torch.unique(tmp_full), tmp_full.shape)
         return tmp_full
