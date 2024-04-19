@@ -13,6 +13,7 @@ from torch.utils.data import DataLoader
 from torch.cuda.amp import GradScaler
 import torch.distributed as dist
 from tqdm import tqdm
+from pprint import pprint
 
 from learnergy.core import Model
 import learnergy.utils.constants as c
@@ -54,17 +55,26 @@ class ClustDBN(Model):
 
         self.number_heads = 1 #TODO try out multi
         self.fc = MultiPrototypes(self.input_fc, self.n_classes, self.number_heads)
-        self.fc = self.fc.to(self.dbn_trunk.torch_device, non_blocking = True)
-        for m in self.fc.modules():
-            m = m.to(self.dbn_trunk.torch_device, non_blocking = True)
-        self.to(self.dbn_trunk.torch_device, non_blocking = True)
-        self.dbn_trunk = self.dbn_trunk.to(self.dbn_trunk.torch_device, non_blocking = True)
- 
+        if hasattr(self.dbn_trunk, "torch_device"):
+            self.fc = self.fc.to(self.dbn_trunk.torch_device, non_blocking = True)
+            for m in self.fc.modules():
+                m = m.to(self.dbn_trunk.torch_device, non_blocking = True)
+            self.to(self.dbn_trunk.torch_device, non_blocking = True)
+            self.dbn_trunk = self.dbn_trunk.to(self.dbn_trunk.torch_device, non_blocking = True)
+        else:
+            self.fc = self.fc.cuda()
+            for m in self.fc.modules():
+                m = m.cuda()
+            self.cuda()
+            self.dbn_trunk = self.dbn_trunk.cuda() 
+
         #TODO configurable? What does FaceBook and IID paper do, arch-wise?
         # Creating the optimzers
         self.optimizer = [
-            torch.optim.Adam(self.fc.parameters(), lr=0.0001), #TODO Test altering all layers? Last DBN Layer? Only Head?
-            #torch.optim.SGD(self.fc.parameters(), lr=0.0001, momentum=0.5, weight_decay=0.0001, nesterov=True),
+            torch.optim.Adam(self.fc.parameters(), lr=0.0001),
+            #torch.optim.Adam(self.dbn_trunk.parameters(), lr=0.0001),
+            #torch.optim.Adam(self.dbn_trunk.parameters(), lr=1e-4) #TODO Test altering all layers? Last DBN Layer? Only Head?
+            #torch.optim.SGD(self.dbn_trunk.parameters(), lr=0.00001, momentum=0.95, weight_decay=0.0001, nesterov=True),
         ]
 
         self.fit_scaler = False
@@ -80,12 +90,16 @@ class ClustDBN(Model):
         for x_batch, _ in tqdm(batches):
             global cuml_avail
             if cuml_avail:
-                x_batch = x_batch.to(self.dbn_trunk.torch_device, non_blocking = True)
+                if hasattr(self.dbn_trunk, "torch_device"):
+                    x_batch = x_batch.to(self.dbn_trunk.torch_device, non_blocking = True)
+                else:
+                    x_batch = x_batch.cuda()
             with torch.no_grad():
                 tmp = self.dbn_trunk(x_batch)
-                if len(tmp.shape) == 4:
-                    tmp = torch.flatten(nn.functional.adaptive_max_pool2d(tmp, (1,1)), start_dim=1)
-                    print("HERE SCALER FIT", tmp.shape)
+                #if len(tmp.shape) == 4:
+                #    tmp = torch.flatten(nn.functional.adaptive_avg_pool2d(tmp, (1,1)), start_dim=1)
+                #print(tmp.shape)
+                tmp = torch.flatten(tmp, start_dim=1)
                 self.scaler.partial_fit(tmp)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -107,9 +121,9 @@ class ClustDBN(Model):
             y = x
         if isinstance(y,tuple):
             y = y[0]
-
-        if len(y.shape) == 4:
-                    y = nn.functional.adaptive_max_pool2d(y, (1,1))
+        #if len(y.shape) == 4:
+        #            y = nn.functional.adaptive_avg_pool2d(y, (1,1))
+        print(y.shape, y.device, y.dtype, self.scaler)
         y = torch.flatten(y, start_dim=1)
  
         global cuml_avail
@@ -117,7 +131,10 @@ class ClustDBN(Model):
             y = torch.as_tensor(self.scaler.transform(y), dtype = dt)
         else:
            y = torch.from_numpy(self.scaler.transform(y.cpu().numpy()), dtype = dt) 
-           y = y.to(self.dbn_trunk.torch_device, non_blocking = True)
+           if hasattr(self.dbn_trunk, "torch_device"):
+               y = y.to(self.dbn_trunk.torch_device, non_blocking = True)
+           else:
+               y = y.cuda()
         y = self.fc.forward(y)
 
         return y
@@ -135,6 +152,7 @@ class ClustDBN(Model):
         cluster_lambda: Optional[float] = 1.0,
     ) -> Tuple[float, float]:
 
+        #self.dbn_trunk.eval()
  
         # Transforming the dataset into training batches
         if batches is None:
@@ -150,13 +168,15 @@ class ClustDBN(Model):
         if self.fit_scaler:
             self.train_scaler(batches)
 
+        #unique = None
         for e in range(epochs):
+            #unique_tmp = None
+            print(f"Epoch {e+1}/{epochs}")
 
             noise_stdev = cluster_gauss_noise_stdev[int(e % len(cluster_gauss_noise_stdev))]
 
             if sampler is not None:
                 sampler.set_epoch(e)
-            print(f"Epoch {e+1}/{epochs}", "STDEV " , str(noise_stdev))
 
             # Resetting metrics
             train_loss, val_acc = 0, 0
@@ -175,9 +195,12 @@ class ClustDBN(Model):
                 if self.device == "cpu":
                     dt = torch.bfloat16 
                 with torch.autocast(device_type=self.device, dtype=dt):
-                    x_batch = x_batch.to(self.dbn_trunk.torch_device, non_blocking = True)
-                    x2 = x2.to(self.dbn_trunk.torch_device, non_blocking = True)
-                                   
+                    if hasattr(self.dbn_trunk, "torch_device"):
+                        x_batch = x_batch.to(self.dbn_trunk.torch_device, non_blocking = True)
+                        x2 = x2.to(self.dbn_trunk.torch_device, non_blocking = True)
+                    else:
+                        x_batch = x_batch.cuda()
+                        x2 = x2.cuda()            
                     # Passing the batch down the model
                     y = None
                     y2 = None
@@ -187,12 +210,15 @@ class ClustDBN(Model):
                         if isinstance(y,tuple):
                             y = y[0]
                             y2 = y2[0]
-                        if len(y.shape) == 4:
-                            y = nn.functional.adaptive_max_pool2d(y, (1,1))
-                            y2 = nn.functional.adaptive_max_pool2d(y2, (1,1))
+                        #if len(y.shape) == 4:
+                        #    y = nn.functional.adaptive_avg_pool2d(y, (1,1))
+                        #    y2 = nn.functional.adaptive_avg_pool2d(y2, (1,1))
 
                         y = torch.flatten(y, start_dim = 1)
                         y2 = torch.flatten(y2, start_dim = 1)
+                        #print("HERE BATCH MEAN", y.mean(axis=1))
+                        #print("HERE BATCH STD", y.std(axis=1))
+    
                         global cuml_avail
                         if cuml_avail:
                             y = torch.flatten(torch.as_tensor(self.scaler.transform(y), dtype=dt), start_dim = 1)
@@ -200,18 +226,39 @@ class ClustDBN(Model):
                         else:
                             y = torch.flatten(torch.from_numpy(self.scaler.transform(y.cpu().numpy()), dtype=dt), start_dim = 1)
                             y2 = torch.flatten(torch.from_numpy(self.scaler.transform(y2.cpu().numpy()), dtype=dt), start_dim = 1)
-                        y = y.to(self.dbn_trunk.torch_device, non_blocking = True)
+ 
+                        if hasattr(self.dbn_trunk, "torch_device"):
+                            y = y.to(self.dbn_trunk.torch_device, non_blocking = True)
+                        else:
+                            y = y.cuda()
                         if noise_stdev > 0.0:
-                            y2 = y2 + torch.from_numpy(rng.normal(0,noise_stdev,\
+                            #print(f"Epoch {e+1}/{epochs}", "MEAN STDEV " , torch.min(torch.abs(torch.mean(y2, axis=1))).cpu().numpy(), torch.min(torch.abs(torch.std(y2, axis=1))).cpu().numpy())
+                            #y2 = y2 + torch.from_numpy(rng.normal(
+                            #    torch.min(torch.abs(torch.mean(y2, axis=1))).cpu().numpy(), \
+                            #    torch.min(torch.abs(torch.std(y2, axis=1))).cpu().numpy(),\
+                            #    y2.shape[1]*y2.shape[0]).reshape(y2.shape[0],\
+                            #    y2.shape[1])).type(y2.dtype).to(y2.device)
+                            y2 = y2 + torch.from_numpy(rng.normal(0.0, noise_stdev, \
                                 y2.shape[1]*y2.shape[0]).reshape(y2.shape[0],\
-                                y2.shape[1])).type(y2.dtype)
-                        y2 = y2.to(self.dbn_trunk.torch_device, non_blocking = True)
+                                y2.shape[1])).type(y2.dtype).to(y2.device)
+                        if hasattr(self.dbn_trunk, "torch_device"): 
+                            y2 = y2.to(self.dbn_trunk.torch_device, non_blocking = True)
+                        else:
+                            y2 = y2.cuda()
+                    ##NO GRAD
+
+                    #print("HERE BATCH SCALED MEAN1 ", y.mean(axis=1))
+                    #print("HERE BATCH SCALED STD1 ", y.std(axis=1))
+
+ 
+                    #print("HERE BATCH SCALED MEAN2 ", y2.mean(axis=1))
+                    #print("HERE BATCH SCALED STD2 ", y2.std(axis=1))
 
 
                     # Calculating the fully-connected outputs
                     y = self.fc(y)
                     y2 = self.fc(y2)
-         
+ 
                     end_time = time.monotonic()
                     temperature = 1 #TODO toggle
                     # Calculating loss
@@ -220,6 +267,12 @@ class ClustDBN(Model):
                     loss = loss / self.number_heads
                     temperature = 1 #TODO toggle                    
 
+                    #if unique_tmp is None:
+                    #    unique_tmp = np.unique(np.concatenate((torch.unique(torch.argmax(y[0], axis = 1)).detach().cpu().numpy(), torch.unique(torch.argmax(y2[0], axis = 1)).detach().cpu().numpy())))
+                    #else:
+                    #    unique_tmp = np.unique(np.concatenate((unique_tmp, np.unique(np.concatenate((torch.unique(torch.argmax(y[0], axis = 1)).detach().cpu().numpy(), torch.unique(torch.argmax(y2[0], axis = 1)).detach().cpu().numpy()))))))    
+
+                    #print("UNIQUE CLUSTERS", unique_tmp, unique_tmp.shape)
                     if "cuda" in self.device:
                         x_batch = x_batch.detach().cpu()
                         x2 = x2.detach().cpu()
@@ -258,6 +311,11 @@ class ClustDBN(Model):
                 train_loss = train_loss + loss.item()
                 end_time = time.monotonic()
 
+            #if unique is None:
+            #    unique = unique_tmp
+            #else:
+            #    unique = np.unique(np.concatenate((unique, unique_tmp)))
+            #print("CLUSTERS", unique)
             logger.info("LOSS: %f", (train_loss/len(batches)))
 
 
@@ -286,19 +344,30 @@ class MultiPrototypes(nn.Module):
         super(MultiPrototypes, self).__init__()
         self.nmb_heads = nmb_heads
         for i in range(nmb_heads):
+            self.n_layers = 0
             self.add_module("flatten" + str(i), nn.Flatten())
             #for j in range(0,3):
+            #if output_dim <= n_classes*2.5:
+            self.n_layers =  self.n_layers + 1
             self.add_module("prototypes" + str(i) + "_0", nn.Linear(output_dim, n_classes))
+            #else:
+            #    tmp = output_dim
+            #    while tmp > n_classes*2.5:
+            #        self.n_layers =  self.n_layers + 1
+            #        self.add_module("prototypes" + str(i) + "_" + str(self.n_layers-1), nn.Linear(tmp, int(tmp/2)))
+            #        tmp = int(tmp/2)
             #self.add_module("prototypes" + str(i) + "_0", nn.Linear(output_dim, output_dim*2)) 
             ##self.add_module("prototypes" + str(i) + "_1", nn.Linear(output_dim, n_classes))
             #self.add_module("prototypes" + str(i) + "_2", nn.Linear(n_classes*2, n_classes))
-            self.add_module("prototypes" + str(i) + "_1", nn.Softmax(dim=1)) #n_classes, n_classes, bias=False))
+            self.n_layers =  self.n_layers + 1
+            self.add_module("prototypes" + str(i) + "_" + str(self.n_layers-1), nn.Softmax(dim=1)) #n_classes, n_classes, bias=False))
+         
 
     def forward(self, x):
         out = []
         for i in range(self.nmb_heads):
             x = getattr(self, "flatten" + str(i))(x)
-            for j in range(0,2):
+            for j in range(0,self.n_layers):
                 x = getattr(self, "prototypes" + str(i) + "_" + str(j))(x)
             out.append(x)
         return out 
@@ -330,7 +399,7 @@ def IID_loss(x_out, x_tf_out, lamb=1.0, EPS=sys.float_info.epsilon):
   p_i_j = p_i_j.contiguous()
  
   # avoid NaN losses. Effect will get cancelled out by p_i_j tiny anyway
-  lamb = 0.1
+  #lamb = 0.1
   
   p_i_j[(p_i_j < EPS).data] = EPS
   p_j[(p_j < EPS).data] = EPS
