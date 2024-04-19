@@ -1,0 +1,84 @@
+import numpy as np
+import pytorch_lightning as pl
+import torch.nn as nn
+import torch
+from torch.utils.data import Dataset
+from torch.utils.data import DataLoader
+from pytorch_lightning.callbacks import (
+    ModelCheckpoint,
+    LearningRateMonitor,
+    ModelSummary,
+)
+from pytorch_lightning.loggers import WandbLogger
+
+from ..encoders.dbn_pl import DBN_PL
+
+from losses.iid import IID_loss
+from models.deep_cluster.multi_prototypes import MultiPrototypes
+import numpy as np
+
+
+class DBN_DC(pl.LightningModule):
+    #take pretrained model path, number of classes, learning rate, weight decay, and drop path as input
+    def __init__(self, dbn, num_classes, lr=1e-3, weight_decay=0):
+
+        super().__init__()
+        self.save_hyperparameters()
+
+        #set parameters
+        self.lr = lr
+        self.weight_decay = weight_decay
+
+        self.mlp_head =  MultiPrototypes(dbn.models[-1].n_hidden, 800, 1)
+
+        #define loss
+        self.criterion = IID_loss
+        self.rng = np.random.default_rng(None)
+ 
+    def forward(self, x):
+        x = self.pretrained_model.model(x)
+        x = self.mlp_head(x)[0] #pass through mlp head
+        return x
+    
+    def training_step(self, batch, batch_idx):
+        x = batch
+        y = self.pretrained_model.model(x)
+        y2 = y.clone() + torch.from_numpy(self.rng.normal(0.0, 0.01, \
+                                y.shape[1]*y.shape[0]).reshape(y.shape[0],\
+                                y.shape[1])).type(y.dtype).to(y.device)
+        y = self.mlp_head(y)[0] 
+        y2 = self.mlp_head(y2)[0]
+        loss = self.criterion(y,y2)[0] #calculate loss
+        self.log('train_loss', loss)
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        x = batch
+        y = self.pretrained_model.model(x)
+        y2 = y.clone() + torch.from_numpy(self.rng.normal(0.0, 0.01, \
+                                y.shape[1]*y.shape[0]).reshape(y.shape[0],\
+                                y.shape[1])).type(y.dtype).to(y.device)
+        y = self.mlp_head(y)[0]
+        y2 = self.mlp_head(y2)[0]
+        loss = self.criterion(y,y2)[0] #calculate loss
+        self.log('val_loss', loss)
+        return loss
+
+    def predict_step(self, batch, batch_idx, dataloader_idx):
+        return self(batch)
+    
+    def configure_optimizers(self):
+        optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
+        scheduler = torch.optim.lr_scheduler.OneCycleLR(
+            optimizer,
+            max_lr=self.lr,
+            total_steps=self.trainer.estimated_stepping_batches,
+        )
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "interval": "step",
+            },
+        }
+
