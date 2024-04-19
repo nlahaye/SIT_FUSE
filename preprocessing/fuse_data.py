@@ -63,7 +63,8 @@ def fuse_data(yml_conf):
     use_bilinear = yml_conf["fusion"]["use_bilinear"]
  
     output_files = yml_conf["output_files"]
- 
+
+    print(len(lo_geoloc) , len(lo_filenames))
     for i in range(len(lo_filenames)):
         hi_channel_dim = yml_conf["high_res"]["data"]["chan_dim"]
         hi_coord_dim = yml_conf["high_res"]["data"]["geo_coord_dim"]
@@ -79,9 +80,11 @@ def fuse_data(yml_conf):
 
             hi_geo = read_func_geo_hi(hi_geoloc[i], **geo_data_reader_kwargs_hi).astype(np.float64)
             print(hi_geo.shape, hi_geoloc[i])
-
-            hi_dat = np.moveaxis(hi_dat, hi_channel_dim, 2)
-            hi_geo = np.moveaxis(hi_geo, hi_coord_dim, 2)
+ 
+            if hi_channel_dim != 2:
+                hi_dat = np.moveaxis(hi_dat, hi_channel_dim, 2)
+            if hi_coord_dim != 2:
+                hi_geo = np.moveaxis(hi_geo, hi_coord_dim, 2)
             hi_channel_dim = 2
             hi_coord_dim = 2
             if hi_geo.shape[0] > hi_dat.shape[0] or hi_geo.shape[1] > hi_dat.shape[1]:
@@ -109,13 +112,17 @@ def fuse_data(yml_conf):
 
 
         print(lo_dat.shape, lo_geo.shape)
-        lo_dat = np.moveaxis(lo_dat, lo_channel_dim, 2)
-        lo_geo = np.moveaxis(lo_geo, lo_coord_dim, 2)
+        if lo_channel_dim != 2:
+            lo_dat = np.moveaxis(lo_dat, lo_channel_dim, 2)
+        if lo_coord_dim != 2:
+            lo_geo = np.moveaxis(lo_geo, lo_coord_dim, 2)
         lo_channel_dim = 2
         lo_coord_dim = 2
         if lo_geo.shape[0] > lo_dat.shape[0] or lo_geo.shape[1] > lo_dat.shape[1]:
             tmp = np.zeros((lo_geo.shape[0], lo_geo.shape[1], lo_dat.shape[2])) - 9999.0
-            tmp[:lo_dat.shape[0], :lo_dat.shape[1],:] = lo_dat
+            min_shape_1 = min(lo_geo.shape[0], lo_dat.shape[0])
+            min_shape_2 = min(lo_geo.shape[1], lo_dat.shape[1])
+            tmp[:min_shape_1, :min_shape_2,:] = lo_dat[:min_shape_1, :min_shape_2,:]
             lo_dat = tmp
         print(lo_dat.shape, lo_geo.shape)
         print(lo_dat.min(), lo_dat.max(), valid_min_lo, valid_max_lo)
@@ -145,6 +152,7 @@ def fuse_data(yml_conf):
         print(np.where(lo_dat > valid_max_lo))
         lo_dat = np.ma.masked_where((lo_dat < valid_min_lo) | (lo_dat > valid_max_lo), lo_dat)
         np.ma.set_fill_value(lo_dat, -9999.0)
+        print(lo_dat.min(), lo_dat.max(), lo_dat.mean(), lo_dat.std(), "STATS INIT")
 
         if resample_n_procs > 1:
             from pyresample._spatial_mp import cKDTree_MP as kdtree_class
@@ -181,7 +189,7 @@ def fuse_data(yml_conf):
         result2 = np.ma.masked_where((result2 < (min(valid_min_lo, valid_min_hi)-100.0)), result2)
         np.ma.set_fill_value(result2, -9999.0)
 
-        print("AFTER RESAMPLING2", lo_dat.shape, result2.shape, result2.min())
+        print("AFTER RESAMPLING2", lo_dat.shape, result2.shape, result2.min(), result2.max(), result2.mean(), result2.std())
    
         datFinal = []
         print("MASKING", np.count_nonzero(result2.mask))

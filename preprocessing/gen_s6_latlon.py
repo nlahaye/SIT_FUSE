@@ -6,6 +6,7 @@ This software may be subject to U.S. export control laws. By accepting this soft
 applicable U.S. export laws and regulations. User has the responsibility to obtain export licenses, or other export authority as may be 
 required before exporting such information to foreign countries or providing access to foreign persons.
 """
+import argparse
 from misc_utils import dummyLatLonS6
 from utils import read_yaml
 

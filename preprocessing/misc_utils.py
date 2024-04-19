@@ -9,7 +9,10 @@ required before exporting such information to foreign countries or providing acc
 import os
 import re
 import zarr
+import glob
+import cv2
 import numpy as np
+from pprint import pprint
 from osgeo import osr, gdal
 from subprocess import DEVNULL, run, Popen, PIPE
 from scipy.ndimage import uniform_filter
@@ -204,17 +207,15 @@ def gtiff_to_gtiff_multfile(fname, n_channels, **kwargs):
 
 #Assumes each set of tiffs will be moved to a separate directory
 def gen_polar_2_grid_cmds(exe_location, data_files, location_files, instruments, out_dirs):
+ 
+    print(len(data_files), len(out_dirs), len(location_files), len(instruments))
 
     cmds = []
     cmd = "rm *dat; rm *tif; "
     for i in range(len(data_files)):
         os.makedirs(out_dirs[i], exist_ok = True)
-        cmd_str = ""
-        if instruments[i] == "viirs":
-            cmd_str = cmd + "./viirs_l1b2gtiff.sh --debug -f "
-        elif instruments[i] == "modis":
-            cmd_str = cmd + "./modis2gtiff.sh --debug -f "
-        cmd_str += f"{data_files[i]} {location_files[i]}; mv *tif {out_dirs[i]}"
+        cmd_str = exe_location + " -r " + instruments[i] + " -w geotiff -f " + data_files[i] + " " + location_files[i]
+        cmd_str += f"; mv *tif {out_dirs[i]}"
         cmds.append(cmd_str)
     return cmds
 
@@ -223,48 +224,62 @@ def gen_polar_2_grid_cmds(exe_location, data_files, location_files, instruments,
 #Generates a single zarr file from Polar2Grid generated tiffs
 def combine_viirs_gtiffs(tiff_dirs):
     for i in range(len(tiff_dirs)):
-        mtch = re.match(os.path.listdir(tiff_dirs[i])[0])
         data = None
+        fns_total = []
         for j in range(1,17):
-            fn = os.path.join(tiff_dirs[i], mtch.group(1) + "m" + str(j).zfill(2) + mtch.group(2) + "_wgs84_fit.tif")
-            dat = gdal.Open(fn)
-            band = dat.GetRasterBand(1).ReadAsArray()
-            band[np.where(band < 0.0000000005)] = -9999
-            if data is None:
-                data = np.zeros((16, band.shape[0], band.shape[1]))
-            data[j-1,:,:] = band
-        fn = os.path.join(tiff_dirs[i], mtch.group(1) + "m" + str(i).zfill(2) + mtch.group(2) + ".zarr", data)
-        zarr.save(fn, data)
-
-        data = None 
+            fns = sorted(glob.glob(os.path.join(tiff_dirs[i], "*viirs_m" + str(j).zfill(2) + "*_wgs84_fit.tif")))
+            fns_total.append(fns)
         for j in range(1,6):
-            fn = os.path.join(tiff_dirs[i], mtch.group(1) + "i" + str(j).zfill(2) + mtch.group(2) + "_wgs84_fit.tif")   
-            dat = gdal.Open(fn)
-            band = dat.GetRasterBand(1).ReadAsArray()
-            band[np.where(band < 0.0000000005)] = -9999
-            if data is None:
-                data = np.zeros((5, band.shape[0], band.shape[1]))
-            data[j-1,:,:] = band[:data.shape[1], :data.shape[2]]
-        fn = os.path.join(tiff_dirs[i], mtch.group(1) + "i" + str(j).zfill(2) + mtch.group(2) + ".zarr", data)
-        zarr.save(fn, data)        
+            fns = sorted(glob.glob(os.path.join(tiff_dirs[i], "*viirs_i" + str(j).zfill(2) + "*_wgs84_fit.tif")))
+            fns_total.append(fns)
+        for j in range(len(fns_total)):
+            print(len(fns_total[j]))
+            pprint(fns_total[j])
+        for k in range(len(fns_total[0])):
+            data = None
+            for j in range(len(fns_total)):
+                fn = fns_total[j][k]
+                dat = gdal.Open(fn)
+                band = dat.GetRasterBand(1).ReadAsArray()
+                if j > 15:
+                    band = cv2.resize(band, (data[0].shape[1], data[0].shape[0]), interpolation=cv2.INTER_CUBIC)
+                band[np.where(band < 0.0000000005)] = -9999
+                if data is None:
+                    data = np.zeros((len(fns_total), band.shape[0], band.shape[1]))
+                print(fn)
+                data[j-1,:,:] = band
+            fn = os.path.join(tiff_dirs[i], os.path.basename(fns_total[0][k]) + ".zarr")
+            print(fn)
+            zarr.save(fn, data)
 
 
 #Assumes one set of tiffs per directory
 #Generates a single zarr file from Polar2Grid generated tiffs
 def combine_modis_gtiffs(tiff_dirs):
     for i in range(len(tiff_dirs)):
-        mtch = re.match(os.path.listdir(tiff_dirs[i])[0])
         data = None
+        fns_total = []
         for j in range(len(MODIS_BAND_ORDER)):
-            fn = os.path.join(tiff_dirs[i], mtch.group(1) + MODIS_BAND_ORDER[j] + mtch.group(2) + "_wgs84_fit.tif")
-            dat = gdal.Open(fn)
-            band = dat.GetRasterBand(1).ReadAsArray()
-            band[np.where(band < 0.0000000005)] = -9999
-            if data is None:
-                data = np.zeros((5, band.shape[0], band.shape[1]))
-            data[j-1,:,:] = band[:data.shape[1], :data.shape[2]]
-        fn = os.path.join(tiff_dirs[i], mtch.group(1) + MODIS_BAND_ORDER[j] + mtch.group(2) + ".zarr", data)
-        zarr.save(fn, data)
+            fns = sorted(glob.glob(os.path.join(tiff_dirs[i], "*modis*" + MODIS_BAND_ORDER[j]+ "*_wgs84_fit.tif")))
+            fns_total.append(fns)
+        for j in range(len(fns_total)):
+            print(len(fns_total[j]))
+            pprint(fns_total[j])
+        for k in range(len(fns_total[0])):
+            data = None
+            for j in range(len(fns_total)):
+                fn = fns_total[j][k]
+                print(fns_total[j][k])
+                dat = gdal.Open(fn)
+                band = dat.GetRasterBand(1).ReadAsArray()
+                print(band.shape, i, j, k)
+                band[np.where(band < 0.0000000005)] = -9999
+                if data is None:
+                    data = np.zeros((len(fns_total), band.shape[0], band.shape[1]))
+                data[j-1,:,:] = band[:data.shape[1], :data.shape[2]]
+            fn = os.path.join(tiff_dirs[i], os.path.basename(fns_total[0][k]) + ".zarr")
+            print(fn)
+            zarr.save(fn, data)
 
 
 def combine_modis_gtiffs_laads(file_list):
