@@ -21,12 +21,14 @@ from joblib import load
 
 #Data
 from utils import read_yaml, get_read_func
+from dbn_datasets import DBNDataset
 
 #ML Imports
 import torch
 import torch.optim as opt 
 from torch.nn.parallel import DistributedDataParallel as DDP
 from rbm_models.clust_dbn import ClustDBN
+from rbm_models.heirarchichal_deep_clust import HeirClust
 from learnergy.models.deep import DBN
 from dbn_learnergy import setup_ddp, cleanup_ddp
 import shap
@@ -45,7 +47,7 @@ torch.backends.cudnn.enabled = True
 # TODO: Parallel process shap values
 
 
-def load_model(yml_conf, n_visible = None):
+def load_model(yml_conf, n_visible = None, data_train = None):
     
     # TODO: Fix bugs
     # FCDBN not supported
@@ -68,16 +70,30 @@ def load_model(yml_conf, n_visible = None):
     batch_normalize = tuple(yml_conf["dbn"]["params"]["batch_normalize"])
     nesterov_accel = tuple(yml_conf["dbn"]["params"]["nesterov_accel"])
 
+
+    model_fname = yml_conf["output"]["model"]
+    model_file = os.path.join(out_dir, model_fname)
+    heir_model_file = os.path.join(out_dir, "heir_" + model_fname)
+    heir_model_tiers = yml_conf["dbn"]["heir_tiers"]
+
+    heir_min_samples = yml_conf["dbn"]["training"]["heir_cluster_min_samples"]
+    heir_gauss_stdevs = yml_conf["dbn"]["training"]["heir_cluster_gauss_noise_stdev"]
+    heir_epochs = yml_conf["dbn"]["training"]["heir_epochs"]
+    n_heir_classes = yml_conf["dbn"]["training"]["heir_deep_cluster"]
+
     local_rank = 0
+    device = "cpu"
     if "LOCAL_RANK" in os.environ.keys():
         setup_ddp(device_ids, use_gpu)
         local_rank = int(os.environ["LOCAL_RANK"])
-    
+        device = torch.device("cuda:{}".format(local_rank))   
+ 
     if n_visible is None:
         input_fp = glob(os.path.join(out_dir, "*.clustoutput.data.input"))[0]
         data_full = torch.load(input_fp)
         n_visible = data_full.shape[1]
     
+    n_visible = data_train.data_full.shape[1]
     new_dbn = DBN(model=model_type, n_visible=n_visible, n_hidden=dbn_arch, steps=gibbs_steps, \
         learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=use_gpu)
     
@@ -100,10 +116,33 @@ def load_model(yml_conf, n_visible = None):
     model = clust_dbn
     model.dbn_trunk.load_state_dict(torch.load(model_file + ".ckpt"))
     model.fc.load_state_dict(torch.load(model_file + "_fc_clust.ckpt"))
-    
-    cleanup_ddp()
-    
-    return model
+    final_model = model  
+ 
+    heir_clust = None
+
+    for tiers in range(0,heir_model_tiers):
+
+        print("HEIRARCHICAL TIER ", str(tiers + 1))
+
+        heir_mdl_file = heir_model_file + ""
+        if tiers > 0:
+            heir_mdl_file = heir_model_file + "_" + str(tiers)
+
+        print(heir_mdl_file)
+        if os.path.exists(heir_mdl_file + ".ckpt"):
+            heir_clust = HeirClust(final_model, data_train, n_heir_classes, use_gpu=use_gpu, min_samples=heir_min_samples, gauss_stdevs = heir_gauss_stdevs)
+            heir_dict = torch.load(heir_mdl_file + ".ckpt")
+            heir_clust.load_model(heir_dict)
+
+
+        final_model = heir_clust
+
+
+
+
+
+ 
+    return final_model
 
 
 
@@ -154,21 +193,50 @@ def read_train_test(yml_conf, read_from_input_file = False):
         reader_kwargs = yml_conf['data']['reader_kwargs']
         files_train = yml_conf['data']['files_train']
         files_test = yml_conf['data']['files_test']
+        data_reader_kwargs = yml_conf["data"]["reader_kwargs"]
+        pixel_padding = yml_conf["data"]["pixel_padding"]
+        number_channel = yml_conf["data"]["number_channels"]
+        fill = yml_conf["data"]["fill_value"]
+        chan_dim = yml_conf["data"]["chan_dim"]
+        valid_min = yml_conf["data"]["valid_min"]
+        valid_max = yml_conf["data"]["valid_max"]
+        delete_chans = yml_conf["data"]["delete_chans"]
+        subset_count = yml_conf["data"]["subset_count"]
+        output_subset_count = yml_conf["data"]["output_subset_count"]
+        scale_data = yml_conf["data"]["scale_data"]
+        transform_chans = yml_conf["data"]["transform_default"]["chans"]
+        transform_values =  yml_conf["data"]["transform_default"]["transform"]
+        scale_data = yml_conf["data"]["scale_data"]
+        stratify_data = None
+        if "stratify_data" in yml_conf["dbn"]["training"]:
+            stratify_data = yml_conf["dbn"]["training"]["stratify_data"]
+
+        subset_training = yml_conf["dbn"]["subset_training"]
         read_func = get_read_func(reader_type)
 
-        for file in files_train:
-            if isinstance(file, list):
-                fname = os.path.basename(file[0])
-            else:
-                fname = os.path.basename(file)
-            data_train = read_func(file, **reader_kwargs)
-        
-        for file in files_test:
-            if isinstance(file, list):
-                fname = os.path.basename(file[0])
-            else:
-                fname = os.path.basename(file)
-            data_test = read_func(file, **reader_kwargs)
+        scaler = None
+        scaler_train = False
+        scaler_fname = os.path.join(out_dir, "dbn_scaler.pkl")
+ 
+        if not os.path.exists(scaler_fname):
+            scaler_type = yml_conf["scaler"]["name"]
+            scaler, scaler_train = get_scaler(scaler_type, cuda = use_gpu_pre)
+        else:
+            scaler = load(scaler_fname)
+
+ 
+        data_train = DBNDataset()
+        data_train.read_and_preprocess_data(files_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
+                valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
+                transform_values=transform_values, scaler = scaler, train_scaler = scaler_train, scale = scale_data, \
+                transform=None, subset=subset_count, subset_training = subset_training, stratify_data=stratify_data)
+
+
+        data_test = DBNDataset()
+        data_test.read_and_preprocess_data(files_test, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
+                valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
+                transform_values=transform_values, scaler = scaler, train_scaler = scaler_train, scale = scale_data, \
+                transform=None, subset=subset_count, subset_training = subset_training, stratify_data=stratify_data)
     
     return data_train, data_test
 
@@ -206,7 +274,7 @@ def unwrap(x, shape):
 
 def filled_array(x, fill=0.):
     if isinstance(x, np.ndarray) or isinstance(x, list):
-        return (np.zeros_like(x, dtype=x.dtype) + fill)
+        return (np.zeros_like(x, dtype=x.data_full.dtype) + fill)
     elif isinstance(x, tuple):
         return (np.zeros(x, dtype=np.float32) + fill)
     else:
@@ -252,8 +320,12 @@ def most_frequent_labels(data):
     Returns: 
         Array of labels (# labels) sorted by frequency of occurence
     """
-    
-    labels = np.argmax(data, axis=1)
+   
+
+    if data.shape[1] > 1:
+        labels = np.argmax(data, axis = 1)
+    else:
+        labels = data.astype(np.int32)
     unique_labels, frequency = np.unique(labels, return_counts=True)
     sorted_indexes = np.argsort(frequency)[::-1]
     sorted_by_freq = unique_labels[sorted_indexes]
@@ -276,7 +348,7 @@ def get_background(background_type, data: np.ndarray, n_samples=None):
     elif background_type == "sample":
         background = shap.sample(data, n_samples)
     elif background_type == "zero":
-        background = np.expand_dims(np.array([0,0,0], dtype=data.dtype), 0)
+        background = np.zeros((1,data.shape[1]), dtype=data.dtype)
     else:
         background = data
     return background
@@ -304,6 +376,7 @@ def explain(f, dataset: np.ndarray, background: np.ndarray, link, output_names, 
     if link not in ['identity', 'logit']:
         link = 'identity'
     explainer = shap.KernelExplainer(f, background, link=link, output_names=output_names)
+    print(dataset.shape)
     explanation = explainer(dataset)
     save_shap(explanation, os.path.join(out_dir, explanation_fname))
         
@@ -338,56 +411,61 @@ def main(**kwargs):
     n_channels = yml_conf['data']['number_channels']
     chan_dim = yml_conf['data']['chan_dim']
     
+    # Load train and test data
+    data_train, data_test = read_train_test(yml_conf)
+
     # Load model and scaler
-    model = load_model(yml_conf, n_channels).cuda()
+    model = load_model(yml_conf, n_channels, data_train).cuda()
     scaler = load(os.path.join(out_dir, "dbn_scaler.pkl"))
     
     # Load train and test data
     data_train, data_test = read_train_test(yml_conf)
     
     # Subset? (yes: (0:200, 0:600))
-    row_min, row_max = 0, 200
-    col_min, col_max = 0, 600
-    new_dims = np.moveaxis(np.array([n_channels, row_max, col_max]), 0, chan_dim)
+    #row_min, row_max = 0, 200
+    #col_min, col_max = 0, 600
+    #new_dims = np.moveaxis(np.array([n_channels, row_max, col_max]), 0, chan_dim)
     
-    if row_min and col_min and row_max and col_max:
-        data_train = data_train[:,row_min:row_max,col_min:col_max]
-        data_test = data_test[:,row_min:row_max,col_min:col_max]
+    #if row_min and col_min and row_max and col_max:
+    #    data_train = data_train[:,row_min:row_max,col_min:col_max]
+    #    data_test = data_test[:,row_min:row_max,col_min:col_max]
     
-    print("Data: ", data_test.shape)
+    #print("Data: ", data_test.shape)
         
     # Preprocess data 
-    data_train = scaler.transform(wrap(data_train))
-    data_test = scaler.transform(wrap(data_test))
-    print("Model input: ", data_test.shape)
+    #data_train = scaler.transform(wrap(data_train))
+    #data_test = scaler.transform(wrap(data_test))
+    #print("Model input: ", data_test.shape)
     
     # Set explain params
     overwrite = True
     link = 'identity' # 'logit'
     background_type = 'zero'
-    background = get_background(background_type, data_train)
+    background = get_background(background_type, data_train.data_full)
     
     # ============================== EXPLANATION ===============================
     
     labels = [x for x in range(clusters)]
     label_names = map(str, labels)
-    
+   
+    f = lambda x: (model.forward(torch.from_numpy(x).to(model.dbn_trunk.models[0].module.torch_device))).detach().cpu().numpy() 
     if not overwrite and os.path.exists(os.path.join(out_dir, "explanation.pkl")) and os.path.exists(os.path.join(out_dir, "shap_values.npz")):
         
         explanation = np.load(os.path.join(out_dir, "explanation.pkl"), allow_pickle=True)
         shap_values = np.array(np.load(os.path.join(out_dir, "shap_values.npz"), allow_pickle=True))   
     
     else:
+        print("HERE", data_test.data_full.shape, data_test.data_full[0:1000].shape)
         # Compute with zero background
-        explanation = explain(model.forward_numpy, data_test, background, link=link, 
+        explanation = explain(f, data_test.data_full[0:1000], background, link=link, 
                             output_names=label_names, out_dir=out_dir, 
                             explanation_fname="explanation_zero_background.pkl")
         shap_values = explanation.values
         save_shap(shap_values, os.path.join(out_dir, "shap_values_zero_background.npz"))
     
         # Also compute with kmeans background 
-        background = get_background('kmeans', data_train, n_samples=50)
-        explanation = explain(model.forward_numpy, data_test, background, link=link, 
+        #background = get_background('kmeans', data_train.data_full[0:1000], n_samples=50)
+        explanation = explain(f, data_train.data_full[0:1000], background, link=link, 
                             output_names=label_names, out_dir=out_dir, 
                             explanation_fname="explanation_kmeans_background.pkl")
         shap_values = explanation.values
@@ -403,10 +481,10 @@ def main(**kwargs):
     os.makedirs(shap_out_dir, exist_ok=True)
     print(shap_out_dir)
     
-    feature_names = ['HHHH', 'HVHV', 'VVVV']
+    feature_names = ["chan_" + str(i) for i in range(data_test.data_full.shape[1])]
     
     plot_by_freq = True
-    labels_by_freq = most_frequent_labels(forward_numpy(data_test, model))
+    labels_by_freq = most_frequent_labels(f(data_test.data_full[0:1000]))
     print("Most significant labels: ", labels_by_freq)
     
     if plot_by_freq:
@@ -432,6 +510,8 @@ if __name__ == '__main__':
     main(yaml=args.yaml)
     end = timer()
     print(end - start) # Time in seconds, e.g. 5.38091952400282
+
+    cleanup_ddp()
 
 
 # def get_masker(masker, shape, fill):
