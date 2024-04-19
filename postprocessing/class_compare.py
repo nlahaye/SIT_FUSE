@@ -7,7 +7,7 @@ applicable U.S. export laws and regulations. User has the responsibility to obta
 required before exporting such information to foreign countries or providing access to foreign persons.
 """
 
-
+from collections import OrderedDict
 from operator import itemgetter
 import sys
 import numpy as np
@@ -22,7 +22,7 @@ import shutil
 import os
 import datetime
 import copy
-
+import dbfread
 from osgeo import gdal
 
 from utils import numpy_to_torch, read_yaml, get_read_func
@@ -171,6 +171,116 @@ def get_class_mask_func(key):
         return class_mask_gen_basic
 
 
+def read_label_counts_dbfs(dbf_list):
+
+    new_data_label_counts = {}
+    init_data_label_counts = {}
+
+    for i in range(len(dbf_list)):
+        init_data_label_counts[i] = {'total' : 0} 
+        for j in range(len(dbf_list[i])):
+            if dbf_list[i][j] == "":
+                continue
+            for record in dbfread.DBF(dbf_list[i][j]):
+                for key in record.keys():
+                    try:
+                        label = float(key)    
+                        count = int(record[key])
+                                                                          
+
+                        if label not in new_data_label_counts.keys():
+                            new_data_label_counts[label] = {i : count, 'total' : count}
+                        elif i in new_data_label_counts[label].keys():
+                             new_data_label_counts[label][i] = new_data_label_counts[label][i] + count
+                             new_data_label_counts[label]['total'] = new_data_label_counts[label]['total'] + count
+                        else:
+                             new_data_label_counts[label][i] = count
+                             new_data_label_counts[label]['total'] = new_data_label_counts[label]['total'] + count
+
+                        if label not in init_data_label_counts[i].keys():
+                            init_data_label_counts[i][label] = count
+                        else:
+                            init_data_label_counts[i][label] = init_data_label_counts[i][label] + count
+                        init_data_label_counts[i]['total'] = init_data_label_counts[i]['total'] + count
+
+                    except ValueError:
+                        continue
+
+
+    for key in init_data_label_counts.keys():
+            init_data_label_counts[key] = OrderedDict(sorted(init_data_label_counts[key].items(), reverse = True, key=lambda item: item[1]))
+    for key in new_data_label_counts.keys():
+            new_data_label_counts[key] = OrderedDict(sorted(new_data_label_counts[key].items(), reverse = True, key=lambda item: item[1]))
+  
+
+
+    print("KEYS")
+    pprint(init_data_label_counts)
+    print("KEYS")
+    pprint(new_data_label_counts)
+    return new_data_label_counts, init_data_label_counts
+
+
+def run_compare_dbf(dbf_list):
+
+    new_data_label_counts, init_data_label_counts = read_label_counts_dbfs(dbf_list)
+        
+    new_data_label_percentage = {}
+    init_data_label_percentage = {}
+
+    for key in new_data_label_counts.keys():
+        new_data_label_percentage[key] = {}
+        for key2 in new_data_label_counts[key].keys():
+            new_data_label_percentage[key][key2] = float(new_data_label_counts[key][key2]) / float(new_data_label_counts[key]['total'])
+                
+    for key in init_data_label_counts.keys():
+        init_data_label_percentage[key] = {}
+        for key2 in init_data_label_counts[key].keys():
+            init_data_label_percentage[key][key2] = float(init_data_label_counts[key][key2]) / float(init_data_label_counts[key]['total'])
+
+    for key in init_data_label_percentage.keys():
+            init_data_label_percentage[key] = OrderedDict(sorted(init_data_label_percentage[key].items(), reverse = True, key=lambda item: item[1]))
+    for key in new_data_label_percentage.keys():
+            new_data_label_percentage[key] = OrderedDict(sorted(new_data_label_percentage[key].items(), reverse = True, key=lambda item: item[1]))
+ 
+ 
+
+
+    print("KEYS")
+    pprint(init_data_label_percentage)
+    print("KEYS")
+    pprint(new_data_label_percentage)
+
+
+
+    assignment = []
+    uncertain = []
+    for key in sorted(init_data_label_percentage.keys()):
+        assignment.append([])
+    assignment.append([])
+    for key in new_data_label_percentage.keys():
+        if key <= 0.0:
+            continue
+        #skip total
+        assign = list(new_data_label_percentage[key].items())[1]
+        if assign[0] == 'total':
+            assign = list(new_data_label_percentage[key].items())[0]
+        percentage = assign[1]
+        index = assign[0]
+        print(percentage)
+        if percentage >= 0.6:
+            assignment[index].append(key)
+        else:
+            assignment[-1].append(key)
+            tmp = list(new_data_label_percentage[key].items())
+            tmp.insert(0, key)
+            uncertain.append(tmp)
+
+    print("ASSIGNMENT")
+    print(assignment)
+
+    pprint(uncertain)
+
 def compare_label_sets(new_data, init_data, mask_name, map_vals, no_retrieval_init=-1, 
     no_retrieval_new=-1, new_data_label_counts = None, init_data_label_counts  = None, glint = None):
  
@@ -251,6 +361,7 @@ def plot_classifier_map(init_dat, new_dat, log_fname, total_data, total_mask,
         pprint(agree_new)
 
 
+        print(init_data.shape, new_data.shape, "HERE SIZES")
         for i in range(new_data.shape[0]):
                 for j in range(new_data.shape[1]):
                         if init_data[i,j] == no_retrieval_init or \
@@ -379,6 +490,7 @@ def run_compare(init_input, new_input, class_order, log_fname, out_ext, clust_ex
 
                                         pprint(init_input)
                                         pprint(new_input)
+                                        print(dbn, clust, class_order[i], len(new_input), len(init_input))
                                         if not os.path.exists(new_input[dbn][clust]) or not os.path.exists(init_input[dbn][class_order[i]]):
                                                 print(new_input[dbn][clust], init_input[dbn][class_order[i]], 
                                                     os.path.exists(new_input[dbn][clust]), 
@@ -495,24 +607,29 @@ def main(yml_fpath):
     #Translate config to dictionary 
     yml_conf = read_yaml(yml_fpath)
     #Run 
-    init_data = yml_conf["init_data"]
-    new_data = yml_conf["new_data"]
-    class_order = yml_conf["class_order"]
-    log_fname = yml_conf["log_fname"]
-    out_ext = yml_conf["out_ext"]
-    clust_ext = yml_conf["clust_ext"]
-    no_retrieval_init = yml_conf["no_retrieval_init"]
-    no_retrieval_new = yml_conf["no_retrieval_new"]
-    good_vals = yml_conf["good_vals"]
-    map_vals = yml_conf["map_vals"]
-    labels = yml_conf["labels"]
-    gradient = yml_conf["gradient"]
-    grad_increase = yml_conf["gradient_increase"]
 
-    class_mask_gen_func = get_class_mask_func(yml_conf["class_mask_gen_func"])
+    if yml_conf["dbf"]:
+        run_compare_dbf(yml_conf["dbf_list"])
+ 
+    else:
+        init_data = yml_conf["init_data"]
+        new_data = yml_conf["new_data"]
+        class_order = yml_conf["class_order"]
+        log_fname = yml_conf["log_fname"]
+        out_ext = yml_conf["out_ext"]
+        clust_ext = yml_conf["clust_ext"]
+        no_retrieval_init = yml_conf["no_retrieval_init"]
+        no_retrieval_new = yml_conf["no_retrieval_new"]
+        good_vals = yml_conf["good_vals"]
+        map_vals = yml_conf["map_vals"]
+        labels = yml_conf["labels"]
+        gradient = yml_conf["gradient"]
+        grad_increase = yml_conf["gradient_increase"]
 
-    run_compare(init_data, new_data, class_order, log_fname, out_ext, clust_ext, no_retrieval_init, \
-        no_retrieval_new, good_vals, map_vals, labels, gradient, grad_increase, class_mask_gen_func)
+        class_mask_gen_func = get_class_mask_func(yml_conf["class_mask_gen_func"])
+
+        run_compare(init_data, new_data, class_order, log_fname, out_ext, clust_ext, no_retrieval_init, \
+            no_retrieval_new, good_vals, map_vals, labels, gradient, grad_increase, class_mask_gen_func)
 
 
 if __name__ == '__main__':
