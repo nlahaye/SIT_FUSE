@@ -6,6 +6,7 @@ This software may be subject to U.S. export control laws. By accepting this soft
 applicable U.S. export laws and regulations. User has the responsibility to obtain export licenses, or other export authority as may be 
 required before exporting such information to foreign countries or providing access to foreign persons.
 """
+from timeit import default_timer as timer
 import os
 import numpy as np
 import random
@@ -36,8 +37,8 @@ class DBNDatasetConv(DBNDataset):
 
 	def read_data_preprocessed(self, data_filename, indices_filename, transform = None, subset=None):
 
-		self.data_full = np.load(data_filename)
-		self.targets_full = np.load(indices_filename)
+		self.data_full = np.load(data_filename, allow_pickle=True)
+		self.targets_full = np.load(indices_filename, allow_pickle=True)
 
 		self.scale = False
 		self.scaler = None
@@ -54,7 +55,7 @@ class DBNDatasetConv(DBNDataset):
 
 
 
-	def read_and_preprocess_data(self, filenames, read_func, read_func_kwargs, delete_chans, valid_min, valid_max, fill_value = -9999, chan_dim = 0, transform_chans = [], transform_values = [], transform=None, subset=None, tile = False, tile_size = None, tile_step = None, subset_training = -1):
+	def read_and_preprocess_data(self, filenames, read_func, read_func_kwargs, delete_chans, valid_min, valid_max, fill_value = -999999, chan_dim = 0, transform_chans = [], transform_values = [], transform=None, subset=None, tile = False, tile_size = None, tile_step = None, subset_training = -1, stratify_data = None, data_fraction = 1, data_fraction_index = 1):
 		#Scaler info isnt used here, but keeping same interface as DBNDataset
 
                 #TODO Employ stratification
@@ -77,21 +78,30 @@ class DBNDatasetConv(DBNDataset):
 		self.tile = tile
 		self.tile_size = tile_size
 		self.tile_step = tile_step
+		self.stratify_data = stratify_data
 		if self.subset is None:
 			self.subset = 1		
 		self.current_subset = -1
 		self.subset_training = subset_training
 	
+		self.data_fraction = data_fraction
+		self.data_fraction_index = data_fraction_index
 
 		self.__loaddata__()
 
 	def __loaddata__(self):
 		
 		data_local = []
+		strat_local = []
+		dat_begin = []
 		for i in range(0, len(self.filenames)):
-			if (type(self.filenames[i]) == str and os.path.exists(self.filenames[i])) or (type(self.filenames[i]) is list and os.path.exists(self.filenames[i][0])):
+			if (type(self.filenames[i]) == str and os.path.exists(self.filenames[i])) or (type(self.filenames[i]) is list and os.path.exists(self.filenames[i][1])):
 				print(self.filenames[i])
+				strat_data = None
 				dat = self.read_func(self.filenames[i], **self.read_func_kwargs).astype(np.float32)
+				if self.stratify_data is not None and "kmeans" not in self.stratify_data:
+					strat_data = self.stratify_data["reader"](self.stratify_data["filename"][i], \
+						**self.stratify_data["reader_kwargs"])
 				for t in range(len(self.transform_chans)):
 					slc = [slice(None)] * dat.ndim
 					slc[self.chan_dim] = slice(self.transform_chans[t], self.transform_chans[t]+1)
@@ -109,13 +119,37 @@ class DBNDatasetConv(DBNDataset):
 				dat = np.delete(dat, self.delete_chans, self.chan_dim)
 
 				if self.valid_min is not None:
-					dat[np.where(dat < self.valid_min - 0.00000000005)] = -9999
+					dat[np.where(dat < self.valid_min - 0.00000000005)] = -999999
 				if self.valid_max is not None:	
-					dat[np.where(dat > self.valid_max - 0.00000000005)] = -9999
+					dat[np.where(dat > self.valid_max - 0.00000000005)] = -999999
 				if self.fill_value is not None:
-					dat[np.where(dat == self.fill_value)] = -9999
+					dat[np.where(dat == self.fill_value)] = -999999
+				dat[np.where(np.logical_not(np.isfinite(dat)))] = -999999
 				dat = np.moveaxis(dat, self.chan_dim, 0)
+				if self.data_fraction > 1:
+					dat_index_1_1 = self.data_fraction_index * int(dat.shape[1]//self.data_fraction)
+					dat_index_1_2 = (self.data_fraction_index+1) * int(dat.shape[1]//self.data_fraction)
+					#dat_index_2_2 = (self.data_fraction_index+1) * int(dat.shape[2]//self.data_fraction)
+					if self.data_fraction_index == self.data_fraction -1:
+						dat_index_1_2 = dat.shape[1]
+						#dat_index_2_2 = dat.shape[2]
+					#dat_index_2_1 = self.data_fraction_index * int(dat.shape[2]//self.data_fraction)
+					if self.tile:
+						dat_index_1_2 = dat_index_1_2 + self.tile_size[0]
+					dat_begin.append([dat_index_1_1, 0])
+					dat = dat[:,dat_index_1_1:dat_index_1_2, :]
+				else:
+					dat_begin.append([0,0])  
+
 				data_local.append(dat)
+				
+				if strat_data is not None:
+					#TODO Generalize to multi-class
+					strat_data = strat_data.astype(np.int32)
+					strat_data[np.where(strat_data < 0)] = 0
+					strat_data[np.where(strat_data > 0)] = 1
+					strat_local.append(strat_data)
+
 
 		del dat 
 		dim1 = 1
@@ -135,6 +169,7 @@ class DBNDatasetConv(DBNDataset):
 			tile_step_final[self.chan_dim] = data_local[0].shape[self.chan_dim]#*2
 			window_size[self.chan_dim] = data_local[0].shape[self.chan_dim]#*2
 			window_size = tuple(window_size)
+		self.stratify_training = []
 		for r in range(len(data_local)):
 			count = 0
 			last_count = len(self.data)
@@ -142,12 +177,14 @@ class DBNDatasetConv(DBNDataset):
 			#data_local[r] = np.concatenate((sobel(data_local[r], axis=(dim1,dim2)), data_local[r]), axis=self.chan_dim)
 			
 			#TODO - 0 imputation - fix with mean later
-			data_local[r][np.where(data_local[r] <= -9999)] = 0.0	
+			data_local[r][np.where(data_local[r] <= -999999)] = 0.0	
 
 			pixel_padding = (window_size[dim1] - 1) //2
 
 			tgts = np.indices(data_local[r].shape[1:])
-			tgts = tgts[:,pixel_padding:tgts.shape[1] - pixel_padding,pixel_padding:tgts.shape[2] - pixel_padding]
+			tgts[0,:,:] = tgts[0,:,:] + dat_begin[r][0]
+			tgts[1,:,:] = tgts[1,:,:] + dat_begin[r][1]
+			#tgts = tgts[:,pixel_padding:tgts.shape[1] - pixel_padding,pixel_padding:tgts.shape[2] - pixel_padding]
 			tgts = np.concatenate((np.full((1,tgts.shape[1], tgts.shape[2]),r, dtype=np.int16), tgts), axis=0)
 	
 			
@@ -155,18 +192,27 @@ class DBNDatasetConv(DBNDataset):
 				tmp = np.squeeze(view_as_windows(data_local[r], window_size, step=tile_step_final))
 				tmp = tmp.reshape((tmp.shape[0]*tmp.shape[1], tmp.shape[2], tmp.shape[3], tmp.shape[4]))			
 
-				tgts = tgts.reshape((3,tgts.shape[1]*tgts.shape[2])).astype(np.int16)
-				tgts = np.swapaxes(tgts, 0, 1)     
+
+				window_size_tgt = [3,window_size[1],window_size[2]]
+				tile_step_tgt = [3,tile_step_final[1],tile_step_final[2]]
+				print(tgts.shape, tmp.shape, data_local[r].shape, window_size_tgt, tile_step_tgt)
+				tgts2 = np.squeeze(view_as_windows(tgts, window_size_tgt, step=tile_step_tgt))
+				cntr = int(tile_step_final[1]/2)
+				print(tgts2.shape)
+				tgts2 = tgts2[:,:,:,cntr,cntr]
+				tgts2 = tgts2.reshape(tgts2.shape[0]*tgts2.shape[1], tgts2.shape[2])
+				#tgts = tgts.reshape((3,tgts.shape[1]*tgts.shape[2])).astype(np.int16)
+				#tgts = np.swapaxes(tgts, 0, 1)     
 
 
 				if isinstance(self.data, list):
 					self.data = tmp
-					self.targets = tgts
+					self.targets = tgts2
 				else:
 					self.data = np.append(self.data, tmp, axis=0)
-					self.targets = np.append(self.targets, tgts, axis=0)		
+					self.targets = np.append(self.targets, tgts2, axis=0)		
 			else:
-				if(data_local[r].max() > -9999):
+				if(data_local[r].max() > -999999):
 					np.append(self.data,data_local[r], axis = 0)	
 					np.append(self.targets,[r,0,0], axis = 0)			
 				else:
@@ -174,20 +220,35 @@ class DBNDatasetConv(DBNDataset):
 					continue
 			if last_count >= len(self.data):
 				print("ERROR NO DATA RECEIVED FROM", self.filenames[r]) 
+			elif len(strat_local) > 0:
+				pass
 			print("SKIPPED", count, "SAMPLES OUT OF", len(self.data), data_local[r].shape, dim1, dim2, self.chan_dim)
 		print("SHUFFLING", self.data.shape, self.targets.shape)
 		p = np.random.permutation(self.data.shape[0])
 		self.data_full = torch.from_numpy(self.data[p]) #np.array(self.data).astype(np.float32) #float32
 		self.targets_full = torch.from_numpy(self.targets[p])  #np.array(self.targets).astype(np.int16)
+		if len(self.stratify_training) > 0:
+			self.stratify_training = torch.from_numpy(self.stratify_training[p])
+ 
 		del self.data
 		del self.targets
 
 
-		if self.subset_training > 0:
-			self.data_full = self.data_full[:self.subset_training,:,:,:]
-			self.targets_full = self.data_full[:self.subset_training,:,:]
+		#Subset data for training and/or stratify
+		if self.subset_training > 0 or (self.stratify_data and self.stratify_data["kmeans"]):
+			if len(self.stratify_training) > 0:
+				self.stratify_training = np.array(self.stratify_training)
+				self.stratify_training = self.stratify_training.reshape((-1))
+				self.__stratify_training__()
+			elif self.stratify_data and self.stratify_data["kmeans"]:
+				self.__stratify_k_means__(flatten=True)
+			else:
+				self.data_full = self.data_full[:self.subset_training,:,:,:]
+				self.targets_full = self.data_full[:self.subset_training,:,:]
 
 		self.chan_dim = 1
+		self.mean_per_channel = []
+		self.std_per_channel = []
 		if self.transform == None:
 			mean_per_channel = []
 			std_per_channel = []
@@ -196,8 +257,8 @@ class DBNDatasetConv(DBNDataset):
 			for chan in range(0, self.data_full.shape[self.chan_dim]):
 				#TODO slice to make more generic
 				subd = self.data_full[:,chan,:,:]
-				inds = np.where(subd <= -9999)
-				inds2 = np.where(subd > -9999)
+				inds = np.where(subd <= -999999)
+				inds2 = np.where(subd > -999999)
 				mean_per_channel.append(np.squeeze(subd[inds2].mean()))
 				std_per_channel.append(np.squeeze(subd[inds2].std()))
 				subd[inds] = mean_per_channel[chan]
@@ -207,7 +268,9 @@ class DBNDatasetConv(DBNDataset):
 				#transforms.ToTensor(),
 				transforms.Normalize(mean_per_channel, std_per_channel)
 			)  
-
+                       
+			self.mean_per_channel = mean_per_channel
+			self.std_per_channel = std_per_channel
 			self.transform = transform_norm 
 
 		self.data_full = self.transform(self.data_full)
@@ -215,6 +278,29 @@ class DBNDatasetConv(DBNDataset):
 
 		self.next_subset()
  
+
+	def __len__(self):
+		"""
+		Overriding of Dataset internal function __len__.
+        
+		:return: Number of samples.
+		"""
+		return len(self.data)
+
+	def __getitem__(self, idx):
+		"""
+		Overriding of Dataset internal function __getitem__.
+		
+		:param idx: Index of sample to be returned.
+
+		:return: Sample and associated idx.
+		"""
+		if torch.is_tensor(idx):
+			idx = idx.tolist()
+
+		sample = self.data[idx]
+
+		return sample, self.targets[idx]
 
 
  
@@ -256,6 +342,9 @@ def main(yml_fpath):
 
     scaler_fname = os.path.join(out_dir, "dbn_scaler.pkl")
     scaler_type = yml_conf["scaler"]["name"]
+
+    use_gpu_pre = subset_training = yml_conf["dbn"]["training"]["use_gpu_preprocessing"]
+
     scaler, scaler_train = get_scaler(scaler_type, cuda = use_gpu_pre)
 
     subset_training = yml_conf["dbn"]["subset_training"]
@@ -264,19 +353,19 @@ def main(yml_fpath):
 
     read_func = get_read_func(data_reader)
 
-    #stratify_data = None
-    #if "stratify_data" in yml_conf["dbn"]["training"]:
-    #    stratify_data = yml_conf["dbn"]["training"]["stratify_data"]
-
-    #if stratify_data is not None:
-    #    strat_read_func = get_read_func(stratify_data["reader"])
-    #    stratify_data["reader"] = strat_read_func
+    stratify_data = None
+    if "stratify_data" in yml_conf["dbn"]["training"]:
+        stratify_data = yml_conf["dbn"]["training"]["stratify_data"]
+ 
+    if stratify_data is not None and "kmeans" not in stratify_data:
+        strat_read_func = get_read_func(stratify_data["reader"])
+        stratify_data["reader"] = strat_read_func
 
     x2 = DBNDatasetConv()
     x2.read_and_preprocess_data(data_train, read_func, data_reader_kwargs, delete_chans=delete_chans, \
             valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
             transform_values=transform_values, transform=None, subset=subset_count, tile=tile, tile_size=tile_size, tile_step=tile_step,
-            subset_training = subset_training)
+            subset_training = subset_training, stratify_data=stratify_data)
 
     if x2.train_indices is not None:
         np.save(os.path.join(out_dir, "train_indices"), x2.train_indices)
@@ -285,7 +374,8 @@ def main(yml_fpath):
     np.save(os.path.join(out_dir, "train_data.indices"), x2.targets_full)
     np.save(os.path.join(out_dir, "train_data"), x2.data_full)
 
-    torch.save(x2.transform.state_dict(), os.path.join(out_dir, "dbn_data_transform.ckpt"))
+    state_dict = {"mean_per_channel" : x2.mean_per_channel, "std_per_channel" : x2.std_per_channel}
+    torch.save(state_dict, os.path.join(out_dir, "dbn_data_transform.ckpt"))
 
 
 

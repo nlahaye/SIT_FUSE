@@ -6,8 +6,8 @@ This software may be subject to U.S. export control laws. By accepting this soft
 applicable U.S. export laws and regulations. User has the responsibility to obtain export licenses, or other export authority as may be 
 required before exporting such information to foreign countries or providing access to foreign persons.
 """
+from timeit import default_timer as timer
 from osgeo import osr, gdal
-
 import os
 import numpy as np
 import random
@@ -30,6 +30,7 @@ from joblib import load, dump
 import torch
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
 from sklearn.utils import shuffle
+from sklearn.cluster import MiniBatchKMeans
 
 from skimage.filters import sobel
 from skimage.util import view_as_windows
@@ -88,8 +89,8 @@ class DBNDataset(torch.utils.data.Dataset):
 		"""		
 
 		#Load in npy files and set class attributes
-		self.data_full = np.load(data_filename)
-		self.targets_full = np.load(indices_filename)
+		self.data_full = np.load(data_filename, allow_pickle=True)
+		self.targets_full = np.load(indices_filename, allow_pickle=True)
 		self.increment = 0
 
 		self.train_indices = None
@@ -173,11 +174,13 @@ class DBNDataset(torch.utils.data.Dataset):
 		self.increment = 0
 		for i in range(0, len(self.filenames)):
 			#Read data in one file at a time
-			if (type(self.filenames[i]) == str and os.path.exists(self.filenames[i])) or (type(self.filenames[i]) is list and os.path.exists(self.filenames[i][0])):
 
 				print(self.filenames[i])
 				#Use read function passed in to get data into numpy ndarray
-				dat = self.read_func(self.filenames[i], **self.read_func_kwargs).astype(np.float64)
+				dat = self.read_func(self.filenames[i], **self.read_func_kwargs)
+				if dat is None:
+					continue
+				dat = dat.astype(np.float32)
 				print(dat.shape)
 				strat_data = None
 				#If single channel, 2D data, transform into 3D (setting 3rd dimension to 1)
@@ -185,7 +188,7 @@ class DBNDataset(torch.utils.data.Dataset):
 					dat = np.expand_dims(dat, self.chan_dim)
 				self.increment = dat.ndim - 3
 				#Setup data to use for stratification
-				if self.stratify_data is not None:
+				if self.stratify_data is not None and "kmeans" not in self.stratify_data:
 					strat_data = self.stratify_data["reader"](self.stratify_data["filename"][i], \
 						**self.stratify_data["reader_kwargs"])	
 				#Apply channel-specific transformations, if any. 		
@@ -216,7 +219,6 @@ class DBNDataset(torch.utils.data.Dataset):
 					dat[np.where(dat == self.fill_value)] = -999999
 				#Move specified channel dimension to 3rd position for uniformity
 				dat = np.moveaxis(dat, self.chan_dim+self.increment, 2+self.increment)
-				print("HERE", dat.shape, len(data_local))                                 
 				#Append data and stratification data from current files to full set
 				if dat.ndim == 3:
 					data_local.append(dat)
@@ -296,7 +298,10 @@ class DBNDataset(torch.utils.data.Dataset):
 				print(strat_local[r].shape)
 				sub_data_strat = np.squeeze(strat_local[r].flatten()) 
 				self.stratify_training.append(sub_data_strat)
-					   
+				
+			print(sub_data_total.shape)
+			if sub_data_total.shape[0] == 0:
+				continue	   
 			#Append to final data structure if any valid samples
 			if len(self.data) == 0: 
 				self.data.append(sub_data_total)
@@ -305,11 +310,13 @@ class DBNDataset(torch.utils.data.Dataset):
 				self.data[0] = np.concatenate((self.data[0],sub_data_total),axis=0)
 				self.targets[0] = np.concatenate((self.targets[0],tgts),axis=1)
 
+		self.data_full = None
+		if len(self.targets) == 0 or len(self.targets[0].shape) == 0 or self.targets[0].shape[0] == 0:
+			return
+		if len(self.data) == 0 or len(self.data[0].shape) == 0 or self.data[0].shape[0] == 0:
+			return
 		#Format as downstream processes expect
 		self.targets[0] = np.swapaxes(self.targets[0], 0, 1)
-		self.data_full = None
-		if self.data[0].shape[0] == 0:
-			return
 		print(self.data[0].shape, self.targets[0].shape)
 		#Shuffle samples, indices, and (if applicable) stratification data together
 		if len(self.stratify_training) > 0:
@@ -328,11 +335,13 @@ class DBNDataset(torch.utils.data.Dataset):
 		self.targets_full = np.copy(self.targets).astype(np.int16)
 
 		#Subset data for training and/or stratify
-		if self.training and self.subset_training > 0:
+		if self.training and ((self.subset_training > 0 or (self.stratify_data and self.stratify_data["kmeans"])) and self.subset_training < self.data_full.shape[0]):
 			if len(self.stratify_training) > 0:
 				self.stratify_training = np.array(self.stratify_training)
 				self.stratify_training = self.stratify_training.reshape((-1))
 				self.__stratify_training__()
+			elif self.stratify_data and self.stratify_data["kmeans"]:
+				self.__stratify_k_means__()                        
 			else:
 				self.data_full = self.data_full[:self.subset_training,:]
 				self.targets_full = self.targets_full[:self.subset_training,:]
@@ -375,10 +384,39 @@ class DBNDataset(torch.utils.data.Dataset):
 		"""
 		return self.current_subset > 0
 
-		
+
+
+	def __stratify_k_means__(self, flatten=False):
+		"""
+		Internal function to implement stratification via simple k-means. Shown to be better than plain random selection or human selection.
+		"""
+       		
+		print("Running Mini-Batch K-Means Stratification") 
+		start = timer()
+		if flatten:
+			kmeans = MiniBatchKMeans(n_clusters=20,
+                                random_state=0,
+                                max_iter=50,
+                                n_init="auto").fit(torch.flatten(self.data_full, start_dim=1).numpy())
+		else:
+			kmeans = MiniBatchKMeans(n_clusters=20,
+				random_state=0,
+				max_iter=50,
+				n_init="auto").fit(self.data_full)
+
+		end = timer()
+		print("KMEANS RUNTIME", end-start)
+		if flatten:
+			self.stratify_training = kmeans.predict(torch.flatten(self.data_full, start_dim=1).numpy())
+		else:
+			self.stratify_training = kmeans.predict(self.data_full)
+		self.__stratify_training__()
+ 
+
+
 	def __stratify_training__(self):
 		"""
-		Internal function to implement stratification. Currently under development and should not be used.
+		Internal function to implement stratification.
 		"""
 
 		num_train_exs = self.subset_training
@@ -391,6 +429,7 @@ class DBNDataset(torch.utils.data.Dataset):
  
 
 		#TODO Allow for oversampling, actual stratification, and only selction of a subset of labels
+		print(dataset_size, num_train_exs, self.data_full.shape, self.targets_full.shape, self.stratify_training)
 		for mask_val in range(self.stratify_training.max()):
 			type_inds.append(np.where(self.stratify_training == mask_val)[0])
 			percentage_of_dataset = len(type_inds[mask_val]) / dataset_size
@@ -450,7 +489,8 @@ class DBNDataset(torch.utils.data.Dataset):
 			yy,xx = np.meshgrid(np.linspace(0,subd.shape[1]-1,subd.shape[1]).astype(np.int32), np.linspace(0,subd.shape[0]-1,subd.shape[0]).astype(np.int32))
 			indices = np.where(subd[xx.ravel(),yy.ravel(),mn.ravel()].reshape(shape[0],shape[1],1) > -999999)
 			subd = subd[indices[0], indices[1],:].reshape(-1, shape[self.chan_dim-self.increment])
-			self.scaler.partial_fit(subd)
+			if subd.shape[0] > 0:
+				self.scaler.partial_fit(subd)
  
 	def __len__(self):
 		"""
@@ -460,25 +500,26 @@ class DBNDataset(torch.utils.data.Dataset):
 		"""
 		return len(self.data)
 
-	def __getitem__(self, index):
+	def __getitem__(self, idx):
 		"""
 		Overriding of Dataset internal function __getitem__.
 	
-		:param index: Index of sample to be returned.
+		:param idx: Index of sample to be returned.
 
-		:return: Sample and associated index.
+		:return: Sample and associated idx.
 		"""
-		if torch.is_tensor(index):
-			index = index.tolist()
+		if torch.is_tensor(idx):
+			idx = idx.tolist()
 
-		sample = self.data[index]
+		sample = self.data[idx]
 		if self.transform is not None:
+			print("TRANSFORMING")
 			sample = self.transform(sample)
 
-		#sample = sample * 1e10
+		#sample = sample * 1e10 
 		#sample = sample.astype(np.int32)
 
-		return sample, self.targets[index]
+		return sample, self.targets[idx]
 
 
 
@@ -494,7 +535,6 @@ def main(yml_fpath):
 	/data : Sub-dictionary that contains parameters about dataset.
 	/data/files_train : List of files tp be used for training.
 	/data/pixel_padding : Number of pixels to extend per-pixel/per-sample 'neighborhood' away from center sample of focus. Can be 0.
-	/data/number_channels : Number of channels to be used from dataset.
 	/data/reader_type : Name of reader key (see utils documentation) to get the appropriate data reader function.
 	/data/reader_kwargs : Kwargs for reader function.
 	/data/fill_value : Fill value to use for unusable pixels/samples.
@@ -515,7 +555,6 @@ def main(yml_fpath):
 	data_train = yml_conf["data"]["files_train"]
 
 	pixel_padding = yml_conf["data"]["pixel_padding"]
-	number_channel = yml_conf["data"]["number_channels"]
 	data_reader =  yml_conf["data"]["reader_type"]
 	data_reader_kwargs = yml_conf["data"]["reader_kwargs"]
 	fill = yml_conf["data"]["fill_value"]
@@ -553,7 +592,7 @@ def main(yml_fpath):
 	if "stratify_data" in yml_conf["dbn"]["training"]:
 		stratify_data = yml_conf["dbn"]["training"]["stratify_data"]
 
-	if stratify_data is not None:
+	if stratify_data is not None and "kmeans" not in stratify_data:
 		strat_read_func = get_read_func(stratify_data["reader"])
 		stratify_data["reader"] = strat_read_func
 
