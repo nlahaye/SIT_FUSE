@@ -10,10 +10,10 @@ from pytorch_lightning.loggers import WandbLogger
 
 from learnergy.models.deep import DBN
 
-from ..models.encoders.ijepa_pl import IJEPA_PL
-from ..models.encoders.dbn_pl import DBN_PL
-from ..datasets.sf_dataset_module import SFDataModule
-from ..utils import read_yaml
+from sit_fuse.models.encoders.ijepa_pl import IJEPA_PL
+from sit_fuse.models.encoders.dbn_pl import DBN_PL
+from sit_fuse.datasets.sf_dataset_module import SFDataModule
+from sit_fuse.utils import read_yaml
 
 import argparse
 

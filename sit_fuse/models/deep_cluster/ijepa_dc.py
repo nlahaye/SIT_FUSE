@@ -2,15 +2,6 @@ import numpy as np
 import pytorch_lightning as pl
 import torch.nn as nn
 import torch
-from torch.utils.data import Dataset
-from torch.utils.data import DataLoader
-from pytorch_lightning.callbacks import (
-    ModelCheckpoint,
-    LearningRateMonitor,
-    ModelSummary,
-)
-from pytorch_lightning.loggers import WandbLogger
-from ijepa_model import IJEPA_base
 
 from sit_fuse.models.encoders.ijepa_pl import IJEPA_PL
 from sit_fuse.losses.iid import IID_loss

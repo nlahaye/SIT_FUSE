@@ -2,17 +2,9 @@ import numpy as np
 import pytorch_lightning as pl
 import torch.nn as nn
 import torch
-from torch.utils.data import Dataset
-from torch.utils.data import DataLoader
-from pytorch_lightning.callbacks import (
-    ModelCheckpoint,
-    LearningRateMonitor,
-    ModelSummary,
-)
-from pytorch_lightning.loggers import WandbLogger
 
 from sit_fuse.losses.iid import IID_loss
-from sit_fuse.models.deep_cluster.multi_prototypes import DeepConvMultiPrototypes
+from sit_fuse.models.deep_cluster.multi_prototypes import DeepMultiPrototypes, DeepConvMultiPrototypes
 import numpy as np
 
 class DeepCluster(pl.LightningModule):

@@ -2,21 +2,11 @@ import numpy as np
 import pytorch_lightning as pl
 import torch.nn as nn
 import torch
-from torch.utils.data import Dataset, TensorDataset
-from torch.utils.data import DataLoader
-from pytorch_lightning.callbacks import (
-    ModelCheckpoint,
-    LearningRateMonitor,
-    ModelSummary,
-)
-
-from pytorch_lightning.strategies import DDPStrategy
-from pytorch_lightning.loggers import WandbLogger
 
 from learnergy.models.deep import DBN
 
 import argparse
-from ...utils import numpy_to_torch, read_yaml, get_read_func, get_scaler
+from sit_fuse.utils import read_yaml
 
 '''
 pytorch lightning model
@@ -126,57 +116,3 @@ class DBN_PL(pl.LightningModule):
         return torch.optim.SGD(self.model.parameters(), lr=self.lr, momentum=self.momentum, weight_decay=self.decay, nesterov=self.nesterov_accel)
 
 
-def main(yml_fpath):
-
-    yml_conf = read_yaml(yml_fpath)
-
-    dataset = D2VDataModule(dataset_path='data')
-    dataset.setup()
-
-    model_type = tuple(yml_conf["dbn"]["params"]["model_type"])
-    dbn_arch = tuple(yml_conf["dbn"]["params"]["dbn_arch"])
-    gibbs_steps = tuple(yml_conf["dbn"]["params"]["gibbs_steps"])
-    normalize_learnergy = tuple(yml_conf["dbn"]["params"]["normalize_learnergy"])
-    batch_normalize = tuple(yml_conf["dbn"]["params"]["batch_normalize"])
- 
-    learning_rate = tuple(yml_conf["dbn"]["params"]["learning_rate"])
-    momentum = tuple(yml_conf["dbn"]["params"]["momentum"])
-    decay = tuple(yml_conf["dbn"]["params"]["decay"])
-    nesterov_accel = tuple(yml_conf["dbn"]["params"]["nesterov_accel"])
-    temp = tuple(yml_conf["dbn"]["params"]["temp"]) 
-
-    dbn = DBN(model=model_type, n_visible=dataset.n_visible, n_hidden=dbn_arch, steps=gibbs_steps,
-        learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=True)
-    for i, model in enumerate(dbn.models):
-        current_rbm = model
-        previous_layers = None
-        if i > 0:
-            previous_layers = dbn.models[:i]
-
-        model = DBN_PL(current_rbm, previous_layers, learning_rate[i], momentum[i], nesterov_accel[i], decay[i])
-    
-        lr_monitor = LearningRateMonitor(logging_interval="step")
-        model_summary = ModelSummary(max_depth=2)
-
-        wandb_logger = WandbLogger(project="SIT-FUSE", log_model=True, save_dir = "/home/nlahaye/SIT_FUSE_DEV/wandb_dbn/")
- 
-        trainer = pl.Trainer(
-            accelerator='gpu',
-            devices=1,
-            strategy=DDPStrategy(find_unused_parameters=True),
-            precision="16-mixed",
-            max_epochs=100,
-            callbacks=[lr_monitor, model_summary],
-            gradient_clip_val=.1,
-            logger=wandb_logger
-        )
-
-        trainer.fit(model, dataset)
-
-
-
-if __name__ == '__main__': 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-y", "--yaml", help="YAML file for DBN and output config.")
-    args = parser.parse_args()
-    main(args.yaml)
