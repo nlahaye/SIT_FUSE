@@ -103,7 +103,7 @@ dbn:
 cluster:
  training:
   batch_size: 1000
-  cluster_epochs: 30 #[10]#[8] #, 1, 1] #, 5] #, 10]
+  cluster_epochs: 100 #[10]#[8] #, 1, 1] #, 5] #, 10]
   cluster_gauss_noise_stdev:  [0.01]
   cluster_lambda: 1.0
 

@@ -52,7 +52,7 @@ class IJEPA_DC(pl.LightningModule):
     
     def training_step(self, batch, batch_idx):
         x = batch
-        y = self.pretrained_model.model(x).flatten(dim=1)
+        y = self.pretrained_model.model(x).flatten(start_dim=1)
         y2 = y.clone() + torch.from_numpy(self.rng.normal(0.0, 0.01, \
                                 y.shape[1]*y.shape[0]).reshape(y.shape[0],\
                                 y.shape[1])).type(y.dtype).to(y.device)
@@ -64,7 +64,7 @@ class IJEPA_DC(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         x = batch
-        y = self.pretrained_model.model(x).flatten(dim=1)
+        y = self.pretrained_model.model(x).flatten(start_dim=1)
         y2 = y.clone() + torch.from_numpy(self.rng.normal(0.0, 0.01, \
                                 y.shape[1]*y.shape[0]).reshape(y.shape[0],\
                                 y.shape[1])).type(y.dtype).to(y.device)

@@ -89,6 +89,8 @@ def dc_DBN(yml_conf, dataset):
 def dc_IJEPA(yml_conf, dataset):
 
     model = IJEPA_DC(pretrained_model_path="/data/nlahaye/output/Learnergy/IJEPA_TEST_FULL/ijepa.ckpt", num_classes=800)
+    for param in model.pretrained_model.parameters():
+        param.requires_grad = False
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
@@ -97,7 +99,7 @@ def dc_IJEPA(yml_conf, dataset):
 
     trainer = pl.Trainer(
         accelerator='gpu',
-        devices=1,
+        devices=2,
         strategy=DDPStrategy(find_unused_parameters=True),
         precision="16-mixed",
         max_epochs=50,
