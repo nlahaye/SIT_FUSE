@@ -1,32 +1,43 @@
+from torch.utils.data import DataLoader, Dataset
 import pytorch_lightning as pl
 import torch
-from torch.utils.data import DataLoader
 
-from .simple_dataset import SimpleDataset
-from .dataset_utils import get_train_dataset_sf
-
-class SFDataModule(pl.LightningDataModule):
+class SimpleDataset(Dataset):
     def __init__(self,
-                 yml_conf,
+                 data,
+                 ):
+        super().__init__()
+        self.data = data
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index):
+        return self.data[index]
+
+
+class SimpleDataModule(pl.LightningDataModule):
+    def __init__(self,
+                 dataset_path,
                  batch_size=16,
-                 num_workers=10,
+                 num_workers=4,
                  pin_memory=True,
                  shuffle=True,
                  val_percent=0.1
                  ):
         super().__init__()
 
+        self.dataset_path = dataset_path
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.shuffle = shuffle
-        self.val_percent = val_percent
-        self.yml_conf = yml_conf
 
     def setup(self, stage=None):
-        dataset = get_train_dataset_sf(yml_conf)        
-        train_max = int(data.data_full.shape[0]*(1.0-self.val_percent)
-        self.train_dataset = SimpleDataset(torch.from_numpy(data.data_full[:train_max]))
-        self.val_dataset = SimpleDataset(torch.from_numpy(data.data_full[train_max:]))
+        data = np.load(dataset_path)
+        train_max = int(data.shape[0]*(1.0-val_percent))
+        print(train_max, data.shape)
+        self.train_dataset = SimpleDataset(torch.from_numpy(data[:train_max]))
+        self.val_dataset = SimpleDataset(torch.from_numpy(data[train_max:]))
 
     def train_dataloader(self):
         return DataLoader(

@@ -1,5 +1,6 @@
 
 data:
+ val_percent: 0.1
  num_loader_workers: 10
  scale_data: True
  pixel_padding: 1
@@ -62,6 +63,10 @@ output:
  model: "dbn"
 
 
+encoder_type: "dbn"
+encoder:
+ tiled: False
+ tune_scaler: False
 dbn:
  conv: False
  subset_training: 2000000
@@ -70,7 +75,6 @@ dbn:
  overwrite_model: False
  tune_clust: False
  tune_dbn: False
- tune_scaler: False
  params:
   model_type: ["gaussian_selu", "gaussian_selu"] 
   dbn_arch: [2000, 1000] #[250, 500, 2000] #, 2000]
@@ -91,7 +95,10 @@ dbn:
   device_ids: ["2"]
   batch_size: 1000
   epochs: [10, 10] #[10]#[8] #, 1, 1] #, 5] #, 10]
-  cluster_batch_size: 1000
+
+cluster:
+ training:
+  batch_size: 1000
   cluster_epochs: 30 #[10]#[8] #, 1, 1] #, 5] #, 10]
   cluster_gauss_noise_stdev:  [0.01]
   cluster_lambda: 1.0

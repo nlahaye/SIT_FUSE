@@ -21,9 +21,9 @@ sys.setrecursionlimit(4500)
 #ML imports
 import torch
 from torchvision import transforms
-from sf_datasets import SFDataset
+from sit_fuse.datasets.sf_dataset import SFDataset
 
-from utils import numpy_to_torch, read_yaml, get_read_func, get_scaler
+from sit_fuse.utils import numpy_to_torch, read_yaml, get_read_func, get_scaler
 
 import argparse
 

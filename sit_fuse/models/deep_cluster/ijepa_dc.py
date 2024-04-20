@@ -12,10 +12,10 @@ from pytorch_lightning.callbacks import (
 from pytorch_lightning.loggers import WandbLogger
 from ijepa_model import IJEPA_base
 
-from ..encoders.ijepa_pl import IJEPA_PL
+from sit_fuse.models.encoders.ijepa_pl import IJEPA_PL
+from sit_fuse.losses.iid import IID_loss
+from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes
 
-from losses.iid import IID_loss
-from models.deep_cluster.multi_prototypes import MultiPrototypes
 import numpy as np
 
 

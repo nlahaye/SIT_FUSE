@@ -11,8 +11,8 @@ from pytorch_lightning.callbacks import (
 )
 from pytorch_lightning.loggers import WandbLogger
 
-from losses.iid import IID_loss
-from models.deep_cluster.multi_prototypes import DeepConvMultiPrototypes
+from sit_fuse.losses.iid import IID_loss
+from sit_fuse.models.deep_cluster.multi_prototypes import DeepConvMultiPrototypes
 import numpy as np
 
 class DeepCluster(pl.LightningModule):

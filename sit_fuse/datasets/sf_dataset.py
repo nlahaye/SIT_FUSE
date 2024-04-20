@@ -21,12 +21,7 @@ import argparse
 import sys
 sys.setrecursionlimit(4500)
 
-# directory reach
-directory = path.path(__file__).abspath()
-# setting path
-sys.path.append(directory.parent.parent)
-
-from utils import read_yaml, get_read_func, get_scaler
+from sit_fuse.utils import read_yaml, get_read_func, get_scaler
 
 import pickle
 from joblib import load, dump
@@ -71,6 +66,8 @@ class SFDataset(torch.utils.data.Dataset):
 		if scaler is not None:
 			self.scale = True
 		
+		self.data_full = self.data
+		self.targets_full = self.targets
 
 	def read_data_preprocessed(self, data_filename, indices_filename, scaler = None):
 		"""
@@ -92,6 +89,8 @@ class SFDataset(torch.utils.data.Dataset):
 		self.transform = None
 		if scaler is not None:
 			self.scale = True
+		self.data_full = self.data
+		self.targets_full = self.targets
 
 
 	def read_and_preprocess_data(self, filenames, read_func, read_func_kwargs, pixel_padding, delete_chans, valid_min, valid_max, fill_value = -999999, chan_dim = 0, transform_chans = [], transform_values = [], scaler = None, scale=False, transform=None, train_scaler = False, subset_training = -1, stratify_data = None):
@@ -329,8 +328,8 @@ class SFDataset(torch.utils.data.Dataset):
 				self.targets_full = self.targets_full[:self.subset_training,:]
 		del self.data
 		del self.targets
-                self.data = self.data_full
-                self.targets = self.targets_full
+		self.data = self.data_full
+		self.targets = self.targets_full
 
 		print("STATS", self.data.min(), self.data.max(), self.data.mean(), self.data.std())
 

@@ -8,10 +8,15 @@ from pytorch_lightning.callbacks import (
 from pytorch_lightning.strategies import DDPStrategy
 from pytorch_lightning.loggers import WandbLogger
 
-from ..models.deep_cluster.dc import DeepCluster
-from ..models.deep_cluster.ijepa_dc import IJEPA_DC
-from ..models.deep_cluster.dbn_dc import DBN_DC
-from ..datasets.sf_dataset_module import SFDataModule
+from learnergy.models.deep import DBN
+
+from sit_fuse.models.deep_cluster.dc import DeepCluster
+from sit_fuse.models.deep_cluster.ijepa_dc import IJEPA_DC
+from sit_fuse.models.deep_cluster.dbn_dc import DBN_DC
+from sit_fuse.datasets.sf_dataset_module import SFDataModule
+from sit_fuse.utils import read_yaml
+
+import argparse
 
 def train_dc_no_pt(yml_conf, dataset):
 
@@ -35,7 +40,7 @@ def train_dc_no_pt(yml_conf, dataset):
     trainer.fit(model, dataset)
 
 
-def dc_dbn(yml_conf, dataset):
+def dc_DBN(yml_conf, dataset):
 
     dataset.setup()
 
@@ -64,7 +69,7 @@ def dc_dbn(yml_conf, dataset):
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
 
-    wandb_logger = WandbLogger(project="SIT-FUSE", log_model=True, save_dir = "/home/nlahaye/SIT_FUSE_DEV/wandb_dbn/")
+    wandb_logger = WandbLogger(project="SIT-FUSE", log_model=True, save_dir = "/home/nlahaye/SIT_FUSE_DEV/wandb_dbn_finetune/")
 
     trainer = pl.Trainer(
             accelerator='gpu',
@@ -111,7 +116,7 @@ def main(yml_fpath):
     val_percent = int(yml_conf["data"]["val_percent"])
     batch_size = yml_conf["cluster"]["training"]["batch_size"]
 
-    dataset = SFDataModule(yml_conf, batch_size, num_workers, val_percent=val_percent)
+    dataset = SFDataModule(yml_conf, batch_size, num_loader_workers, val_percent=val_percent)
 
     if "encoder_type" in yml_conf:
         if yml_conf["encoder_type"] == "dbn":

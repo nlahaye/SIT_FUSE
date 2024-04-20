@@ -11,38 +11,40 @@ from pytorch_lightning.callbacks import (
 )
 from pytorch_lightning.loggers import WandbLogger
 
-from ..encoders.dbn_pl import DBN_PL
+from sit_fuse.models.encoders.dbn_pl import DBN_PL
 
-from losses.iid import IID_loss
-from models.deep_cluster.multi_prototypes import MultiPrototypes
+from sit_fuse.losses.iid import IID_loss
+from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes
 import numpy as np
 
 
 class DBN_DC(pl.LightningModule):
     #take pretrained model path, number of classes, learning rate, weight decay, and drop path as input
-    def __init__(self, dbn, num_classes, lr=1e-3, weight_decay=0):
+    def __init__(self, pretrained_model, num_classes, lr=1e-3, weight_decay=0):
 
         super().__init__()
-        self.save_hyperparameters()
+        self.save_hyperparameters(ignore=['pretrained_model'])
 
         #set parameters
         self.lr = lr
         self.weight_decay = weight_decay
 
-        self.mlp_head =  MultiPrototypes(dbn.models[-1].n_hidden, 800, 1)
+        self.pretrained_model = pretrained_model
+
+        self.mlp_head =  MultiPrototypes(self.pretrained_model.models[-1].n_hidden, 800, 1)
 
         #define loss
         self.criterion = IID_loss
         self.rng = np.random.default_rng(None)
  
     def forward(self, x):
-        x = self.pretrained_model.model(x)
+        x = self.pretrained_model(x)
         x = self.mlp_head(x)[0] #pass through mlp head
         return x
     
     def training_step(self, batch, batch_idx):
         x = batch
-        y = self.pretrained_model.model(x)
+        y = self.pretrained_model(x)
         y2 = y.clone() + torch.from_numpy(self.rng.normal(0.0, 0.01, \
                                 y.shape[1]*y.shape[0]).reshape(y.shape[0],\
                                 y.shape[1])).type(y.dtype).to(y.device)
@@ -54,7 +56,7 @@ class DBN_DC(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         x = batch
-        y = self.pretrained_model.model(x)
+        y = self.pretrained_model(x)
         y2 = y.clone() + torch.from_numpy(self.rng.normal(0.0, 0.01, \
                                 y.shape[1]*y.shape[0]).reshape(y.shape[0],\
                                 y.shape[1])).type(y.dtype).to(y.device)

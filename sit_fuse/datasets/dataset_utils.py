@@ -20,9 +20,9 @@ from torchvision import transforms
 from joblib import dump, load
 
 #Data
-from sf_dataset import SFDataset
-from sf_dataset_conv import SFDatasetConv
-from utils import get_read_func, get_scaler
+from sit_fuse.datasets.sf_dataset import SFDataset
+from sit_fuse.datasets.sf_dataset_conv import SFDatasetConv
+from sit_fuse.utils import get_read_func, get_scaler
 
 
 #Serialization
@@ -131,8 +131,8 @@ def get_train_dataset_sf(yml_conf):
     if hasattr(data, "scaler") and data.scaler is not None and not os.path.exists(os.path.join(out_dir, "encoder_scaler.pkl")):
         with open(os.path.join(out_dir, "encoder_scaler.pkl"), "wb") as f:
             dump(data.scaler, f, True, pickle.HIGHEST_PROTOCOL)
-        else:
-            data.scaler = None
+    else:
+        data.scaler = None
 
     return data    
 
@@ -197,7 +197,7 @@ def get_prediction_dataset(yml_conf, fname):
     fbase = fname
     while isinstance(fbase, list):
         fbase = fbase[0]
-    fbase = os.path.base`name(fbase)
+    fbase = os.path.basename(fbase)
     
     fname_begin = os.path.basename(fbase) + ".clust"
     if not conv:
@@ -211,7 +211,7 @@ def get_prediction_dataset(yml_conf, fname):
             fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, transform = transform, \
             subset=output_subset_count, tile=tile, tile_size=tile_size, tile_step=tile_step)
 
-    return data
+    return data, fname_begin
 
 
 

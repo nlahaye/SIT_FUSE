@@ -24,7 +24,7 @@ from pprint import pprint
 import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
-from CMAP import CMAP, CMAP_COLORS
+from sit_fuse.CMAP import CMAP, CMAP_COLORS
 from glob import glob
 from scipy.interpolate import griddata
 from pyhdf import SD
@@ -37,7 +37,7 @@ ocean_basins_50 =  regionmask.defined_regions.natural_earth_v5_0_0.ocean_basins_
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
 from dask_ml.preprocessing import StandardScaler as DaskStandardScaler
 
-from preprocessing.misc_utils import lee_filter
+from sit_fuse.preprocessing.misc_utils import lee_filter
 
 def torch_to_numpy(trch):
     dat = trch.numpy()
