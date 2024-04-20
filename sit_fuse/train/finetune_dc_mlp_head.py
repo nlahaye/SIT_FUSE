@@ -93,11 +93,13 @@ def dc_IJEPA(yml_conf, dataset):
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
 
-    wandb_logger = WandbLogger(project="SIT-FUSE", log_model=True, save_dir = "/home/nlahaye/SIT_FUSE_DEV/wandb_finetune_full/", id='jbf808i6',resume='must')
+    wandb_logger = WandbLogger(project="SIT-FUSE", log_model=True, save_dir = "/home/nlahaye/SIT_FUSE_DEV/wandb_finetune_ijepa_small_full/")
 
     trainer = pl.Trainer(
         accelerator='gpu',
-        precision=16,
+        devices=1,
+        strategy=DDPStrategy(find_unused_parameters=True),
+        precision="16-mixed",
         max_epochs=50,
         callbacks=[lr_monitor, model_summary],
         gradient_clip_val=.1,
@@ -113,7 +115,7 @@ def main(yml_fpath):
     yml_conf = read_yaml(yml_fpath)
 
     num_loader_workers = int(yml_conf["data"]["num_loader_workers"])
-    val_percent = int(yml_conf["data"]["val_percent"])
+    val_percent = float(yml_conf["data"]["val_percent"])
     batch_size = yml_conf["cluster"]["training"]["batch_size"]
 
     dataset = SFDataModule(yml_conf, batch_size, num_loader_workers, val_percent=val_percent)

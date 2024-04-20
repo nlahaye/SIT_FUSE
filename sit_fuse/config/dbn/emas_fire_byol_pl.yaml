@@ -53,7 +53,7 @@ scaler:
  name: "standard" 
 
 output:
- out_dir: "/data/nlahaye/output/Learnergy/DBN_eMAS_FULL_STRAT_MULTI_LAYER_PL/"
+ out_dir: "/data/nlahaye/output/Learnergy/eMAS_BYOL_PL/"
  training_output: "output.data"
  training_mse: "rec_mse.data"
  testing_output: "output_test.data"
@@ -63,9 +63,9 @@ output:
  model: "dbn"
 
 
-encoder_type: "dbn"
+encoder_type: "byol"
 encoder:
- tiled: False
+ tiled: True
  tune_scaler: False
  subset_training: -1
  overwrite_model: False

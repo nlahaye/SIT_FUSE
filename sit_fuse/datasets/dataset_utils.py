@@ -56,7 +56,14 @@ def get_train_dataset_sf(yml_conf):
 
     tiled = yml_conf["encoder"]["tiled"]
     tune_scaler = yml_conf["encoder"]["tune_scaler"]
+    overwrite_model = yml_conf["encoder"]["overwrite_model"]
 
+
+    stratify_data = None
+    if "stratify_data" in yml_conf["encoder"]["training"]:
+        stratify_data = yml_conf["encoder"]["training"]["stratify_data"]
+
+    subset_training = yml_conf["encoder"]["subset_training"]
 
     scaler = None
     scaler_train = True
@@ -101,7 +108,7 @@ def get_train_dataset_sf(yml_conf):
             data.read_and_preprocess_data(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
                 valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
                 transform_values=transform_values, scaler = scaler, train_scaler = scaler_train, scale = scale_data, \
-                transform=None, subset=subset_count, subset_training = subset_training, stratify_data=stratify_data)
+                transform=None, subset_training = subset_training, stratify_data=stratify_data)
         else:
             data = SFDataset()
             data.read_data_preprocessed(data_fname, targets_fname, scaler)
@@ -110,7 +117,7 @@ def get_train_dataset_sf(yml_conf):
             data = SFDatasetConv()
             data.read_and_preprocess_data(data_train, read_func, data_reader_kwargs, delete_chans=delete_chans, \
                  valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
-                 transform_values=transform_values, transform=None, subset=subset_count, tile=tile, tile_size=tile_size, tile_step=tile_step,
+                 transform_values=transform_values, transform=None, tile=tile, tile_size=tile_size, tile_step=tile_step,
                  subset_training = subset_training)
         else:
            transform = None

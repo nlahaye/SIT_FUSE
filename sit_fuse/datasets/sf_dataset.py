@@ -316,13 +316,13 @@ class SFDataset(torch.utils.data.Dataset):
 		self.targets_full = np.copy(self.targets).astype(np.int16)
 
 		#Subset data for training and/or stratify
-		if self.training and ((self.subset_training > 0 or (self.stratify_data and self.stratify_data["kmeans"])) and self.subset_training < self.data_full.shape[0]):
+		if self.training and (((self.subset_training < self.data_full.shape[0] and self.subset_training > 0) or len(self.stratify_training) > 0) and (self.stratify_data or self.stratify_data["kmeans"])):
 			if len(self.stratify_training) > 0:
 				self.stratify_training = np.array(self.stratify_training)
 				self.stratify_training = self.stratify_training.reshape((-1))
 				self.__stratify_training__()
-			elif self.stratify_data and self.stratify_data["kmeans"]:
-				self.__stratify_k_means__()                        
+			elif self.subset_training > 0 and self.stratify_data and self.stratify_data["kmeans"]:
+			    	    self.__stratify_k_means__()                        
 			else:
 				self.data_full = self.data_full[:self.subset_training,:]
 				self.targets_full = self.targets_full[:self.subset_training,:]
@@ -380,7 +380,7 @@ class SFDataset(torch.utils.data.Dataset):
  
 
 		#TODO Allow for oversampling, actual stratification, and only selction of a subset of labels
-		print(dataset_size, num_train_exs, self.data.shape, self.targets.shape, self.stratify_training)
+		print(dataset_size, num_train_exs, self.data_full.shape, self.targets_full.shape, self.stratify_training)
 		for mask_val in range(self.stratify_training.max()):
 			type_inds.append(np.where(self.stratify_training == mask_val)[0])
 			percentage_of_dataset = len(type_inds[mask_val]) / dataset_size
@@ -392,8 +392,8 @@ class SFDataset(torch.utils.data.Dataset):
 			train_inds_by_value.append(tmp) 
 			
 
-		self.data = self.data[train_indices]
-		self.targets = self.targets[train_indices]
+		self.data_full = self.data_full[train_indices]
+		self.targets_full = self.targets_full[train_indices]
 		self.train_indices = train_inds_by_value
 
 

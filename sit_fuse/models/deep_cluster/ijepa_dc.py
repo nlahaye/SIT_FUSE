@@ -23,14 +23,15 @@ class IJEPA_DC(pl.LightningModule):
         self.drop_path = drop_path
 
         #define model layers
-        self.pretrained_model = IJEPA.load_from_checkpoint(pretrained_model_path)
+        self.pretrained_model = IJEPA_PL.load_from_checkpoint(pretrained_model_path)
         self.pretrained_model.model.mode = "test"
         self.pretrained_model.model.layer_dropout = self.drop_path
         #self.average_pool = nn.AvgPool1d((self.pretrained_model.embed_dim), stride=1)
         #mlp head
-        
+       
+        print(self.pretrained_model.num_tokens)
         #self.mlp_head =  MultiPrototypes(self.pretrained_model.num_tokens, 800, 1)
-        self.mlp_head =  MultiPrototypes(196*704, 800, 1)
+        self.mlp_head =  MultiPrototypes(self.pretrained_model.num_tokens*self.pretrained_model.embed_dim, 800, 1)
 
         #nn.Sequential(
         #    nn.LayerNorm(self.pretrained_model.num_tokens),
@@ -51,7 +52,7 @@ class IJEPA_DC(pl.LightningModule):
     
     def training_step(self, batch, batch_idx):
         x = batch
-        y = self.pretrained_model.model(x)
+        y = self.pretrained_model.model(x).flatten(dim=1)
         y2 = y.clone() + torch.from_numpy(self.rng.normal(0.0, 0.01, \
                                 y.shape[1]*y.shape[0]).reshape(y.shape[0],\
                                 y.shape[1])).type(y.dtype).to(y.device)
@@ -63,7 +64,7 @@ class IJEPA_DC(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         x = batch
-        y = self.pretrained_model.model(x)
+        y = self.pretrained_model.model(x).flatten(dim=1)
         y2 = y.clone() + torch.from_numpy(self.rng.normal(0.0, 0.01, \
                                 y.shape[1]*y.shape[0]).reshape(y.shape[0],\
                                 y.shape[1])).type(y.dtype).to(y.device)
