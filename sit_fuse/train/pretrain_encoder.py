@@ -43,7 +43,7 @@ def pretrain_DBN(yml_conf, dataset):
 
     use_wandb_logger = yml_conf["logger"]["use_wandb"]
     log_model = None
-    save_dir = None
+    save_dir = yml_conf["output"]["out_dir"]
     project = None
     if use_wandb_logger:
         log_model = yml_conf["logger"]["log_model"]
@@ -69,12 +69,13 @@ def pretrain_DBN(yml_conf, dataset):
 
         lr_monitor = LearningRateMonitor(logging_interval="step")
         model_summary = ModelSummary(max_depth=2)
- 
+
+        os.makedirs(save_dir, exist_ok=True) 
         if use_wandb_logger:
-            os.makedirs(save_dir, exist_ok=True)
             wandb_logger = WandbLogger(project=project, log_model=log_model, save_dir = save_dir)
 
             trainer = pl.Trainer(
+                default_root_dir=save_dir,
                 accelerator=accelerator,
                 devices=devices,
                 strategy=DDPStrategy(find_unused_parameters=True),
@@ -86,6 +87,7 @@ def pretrain_DBN(yml_conf, dataset):
             )
         else:
             trainer = pl.Trainer(
+                default_root_dir=save_dir,
                 accelerator=accelerator,
                 devices=devices,
                 strategy=DDPStrategy(find_unused_parameters=True),
@@ -124,7 +126,7 @@ def pretrain_IJEPA(yml_conf, dataset):
 
     use_wandb_logger = yml_conf["logger"]["use_wandb"]
     log_model = None
-    save_dir = None
+    save_dir = yml_conf["output"]["out_dir"]
     project = None
     if use_wandb_logger:
         log_model = yml_conf["logger"]["log_model"]
@@ -146,13 +148,14 @@ def pretrain_IJEPA(yml_conf, dataset):
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
- 
+
+    os.makedirs(save_dir, exist_ok=True) 
     if use_wandb_logger:
-        os.makedirs(out_dir, exist_ok=True)
         wandb_logger = WandbLogger(project=project, log_model=log_model, save_dir = save_dir)
         #id="a02ltqei", resume="must")
 
         trainer = pl.Trainer(
+            default_root_dir=save_dir,
             accelerator=accelerator,
             devices=devices,
             strategy=DDPStrategy(find_unused_parameters=True),
@@ -164,6 +167,7 @@ def pretrain_IJEPA(yml_conf, dataset):
         )
     else:
         trainer = pl.Trainer(
+            default_root_dir=save_dir,
             accelerator=accelerator,
             devices=devices,
             strategy=DDPStrategy(find_unused_parameters=True),
@@ -188,7 +192,7 @@ def pretrain_BYOL(yml_conf, dataset):
 
     use_wandb_logger = yml_conf["logger"]["use_wandb"]
     log_model = None
-    save_dir = None
+    save_dir = yml_conf["output"]["out_dir"]
     project = None
     if use_wandb_logger:
         log_model = yml_conf["logger"]["log_model"]
@@ -215,24 +219,36 @@ def pretrain_BYOL(yml_conf, dataset):
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
  
+    os.makedirs(save_dir, exist_ok=True)
     if use_wandb_logger:
-        os.makedirs(save_dir, exist_ok=True)
  
         wandb_logger = WandbLogger(project=project, log_model=log_model, save_dir = save_dir)
 
-    trainer = pl.Trainer(
-        accelerator=accelerator,
-        devices=devices,
-        strategy=DDPStrategy(find_unused_parameters=True),
-        precision=precision,
-        max_epochs=max_epochs,
-        callbacks=[lr_monitor, model_summary],
-        gradient_clip_val=gradient_clip_val,
-        logger=wandb_logger
-    )
+        trainer = pl.Trainer(
+            default_root_dir=save_dir,
+            accelerator=accelerator,
+            devices=devices,
+            strategy=DDPStrategy(find_unused_parameters=True),
+            precision=precision,
+            max_epochs=max_epochs,
+            callbacks=[lr_monitor, model_summary],
+            gradient_clip_val=gradient_clip_val,
+            logger=wandb_logger
+        )
+    else:
+        trainer = pl.Trainer(
+            default_root_dir=save_dir,
+            accelerator=accelerator,
+            devices=devices,
+            strategy=DDPStrategy(find_unused_parameters=True),
+            precision=precision,
+            max_epochs=max_epochs,
+            callbacks=[lr_monitor, model_summary],
+            gradient_clip_val=gradient_clip_val,
+            logger=wandb_logger
 
     trainer.fit(learner, dataset)
-    torch.save(model.state_dict(), os.path.join(save_dir, "byol.ckpt")
+    torch.save(model.state_dict(), os.path.join(save_dir, "byol.ckpt"))
 
 
 def main(yml_fpath):
