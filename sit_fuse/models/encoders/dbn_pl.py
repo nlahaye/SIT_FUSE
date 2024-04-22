@@ -44,14 +44,16 @@ class DBN_PL(pl.LightningModule):
     def training_step(self, batch, batch_idx):
   
         if self.previous_layers is not None:
-            for mod in range(len(previous_layers)):
-                batch = previous_layers[mod](batch)
+            for mod in range(len(self.previous_layers)):
+                batch = self.previous_layers[mod](batch)
  
         if self.model.normalize:
             samples = (
                 (batch - torch.mean(batch, 0, True))
                     / (torch.std(batch, 0, True) + 1e-6)
                 ).detach()
+        else:
+            samples = batch
 
         samples = samples.reshape(len(samples), self.model.n_visible)
 
@@ -77,14 +79,16 @@ class DBN_PL(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
 
         if self.previous_layers is not None:
-            for mod in range(len(previous_layers)):
-                batch = previous_layers[mod](batch)
+            for mod in range(len(self.previous_layers)):
+                batch = self.previous_layers[mod](batch)
 
         if self.model.normalize:
             samples = (
                 (batch - torch.mean(batch, 0, True))
                     / (torch.std(batch, 0, True) + 1e-6)
                 ).detach()
+        else:
+            samples = batch
 
         samples = samples.reshape(len(samples), self.model.n_visible)
 
