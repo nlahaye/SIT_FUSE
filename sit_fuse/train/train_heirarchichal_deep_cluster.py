@@ -10,6 +10,7 @@ from pytorch_lightning.loggers import WandbLogger
 
 from learnergy.models.deep import DBN
 
+from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes
 from sit_fuse.models.deep_cluster.heir_dc import Heir_DC
 from sit_fuse.datasets.sf_heir_dataset_module import SFHeirDataModule
 from sit_fuse.datasets.sf_dataset import SFDataset
@@ -79,16 +80,16 @@ def heir_dc(yml_conf, dataset, ckpt_path):
             param.requires_grad = True 
   
 
-        if not yml_conf["conv"]:
+        if "tile" not in yml_conf["data"] or yml_conf["data"]["tile"] == False:
             train_subset = SFDataset()
-            train_subset.init_from_array(train_data.data.data_full[self.lab_full[key]], 
-                train_data.data.targets_full[self.lab_full[key]], scaler = train_data.data.scaler)
+            train_subset.init_from_array(dataset.data_full[model.lab_full[key]], 
+                dataset.targets_full[model.lab_full[key]], scaler = dataset.scaler)
         else:
             train_subset = SFDatasetConv()
-            train_subset.init_from_array(train_data.data.data_full[self.lab_full[key]], 
-                train_data.data.targets_full[self.lab_full[key]], transform = train_data.data.transform)
+            train_subset.init_from_array(dataset.data_full[model.lab_full[key]], 
+                dataset.targets_full[model.lab_full[key]], transform = dataset.transform)
 
-        final_dataset = SFHeirDataModule(train_subset, batch_size=batch_size, num_workers=num_workers, val_percent=val_percent)
+        final_dataset = SFHeirDataModule(train_subset, batch_size=batch_size, num_workers=num_loader_workers, val_percent=val_percent)
 
         if use_wandb_logger:
 

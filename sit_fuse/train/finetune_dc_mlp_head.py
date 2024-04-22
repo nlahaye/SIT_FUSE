@@ -17,6 +17,7 @@ from sit_fuse.datasets.sf_dataset_module import SFDataModule
 from sit_fuse.utils import read_yaml
 
 import argparse
+import os
 
 def train_dc_no_pt(yml_conf, dataset):
 
@@ -177,11 +178,11 @@ def dc_IJEPA(yml_conf, dataset):
     encoder_dir = os.path.join(save_dir, "encoder")
     save_dir = os.path.join(save_dir, "full_model")
 
-    accelerator = yml_conf["encoder"]["training"]["accelerator"]
-    devices = yml_conf["encoder"]["training"]["devices"]
-    precision = yml_conf["encoder"]["training"]["precision"]
-    max_epochs = yml_conf["encoder"]["training"]["epochs"]
-    gradient_clip_val = yml_conf["encoder"]["training"]["gradient_clip_val"]
+    accelerator = yml_conf["cluster"]["training"]["accelerator"]
+    devices = yml_conf["cluster"]["training"]["devices"]
+    precision = yml_conf["cluster"]["training"]["precision"]
+    max_epochs = yml_conf["cluster"]["training"]["epochs"]
+    gradient_clip_val = yml_conf["cluster"]["training"]["gradient_clip_val"]
     gauss_stdev = yml_conf["cluster"]["gauss_noise_stdev"] #TODO incorporate
     lambda_iid = yml_conf["cluster"]["lambda"] #TODO incorporate
 

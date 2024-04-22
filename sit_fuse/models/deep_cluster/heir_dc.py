@@ -5,7 +5,6 @@ import torch
 
 from sit_fuse.losses.iid import IID_loss
 
-from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes
 from sit_fuse.models.deep_cluster.ijepa_dc import IJEPA_DC
 from sit_fuse.models.deep_cluster.dbn_dc import DBN_DC
 from sit_fuse.models.deep_cluster.dc import DeepCluster
