@@ -17,6 +17,8 @@ from sit_fuse.models.encoders.cnn_encoder import DeepConvEncoder
 from sit_fuse.datasets.sf_dataset_module import SFDataModule
 from sit_fuse.utils import read_yaml
 
+import wandb
+
 import argparse
 import os
 
@@ -100,7 +102,12 @@ def pretrain_DBN(yml_conf, dataset):
             )
 
         trainer.fit(model, dataset)
-    
+
+        if use_wandb_logger:
+            wandb.finish()
+
+        dbn.models[i] = model.model    
+
     torch.save(dbn.state_dict(), os.path.join(save_dir, "dbn.ckpt"))
 
  
@@ -252,7 +259,7 @@ def pretrain_BYOL(yml_conf, dataset):
             callbacks=[lr_monitor, model_summary],
             gradient_clip_val=gradient_clip_val,
             logger=wandb_logger
-
+        )
     trainer.fit(learner, dataset)
     torch.save(model.state_dict(), os.path.join(save_dir, "byol.ckpt"))
 

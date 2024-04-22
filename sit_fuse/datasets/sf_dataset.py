@@ -438,12 +438,6 @@ class SFDataset(torch.utils.data.Dataset):
 			idx = idx.tolist()
 
 		sample = self.data[idx]
-		if self.transform is not None:
-			print("TRANSFORMING")
-			sample = self.transform(sample)
-
-		#sample = sample * 1e10 
-		#sample = sample.astype(np.int32)
 
 		return sample, self.targets[idx]
 

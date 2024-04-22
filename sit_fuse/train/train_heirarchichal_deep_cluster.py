@@ -50,7 +50,11 @@ def heir_dc(yml_conf, dataset, ckpt_path):
 
     ckpt_path = os.path.join(full_model_dir, "checkpoint.ckpt")
 
-    model = Heir_DC(dataset, pretrained_model_path=ckpt_path, num_classes=num_classes, encoder_type=yml_conf["encoder_type"])
+    encoder_type=None
+    if "encoder_type" in yml_conf:
+        encoder_type=yml_conf["encoder_type"]
+
+    model = Heir_DC(dataset, pretrained_model_path=ckpt_path, num_classes=num_classes, encoder_type=encoder_type)
     for param in model.pretrained_model.parameters():
         param.requires_grad = False
 
@@ -74,20 +78,27 @@ def heir_dc(yml_conf, dataset, ckpt_path):
 
         print("TRAINING MODEL ", str(count), " / ", str(len(model.lab_full.keys())))
  
-        model.clust_tree["1"][key] = MultiPrototypes(model.pretrained_model.num_classes, model.num_classes, model.number_heads)
-       
+
+        n_visible = list(model.pretrained_model.mlp_head.children())[1].num_features
+        model.clust_tree["1"][key] = MultiPrototypes(n_visible, model.num_classes, model.number_heads)
+
+        model.clust_tree["1"][key].train() 
         for param in model.clust_tree["1"][key].parameters():
             param.requires_grad = True 
-  
+
+        model.module_list.append(model.clust_tree["1"][key])
 
         if "tile" not in yml_conf["data"] or yml_conf["data"]["tile"] == False:
             train_subset = SFDataset()
             train_subset.init_from_array(dataset.data_full[model.lab_full[key]], 
                 dataset.targets_full[model.lab_full[key]], scaler = dataset.scaler)
         else:
+            print(key, model.lab_full[key])
+            print(dataset.data_full[model.lab_full[key]].shape, dataset.data_full.shape)
             train_subset = SFDatasetConv()
             train_subset.init_from_array(dataset.data_full[model.lab_full[key]], 
                 dataset.targets_full[model.lab_full[key]], transform = dataset.transform)
+            print(train_subset.data_full.shape, train_subset.targets_full.shape)
 
         final_dataset = SFHeirDataModule(train_subset, batch_size=batch_size, num_workers=num_loader_workers, val_percent=val_percent)
 
@@ -121,9 +132,10 @@ def heir_dc(yml_conf, dataset, ckpt_path):
 
         trainer.fit(model, final_dataset)
 
-        for param in model.clust_tree["1"][key].parameters():
-            param.requires_grad = False
-        model.clust_tree["1"][key].eval()
+        #for param in model.clust_tree["1"][key].parameters():
+        #    param.requires_grad = False
+        #model.clust_tree["1"][key].eval()
+        #model.module_list[-1] = model.clust_tree["1"][key]
 
 def main(yml_fpath):
 

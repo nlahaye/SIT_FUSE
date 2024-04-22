@@ -291,14 +291,6 @@ class SFDatasetConv(SFDataset):
 			idx = idx.tolist()
 
 		sample = self.data[idx]
-		#print("HERE STATS:", sample.shape, sample.min(), sample.max(), sample.mean(), sample.std())
-		#if self.transform is not None:
-		#	print("TRANSFORMING")
-		#	sample = self.transform(sample)
-		#print("HERE STATS_2:", sample.shape, sample.min(), sample.max(), sample.mean(), sample.std())
-
-		#sample = sample * 1e10 
-		#sample = sample.astype(np.int32)
 
 		return sample, self.targets[idx]
 

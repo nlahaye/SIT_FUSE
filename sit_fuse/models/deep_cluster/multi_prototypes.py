@@ -12,6 +12,7 @@ class MultiPrototypes(nn.Module):
     def __init__(self, output_dim, n_classes, nmb_heads):
         super(MultiPrototypes, self).__init__()
         self.nmb_heads = nmb_heads
+        self.output_dim = output_dim
         for i in range(nmb_heads):
             self.n_layers = 0
             self.add_module("flatten" + str(i), nn.Flatten())

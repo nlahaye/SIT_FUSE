@@ -1,5 +1,6 @@
 
 data:
+ tile: False
  val_percent: 0.1
  num_loader_workers: 10
  scale_data: True
@@ -87,7 +88,7 @@ encoder:
   batch_size: 128
   epochs: 30
   accelerator: "gpu"
-  devices: 1
+  devices: 3
   gradient_clip_val: 0.1
   precision: "16-mixed"
   stratify_data:
@@ -101,18 +102,32 @@ logger:
  project: "SIT-FUSE"
 
 cluster:
+ gauss_noise_stdev:  [0.01]
+ lambda: 1.0
  num_classes: 800
  training:
+  learning_rate: 0.0001
   batch_size: 1000
-  cluster_batch_size: 1000
-  cluster_epochs: 30 #[10]#[8] #, 1, 1] #, 5] #, 10]
-  cluster_gauss_noise_stdev:  [0.01]
-  cluster_lambda: 1.0
+  epochs: 30
+  accelerator: "gpu"
+  devices: 1
+  gradient_clip_val: 0.1
+  precision: "16-mixed"
+  save_dir: "wandb_dbn"
 
-  heir_cluster_min_samples: 1000
-  heir_cluster_gauss_noise_stdev: [0.01] #[0.001, 0.0001, 0.00001, 0.000001, 0.0]
-  heir_epochs: 30
-  heir_tune_subtrees: False
-  heir_tune_subtree_list: []
-  heir_deep_cluster: 100
+ heir:
+  tiers: 1
+  gauss_noise_stdev:  [0.01]
+  lambda: 1.0
+  num_classes: 100
+  training:
+   accelerator: "gpu"
+   devices: 1
+   gradient_clip_val: 0.1
+   precision: "16-mixed"
+   save_dir: "wandb_dbn"
+   batch_size: 100
+   min_samples: 1000
+
+
 

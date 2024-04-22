@@ -125,10 +125,26 @@ def dc_DBN(yml_conf, dataset):
 
     dbn = DBN(model=model_type, n_visible=dataset.n_visible, n_hidden=dbn_arch, steps=gibbs_steps,
         learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=True)
+
+    for model in dbn.models:
+        for param in model.parameters():
+            print(param)
+            param.requires_grad = False
+
+    print("PRE LOAD")
+
     dbn.load_state_dict(torch.load(ckpt_path))
 
+    print(dbn.models)
+
     for param in dbn.parameters():
+        print(param)
         param.requires_grad = False
+    for model in dbn.models:
+        model.eval()
+        for param in model.parameters():
+            print(param)
+            param.requires_grad = False
     dbn.eval() 
 
     model = DBN_DC(dbn, num_classes=num_classes)

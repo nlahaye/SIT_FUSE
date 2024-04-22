@@ -61,17 +61,6 @@ output:
  generate_output: False
 
 
-encoder_type: "byol"
-encoder:
- tiled: True
- tune_scaler: False
- subset_training: -1
- overwrite_model: False
- training:
-  batch_size: 128
-  stratify_data:
-   kmeans: True
-
 byol:
  hidden_layer: -1
  projection_size: 256
@@ -81,20 +70,59 @@ byol:
 logger:
  use_wandb: True
  log_model: True
- log_out_dir: "wandb_dbn"
+ log_out_dir: "wandb_byol"
  project: "SIT-FUSE"
 
 
-cluster:
- training:
-  batch_size: 1000
-  cluster_epochs: 30 #[10]#[8] #, 1, 1] #, 5] #, 10]
-  cluster_gauss_noise_stdev:  [0.01]
-  cluster_lambda: 1.0
 
-  heir_cluster_min_samples: 1000
-  heir_cluster_gauss_noise_stdev: [0.01] #[0.001, 0.0001, 0.00001, 0.000001, 0.0]
-  heir_epochs: 30
-  heir_tune_subtrees: False
-  heir_tune_subtree_list: []
-  heir_deep_cluster: 100
+encoder_type: "byol"
+encoder:
+ subset_training: -1
+ overwrite_model: False
+ tune_scaler: False
+ training:
+  weight_decay: 0.05
+  momentum: 0.996
+  momentum_start_end: [0.996, 1.0]
+  learning_rate: 0.001
+  batch_size: 16
+  epochs: 100
+  accelerator: "gpu"
+  devices: 3
+  gradient_clip_val: 0.1
+  precision: "16-mixed"
+  save_dir: "wandb_byol"
+  stratify_data:
+   kmeans: False
+
+cluster:
+ gauss_noise_stdev:  [0.01]
+ lambda: 1.0
+ num_classes: 800
+ training:
+  learning_rate: 0.0001
+  batch_size: 1000
+  epochs: 30
+  accelerator: "gpu"
+  devices: 3
+  gradient_clip_val: 0.1
+  precision: "16-mixed"
+  save_dir: "wandb_byol"
+
+ heir:
+  tiers: 1
+  gauss_noise_stdev:  [0.01]
+  lambda: 1.0
+  num_classes: 100
+  training:
+   accelerator: "gpu"
+   devices: 1
+   gradient_clip_val: 0.1
+   precision: "16-mixed"
+   save_dir: "wandb_byol"
+   batch_size: 100
+   min_samples: 1000
+   epochs: 30
+   lambda: 1.0
+
+

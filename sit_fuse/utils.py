@@ -24,7 +24,7 @@ from pprint import pprint
 import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
-from sit_fuse.CMAP import CMAP, CMAP_COLORS
+from sit_fuse.viz.CMAP import CMAP, CMAP_COLORS
 from glob import glob
 from scipy.interpolate import griddata
 from pyhdf import SD
