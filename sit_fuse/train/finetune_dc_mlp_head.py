@@ -58,7 +58,7 @@ def dc_DBN(yml_conf, dataset):
 
     dbn = DBN(model=model_type, n_visible=dataset.n_visible, n_hidden=dbn_arch, steps=gibbs_steps,
         learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=True)
-    dbn.load_state_dict(torch.load("/home/nlahaye/SIT_FUSE_DEV/wandb_dbn/dbn.ckpt"))
+    dbn.load_state_dict(torch.load("/home/nlahaye/SIT_FUSE_DEV/wandb_dbn/dbn_2.ckpt"))
 
     for param in dbn.parameters():
         param.requires_grad = False
@@ -69,7 +69,7 @@ def dc_DBN(yml_conf, dataset):
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
 
-    wandb_logger = WandbLogger(project="SIT-FUSE", log_model=True, save_dir = "/home/nlahaye/SIT_FUSE_DEV/wandb_dbn_finetune/")
+    wandb_logger = WandbLogger(project="SIT-FUSE", log_model=True, save_dir = "/home/nlahaye/SIT_FUSE_DEV/wandb_dbn_finetune_2/")
 
     trainer = pl.Trainer(
             accelerator='gpu',
@@ -88,9 +88,11 @@ def dc_DBN(yml_conf, dataset):
 
 def dc_IJEPA(yml_conf, dataset):
 
-    model = IJEPA_DC(pretrained_model_path="/data/nlahaye/output/Learnergy/IJEPA_TEST_FULL/ijepa.ckpt", num_classes=800)
+    model = IJEPA_DC(pretrained_model_path="/data/nlahaye/output/Learnergy/IJEPA_TEST_SMALL/ijepa.ckpt", num_classes=800)
     for param in model.pretrained_model.parameters():
         param.requires_grad = False
+    for param in model.mlp_head.parameters():
+        param.requires_grad = True
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
@@ -99,7 +101,34 @@ def dc_IJEPA(yml_conf, dataset):
 
     trainer = pl.Trainer(
         accelerator='gpu',
-        devices=2,
+        devices=1,
+        strategy=DDPStrategy(find_unused_parameters=True),
+        precision="16-mixed",
+        max_epochs=50,
+        callbacks=[lr_monitor, model_summary],
+        gradient_clip_val=.1,
+        logger=wandb_logger
+    )
+
+    trainer.fit(model, dataset)
+
+
+def dc_BYOL(yml_conf, dataset):
+
+    model = BYOL_DC(pretrained_model_path="/data/nlahaye/output/Learnergy/IJEPA_TEST_SMALL/byol.ckpt", num_classes=800)
+    for param in model.pretrained_model.parameters():
+        param.requires_grad = False
+    for param in model.mlp_head.parameters():
+        param.requires_grad = True
+
+    lr_monitor = LearningRateMonitor(logging_interval="step")
+    model_summary = ModelSummary(max_depth=2)
+
+    wandb_logger = WandbLogger(project="SIT-FUSE", log_model=True, save_dir = "/home/nlahaye/SIT_FUSE_DEV/wandb_finetune_byol/")
+
+    trainer = pl.Trainer(
+        accelerator='gpu',
+        devices=1,
         strategy=DDPStrategy(find_unused_parameters=True),
         precision="16-mixed",
         max_epochs=50,
