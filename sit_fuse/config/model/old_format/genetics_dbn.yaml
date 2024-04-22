@@ -1,0 +1,199 @@
+
+output:
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_GENETICS_AUTO_CLUST/"
+ training_output: "output.data"
+ training_mse: "rec_mse.data"
+ testing_output: "output_test.data"
+ testing_mse: "rec_mse_test.data"
+ generate_train_output: False
+ generate_output: False
+ model: "dbn"
+
+dbn:
+ conv: False
+ subset_training: 5000000
+ tune_clust: False
+ tune_dbn: False
+ heir_tiers: 1
+ tune_scaler: False
+ deep_cluster: 800
+ overwrite_model: False
+ params:
+  model_type: ["gaussian_selu", "gaussian_selu"] #, 'gaussian_relu_dropout', 'gaussian_relu_dropout'] #'variance_gaussian_dropout' "gaussian_dropout"
+  dbn_arch: [1000, 500] #[2000] [250, 500, 2000] #, 2000]
+  gibbs_steps: [1,1] #, 7, 7] #, 10] #, 25]
+  learning_rate: [0.00001, 0.00001] #, 0.0001, 0.0001] #, 0.01] #, 0.01]
+  momentum: [0.95,0.95] #, 0.95, 0.95] #, 0.95] #, 0.95]
+  decay: [0.0001, 0.0001] #, 0.0001, 0.0001] #, 0.0001] #, 0.0001]
+  temp: [1.0, 1.0] #, 1.0, 1.0] [0.9, 0.75, 0.5] #, 1.0] #, 0.5] #, 0.5] 
+  nesterov_accel: [True, True]
+  normalize_learnergy: [False, True]
+  batch_normalize: [False, False]
+
+ training:
+  use_gpu: True
+  use_gpu_preprocessing: False
+  world_size: 1
+  rank: 0
+  device_ids: ["2"]
+  batch_size: 1000
+  epochs: [10,10] #[8] #, 1, 1] #, 5] #, 10]
+  cluster_batch_size: 1000
+  cluster_epochs: 30
+  cluster_gauss_noise_stdev: [0.01]
+  cluster_lambda: 1.0
+
+  heir_cluster_min_samples: 1000
+  heir_cluster_gauss_noise_stdev: [0.01] #[0.001, 0.0001, 0.00001, 0.000001, 0.0]
+  heir_epochs: 30
+  heir_tune_subtrees: False
+  heir_tune_subtree_list: []
+  heir_deep_cluster: 100
+  stratify_data:
+   kmeans: True
+
+scaler:
+ name: "standard"
+
+data:
+ num_loader_workers: 10
+ scale_data: True
+ pixel_padding: 1
+ number_channels: 1
+ fill_value: -9999.0
+ valid_min: -10000.0
+ valid_max: 100000000
+ subset_count: 1
+ output_subset_count: 1
+ reader_type: "gtiff"
+ reader_kwargs:
+  no_arg: ''
+ chan_dim: 0
+ delete_chans: []
+ transform_default:
+  chans: []
+  transform: []
+ 
+ files_train: [
+"/data/nlahaye/remoteSensing/Genetics/train/P253_73666050044-C7_001_034_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P242_73665006707-G3_002_042_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P284_73668752578-E6_003_030_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P251_73665707362-G3_011_013_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P279_73668277350-E5_002_078_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P279_73668277350-A7_006_001_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P283_73668670516-C7_006_005_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P288_73669012104-E6_017_021_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P253_73666050044-C7_019_013_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P284_73668752578-F5_009_027_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P243_73665098237-A8_014_013_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P282_73668608120-E5_016_021_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P242_73665006707-G3_006_031_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P284_73668752578-C7_004_015_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P250_73665642094-A8_012_004_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P287_73668956345-E1_017_033_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P282_73668608120-D5_010_043_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P288_73669012104-E5_013_016_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P244_73665165741-A8_020_005_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P287_73668956345-D5_010_040_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P243_73665098237-C8_011_023_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P282_73668608120-D5_007_019_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P287_73668956345-E1_019_017_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P282_73668608120-E1_018_026_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P283_73668670516-D5_017_029_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P253_73665853037-G3_002_050_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P282_73668608120-F5_013_031_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P253_73665853037-G3_012_006_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P250_73665642094-G4_002_015_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P288_73669012104-E2_020_009_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P249_73665543731-G3_010_042_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P280_73668439105-A7_005_021_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P243_73665098237-C8_013_002_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P280_73668439105-E1_014_010_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P278_73668090728-E6_012_004_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P251_73665707362-G3_012_026_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P253_73666050044-A6_016_033_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P284_73668752578-D5_003_020_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P288_73669012104-E1_001_005_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P278_73668090728-C7_002_025_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P279_73668277350-E5_017_027_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P251_73665707362-C7_023_014_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P284_73668752578-E2_002_001_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P244_73665165741-A8_026_002_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P244_73665165741-A6_009_023_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P250_73665642094-C8_024_006_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P288_73669012104-D5_001_023_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P279_73668277350-A7_010_016_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P251_73665707362-A8_016_001_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P251_73665707362-C8_030_001_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P279_73668277350-E1_008_038_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P243_73665098237-C7_010_022_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P253_73665853037-E4_007_025_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P287_73668956345-E2_012_003_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P243_73665098237-E4_004_038_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P283_73668670516-E2_040_005_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P278_73668090728-E5_008_005_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P248_73665445941-G3_015_022_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P283_73668670516-D5_010_032_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P280_73668439105-E2_035_005_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P242_73665006707-C6_024_005_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P287_73668956345-E1_003_031_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P253_73666050044-A6_012_040_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P288_73669012104-D5_016_013_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P287_73668956345-F5_004_039_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P288_73669012104-E6_001_001_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P244_73665165741-G4_007_026_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P248_73665445941-C8_005_035_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P282_73668608120-F5_015_015_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P286_73668871024-E2_015_002_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P278_73668090728-E5_020_023_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P288_73669012104-E6_014_021_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P282_73668608120-D5_013_018_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P248_73665445941-G4_003_001_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P249_73665543731-C8_016_005_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P284_73668752578-F5_002_045_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P287_73668956345-E6_013_030_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P283_73668670516-E2_025_008_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P286_73668871024-E6_001_040_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P243_73665098237-G3_003_037_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P244_73665165741-C7_011_005_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P243_73665098237-A6_016_012_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P249_73665543731-A8_001_002_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P280_73668439105-E1_020_005_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P282_73668608120-E6_007_041_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P278_73668090728-C7_021_014_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P243_73665098237-C6_014_002_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P282_73668608120-E1_001_034_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P287_73668956345-E2_015_010_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P279_73668277350-C7_011_003_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P242_73665006707-A6_002_054_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P278_73668090728-E1_001_013_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P253_73666050044-C8_014_019_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P249_73665543731-A6_001_043_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P250_73665642094-A8_012_007_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P249_73665543731-G4_003_014_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P286_73668871024-E5_003_020_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P282_73668608120-E2_030_005_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P284_73668752578-E2_001_032_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P242_73665006707-G3_008_028_proj.tif"]
+
+
+
+
+ files_test: [
+"/data/nlahaye/remoteSensing/Genetics/train/P278_73668090728-E5_013_026_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P242_73665006707-A6_004_053_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P244_73665165741-G4_013_030_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P249_73665543731-G3_002_006_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P286_73668871024-C7_024_013_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P284_73668752578-D5_003_008_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P243_73665098237-A8_019_012_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P288_73669012104-E5_014_026_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P284_73668752578-E5_018_014_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P282_73668608120-E6_012_034_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P244_73665165741-C8_026_015_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P251_73665707362-G3_005_048_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P253_73665853037-E4_006_015_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P250_73665642094-C7_004_030_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P250_73665642094-C7_024_005_proj.tif",
+"/data/nlahaye/remoteSensing/Genetics/train/P251_73665707362-A6_008_029_proj.tif"]
+

@@ -1,0 +1,86 @@
+output:
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_PLANET_KOREA_CLIPPED_NEW_PAD_STRAT/"
+ training_output: "output.data"
+ training_mse: "rec_mse.data"
+ testing_output: "output_test.data"
+ testing_mse: "rec_mse_test.data"
+ generate_train_output: False
+ generate_output: False
+ model: "dbn"
+
+dbn:
+ conv: False
+ subset_training: 2000000
+ deep_cluster: 800
+ heir_tiers: 1
+ overwrite_model: False
+ tune_clust: False
+ tune_dbn: False
+ tune_scaler: False
+ params:
+  model_type: ["gaussian_selu"] #, 'gaussian_relu_dropout', 'gaussian_relu_dropout'] #'variance_gaussian_dropout' "gaussian_dropout"
+  dbn_arch: [2000] #[2000] [250, 500, 2000] #, 2000]
+  gibbs_steps: [1] #, 7, 7] #, 10] #, 25]
+  learning_rate: [0.00001] #, 0.0001, 0.0001] #, 0.01] #, 0.01]
+  momentum: [0.95] #, 0.95, 0.95] #, 0.95] #, 0.95]
+  decay: [0.0001] #, 0.0001, 0.0001] #, 0.0001] #, 0.0001]
+  temp: [1.0] #, 1.0, 1.0] [0.9, 0.75, 0.5] #, 1.0] #, 0.5] #, 0.5] 
+  nesterov_accel: [False]
+  normalize_learnergy: [False]
+  batch_normalize: [False]
+
+ training:
+  use_gpu: True
+  use_gpu_preprocessing: False
+  world_size: 1
+  rank: 0
+  device_ids: ["7"]
+  batch_size: 1000
+  epochs: [10] #[15] #[8] #, 1, 1] #, 5] #, 10]
+  cluster_batch_size: 1000
+  cluster_epochs: 30
+  cluster_gauss_noise_stdev: [0.01] #[0.001, 0.0001, 0.00001, 0.000001, 0.0]
+  cluster_lambda: 1.0
+
+  heir_cluster_min_samples: 1000
+  heir_cluster_gauss_noise_stdev: [0.01] #[0.001, 0.0001, 0.00001, 0.000001, 0.0]
+  heir_epochs: 30
+  heir_tune_subtrees: False
+  heir_tune_subtree_list: []
+  heir_deep_cluster: 100
+  stratify_data:
+   kmeans: True
+
+scaler:
+ name: "standard"
+
+data:
+ num_loader_workers: 10
+ scale_data: True
+ pixel_padding: 1
+ number_channels: 4
+ fill_value: 0.0
+ valid_min: 0.0000001
+ valid_max: 100000000
+ subset_count: 1
+ output_subset_count: 1
+ reader_type: "gtiff"
+ reader_kwargs:
+  start_line: 5000
+  end_line: 7500
+  start_sample: 0
+  end_sample: 1500
+ chan_dim: 0
+ delete_chans: []
+ transform_default:
+  chans: []
+  transform: []
+ files_train: [
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_011431_11_242b_3B_AnalyticMS_clip.tif"
+]
+
+ files_test: [
+"/data/nlahaye/remoteSensing/CSDSA/Korea/PSScene/20220305_011431_11_242b_3B_AnalyticMS_clip.tif"
+]
+
+

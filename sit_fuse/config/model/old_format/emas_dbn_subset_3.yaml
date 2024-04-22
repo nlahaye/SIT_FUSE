@@ -1,0 +1,97 @@
+
+data:
+ num_loader_workers: 10
+ scale_data: True
+ pixel_padding: 0
+ number_channels: 34
+ fill_value: -9999.0
+ valid_min:  -900.0
+ valid_max: 100000000
+ subset_count: 1
+ output_subset_count: 10
+ reader_type: "numpy"
+ reader_kwargs:
+  no_arg: "no_arg"
+ chan_dim: 0
+ delete_chans: [25,26,27,37]
+ transform_default:
+  chans: []
+  transform: []
+
+
+ files_train: [
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_10_20190806_1858_1910_V02_Georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19911_10_20190807_2004_2016_V02_georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19911_09_20190807_1947_2002_V02_georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19912_07_20190808_1806_1821_V02_georeferenced_scaled.tif.npy',
+]
+
+ files_test: [
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19911_05_20190807_1817_1833_V02_georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_06_20190806_1815_1824_V02_Georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19912_07_20190808_1806_1821_V02_georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_21_20190806_2111_2125_V02_Georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_19_20190806_2035_2048_V02_Georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19911_08_20190807_1928_1942_V02_georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19911_12_20190807_2039_2051_V02_georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19911_11_20190807_2021_2035_V02_georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_17_20190806_2000_2010_V02_Georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_16_20190806_1941_1956_V02_Georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_13_20190806_1923_1925_V02_Georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_20_20190806_2052_2106_V02_Georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_06_20190806_1815_1824_V02_Georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_08_20190806_1834_1846_V02_Georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_18_20190806_2018_2031_V02_Georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_15_20190806_1931_1938_V02_Georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_14_20190806_1926_1929_V02_Georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19910_10_20190806_1858_1910_V02_Georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19911_10_20190807_2004_2016_V02_georeferenced_scaled.tif.npy',
+'/data/nlahaye/remoteSensing/eMAS/rad/eMASL1B_19911_09_20190807_1947_2002_V02_georeferenced_scaled.tif.npy'
+]
+
+scaler:
+ name: "standard" 
+
+output:
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_eMAS_subset_3/"
+ training_output: "output.data"
+ training_mse: "rec_mse.data"
+ testing_output: "output_test.data"
+ testing_mse: "rec_mse_test.data"
+ generate_train_output: False
+ model: "dbn"
+
+
+dbn:
+ subset_training: -1 #1000000
+ deep_cluster: 100
+ overwrite_model: False
+ tune_clust: False
+ tune_dbn: False
+ tune_scaler: False
+ params:
+  model_type: ["gaussian_selu"] 
+  dbn_arch: [2000] #[250, 500, 2000] #, 2000]
+  gibbs_steps: [10] #, 7, 7] #, 10] #, 25]
+  learning_rate: [0.0001] #, 0.0001, 0.0001] #, 0.01] #, 0.01]
+  momentum: [0.0] #, 0.95, 0.95] #, 0.95] #, 0.95]
+  decay: [0.0001] #, 0.0001, 0.0001] #, 0.0001] #, 0.0001]
+  temp: [1.0] #, 1.0, 1.0] ##[0.9, 0.75, 0.5] #, 1.0] #, 0.5] #, 0.5] 
+  nesterov_accel: [False]
+  normalize_learnergy: [False]
+  batch_normalize: [False]
+
+ training:
+  use_gpu_preprocessing: False
+  use_gpu: True
+  world_size: 1
+  rank: 0
+  device_ids: ["0","1","2","3"]
+  batch_size: 128
+  epochs: [30] #[10]#[8] #, 1, 1] #, 5] #, 10]
+  cluster_batch_size: 900
+  cluster_epochs: 24 #[10]#[8] #, 1, 1] #, 5] #, 10]
+  cluster_gauss_noise_stdev: [0.001, 0.0001, 0.00001, 0.000001, 0.0]
+  cluster_lambda: 1.0
+
+

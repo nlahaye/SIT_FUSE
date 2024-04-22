@@ -1,0 +1,379 @@
+
+output:
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_MODIS_AQUA_OC_INIT/"
+ training_output: "output.data"
+ training_mse: "rec_mse.data"
+ testing_output: "output_test.data"
+ testing_mse: "rec_mse_test.data"
+ model: "dbn"
+ generate_train_output: False
+ generate_output: False
+
+dbn:
+ conv: False
+ subset_training: 1000000
+ deep_cluster: 800
+ heir_tiers: 1
+ overwrite_model: False
+ tune_clust: False
+ tune_dbn: False
+ tune_scaler: False
+ params:
+  model_type: ["gaussian_selu"] #, 'gaussian_relu_dropout', 'gaussian_relu_dropout'] #'variance_gaussian_dropout' "gaussian_dropout"
+  dbn_arch: [2000] #[2000] [250, 500, 2000] #, 2000]
+  gibbs_steps: [15] #, 7, 7] #, 10] #, 25]
+  learning_rate: [0.0001] #, 0.0001, 0.0001] #, 0.01] #, 0.01]
+  momentum: [0.0] #, 0.95, 0.95] #, 0.95] #, 0.95]
+  decay: [0.0001] #, 0.0001, 0.0001] #, 0.0001] #, 0.0001]
+  temp: [1.0] #, 1.0, 1.0] [0.9, 0.75, 0.5] #, 1.0] #, 0.5] #, 0.5] 
+  nesterov_accel: [False]
+  normalize_learnergy: [False]
+  batch_normalize: [False]
+
+ training:
+  use_gpu: True
+  use_gpu_preprocessing: False
+  world_size: 1
+  rank: 0
+  device_ids: ["2"]
+  batch_size: 128
+  epochs: [50] #[40] #[8] #, 1, 1] #, 5] #, 10]
+  cluster_batch_size: 700
+  cluster_epochs: 100
+  cluster_gauss_noise_stdev: [0.01] #[0.001, 0.0001, 0.00001, 0.000001, 0.0]
+  cluster_lambda: 1.0
+
+  heir_cluster_min_samples: 1000
+  heir_cluster_gauss_noise_stdev: [0.01] #[0.001, 0.0001, 0.00001, 0.000001, 0.0]
+  heir_epochs: 100
+  heir_tune_subtrees: False
+  heir_tune_subtree_list: []
+  heir_deep_cluster: 100
+
+scaler:
+ name: "standard"
+
+data:
+ tile: True
+ tile_size: [3,3,32]
+ tile_step: [1,1,32]
+ num_loader_workers: 10
+ scale_data: True
+ pixel_padding: 0
+ number_channels: 10
+ fill_value: -999999.0
+ valid_min: -100.0
+ valid_max: 64000
+ subset_count: 1
+ output_subset_count: 1
+ reader_type: "modis_oc"
+ reader_kwargs:
+  no_arg: "no_arg"
+ chan_dim: 0
+ delete_chans: []
+ transform_default:
+  chans: []
+  transform: []
+
+ files_train: [
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180627T202501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180619T212001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180607T205501.L2.OC.nc"]
+
+ files_test: [
+#"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180816T202001.L2.OC.nc",
+#"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180623T094500.L2.OC.nc",
+#"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180727T222000.L2.OC.nc",
+#"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180901T215501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180921T213000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180713T203001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180926T215001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180726T213501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180627T221001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180803T222501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180713T202501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180715T202001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180819T222501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180727T204000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180930T212001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180627T203001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180901T202001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180918T210001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180622T104001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180625T222001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180720T221501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180606T201001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180816T215501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180831T211000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180710T213501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180812T222000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180824T210501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180814T202501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180708T214501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180711T222001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180728T212501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180603T211501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180708T104001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180609T221501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20181001T203001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180806T211501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180802T200501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180815T211500.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180714T211000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180731T201501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180715T201501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180809T201001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180910T201001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180822T212001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180616T204501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180822T211501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180602T203501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180721T212001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180726T200001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180924T202500.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180731T215501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180621T210501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180821T203501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180823T220000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180711T221501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180826T205000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180620T202000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180701T214500.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180712T101500.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180906T203501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180908T202000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180930T212501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180615T214000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180908T220000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180812T204000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180823T202000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180903T214501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180712T212501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180619T211501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180909T210501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180830T221001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180830T203001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180811T200001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180609T204000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180821T221000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180716T210001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180906T221501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180827T213501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180915T202501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180609T222000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180622T215001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180610T212501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180707T210501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180704T110500.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180924T220000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180904T222501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180915T221001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180720T203501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180829T212001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180728T212000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180929T222000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180807T202000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180806T212001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180618T221000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180929T204000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180701T200500.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180717T214000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180702T204501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180810T205000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180911T205000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180910T215001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180828T222000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180606T104001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180923T212001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180624T213501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180725T205500.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180807T202500.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180618T221501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180613T215501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180705T211501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180607T094500.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180829T212501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180613T201501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180802T214000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180615T214500.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180629T215501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180703T213001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180719T213001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180627T092001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180922T221501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180626T212000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180913T222000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180609T111001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180625T204001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180903T200501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180706T202000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180711T204001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180919T200501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180625T111001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180620T220000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180611T203001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180602T110500.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180830T220501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180602T221001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180922T221001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180808T210501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180915T203001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180912T200001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180725T205000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180825T214501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180604T220000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180923T211501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20181001T220501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180717T214500.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180823T202500.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180801T210001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180716T205501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180627T220501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180718T222501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180611T220501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180729T203001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180623T205000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180821T221501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180912T213501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180805T221501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180715T215501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180713T221001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180819T205001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180729T221001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180802T214500.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180618T203501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180915T220501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180908T202500.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180730T211000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180804T213000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180901T201501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180630T205501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180914T212501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180712T212000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180924T202000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180919T214000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180730T211500.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180911T205501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180721T211501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180827T200001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180922T203501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180723T210501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180916T211000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180818T214500.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180625T221501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180614T210001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180819T204501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180927T205501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180622T214501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180611T202501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180616T205001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180809T215001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180820T213000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180818T214000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180807T220000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180709T205500.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180607T205000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180814T220501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180603T212001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180717T200500.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180929T221501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180920T204501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180701T214000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180731T202001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180626T101500.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180907T211501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180811T213501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180918T205501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180713T220501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180830T202501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180709T205000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180926T214501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180913T221501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180604T202500.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180612T211000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180702T222501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180722T220000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180928T213501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180817T210001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180614T205501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180705T212001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180920T205001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180803T204501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180831T211500.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180724T104001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180828T204000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180805T221000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180927T205000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180718T204501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180622T201001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180826T205501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180630T210001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180904T205001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180906T221001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180623T205500.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180917T215501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180610T212000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180825T215001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180616T222501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180711T111001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180611T221001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180902T210001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180917T201501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180618T110500.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180708T201001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180704T221000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180706T220000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180704T203501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180818T200501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180919T214501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180814T203001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180913T204000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180602T221501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20181001T202501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180606T215001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180628T211000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180810T205501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180903T214000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180813T212001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180920T222501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180815T211000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180617T213001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180605T210501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180718T205001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180813T212501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180914T212001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180722T202000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180825T201001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180720T221000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180904T204501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180604T202000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180626T212501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180816T201501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180608T213501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180925T210501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180724T201001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180907T212001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180615T200500.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180905T213000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180629T201501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180729T220501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180706T202500.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180606T214501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180724T214501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180611T092001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180814T221001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180926T201001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180704T221501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180722T202500.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180601T213000.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180708T215001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180702T205001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180729T202501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180910T214501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180620T202500.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180809T214501.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180803T205001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180724T215001.L2.OC.nc",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180805T203501.L2.OC.nc"
+]
+

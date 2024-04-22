@@ -1,0 +1,207 @@
+
+output:
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_MODIS_SR_INIT/"
+ training_output: "output.data"
+ training_mse: "rec_mse.data"
+ testing_output: "output_test.data"
+ testing_mse: "rec_mse_test.data"
+ model: "dbn"
+ generate_train_output: True
+
+dbn:
+ conv: False
+ subset_training: 1000000
+ deep_cluster: 800
+ heir_tiers: 1
+ overwrite_model: False
+ tune_clust: False
+ tune_dbn: False
+ tune_scaler: False
+ params:
+  model_type: ["gaussian_selu"] #, 'gaussian_relu_dropout', 'gaussian_relu_dropout'] #'variance_gaussian_dropout' "gaussian_dropout"
+  dbn_arch: [2000] #[2000] [250, 500, 2000] #, 2000]
+  gibbs_steps: [15] #, 7, 7] #, 10] #, 25]
+  learning_rate: [0.0001] #, 0.0001, 0.0001] #, 0.01] #, 0.01]
+  momentum: [0.0] #, 0.95, 0.95] #, 0.95] #, 0.95]
+  decay: [0.0001] #, 0.0001, 0.0001] #, 0.0001] #, 0.0001]
+  temp: [1.0] #, 1.0, 1.0] [0.9, 0.75, 0.5] #, 1.0] #, 0.5] #, 0.5] 
+  nesterov_accel: [False]
+  normalize_learnergy: [False]
+  batch_normalize: [False]
+
+ training:
+  use_gpu: True
+  use_gpu_preprocessing: False
+  world_size: 1
+  rank: 0
+  device_ids: ["0"]
+  batch_size: 128
+  epochs: [30] #[40] #[8] #, 1, 1] #, 5] #, 10]
+  cluster_batch_size: 700
+  cluster_epochs: 18
+  cluster_gauss_noise_stdev: [0.01] #[0.001, 0.0001, 0.00001, 0.000001, 0.0]
+  cluster_lambda: 1.0
+
+  heir_cluster_min_samples: 1000
+  heir_cluster_gauss_noise_stdev: [0.01] #[0.001, 0.0001, 0.00001, 0.000001, 0.0]
+  heir_epochs: 18
+  heir_tune_subtrees: False
+  heir_tune_subtree_list: []
+  heir_deep_cluster: 100
+
+scaler:
+ name: "standard"
+
+data:
+ tile: True
+ tile_size: [3,3,32]
+ tile_step: [1,1,32]
+ num_loader_workers: 10
+ scale_data: True
+ pixel_padding: 0
+ number_channels: 9
+ fill_value: -999999.0
+ valid_min: -100.0
+ valid_max: 64000
+ subset_count: 1
+ output_subset_count: 1
+ reader_type: "modis_sr"
+ reader_kwargs:
+  no_arg: "no_arg"
+ chan_dim: 0
+ delete_chans: [4,5,6]
+ transform_default:
+  chans: []
+  transform: []
+
+ files_train: [
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019233.h08v05.061.2023129161350.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019228.h08v05.061.2023129113758.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019213.h08v05.061.2023128174944.hdf"
+]
+
+ files_test: [
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019238.h08v05.061.2023129185355.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019225.h09v04.061.2023129074007.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019227.h08v04.061.2023129094143.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019228.h07v05.061.2023129093622.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019230.h07v05.061.2023129113715.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019217.h07v05.061.2023128222337.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019218.h07v05.061.2023128230944.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019241.h08v04.061.2023129180857.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019236.h07v05.061.2023129160200.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019219.h08v05.061.2023129020605.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019225.h08v04.061.2023129070653.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019222.h07v05.061.2023129040240.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019238.h07v05.061.2023129170505.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019221.h09v04.061.2023129034559.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019230.h09v04.061.2023129134530.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019233.h09v04.061.2023129154747.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019227.h07v05.061.2023129090658.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019240.h07v05.061.2023129175930.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019216.h08v04.061.2023128211124.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019225.h07v05.061.2023129065443.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019222.h08v04.061.2023129042605.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019214.h08v05.061.2023128184745.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019217.h08v04.061.2023128224438.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019239.h08v05.061.2023129192242.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019224.h09v04.061.2023129063012.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019216.h09v04.061.2023128222952.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019235.h08v05.061.2023129173329.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019243.h08v04.061.2023129184946.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019241.h09v04.061.2023129200004.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019234.h08v04.061.2023129150234.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019234.h08v05.061.2023129165727.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019220.h08v04.061.2023129023357.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019243.h08v05.061.2023129210609.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019226.h08v05.061.2023129100102.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019216.h07v05.061.2023128205805.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019219.h07v05.061.2023129011607.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019222.h09v04.061.2023129044941.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019232.h08v05.061.2023129153425.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019222.h08v05.061.2023129053109.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019238.h09v04.061.2023129184223.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019233.h08v04.061.2023129142845.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019215.h08v05.061.2023128195315.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019232.h08v04.061.2023129134136.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019236.h08v04.061.2023129155344.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019219.h08v04.061.2023129011026.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019235.h08v04.061.2023129153404.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019228.h08v04.061.2023129103747.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019241.h08v05.061.2023129201953.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019224.h08v04.061.2023129060311.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019223.h08v04.061.2023129052040.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019213.h09v04.061.2023128190917.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019232.h07v05.061.2023129132732.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019223.h07v05.061.2023129050024.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019228.h09v04.061.2023129112737.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019242.h08v05.061.2023129203751.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019226.h08v04.061.2023129082154.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019236.h08v05.061.2023129180006.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019237.h09v04.061.2023129181102.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019227.h08v05.061.2023129105639.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019227.h09v04.061.2023129095652.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019242.h07v05.061.2023129184953.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019218.h08v05.061.2023129010156.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019235.h07v05.061.2023129152027.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019231.h08v05.061.2023129144856.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019231.h09v04.061.2023129142959.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019232.h09v04.061.2023129150302.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019213.h07v05.061.2023128172850.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019213.h08v04.061.2023128174641.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019216.h08v05.061.2023128210447.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019223.h08v05.061.2023129062512.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019240.h08v05.061.2023129195047.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019233.h07v05.061.2023129142146.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019229.h09v04.061.2023129125253.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019240.h08v04.061.2023129174731.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019229.h07v05.061.2023129104947.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019230.h08v04.061.2023129122300.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019226.h07v05.061.2023129080022.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019226.h09v04.061.2023129085530.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019243.h09v04.061.2023129215617.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019234.h09v04.061.2023129163113.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019242.h09v04.061.2023129202149.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019215.h07v05.061.2023128192521.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019229.h08v05.061.2023129130503.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019243.h07v05.061.2023129191011.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019237.h08v04.061.2023129162738.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019214.h09v04.061.2023128195813.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019237.h08v05.061.2023129182844.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019221.h07v05.061.2023129031418.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019236.h09v04.061.2023129173954.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019231.h07v05.061.2023129122838.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019218.h09v04.061.2023129002741.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019221.h08v05.061.2023129042735.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019235.h09v04.061.2023129171159.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019229.h08v04.061.2023129112244.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019230.h08v05.061.2023129135357.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019239.h08v04.061.2023129172130.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019242.h08v04.061.2023129182814.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019241.h07v05.061.2023129182307.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019224.h07v05.061.2023129054536.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019220.h08v05.061.2023129031814.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019217.h09v04.061.2023128230816.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019217.h08v05.061.2023128221555.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019214.h07v05.061.2023128184215.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019239.h09v04.061.2023129190810.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019220.h09v04.061.2023129025140.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019240.h09v04.061.2023129193452.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019237.h07v05.061.2023129163929.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019239.h07v05.061.2023129173420.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019221.h08v04.061.2023129033630.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019219.h09v04.061.2023129013022.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019231.h08v04.061.2023129130129.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019215.h09v04.061.2023128210132.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019214.h08v04.061.2023128184750.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019215.h08v04.061.2023128194213.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019234.h07v05.061.2023129145354.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019223.h09v04.061.2023129053132.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019225.h08v05.061.2023129083234.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019224.h08v05.061.2023129073440.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019218.h08v04.061.2023129001027.hdf",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/MODIS/MCD19A1.A2019220.h07v05.061.2023129024033.hdf"
+]
+
+
+
