@@ -1,9 +1,8 @@
 conda activate rapids-22.08 
 export PYTHONPATH=${PYTHONPATH}:/home/nlahaye/learnergy/:/home/nlahaye/SIT_FUSE/:/home/nlahaye/x-transformers/:/home/nlahaye/I-JEPA/:/home/nlahaye/byol-pytorch/
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/home/nlahaye/.conda/envs/rapids-22.08/lib/ 
-torchrun --rdzv-backend=c10d --nnodes=1 --nproc-per-node=5 --rdzv-endpoint=localhost:12355 dbn_learnergy_heirarchical.py --yaml config/
-dbn/emit_dbn.yaml >& EMIT_HEIR 
-
+python3 pretrain_encoder.py --yaml /home/nlahaye/SIT_FUSE/sit_fuse/config/dbn/emas_fire_ijepa.yaml
+python3 finetune_dc_mlp_head.py --yaml /home/nlahaye/SIT_FUSE/sit_fuse/config/dbn/emas_fire_ijepa.yaml
 
 
 
