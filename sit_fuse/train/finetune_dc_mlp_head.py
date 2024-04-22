@@ -20,24 +20,63 @@ import argparse
 
 def train_dc_no_pt(yml_conf, dataset):
 
-    model = DeepCluster(num_classes=800, conv=yml_conf["conv"])
+    use_wandb_logger = yml_conf["logger"]["use_wandb"]
+    log_model = None
+    save_dir = yml_conf["output"]["out_dir"]
+    project = None
+    if use_wandb_logger:
+        log_model = yml_conf["logger"]["log_model"]
+        save_dir = os.path.join(yml_conf["output"]["out_dir"], yml_conf["logger"]["log_out_dir"])
+        project = yml_conf["logger"]["project"]
+
+    encoder_dir = os.path.join(save_dir, "encoder")
+    save_dir = os.path.join(save_dir, "full_model")
+
+    accelerator = yml_conf["cluster"]["training"]["accelerator"]
+    devices = yml_conf["cluster"]["training"]["devices"]
+    precision = yml_conf["cluster"]["training"]["precision"]
+    max_epochs = yml_conf["cluster"]["training"]["epochs"]
+    gradient_clip_val = yml_conf["cluster"]["training"]["gradient_clip_val"]
+    gauss_stdev = yml_conf["cluster"]["gauss_noise_stdev"] #TODO incorporate
+    lambda_iid = yml_conf["cluster"]["lambda"] #TODO incorporate
+
+    num_classes = yml_conf["cluster"]["num_classes"]
+
+    model = DeepCluster(num_classes=num_classes, conv=yml_conf["conv"])
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
 
-    wandb_logger = WandbLogger(project="SIT-FUSE", log_model=True, save_dir = "/home/nlahaye/SIT_FUSE_DEV/wandb_cnn/")
+    os.makedirs(save_dir, exist_ok=True)
+    if use_wandb_logger:
 
-    trainer = pl.Trainer(
-        accelerator='gpu',
-        devices=1,
-        precision="16-mixed",
-        max_epochs=50,
-        callbacks=[lr_monitor, model_summary],
-        gradient_clip_val=.1,
-        logger=wandb_logger
-    )
+        wandb_logger = WandbLogger(project=project, log_model=log_model, save_dir = save_dir)
+
+        trainer = pl.Trainer(
+            default_root_dir=save_dir,
+            accelerator=accelerator,
+            devices=devices,
+            strategy=DDPStrategy(find_unused_parameters=True),
+            precision=precision,
+            max_epochs=max_epochs,
+            callbacks=[lr_monitor, model_summary],
+            gradient_clip_val=gradient_clip_val,
+            logger=wandb_logger
+        )
+    else:
+        trainer = pl.Trainer(
+            default_root_dir=save_dir,
+            accelerator=accelerator,
+            devices=devices,
+            strategy=DDPStrategy(find_unused_parameters=True),
+            precision=precision,
+            max_epochs=max_epochs,
+            callbacks=[lr_monitor, model_summary],
+            gradient_clip_val=gradient_clip_val
+        )
 
     trainer.fit(model, dataset)
+
 
 
 def dc_DBN(yml_conf, dataset):
@@ -68,11 +107,13 @@ def dc_DBN(yml_conf, dataset):
     encoder_dir = os.path.join(save_dir, "encoder")
     save_dir = os.path.join(save_dir, "full_model")
 
-    accelerator = yml_conf["encoder"]["training"]["accelerator"]
-    devices = yml_conf["encoder"]["training"]["devices"]
-    precision = yml_conf["encoder"]["training"]["precision"]
-    max_epochs = yml_conf["encoder"]["training"]["epochs"]
-    gradient_clip_val = yml_conf["encoder"]["training"]["gradient_clip_val"]
+    accelerator = yml_conf["cluster"]["training"]["accelerator"]
+    devices = yml_conf["cluster"]["training"]["devices"]
+    precision = yml_conf["cluster"]["training"]["precision"]
+    max_epochs = yml_conf["cluster"]["training"]["epochs"]
+    gradient_clip_val = yml_conf["cluster"]["training"]["gradient_clip_val"]
+    gauss_stdev = yml_conf["cluster"]["gauss_noise_stdev"] #TODO incorporate
+    lambda_iid = yml_conf["cluster"]["lambda"] #TODO incorporate
 
     num_classes = yml_conf["cluster"]["num_classes"]
 
@@ -97,6 +138,7 @@ def dc_DBN(yml_conf, dataset):
         wandb_logger = WandbLogger(project=project, log_model=log_model, save_dir = save_dir)
 
         trainer = pl.Trainer(
+            default_root_dir=save_dir,
             accelerator=accelerator,
             devices=devices,
             strategy=DDPStrategy(find_unused_parameters=True),
@@ -108,6 +150,7 @@ def dc_DBN(yml_conf, dataset):
         )
     else:
         trainer = pl.Trainer(
+            default_root_dir=save_dir,
             accelerator=accelerator,
             devices=devices,
             strategy=DDPStrategy(find_unused_parameters=True),
@@ -139,6 +182,8 @@ def dc_IJEPA(yml_conf, dataset):
     precision = yml_conf["encoder"]["training"]["precision"]
     max_epochs = yml_conf["encoder"]["training"]["epochs"]
     gradient_clip_val = yml_conf["encoder"]["training"]["gradient_clip_val"]
+    gauss_stdev = yml_conf["cluster"]["gauss_noise_stdev"] #TODO incorporate
+    lambda_iid = yml_conf["cluster"]["lambda"] #TODO incorporate
 
     num_classes = yml_conf["cluster"]["num_classes"]
 
@@ -159,6 +204,7 @@ def dc_IJEPA(yml_conf, dataset):
         wandb_logger = WandbLogger(project=project, log_model=log_model, save_dir = save_dir)
 
         trainer = pl.Trainer(
+            default_root_dir=save_dir,
             accelerator=accelerator,
             devices=devices,
             strategy=DDPStrategy(find_unused_parameters=True),
@@ -170,6 +216,7 @@ def dc_IJEPA(yml_conf, dataset):
         )
     else:
         trainer = pl.Trainer(
+            default_root_dir=save_dir,
             accelerator=accelerator,
             devices=devices,
             strategy=DDPStrategy(find_unused_parameters=True),
@@ -197,11 +244,13 @@ def dc_BYOL(yml_conf, dataset):
     encoder_dir = os.path.join(save_dir, "encoder")
     save_dir = os.path.join(save_dir, "full_model")
 
-    accelerator = yml_conf["encoder"]["training"]["accelerator"]
-    devices = yml_conf["encoder"]["training"]["devices"]
-    precision = yml_conf["encoder"]["training"]["precision"]
-    max_epochs = yml_conf["encoder"]["training"]["epochs"]
-    gradient_clip_val = yml_conf["encoder"]["training"]["gradient_clip_val"]
+    accelerator = yml_conf["cluster"]["training"]["accelerator"]
+    devices = yml_conf["cluster"]["training"]["devices"]
+    precision = yml_conf["cluster"]["training"]["precision"]
+    max_epochs = yml_conf["cluster"]["training"]["epochs"]
+    gradient_clip_val = yml_conf["cluster"]["training"]["gradient_clip_val"]
+    gauss_stdev = yml_conf["cluster"]["gauss_noise_stdev"] #TODO incorporate
+    lambda_iid = yml_conf["cluster"]["lambda"] #TODO incorporate
 
     num_classes = yml_conf["cluster"]["num_classes"]
 
@@ -221,7 +270,7 @@ def dc_BYOL(yml_conf, dataset):
         wandb_logger = WandbLogger(project=project, log_model=log_model, save_dir=save_dir)
  
         trainer = pl.Trainer(
-            default_root_dir=save_dir
+            default_root_dir=save_dir,
             accelerator=accelerator,
             devices=devices,
             strategy=DDPStrategy(find_unused_parameters=True),
@@ -233,7 +282,7 @@ def dc_BYOL(yml_conf, dataset):
         )
     else:
         trainer = pl.Trainer(
-            default_root_dir=save_dir
+            default_root_dir=save_dir,
             accelerator=accelerator,
             devices=devices,
             strategy=DDPStrategy(find_unused_parameters=True),

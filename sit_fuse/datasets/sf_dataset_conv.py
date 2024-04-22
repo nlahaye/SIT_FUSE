@@ -43,7 +43,8 @@ class SFDatasetConv(SFDataset):
 		self.scaler = None
 		self.train_indices = None
 		self.transform = transform
-
+		self.data = self.data_full
+		self.targets = self.targets_full
 
 
 	def read_and_preprocess_data(self, filenames, read_func, read_func_kwargs, delete_chans, valid_min, valid_max, fill_value = -999999, chan_dim = 0, transform_chans = [], transform_values = [], transform=None, tile = False, tile_size = None, tile_step = None, subset_training = -1, stratify_data = None, data_fraction = 1, data_fraction_index = 1):
@@ -266,7 +267,8 @@ class SFDatasetConv(SFDataset):
 			self.transform = transform_norm 
 
 		self.data_full = self.transform(self.data_full)
-
+		self.data = self.data_full
+		self.targets = self.targets_full
 
 
 	def __len__(self):

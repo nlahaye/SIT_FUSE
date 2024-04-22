@@ -46,7 +46,7 @@ class SFDataset(torch.utils.data.Dataset):
 		"""
 		pass	
 
-	def init_from_array(self, data, targets, scaler = None):
+	def init_from_array(self, data, targets, scaler = None, transform = None):
 		"""
 		Initializes Dataset from pre-existing external array(s).
 
@@ -65,7 +65,8 @@ class SFDataset(torch.utils.data.Dataset):
 		self.transform = None
 		if scaler is not None:
 			self.scale = True
-		
+		if transform is not None:
+			self.transform = transform        
 		self.data_full = self.data
 		self.targets_full = self.targets
 

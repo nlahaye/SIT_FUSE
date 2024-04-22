@@ -12,10 +12,12 @@ import numpy as np
 
 class DBN_DC(pl.LightningModule):
     #take pretrained model path, number of classes, learning rate, weight decay, and drop path as input
-    def __init__(self, pretrained_model, num_classes, lr=1e-3, weight_decay=0):
+    def __init__(self, pretrained_model, num_classes, lr=1e-3, weight_decay=0, number_heads=1):
 
         super().__init__()
         self.save_hyperparameters(ignore=['pretrained_model'])
+        self.num_classes = num_classes
+        self.number_heads = number_heads
 
         #set parameters
         self.lr = lr
@@ -23,7 +25,7 @@ class DBN_DC(pl.LightningModule):
 
         self.pretrained_model = pretrained_model
 
-        self.mlp_head =  MultiPrototypes(self.pretrained_model.models[-1].n_hidden, 800, 1)
+        self.mlp_head =  MultiPrototypes(self.pretrained_model.models[-1].n_hidden, self.num_classes, self.number_heads)
 
         #define loss
         self.criterion = IID_loss

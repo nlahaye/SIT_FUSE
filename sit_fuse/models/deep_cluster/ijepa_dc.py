@@ -12,10 +12,12 @@ import numpy as np
 
 class IJEPA_DC(pl.LightningModule):
     #take pretrained model path, number of classes, learning rate, weight decay, and drop path as input
-    def __init__(self, pretrained_model_path, num_classes, lr=1e-3, weight_decay=0, drop_path=0.1):
+    def __init__(self, pretrained_model_path, num_classes, lr=1e-3, weight_decay=0, drop_path=0.1, number_heads=1):
 
         super().__init__()
         self.save_hyperparameters()
+        self.num_classes = num_classes
+        self.number_heads = number_heads
 
         #set parameters
         self.lr = lr
@@ -31,7 +33,7 @@ class IJEPA_DC(pl.LightningModule):
        
         print(self.pretrained_model.num_tokens)
         #self.mlp_head =  MultiPrototypes(self.pretrained_model.num_tokens, 800, 1)
-        self.mlp_head =  MultiPrototypes(self.pretrained_model.num_tokens*self.pretrained_model.embed_dim, 800, 1)
+        self.mlp_head =  MultiPrototypes(self.pretrained_model.num_tokens*self.pretrained_model.embed_dim, self.num_classes, self.number_heads)
 
         #nn.Sequential(
         #    nn.LayerNorm(self.pretrained_model.num_tokens),

@@ -12,26 +12,25 @@ import numpy as np
 
 class BYOL_DC(pl.LightningModule):
     #take pretrained model path, number of classes, learning rate, weight decay, and drop path as input
-    def __init__(self, pretrained_model_path, num_classes, lr=1e-3, weight_decay=0, drop_path=0.1):
+    def __init__(self, pretrained_model_path, num_classes, lr=1e-3, weight_decay=0, number_heads=1):
 
         super().__init__()
         self.save_hyperparameters()
+        self.num_classes = num_classes   
+        self.number_heads = number_heads
 
         #set parameters
         self.lr = lr
         self.weight_decay = weight_decay
-        self.drop_path = drop_path
 
         #define model layers
         self.pretrained_model = BYOL_PL.load_from_checkpoint(pretrained_model_path)
         self.pretrained_model.model.mode = "test"
-        self.pretrained_model.model.layer_dropout = self.drop_path
         #self.average_pool = nn.AvgPool1d((self.pretrained_model.embed_dim), stride=1)
         #mlp head
        
         print(self.pretrained_model.num_tokens)
-        #self.mlp_head =  MultiPrototypes(self.pretrained_model.num_tokens, 800, 1)
-        self.mlp_head =  MultiPrototypes(self.pretrained_model.num_tokens*self.pretrained_model.embed_dim, 800, 1)
+        self.mlp_head =  MultiPrototypes(self.pretrained_model.num_tokens*self.pretrained_model.embed_dim, self.num_classes, self.number_heads)
 
         #nn.Sequential(
         #    nn.LayerNorm(self.pretrained_model.num_tokens),
@@ -43,7 +42,7 @@ class BYOL_DC(pl.LightningModule):
         self.rng = np.random.default_rng(None)
  
     def forward(self, x):
-        x = self.pretrained_model.model(x)
+        x = self.pretrained_model(x)
         x = x.reshape((x.shape[0], x.shape[1]*x.shape[2]))
         #x = self.average_pool(x) #conduct average pool like in paper
         x = x.squeeze(-1)

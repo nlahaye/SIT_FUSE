@@ -54,7 +54,7 @@ def get_train_dataset_sf(yml_conf):
     os.makedirs(out_dir, exist_ok=True)
 
 
-    tiled = yml_conf["encoder"]["tiled"]
+    tiled = yml_conf["data"]["tile"]
     tune_scaler = yml_conf["encoder"]["tune_scaler"]
     overwrite_model = yml_conf["encoder"]["overwrite_model"]
 

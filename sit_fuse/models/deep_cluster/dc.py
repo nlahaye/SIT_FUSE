@@ -8,7 +8,7 @@ from sit_fuse.models.deep_cluster.multi_prototypes import DeepMultiPrototypes, D
 import numpy as np
 
 class DeepCluster(pl.LightningModule):
-    def __init__(self, num_classes, lr=1e-3, weight_decay=0, drop_path=0.1, conv=False):
+    def __init__(self, num_classes, in_chans, img_shape, lr=1e-3, weight_decay=0, drop_path=0.1, conv=False, number_heads=1):
 
         super().__init__()
         self.save_hyperparameters()
@@ -17,14 +17,17 @@ class DeepCluster(pl.LightningModule):
         self.lr = lr
         self.weight_decay = weight_decay
         self.drop_path = drop_path
+        self.in_chans = in_chans
+        self.img_shape = img_shape
+        self.number_heads = number_heads
 
         self.conv = conv
 
         if conv:
-            self.mlp_head =  DeepConvMultiPrototypes(34, 300, 1)
+            self.mlp_head =  DeepConvMultiPrototypes(in_chans, self.num_classes, self.number_heads)
 
         else:
-            self.mlp_head =  DeepMultiPrototypes(34*9, 800, 1)
+            self.mlp_head =  DeepMultiPrototypes(in_chans*img_shape, self.num_classes, self.number_heads)
 
      
 
