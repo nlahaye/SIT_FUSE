@@ -43,7 +43,10 @@ def train_dc_no_pt(yml_conf, dataset):
 
     num_classes = yml_conf["cluster"]["num_classes"]
 
-    model = DeepCluster(num_classes=num_classes, conv=yml_conf["conv"])
+    img_size = yml_conf["data"]["tile_size"][0]
+    in_chans = yml_conf["data"]["tile_size"][2]
+
+    model = DeepCluster(num_classes=num_classes, conv=yml_conf["conv"], img_size=img_size, in_chans=in_chans)
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
@@ -192,7 +195,7 @@ def dc_IJEPA(yml_conf, dataset):
 
     model = IJEPA_DC(pretrained_model_path=ckpt_path, num_classes=num_classes)
     for param in model.pretrained_model.parameters():
-        param.requires_grad = False
+        param.requires_grad = True
     for param in model.mlp_head.parameters():
         param.requires_grad = True
 

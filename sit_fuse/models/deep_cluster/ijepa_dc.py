@@ -61,7 +61,7 @@ class IJEPA_DC(pl.LightningModule):
         y = self.mlp_head(y)[0] 
         y2 = self.mlp_head(y2)[0]
         loss = self.criterion(y,y2)[0] #calculate loss
-        self.log('train_loss', loss)
+        self.log('train_loss', loss, sync_dist=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -73,7 +73,7 @@ class IJEPA_DC(pl.LightningModule):
         y = self.mlp_head(y)[0]
         y2 = self.mlp_head(y2)[0]
         loss = self.criterion(y,y2)[0] #calculate loss
-        self.log('val_loss', loss)
+        self.log('val_loss', loss, sync_dist=True)
         return loss
 
     def predict_step(self, batch, batch_idx, dataloader_idx):
