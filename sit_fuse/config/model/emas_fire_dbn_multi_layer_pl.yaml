@@ -61,7 +61,6 @@ output:
 dbn:
  conv: False
  subset_training: 2000000
- deep_cluster: 800
  heir_tiers: 1
  overwrite_model: False
  tune_clust: False
@@ -102,6 +101,7 @@ logger:
  project: "SIT-FUSE"
 
 cluster:
+ num_classes: 800
  training:
   batch_size: 1000
   cluster_batch_size: 1000
