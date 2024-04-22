@@ -50,6 +50,8 @@ def pretrain_DBN(yml_conf, dataset):
         save_dir = os.path.join(yml_conf["output"]["out_dir"], yml_conf["logger"]["log_out_dir"])
         project = yml_conf["logger"]["project"]
 
+    save_dir = os.path.join(save_dir, "encoder")
+
     accelerator = yml_conf["encoder"]["training"]["accelerator"]
     devices = yml_conf["encoder"]["training"]["devices"]
     precision = yml_conf["encoder"]["training"]["precision"]
@@ -133,6 +135,8 @@ def pretrain_IJEPA(yml_conf, dataset):
         save_dir = os.path.join(yml_conf["output"]["out_dir"], yml_conf["logger"]["log_out_dir"])
         project = yml_conf["logger"]["project"]
 
+    save_dir = os.path.join(save_dir, "encoder")
+
     accelerator = yml_conf["encoder"]["training"]["accelerator"]
     devices = yml_conf["encoder"]["training"]["devices"]
     precision = yml_conf["encoder"]["training"]["precision"]
@@ -198,6 +202,8 @@ def pretrain_BYOL(yml_conf, dataset):
         log_model = yml_conf["logger"]["log_model"]
         save_dir = os.path.join(yml_conf["output"]["out_dir"], yml_conf["logger"]["log_out_dir"])
         project = yml_conf["logger"]["project"]
+ 
+    save_dir = os.path.join(save_dir, "encoder")
 
     accelerator = yml_conf["encoder"]["training"]["accelerator"]
     devices = yml_conf["encoder"]["training"]["devices"]

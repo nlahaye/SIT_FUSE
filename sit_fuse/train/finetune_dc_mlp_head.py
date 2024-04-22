@@ -65,6 +65,9 @@ def dc_DBN(yml_conf, dataset):
         save_dir = os.path.join(yml_conf["output"]["out_dir"], yml_conf["logger"]["log_out_dir"])
         project = yml_conf["logger"]["project"]
 
+    encoder_dir = os.path.join(save_dir, "encoder")
+    save_dir = os.path.join(save_dir, "full_model")
+
     accelerator = yml_conf["encoder"]["training"]["accelerator"]
     devices = yml_conf["encoder"]["training"]["devices"]
     precision = yml_conf["encoder"]["training"]["precision"]
@@ -73,7 +76,7 @@ def dc_DBN(yml_conf, dataset):
 
     num_classes = yml_conf["cluster"]["num_classes"]
 
-    ckpt_path = os.path.join(save_dir, "dbn.ckpt")
+    ckpt_path = os.path.join(encoder_dir, "dbn.ckpt")
 
     dbn = DBN(model=model_type, n_visible=dataset.n_visible, n_hidden=dbn_arch, steps=gibbs_steps,
         learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=True)
@@ -128,6 +131,9 @@ def dc_IJEPA(yml_conf, dataset):
         save_dir = os.path.join(yml_conf["output"]["out_dir"], yml_conf["logger"]["log_out_dir"])
         project = yml_conf["logger"]["project"]
 
+    encoder_dir = os.path.join(save_dir, "encoder")
+    save_dir = os.path.join(save_dir, "full_model")
+
     accelerator = yml_conf["encoder"]["training"]["accelerator"]
     devices = yml_conf["encoder"]["training"]["devices"]
     precision = yml_conf["encoder"]["training"]["precision"]
@@ -136,7 +142,7 @@ def dc_IJEPA(yml_conf, dataset):
 
     num_classes = yml_conf["cluster"]["num_classes"]
 
-    ckpt_path = os.path.join(save_dir, "checkpoint.ckpt")
+    ckpt_path = os.path.join(encoder_dir, "checkpoint.ckpt")
 
     model = IJEPA_DC(pretrained_model_path=ckpt_path, num_classes=num_classes)
     for param in model.pretrained_model.parameters():
@@ -188,6 +194,9 @@ def dc_BYOL(yml_conf, dataset):
         save_dir = os.path.join(yml_conf["output"]["out_dir"], yml_conf["logger"]["log_out_dir"])
         project = yml_conf["logger"]["project"]
 
+    encoder_dir = os.path.join(save_dir, "encoder")
+    save_dir = os.path.join(save_dir, "full_model")
+
     accelerator = yml_conf["encoder"]["training"]["accelerator"]
     devices = yml_conf["encoder"]["training"]["devices"]
     precision = yml_conf["encoder"]["training"]["precision"]
@@ -196,7 +205,7 @@ def dc_BYOL(yml_conf, dataset):
 
     num_classes = yml_conf["cluster"]["num_classes"]
 
-    ckpt_path = os.path.join(save_dir, "byol.ckpt")
+    ckpt_path = os.path.join(encoder_dir, "byol.ckpt")
 
     model = BYOL_DC(pretrained_model_path=ckpt_path, num_classes=num_classes)
     for param in model.pretrained_model.parameters():

@@ -68,6 +68,68 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, pin_mem = T
     torch.save(output_full, os.path.join(out_dir, output_fle), pickle_protocol=pickle.HIGHEST_PROTOCOL)
     torch.save(dat.targets_full, os.path.join(out_dir, output_fle + ".indices"), pickle_protocol=pickle.HIGHEST_PROTOCOL)
 
+    plot_clusters(dat.targets_full, output_full, os.path.join(out_dir, output_fle)) 
+
+def plot_clusters(coord, output_data, output_basename, pixel_padding=1):
+
+        max_cluster = output_data.shape[1]
+        min_cluster = 0
+        labels = None
+        if output_data.shape[1] > 1:
+            max_cluster = output_data.shape[1]
+            labels = np.argmax(output_data, axis = 1)
+        else:
+            labels = output_data.astype(np.int32)
+            max_cluster = disc_data.max() #TODO this better!!!
+
+        print(np.unique(disc_data).shape, "UNIQUE LABELS", np.unique(disc_data))
+
+
+        n_clusters_local = max_clust - min_clust
+
+        data = []
+        max_dim1 = max(coord[:,1])
+        max_dim2 = max(coord[:,2])
+        strt_dim1 = 0
+        strt_dim2 = 0
+
+        #1 subtracted to separate No Data from areas that have cluster value 0.
+        data = np.zeros((((int)(max_dim1)+1+pixel_padding), ((int)(max_dim2)+pixel_padding+1))) - 1
+        labels = np.array(labels)
+        print("ASSIGNING LABELS", min_clust, max_clust)
+        print(data.shape, labels.shape, coord.shape)
+        for i in range(labels.shape[0]):
+            data[coord[i,1], coord[i,2]] = labels[i]
+            #print(data.shape, coord[i,1], coord[i,2], labels[i], max_dim1, max_dim2)
+
+        print("FINISHED WITH LABEL ASSIGNMENT")
+        print("FINAL DATA TO DASK")
+        data = data.astype(np.float32)
+        print(data)
+        data = (data/1000.0).astype(np.float32)
+        print(data)
+        data2 = da.from_array(data)
+        #del data
+
+        da.to_zarr(data2,output_basename + "_" + str(n_clusters_local) + "clusters.zarr", overwrite=True)
+        img = plt.imshow(data, vmin=-1, vmax=max_clust)
+        print("HERE CLUSTERS MIN MAX MEAN STD", data.min(), data.max(), data.mean(), data.std(), data.shape)
+        cmap = ListedColormap(CMAP_COLORS[0:int(max_clust - (-1) + 1)])
+        img.set_cmap(cmap)
+        plt.colorbar()
+        plt.savefig(output_basename + "_" + str(n_clusters_local) + "clusters.png", dpi=400, bbox_inches='tight')
+        plt.clf()
+
+        file_ext = ".no_geo"
+        fname = output_basename + "_" + str(n_clusters_local) + "clusters" + file_ext + ".tif"
+
+        print("HERE", data.min(), data.max(), data.mean(), data.std(), data.shape)
+        out_ds = gdal.GetDriverByName("GTiff").Create(fname, data.shape[1], data.shape[0], 1, gdal.GDT_Float32)
+        out_ds.GetRasterBand(1).WriteArray(data)
+        out_ds.FlushCache()
+        out_ds = None
+
+
 
 
 def main(yml_fpath):
@@ -80,14 +142,21 @@ def main(yml_fpath):
     use_gpu = yml_conf["encoder"]["training"]["use_gpu"]
     out_dir = yml_conf["output"]["out_dir"]
 
+    save_dir = yml_conf["output"]["out_dir"]
+    use_wandb_logger = yml_conf["logger"]["use_wandb"]
+    if use_wandb_logger:
+        save_dir = os.path.join(yml_conf["output"]["out_dir"], yml_conf["logger"]["log_out_dir"]) 
+    ckpt_path = os.path.join(os.path.join(save_dir, "full_model"), "checkpoint.ckpt")
+
+
     model = None
     if "encoder_type" in yml_conf:
         if yml_conf["encoder_type"] == "dbn":
-            model = dc_DBN.load_from_checkpoint(yml_conf["model_checkpoint"])
+            model = dc_DBN.load_from_checkpoint(ckpt_path)
         elif yml_conf["encoder_type"] == "ijepa":
-            model = dc_IJEPA.load_from_checkpoint(yml_conf["model_checkpoint"])
+            model = dc_IJEPA.load_from_checkpoint(ckpt_path)
     else:
-        model = DeepCluster.load_from_checkpoint(yml_conf["model_checkpoint"])
+        model = DeepCluster.load_from_checkpoint(ckpt_path)
 
     test_fnames = yml_conf["data"]["files_test"]
     train_fnames = yml_conf["data"]["files_train"]
