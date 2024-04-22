@@ -19,18 +19,17 @@ import  matplotlib.pyplot as plt
 import pickle
 from joblib import load
 
-#Data
-from utils import read_yaml, get_read_func
-from dbn_datasets import DBNDataset
 
 #ML Imports
 import torch
 import torch.optim as opt 
+
+from sit_fuse.models.deep_cluster.dc import DeepCluster
+from sit_fuse.models.deep_cluster.ijepa_dc import IJEPA_DC
+from sit_fuse.models.deep_cluster.dbn_dc import DBN_DC
+from sit_fuse.datasets.dataset_utils import get_prediction_dataset
+
 from torch.nn.parallel import DistributedDataParallel as DDP
-from rbm_models.clust_dbn import ClustDBN
-from rbm_models.heirarchichal_deep_clust import HeirClust
-from learnergy.models.deep import DBN
-from dbn_learnergy import setup_ddp, cleanup_ddp
 import shap
 
 #Input Parsing
@@ -47,198 +46,37 @@ torch.backends.cudnn.enabled = True
 # TODO: Parallel process shap values
 
 
-def load_model(yml_conf, n_visible = None, data_train = None):
+def load_model(yml_conf, n_visible = None):
     
-    # TODO: Fix bugs
-    # FCDBN not supported
-    
+    num_loader_workers = int(yml_conf["data"]["num_loader_workers"])
+    val_percent = int(yml_conf["data"]["val_percent"])
+    batch_size = yml_conf["cluster"]["training"]["batch_size"]
+    use_gpu = yml_conf["encoder"]["training"]["use_gpu"]
     out_dir = yml_conf["output"]["out_dir"]
-    os.makedirs(out_dir, exist_ok=True)
-    model_fname = yml_conf["output"]["model"]
-    model_file = os.path.join(out_dir, model_fname)
-    auto_clust = yml_conf["dbn"]["deep_cluster"]
-    device_ids = yml_conf["dbn"]["training"]["device_ids"] 
-    use_gpu = yml_conf["dbn"]["training"]["use_gpu"]
-    model_type = yml_conf["dbn"]["params"]["model_type"]
-    dbn_arch = tuple(yml_conf["dbn"]["params"]["dbn_arch"])
-    temp = tuple(yml_conf["dbn"]["params"]["temp"])
-    gibbs_steps = tuple(yml_conf["dbn"]["params"]["gibbs_steps"])
-    learning_rate = tuple(yml_conf["dbn"]["params"]["learning_rate"])
-    momentum = tuple(yml_conf["dbn"]["params"]["momentum"])
-    decay = tuple(yml_conf["dbn"]["params"]["decay"])
-    normalize_learnergy = tuple(yml_conf["dbn"]["params"]["normalize_learnergy"])
-    batch_normalize = tuple(yml_conf["dbn"]["params"]["batch_normalize"])
-    nesterov_accel = tuple(yml_conf["dbn"]["params"]["nesterov_accel"])
 
+    save_dir = yml_conf["output"]["out_dir"]
+    use_wandb_logger = yml_conf["logger"]["use_wandb"]
+    if use_wandb_logger:
+        save_dir = os.path.join(yml_conf["output"]["out_dir"], yml_conf["logger"]["log_out_dir"])
+    ckpt_path = os.path.join(os.path.join(save_dir, "full_model"), "checkpoint.ckpt")
+    ckpt_path_heir = os.path.join(os.path.join(save_dir, "full_model_heir"), "checkpoint.ckpt")
+   
 
-    model_fname = yml_conf["output"]["model"]
-    model_file = os.path.join(out_dir, model_fname)
-    heir_model_file = os.path.join(out_dir, "heir_" + model_fname)
-    heir_model_tiers = yml_conf["dbn"]["heir_tiers"]
-
-    heir_min_samples = yml_conf["dbn"]["training"]["heir_cluster_min_samples"]
-    heir_gauss_stdevs = yml_conf["dbn"]["training"]["heir_cluster_gauss_noise_stdev"]
-    heir_epochs = yml_conf["dbn"]["training"]["heir_epochs"]
-    n_heir_classes = yml_conf["dbn"]["training"]["heir_deep_cluster"]
-
-    local_rank = 0
-    device = "cpu"
-    if "LOCAL_RANK" in os.environ.keys():
-        setup_ddp(device_ids, use_gpu)
-        local_rank = int(os.environ["LOCAL_RANK"])
-        device = torch.device("cuda:{}".format(local_rank))   
- 
-    if n_visible is None:
-        input_fp = glob(os.path.join(out_dir, "*.clustoutput.data.input"))[0]
-        data_full = torch.load(input_fp)
-        n_visible = data_full.shape[1]
+    model = None
     
-    n_visible = data_train.data_full.shape[1]
-    new_dbn = DBN(model=model_type, n_visible=n_visible, n_hidden=dbn_arch, steps=gibbs_steps, \
-        learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=use_gpu)
-    
-    for i in range(len(new_dbn.models)):
-        if not isinstance(new_dbn.models[i], torch.nn.MaxPool2d):
-           new_dbn.models[i]._optimizer = opt.SGD(new_dbn.models[i].parameters(), lr=learning_rate[i], momentum=momentum[i], weight_decay=decay[i], nesterov=nesterov_accel[i])
-           new_dbn.models[i].normalize = normalize_learnergy[i]
-           new_dbn.models[i].batch_normalize = batch_normalize[i]
-        if "LOCAL_RANK" in os.environ.keys():
-            if not isinstance(new_dbn.models[i], torch.nn.MaxPool2d):
-                new_dbn.models[i] = DDP(new_dbn.models[i], device_ids=[new_dbn.models[i].torch_device], output_device=new_dbn.models[i].torch_device) #, device_ids=device_ids)
-            else:
-                new_dbn.models[i] = new_dbn.models[i]
-    
-    clust_scaler = None
-    with open(os.path.join(out_dir, "fc_clust_scaler.pkl"), "rb") as f:
-        clust_scaler = load(f)
-    clust_dbn = ClustDBN(new_dbn, dbn_arch[-1], auto_clust, True, clust_scaler)
-    clust_dbn.fc = DDP(clust_dbn.fc, device_ids=[local_rank], output_device=local_rank)
-    model = clust_dbn
-    model.dbn_trunk.load_state_dict(torch.load(model_file + ".ckpt"))
-    model.fc.load_state_dict(torch.load(model_file + "_fc_clust.ckpt"))
-    final_model = model  
- 
-    heir_clust = None
-
-    for tiers in range(0,heir_model_tiers):
-
-        print("HEIRARCHICAL TIER ", str(tiers + 1))
-
-        heir_mdl_file = heir_model_file + ""
-        if tiers > 0:
-            heir_mdl_file = heir_model_file + "_" + str(tiers)
-
-        print(heir_mdl_file)
-        if os.path.exists(heir_mdl_file + ".ckpt"):
-            heir_clust = HeirClust(final_model, data_train, n_heir_classes, use_gpu=use_gpu, min_samples=heir_min_samples, gauss_stdevs = heir_gauss_stdevs)
-            heir_dict = torch.load(heir_mdl_file + ".ckpt")
-            heir_clust.load_model(heir_dict)
-
-
-        final_model = heir_clust
-
-
-
-
-
- 
-    return final_model
-
-
-
-def read_train_test(yml_conf, read_from_input_file = False):
-    
-    # TODO: Fix reading from .input and .indices files.
-    
-    out_dir = yml_conf['output']['out_dir']
-    n_channels = yml_conf['data']['number_channels']
-    chan_dim = yml_conf['data']['chan_dim']
-    train_fp = yml_conf['data']['files_train']
-    test_fp = yml_conf['data']['files_test']
-    data_train = None
-    data_test = None
-
-    while isinstance(train_fp, list):
-        train_fp = train_fp[0] 
-    while isinstance(test_fp, list):
-        test_fp = test_fp[0] 
-        
-    train_fp = os.path.join(out_dir, os.path.basename(train_fp) + ".clustoutput.data.input")
-    test_fp = os.path.join(out_dir, os.path.basename(test_fp) + ".clustoutput_test.data.input")
-    train_idx_fp = '.'.join(train_fp.split('.')[0:-1]) + ".indices"
-    test_idx_fp = '.'.join(test_fp.split('.')[0:-1]) + ".indices"
-    
-    # Try to load data from .input files (seems to be a bit faster)
-    if read_from_input_file and os.path.exists(train_fp) and os.path.exists(test_fp):
-        data_train = np.array(torch.load(train_fp))
-        data_test = np.array(torch.load(test_fp))
-        
-        test_idx = np.array(torch.load(test_idx_fp))
-        dims = dims_from_indices(test_idx, n_channels, chan_dim)
-        print(data_train.shape)
-        data_train = unwrap(data_train, dims)
-        del test_idx
-        
-        # If train and test datasets appear to the have the same shape, we can reuse the dimensions
-        if data_train.shape == data_test.shape:
-            data_test = unwrap(data_test, dims)
-        else:
-            train_idx = np.array(torch.load(train_idx_fp))
-            dims = dims_from_indices(train_idx, n_channels, chan_dim)
-            data_train = unwrap(data_train, dims)
-            del train_idx
+    if os.path.exists(ckpt_path_heir):
+         model = Heir_DC.load_from_checkpoint(ckpt_path_heir)
     else:
-        # Load data using reader
-        reader_type = yml_conf['data']['reader_type']
-        reader_kwargs = yml_conf['data']['reader_kwargs']
-        files_train = yml_conf['data']['files_train']
-        files_test = yml_conf['data']['files_test']
-        data_reader_kwargs = yml_conf["data"]["reader_kwargs"]
-        pixel_padding = yml_conf["data"]["pixel_padding"]
-        number_channel = yml_conf["data"]["number_channels"]
-        fill = yml_conf["data"]["fill_value"]
-        chan_dim = yml_conf["data"]["chan_dim"]
-        valid_min = yml_conf["data"]["valid_min"]
-        valid_max = yml_conf["data"]["valid_max"]
-        delete_chans = yml_conf["data"]["delete_chans"]
-        subset_count = yml_conf["data"]["subset_count"]
-        output_subset_count = yml_conf["data"]["output_subset_count"]
-        scale_data = yml_conf["data"]["scale_data"]
-        transform_chans = yml_conf["data"]["transform_default"]["chans"]
-        transform_values =  yml_conf["data"]["transform_default"]["transform"]
-        scale_data = yml_conf["data"]["scale_data"]
-        stratify_data = None
-        if "stratify_data" in yml_conf["dbn"]["training"]:
-            stratify_data = yml_conf["dbn"]["training"]["stratify_data"]
-
-        subset_training = yml_conf["dbn"]["subset_training"]
-        read_func = get_read_func(reader_type)
-
-        scaler = None
-        scaler_train = False
-        scaler_fname = os.path.join(out_dir, "dbn_scaler.pkl")
- 
-        if not os.path.exists(scaler_fname):
-            scaler_type = yml_conf["scaler"]["name"]
-            scaler, scaler_train = get_scaler(scaler_type, cuda = use_gpu_pre)
+        if "encoder_type" in yml_conf:
+            if yml_conf["encoder_type"] == "dbn":
+                model = DBN_DC.load_from_checkpoint(ckpt_path)
+            elif yml_conf["encoder_type"] == "ijepa":
+                model = IJEPA_DC.load_from_checkpoint(ckpt_path)
         else:
-            scaler = load(scaler_fname)
-
- 
-        data_train = DBNDataset()
-        data_train.read_and_preprocess_data(files_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
-                valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
-                transform_values=transform_values, scaler = scaler, train_scaler = scaler_train, scale = scale_data, \
-                transform=None, subset=subset_count, subset_training = subset_training, stratify_data=stratify_data)
+             model = DeepCluster.load_from_checkpoint(ckpt_path)
 
 
-        data_test = DBNDataset()
-        data_test.read_and_preprocess_data(files_test, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
-                valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
-                transform_values=transform_values, scaler = scaler, train_scaler = scaler_train, scale = scale_data, \
-                transform=None, subset=subset_count, subset_training = subset_training, stratify_data=stratify_data)
-    
-    return data_train, data_test
+    return final_model
 
 
 
@@ -405,21 +243,17 @@ def main(**kwargs):
         batch_size = 50
     
     out_dir = yml_conf['output']['out_dir']
-    model = yml_conf['output']['model']
-    clusters = yml_conf['dbn']['deep_cluster']
+    clusters = yml_conf['cluster']['num_classes']
     fill_value = yml_conf['data']['fill_value']
     n_channels = yml_conf['data']['number_channels']
     chan_dim = yml_conf['data']['chan_dim']
     
+    #loop over multiple files + subsample
     # Load train and test data
-    data_train, data_test = read_train_test(yml_conf)
+    data = get_prediction_dataset((yml_conf, yml_conf["data"]["files_test"][0])
 
     # Load model and scaler
-    model = load_model(yml_conf, n_channels, data_train).cuda()
-    scaler = load(os.path.join(out_dir, "dbn_scaler.pkl"))
-    
-    # Load train and test data
-    data_train, data_test = read_train_test(yml_conf)
+    model = load_model(yml_conf, n_channels).cuda()
     
     # Subset? (yes: (0:200, 0:600))
     #row_min, row_max = 0, 200

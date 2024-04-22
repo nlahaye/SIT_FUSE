@@ -152,9 +152,9 @@ def main(yml_fpath):
     model = None
     if "encoder_type" in yml_conf:
         if yml_conf["encoder_type"] == "dbn":
-            model = dc_DBN.load_from_checkpoint(ckpt_path)
+            model = DBN_DC.load_from_checkpoint(ckpt_path)
         elif yml_conf["encoder_type"] == "ijepa":
-            model = dc_IJEPA.load_from_checkpoint(ckpt_path)
+            model = IJEPA_DC.load_from_checkpoint(ckpt_path)
     else:
         model = DeepCluster.load_from_checkpoint(ckpt_path)
 
