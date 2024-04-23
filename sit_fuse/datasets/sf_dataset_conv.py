@@ -277,7 +277,7 @@ class SFDatasetConv(SFDataset):
         
 		:return: Number of samples.
 		"""
-		return len(self.data)
+		return len(self.data_full)
 
 	def __getitem__(self, idx):
 		"""
@@ -290,7 +290,7 @@ class SFDatasetConv(SFDataset):
 		if torch.is_tensor(idx):
 			idx = idx.tolist()
 
-		sample = self.data[idx]
+		sample = self.data_full[idx]
 
 		return sample, self.targets[idx]
 
