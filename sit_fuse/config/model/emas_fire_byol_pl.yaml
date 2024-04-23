@@ -86,7 +86,7 @@ encoder:
   momentum_start_end: [0.996, 1.0]
   learning_rate: 0.001
   batch_size: 16
-  epochs: 100
+  epochs: 3
   accelerator: "gpu"
   devices: 3
   gradient_clip_val: 0.1
