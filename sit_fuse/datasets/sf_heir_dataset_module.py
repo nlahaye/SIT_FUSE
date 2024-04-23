@@ -10,7 +10,7 @@ class SFHeirDataModule(pl.LightningDataModule):
                  batch_size=16,
                  num_workers=10,
                  pin_memory=True,
-                 shuffle=True,
+                 shuffle=False,
                  val_percent=0.1
                  ):
         super().__init__()
