@@ -31,6 +31,8 @@ class Heir_DC(pl.LightningModule):
         self.lr = lr
         self.weight_decay = weight_decay
 
+        self.key = -1
+
 
         self.number_heads = number_heads
         #define model layers
@@ -42,6 +44,12 @@ class Heir_DC(pl.LightningModule):
         elif encoder_type == "ijepa":
             self.pretrained_model = IJEPA_DC.load_from_checkpoint(pretrained_model_path)
             self.pretrained_model.pretrained_model.model.mode = "test"
+            self.pretrained_model.eval()
+            self.pretrained_model.pretrained_model.eval()
+            self.pretrained_model.mlp_head.eval()
+            self.pretrained_model.pretrained_model.model.eval()
+            #getattr(self.pretrained_model.mlp_head, "batch_norm0").track_running_stats = True
+            #self.pretrained_model.pretrained_model.model.layer_dropout = 0.0
         else:
             self.pretrained_model = DeepCluster.load_from_checkpoint(pretrained_model_path) #Why arent these being saved
 
@@ -62,63 +70,45 @@ class Heir_DC(pl.LightningModule):
         del data
 
     def generate_label_set(self, data):
-
         count = 0
         self.lab_full = {}
         batch_size = max(700, self.min_samples)
 
         output_sze = data.data_full.shape[0]
-        append_remainder = int(batch_size - (output_sze % batch_size))
-
-        if isinstance(data.data_full,torch.Tensor):
-            data.data_full = torch.cat((data.data_full,data.data_full[0:append_remainder]))
-            data.targets_full = torch.cat((data.targets_full,data.targets_full[0:append_remainder]))
-        else:
-            data.data_full = np.concatenate((data.data_full,data.data_full[0:append_remainder]))
-            data.targets_full = np.concatenate((data.targets_full,data.targets_full[0:append_remainder]))
 
         test_loader = DataLoader(data, batch_size=batch_size, shuffle=False, \
-        num_workers = 0, drop_last = False, pin_memory = False)
+        num_workers = 0, drop_last = False, pin_memory = True)
         ind = 0
         ind2 = 0
 
         for data2 in tqdm(test_loader):
-            dat_dev, lab_dev = data2[0].to(device=self.pretrained_model.device, non_blocking=True), data2[1].to(device=self.pretrained_model.device, non_blocking=True)
-            dev_ds = TensorDataset(dat_dev, lab_dev)
+            dat_dev = data2[0].to(device=self.pretrained_model.device, non_blocking=True, dtype=torch.float32)
 
             lab = self.pretrained_model.forward(dat_dev)
-            if isinstance(lab, list):
-                lab = lab[0]
-            #If previous layer is top layer / otherwise argmax happens in forward function
-            if lab.shape[1] > 1:
-                lab = torch.argmax(lab, axis = 1)
-                lab = lab.detach().cpu()
+            lab = torch.argmax(lab, axis = 1)
+            lab = lab.detach().cpu()
             dat_dev = dat_dev.detach().cpu()
-            lab_dev = lab_dev.detach().cpu()
-            del dev_ds
-
 
             ind1 = ind2
             ind2 += dat_dev.shape[0]
-            if ind2 > data.data.shape[0]:
-                ind2 = data.data.shape[0]
+            if ind2 > data.data_full.shape[0]:
+                ind2 = data.data_full.shape[0]
 
             lab_unq = torch.unique(lab)
             for l in lab_unq:
                 inds = torch.where(lab == l)
-                print("LABS", len(inds), inds[0])
                 key = str(l.detach().cpu().numpy())
                 if key in self.lab_full.keys():
                     self.lab_full[key] = torch.cat((self.lab_full[key],(inds[0] + ind1)))
                 else:
                     self.lab_full[key] = inds[0] + ind1
+
             ind = ind + 1
             count = count + 1
             del dat_dev
-            del lab_dev
 
  
-    def forward(self, x, perturb = False):
+    def forward(self, x, perturb = False, train=False):
         #TODO fix for multi-head
         dt = x.dtype
         y = self.pretrained_model.forward(x)
@@ -149,7 +139,10 @@ class Heir_DC(pl.LightningModule):
                                 x.shape[1]*x.shape[0]).reshape(x.shape[0],\
                                 x.shape[1])).type(x.dtype).to(x.device)
  
-        tmp_full = torch.zeros((y.shape[0], 1), device=y.device, dtype=torch.int64)
+        if train == False: 
+            tmp_full = torch.zeros((y.shape[0], 1), device=y.device, dtype=torch.int64)
+        else:
+            tmp_full = torch.zeros((y.shape[0], self.num_classes), device=y.device, dtype=torch.float32)
         tmp_subset = None
         tmp = y
         if y.ndim > 1 and y.shape[1] > 1:
@@ -159,19 +152,23 @@ class Heir_DC(pl.LightningModule):
         tmp3 = tmp
         keys = np.unique(tmp2)
         x.requires_grad = True
-        print("HERE KEYS", keys, y.shape) 
+        #print(keys)
         for key in keys:
+            if key != self.key:
+                continue
             inds = np.where(tmp2 == key)
             input_tmp = x[inds]
+            #print(input_tmp.shape)
             if key in self.clust_tree["1"].keys() and self.clust_tree["1"][key] is not None:
                 tmp = self.clust_tree["1"][key].forward(input_tmp) #torch.unsqueeze(x[inds],dim=0))
                 if isinstance(tmp,tuple):
                     tmp = tmp[0]
                 if isinstance(tmp,list):
                     tmp = tmp[0]
-
-                tmp = torch.unsqueeze(torch.argmax(tmp, dim=1), dim=1)
-                tmp[:,0] = tmp[:,0] + (self.num_classes*tmp3[inds[0]])
+ 
+                if train == False:
+                    tmp = torch.unsqueeze(torch.argmax(tmp, dim=1), dim=1)
+                    tmp[:,0] = tmp[:,0] + (self.num_classes*tmp3[inds[0]])
             else:
                 tmp = torch.unsqueeze((self.num_classes*tmp3[inds[0]]), dim=1)
             if tmp_subset is None:
@@ -180,28 +177,30 @@ class Heir_DC(pl.LightningModule):
                 tmp_subset = torch.cat((tmp_subset, tmp), dim=0)
             tmp_full[inds] = tmp
 
-        print("HERE", tmp_subset.requires_grad, tmp_full.requires_grad, tmp.requires_grad, input_tmp.requires_grad, input_tmp.shape, x.requires_grad, x.shape)
         return tmp_subset, tmp_full
 
     
     def training_step(self, batch, batch_idx):
+        torch.set_grad_enabled(True)
         x = batch
-        y, _  = self.forward(x)
-        y2, _ = self.forward(x.clone(), perturb=True)
-        loss = self.criterion(y,y2)[0] #calculate loss
-        self.log('train_loss', loss)
+        y, y1  = self.forward(x, train=True)
+        y2, y21 = self.forward(x.clone(), perturb=True, train=True)
+        loss, loss2 = self.criterion(y,y2) #calculate loss
+        self.log('train_loss', loss, sync_dist=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
         x = batch 
-        y, _ = self.forward(x)
-        y2, _ = self.forward(x.clone(), perturb=True)
+        y, _ = self.forward(x, Train=False)
+        y2, _ = self.forward(x.clone(), perturb=True, train=False)
         loss = self.criterion(y,y2)[0] #calculate loss
-        self.log('val_loss', loss)
+        self.log('val_loss', loss, sync_dist=True)
         return loss
 
     def predict_step(self, batch, batch_idx, dataloader_idx):
-        return self(batch)
+        
+        y, y1  = self.forward(x, train=False)
+        return y
     
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
