@@ -27,7 +27,10 @@ class IJEPA_DC(pl.LightningModule):
         #define model layers
         self.pretrained_model = IJEPA_PL.load_from_checkpoint(pretrained_model_path)
         self.pretrained_model.model.mode = "test"
-        self.pretrained_model.model.layer_dropout = self.drop_path
+        self.pretrained_model.model.layer_dropout = 0.0
+        self.pretrained_model.eval()
+        self.pretrained_model.model.eval()
+ 
         #self.average_pool = nn.AvgPool1d((self.pretrained_model.embed_dim), stride=1)
         #mlp head
        
@@ -46,7 +49,7 @@ class IJEPA_DC(pl.LightningModule):
  
     def forward(self, x):
         x = self.pretrained_model.model(x)
-        x = x.reshape((x.shape[0], x.shape[1]*x.shape[2]))
+        x = x.flatten(start_dim=1)
         #x = self.average_pool(x) #conduct average pool like in paper
         x = x.squeeze(-1)
         x = self.mlp_head(x)[0] #pass through mlp head
