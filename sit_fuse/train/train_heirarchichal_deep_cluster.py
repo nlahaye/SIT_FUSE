@@ -18,6 +18,8 @@ from sit_fuse.datasets.sf_dataset_conv import SFDatasetConv
 from sit_fuse.datasets.dataset_utils import get_train_dataset_sf
 from sit_fuse.utils import read_yaml
 
+import wandb
+
 import argparse
 import os
 
@@ -71,7 +73,6 @@ def heir_dc(yml_conf, dataset, ckpt_path):
     for key in model.lab_full.keys():
 
         count = count + 1
-        print("LABEL", key, len(model.lab_full[key]))
         if len(model.lab_full[key]) < model.min_samples:
             model.clust_tree["1"][key] = None
             continue
@@ -93,14 +94,12 @@ def heir_dc(yml_conf, dataset, ckpt_path):
             train_subset.init_from_array(dataset.data_full[model.lab_full[key]], 
                 dataset.targets_full[model.lab_full[key]], scaler = dataset.scaler)
         else:
-            print(key, model.lab_full[key])
-            print(dataset.data_full[model.lab_full[key]].shape, dataset.data_full.shape)
             train_subset = SFDatasetConv()
             train_subset.init_from_array(dataset.data_full[model.lab_full[key]], 
                 dataset.targets_full[model.lab_full[key]], transform = dataset.transform)
-            print(train_subset.data_full.shape, train_subset.targets_full.shape)
 
-        final_dataset = SFHeirDataModule(train_subset, batch_size=batch_size, num_workers=num_loader_workers, val_percent=val_percent)
+        final_dataset = SFHeirDataModule(train_subset, key, batch_size=batch_size, num_workers=num_loader_workers, val_percent=val_percent)
+        model.key = key
 
         if use_wandb_logger:
 
@@ -131,6 +130,9 @@ def heir_dc(yml_conf, dataset, ckpt_path):
 
 
         trainer.fit(model, final_dataset)
+
+        if use_wandb_logger:
+            wandb.finish()
 
         #for param in model.clust_tree["1"][key].parameters():
         #    param.requires_grad = False
