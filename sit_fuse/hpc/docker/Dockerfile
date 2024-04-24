@@ -1,5 +1,5 @@
 
-FROM nvcr.io/nvidia/pytorch:22.12-py3
+FROM nvcr.io/nvidia/pytorch:24.03-py3
  
 WORKDIR /app
 
@@ -11,8 +11,8 @@ RUN DEBIAN_FRONTEND=noninteractive; apt-get --assume-yes install gdal-bin
 RUN DEBIAN_FRONTEND=noninteractive; apt-get --assume-yes install libgdal-dev
 RUN export CPLUS_INCLUDE_PATH=/usr/include/gdal
 RUN export C_INCLUDE_PATH=/usr/include/gdal
-RUN pip install GDAL==3.3.2
-RUN pip install GPUtil geopandas geocube dask_ml zarr scikit-image diplib pyresample
+RUN pip install GDAL
+RUN pip install GPUtil geopandas geocube dask_ml zarr scikit-image pyresample
 RUN pip install netCDF4 ray tabulate "ray[tune]"
 
 RUN chmod -R a+rwx /app
