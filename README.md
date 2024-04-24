@@ -13,6 +13,7 @@ Currently, this technology is being used with remotely sensed earth data to iden
 * Wildfires and smoke plumes
 * Harmful algal blooms and their severity
 * Palm oil farms
+* Dust and volcanic ash plumes
 * Inland water bodies
 
 Figure 1 depicts the full flow of SIT-FUSE and figures 2 and 3 show segmentation maps and the information extracted for instance tracking across scenes. SIT-FUSE’s innovative multi-sensor fire and smoke segmentation precisely detects anomalous observations from instruments with varying spatial and spectral resolutions. This capability creates a sensor web by incorporating observations from multiple satellite-based and suborbital missions. The ML framework’s output also facilitates smoke plume and fire front tracking, a task currently under development by the SIT-FUSE team.
@@ -29,8 +30,17 @@ Figure 1 depicts the full flow of SIT-FUSE and figures 2 and 3 show segmentation
 
 ***
 
-References:\
+Recent Talks:
 
+{% embed url="https://vimeo.com/771105424/c1379bc387" %}
+2022 ECMWF–ESA Workshop on Machine Learning for Earth Observation and Prediction
+{% endembed %}
+
+{% embed url="https://www.google.com/url?opi=89978449&rct=j&sa=t&source=web&url=https://www.youtube.com/watch?v=-cYSpBQVQi4&usg=AOvVaw37WlIcIwp3564Kb6AKPdLP&ved=2ahUKEwiGqOXKs9uFAxUeJEQIHahiBVIQtwJ6BAgWEAI" %}
+2022 TIES Annual Meeting
+{% endembed %}
+
+References:
 
 * Lahaye, N., Garay, M. J., Bue, B., El-Askary, H., Linstead, E. “A Quantitative Validation of  Multi-Modal Image Fusion and Segmentation for Object Detection and Tracking”. Remote Sens. 2021, 13, 2364. [https://doi.org/10.3390/rs13122364](https://doi.org/10.3390/rs13122364)&#x20;
 * Lahaye, N., Ott, J., Garay, M. J., El-Askary, H., and Linstead, E., “Multi-modal object tracking and image fusion with unsupervised deep learning,” IEEE Journal of Selected Topics in Applied Earth Observations and Remote Sensing, vol. 12, no. 8, pp. 3056-3066, Aug. 2019, doi: [https://doi.org/10.1109/JSTARS.2019.2920234](https://doi.org/10.1109/JSTARS.2019.2920234)
