@@ -3,7 +3,6 @@ import pytorch_lightning as pl
 import torch.nn as nn
 import torch
 
-from sit_fuse.models.encoders.byol_pl import BYOL_PL
 from sit_fuse.losses.iid import IID_loss
 from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes
 
@@ -12,7 +11,7 @@ import numpy as np
 
 class BYOL_DC(pl.LightningModule):
     #take pretrained model path, number of classes, learning rate, weight decay, and drop path as input
-    def __init__(self, pretrained_model_path, num_classes, lr=1e-3, weight_decay=0, number_heads=1):
+    def __init__(self, pretrained_model, num_classes, lr=1e-3, weight_decay=0, number_heads=1):
 
         super().__init__()
         self.save_hyperparameters()
@@ -23,19 +22,12 @@ class BYOL_DC(pl.LightningModule):
         self.lr = lr
         self.weight_decay = weight_decay
 
-        #define model layers
-        self.pretrained_model = BYOL_PL.load_from_checkpoint(pretrained_model_path)
-        self.pretrained_model.model.mode = "test"
-        #self.average_pool = nn.AvgPool1d((self.pretrained_model.embed_dim), stride=1)
-        #mlp head
-       
-        print(self.pretrained_model.num_tokens)
-        self.mlp_head =  MultiPrototypes(self.pretrained_model.num_tokens*self.pretrained_model.embed_dim, self.num_classes, self.number_heads)
+        self.pretrained_model = pretrained_model
 
-        #nn.Sequential(
-        #    nn.LayerNorm(self.pretrained_model.num_tokens),
-        #    nn.Linear(self.pretrained_model.num_tokens, num_classes),
-        #)
+        #define model layers
+        #TODO compute
+        self.mlp_head =  MultiPrototypes(4896, self.num_classes, self.number_heads)
+
 
         #define loss
         self.criterion = IID_loss
@@ -43,7 +35,7 @@ class BYOL_DC(pl.LightningModule):
  
     def forward(self, x):
         x = self.pretrained_model(x)
-        x = x.reshape((x.shape[0], x.shape[1]*x.shape[2]))
+        x = x.flatten(start_dim=1)
         #x = self.average_pool(x) #conduct average pool like in paper
         x = x.squeeze(-1)
         x = self.mlp_head(x)[0] #pass through mlp head
@@ -51,7 +43,7 @@ class BYOL_DC(pl.LightningModule):
     
     def training_step(self, batch, batch_idx):
         x = batch
-        y = self.pretrained_model.model(x).flatten(start_dim=1)
+        y = self.pretrained_model(x)
         y2 = y.clone() + torch.from_numpy(self.rng.normal(0.0, 0.01, \
                                 y.shape[1]*y.shape[0]).reshape(y.shape[0],\
                                 y.shape[1])).type(y.dtype).to(y.device)
@@ -63,7 +55,7 @@ class BYOL_DC(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         x = batch
-        y = self.pretrained_model.model(x).flatten(start_dim=1)
+        y = self.pretrained_model(x)
         y2 = y.clone() + torch.from_numpy(self.rng.normal(0.0, 0.01, \
                                 y.shape[1]*y.shape[0]).reshape(y.shape[0],\
                                 y.shape[1])).type(y.dtype).to(y.device)
