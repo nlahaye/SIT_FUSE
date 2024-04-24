@@ -102,7 +102,7 @@ cluster:
  training:
   learning_rate: 0.0001
   batch_size: 1000
-  epochs: 30
+  epochs: 10
   accelerator: "gpu"
   devices: 3
   gradient_clip_val: 0.1
@@ -116,7 +116,7 @@ cluster:
   num_classes: 100
   training:
    accelerator: "gpu"
-   devices: 1
+   devices: 2
    gradient_clip_val: 0.1
    precision: "16-mixed"
    save_dir: "wandb_byol"

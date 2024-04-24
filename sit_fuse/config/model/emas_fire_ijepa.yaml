@@ -128,7 +128,7 @@ cluster:
   num_classes: 100
   training:
    accelerator: "gpu"
-   devices: 1
+   devices: 2
    gradient_clip_val: 0.1
    precision: "32"
    save_dir: "wandb_ijepa_small_full"
