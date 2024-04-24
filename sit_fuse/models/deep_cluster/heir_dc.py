@@ -5,6 +5,7 @@ import torch
 
 from sit_fuse.losses.iid import IID_loss
 
+from sit_fuse.models.deep_cluster.byol_dc import BYOL_DC
 from sit_fuse.models.deep_cluster.ijepa_dc import IJEPA_DC
 from sit_fuse.models.deep_cluster.dbn_dc import DBN_DC
 from sit_fuse.models.deep_cluster.dc import DeepCluster
@@ -50,7 +51,12 @@ class Heir_DC(pl.LightningModule):
             self.pretrained_model.pretrained_model.model.eval()
             #getattr(self.pretrained_model.mlp_head, "batch_norm0").track_running_stats = True
             #self.pretrained_model.pretrained_model.model.layer_dropout = 0.0
-        else:
+        elif encoder_type == "byol":
+            self.pretrained_model = BYOL_DC.load_from_checkpoint(pretrained_model_path)
+            self.pretrained_model.eval()
+            self.pretrained_model.pretrained_model.eval()
+            self.pretrained_model.mlp_head.eval()
+        else: 
             self.pretrained_model = DeepCluster.load_from_checkpoint(pretrained_model_path) #Why arent these being saved
 
         self.encoder_type = encoder_type
@@ -191,7 +197,7 @@ class Heir_DC(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         x = batch 
-        y, _ = self.forward(x, Train=False)
+        y, _ = self.forward(x, train=False)
         y2, _ = self.forward(x.clone(), perturb=True, train=False)
         loss = self.criterion(y,y2)[0] #calculate loss
         self.log('val_loss', loss, sync_dist=True)
