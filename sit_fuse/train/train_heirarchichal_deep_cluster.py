@@ -98,7 +98,7 @@ def heir_dc(yml_conf, dataset, ckpt_path):
             train_subset.init_from_array(dataset.data_full[model.lab_full[key]], 
                 dataset.targets_full[model.lab_full[key]], transform = dataset.transform)
 
-        final_dataset = SFHeirDataModule(train_subset, key, batch_size=batch_size, num_workers=num_loader_workers, val_percent=val_percent)
+        final_dataset = SFHeirDataModule(train_subset, batch_size=batch_size, num_workers=num_loader_workers, val_percent=val_percent)
         model.key = key
 
         if use_wandb_logger:
@@ -134,10 +134,45 @@ def heir_dc(yml_conf, dataset, ckpt_path):
         if use_wandb_logger:
             wandb.finish()
 
+    state_dict = get_state_dict(model.clust_tree, model.lab_full)
+    torch.save(dbn.state_dict(), os.path.join(save_dir, "heir_fc.ckpt"))         
+
         #for param in model.clust_tree["1"][key].parameters():
         #    param.requires_grad = False
         #model.clust_tree["1"][key].eval()
         #model.module_list[-1] = model.clust_tree["1"][key]
+
+
+def get_state_dict(clust_tree, lab_full):
+
+    state_dict = {}
+    for lab1 in clust_tree.keys():
+        if lab1 == "0":
+            continue
+        if lab1 not in state_dict:
+            state_dict[lab1] = {}
+            for lab2 in clust_tree[lab1].keys():
+                if lab2 not in state_dict[lab1].keys():
+                    if clust_tree[lab1][lab2] is not None:
+                        if lab2 not in state_dict[lab1].keys():
+                            state_dict[lab1][lab2] = {}
+                        state_dict[lab1][lab2]["model"] = clust_tree[lab1][lab2].state_dict()
+                        uid = str(uuid.uuid1())
+    state_dict["labels"] = lab_full
+    return state_dict
+
+def load_model(clust_tree, n_visible, model, state_dict):
+        lab_full = state_dict["labels"]
+        for lab1 in clust_tree.keys():
+            if lab1 == "0":
+                continue
+            for lab2 in lab_full.keys():
+                clust_tree[lab1][lab2] = None
+                if lab2 in state_dict[lab1].keys():
+                    clust_tree[lab1][lab2] = MultiPrototypes(n_visible, model.num_classes, model.number_heads)
+                    clust_tree[lab1][lab2].load_state_dict(state_dict[lab1][lab2]["model"])
+        return clust_tree, lab_full 
+
 
 def main(yml_fpath):
 
