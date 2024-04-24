@@ -193,7 +193,7 @@ dependencies:
   - sqlite=3.39.3=h4ff8645_0
   - tbb=2021.6.0=h924138e_0
   - tblib=1.7.0=pyhd8ed1ab_0
-  - tiledb=2.11.3=h1e4a385_0
+  - tiledb
   - tk=8.6.12=h27826a3_0
   - toolz=0.12.0=pyhd8ed1ab_0
   - treelite=2.4.0=py39h6b629c6_1
