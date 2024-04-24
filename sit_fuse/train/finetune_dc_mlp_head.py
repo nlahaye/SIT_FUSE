@@ -11,8 +11,10 @@ from pytorch_lightning.loggers import WandbLogger
 from learnergy.models.deep import DBN
 
 from sit_fuse.models.deep_cluster.dc import DeepCluster
+from sit_fuse.models.encoders.cnn_encoder import DeepConvEncoder
 from sit_fuse.models.deep_cluster.ijepa_dc import IJEPA_DC
 from sit_fuse.models.deep_cluster.dbn_dc import DBN_DC
+from sit_fuse.models.deep_cluster.byol_dc import BYOL_DC
 from sit_fuse.datasets.sf_dataset_module import SFDataModule
 from sit_fuse.utils import read_yaml
 
@@ -130,8 +132,6 @@ def dc_DBN(yml_conf, dataset):
         for param in model.parameters():
             print(param)
             param.requires_grad = False
-
-    print("PRE LOAD")
 
     dbn.load_state_dict(torch.load(ckpt_path))
 
@@ -274,13 +274,12 @@ def dc_BYOL(yml_conf, dataset):
 
     num_classes = yml_conf["cluster"]["num_classes"]
 
+    in_chans = yml_conf["data"]["tile_size"][2]
     ckpt_path = os.path.join(encoder_dir, "byol.ckpt")
+    model = DeepConvEncoder(in_chans=in_chans, flatten=True)
+    model.load_state_dict(torch.load(ckpt_path))
 
-    model = BYOL_DC(pretrained_model_path=ckpt_path, num_classes=num_classes)
-    for param in model.pretrained_model.parameters():
-        param.requires_grad = False
-    for param in model.mlp_head.parameters():
-        param.requires_grad = True
+    model = BYOL_DC(pretrained_model=model, num_classes=num_classes)
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
@@ -331,6 +330,8 @@ def main(yml_fpath):
             dc_DBN(yml_conf, dataset)
         elif yml_conf["encoder_type"] == "ijepa":
             dc_IJEPA(yml_conf, dataset)
+        elif yml_conf["encoder_type"] == "byol":
+            dc_BYOL(yml_conf, dataset)
     else:
         train_dc_no_pt(yml_conf, dataset)
 
