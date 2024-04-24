@@ -21,7 +21,7 @@ import numpy as np
 #TODO add back in multi-layer heir
 class Heir_DC(pl.LightningModule):
     #take pretrained model path, number of classes, learning rate, weight decay, and drop path as input
-    def __init__(self, data, pretrained_model_path, num_classes, lr=1e-3, weight_decay=0, encoder_type=None, number_heads=1, min_samples=1000):
+    def __init__(self, data, pretrained_model_path, num_classes, lr=1e-3, weight_decay=0, encoder_type=None, number_heads=1, min_samples=1000, encoder=None):
 
         super().__init__()
         self.save_hyperparameters(ignore=['data'])
@@ -41,7 +41,7 @@ class Heir_DC(pl.LightningModule):
         if encoder_type is None:
             self.pretrained_model = DeepCluster.load_from_checkpoint(pretrained_model_path, img_size=3, in_chans=34) #Why arent these being saved
         elif encoder_type == "dbn":
-            self.pretrained_model = DBN_DC.load_from_checkpoint(pretrained_model_path)
+            self.pretrained_model = DBN_DC.load_from_checkpoint(pretrained_model_path, pretrained_model=encoder)
         elif encoder_type == "ijepa":
             self.pretrained_model = IJEPA_DC.load_from_checkpoint(pretrained_model_path)
             self.pretrained_model.pretrained_model.model.mode = "test"

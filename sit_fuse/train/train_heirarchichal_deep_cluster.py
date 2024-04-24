@@ -56,7 +56,43 @@ def heir_dc(yml_conf, dataset, ckpt_path):
     if "encoder_type" in yml_conf:
         encoder_type=yml_conf["encoder_type"]
 
-    model = Heir_DC(dataset, pretrained_model_path=ckpt_path, num_classes=num_classes, encoder_type=encoder_type)
+    encoder = None
+    if encoder_type is not None and  encoder_type == "dbn":
+        model_type = tuple(yml_conf["dbn"]["model_type"])
+        dbn_arch = tuple(yml_conf["dbn"]["dbn_arch"])
+        gibbs_steps = tuple(yml_conf["dbn"]["gibbs_steps"])
+        normalize_learnergy = tuple(yml_conf["dbn"]["normalize_learnergy"])
+        batch_normalize = tuple(yml_conf["dbn"]["batch_normalize"])
+        temp = tuple(yml_conf["dbn"]["temp"])
+
+        learning_rate = tuple(yml_conf["encoder"]["training"]["learning_rate"])
+        momentum = tuple(yml_conf["encoder"]["training"]["momentum"])
+        decay = tuple(yml_conf["encoder"]["training"]["weight_decay"])
+        nesterov_accel = tuple(yml_conf["encoder"]["training"]["nesterov_accel"])
+
+
+        save_dir = yml_conf["output"]["out_dir"]
+        use_wandb_logger = yml_conf["logger"]["use_wandb"]
+        if use_wandb_logger:
+            save_dir = os.path.join(yml_conf["output"]["out_dir"], yml_conf["logger"]["log_out_dir"])
+        encoder_dir = os.path.join(save_dir, "encoder")
+
+        enc_ckpt_path = os.path.join(encoder_dir, "dbn.ckpt")
+
+        encoder = DBN(model=model_type, n_visible=dataset.data_full.shape[1], n_hidden=dbn_arch, steps=gibbs_steps,
+            learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=True)
+
+        encoder.load_state_dict(torch.load(enc_ckpt_path))
+ 
+        for param in encoder.parameters():
+            param.requires_grad = False
+        for model in encoder.models:
+            for param in model.parameters():
+                param.requires_grad = False
+        encoder.eval()
+
+
+    model = Heir_DC(dataset, pretrained_model_path=ckpt_path, num_classes=num_classes, encoder_type=encoder_type, encoder=encoder)
     for param in model.pretrained_model.parameters():
         param.requires_grad = False
 
@@ -135,7 +171,7 @@ def heir_dc(yml_conf, dataset, ckpt_path):
             wandb.finish()
 
     state_dict = get_state_dict(model.clust_tree, model.lab_full)
-    torch.save(dbn.state_dict(), os.path.join(save_dir, "heir_fc.ckpt"))         
+    torch.save(model.state_dict(), os.path.join(save_dir, "heir_fc.ckpt"))         
 
         #for param in model.clust_tree["1"][key].parameters():
         #    param.requires_grad = False
