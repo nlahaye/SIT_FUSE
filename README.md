@@ -19,11 +19,15 @@ Figure 1 depicts the full flow of SIT-FUSE and figures 2 and 3 show segmentation
 
 <figure><img src=".gitbook/assets/Screenshot 2024-04-23 at 9.07.28 PM.png" alt=""><figcaption><p>Figure 1. The flow diagram for SIT-FUSE</p></figcaption></figure>
 
+***
+
 <figure><img src="https://lh7-us.googleusercontent.com/YOsc_q62-vEjxvqJVMIF_5Unt5GU4UndqNIQf_q7WCXYLYk7S8-Eax2t8LfL850GFdeTW0t48FllBtA1V8CTfn_2GJm7F61hfPzqgvZ-WM9x8dwDstDgjPyoRhwOz3J2OulNSZ8aaf435xXgvseVCoE" alt=""><figcaption><p>Figure 2. The first row contains scenes from different instruments/instrument sets used as input. The second row shows SIT-FUSE’s output segmentation maps for the input scene, and the third row shows retrieved objects of interest, in this case, fire and smoke.</p></figcaption></figure>
+
+***
 
 <figure><img src="https://lh7-us.googleusercontent.com/F26NyNgjlpnI3QEaLNRgdr3H6H4E9xyhCq-q8Ucr9tJL525esTtTulDBdXv2VlJlwqi3YeVZxDEdlCWGNKrm4oPa8NnlH6FacAPaIKXAF_bWApKCbF7Lsc4VZqrmj3E5NLVJyALxk2gMeQk6dTyRTnQ" alt=""><figcaption><p>Figure 3. Each 4-image set is generated from a separate GOES-17 scene over an observed fire in 2019. The top row of each set depicts radiances and their associated clustering output from software system S. The second row shows the radiances with an overlay of the subset of clusters assigned to the contexts of smoke and fire. The bottom row shows the input radiances with shape approximations for smoke and fire generated via the openCV contour functionality. The green arrows depict the products that can be used for instance tracking. For cross-instrument instance tracking we will use contrastive learning to map the instance signatures across the different domains.</p></figcaption></figure>
 
-
+***
 
 References:\
 

@@ -5,7 +5,7 @@ description: >-
   to large and powerful:
 ---
 
-# Self-Supervised Representation Learning
+# 🤖 Self-Supervised Representation Learning
 
 * Restricted Boltzmann Machines (RBMs) + Deep Belief Networks (DBNs) - An RBM are simple 2-layer generative models, that are trained here using an unsupervised learning algorithm called contrastive divergence, during which, the optimizers goal is to be able to reconstruct samples that fall within the distribution of the input samples, X, by sampling the output of the model. In doing so, the model develops an in-depth understanding of the internal structure of the data.\
   RBMs can also be stacked together, to create a deep architecture called a Deep Belief Network (Hinton et al., 2006). Because of the nature of RBMs, the training process of DBNs can be done in a layer-wise fashion, making it less resource hungry than typical backpropagation-based model training techniques. SIT-FUSE allows for DBNs to be used as well as simple RBMs
@@ -16,10 +16,13 @@ description: >-
 
 
 
+***
+
 *   Bootstrap Your Own Latent - A framework that tries to minimize similarity loss between a pair of convolutional networks trained together, one seeing the unperturbed version of a sample, and the other seeing its perturbed pair
 
     <figure><img src=".gitbook/assets/Screenshot 2024-04-23 at 5.26.22 PM.png" alt=""><figcaption></figcaption></figure>
 
+***
 
 *   Image-Joint Embedding Predictive Architecture (I-JEPA) - A framework that trains a pair of Vision Transformers (ViTs) to learn a joint embedding by learning to predict values for masked out parts of an input tile.\
 
