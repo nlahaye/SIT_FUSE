@@ -3,7 +3,7 @@ import pytorch_lightning as pl
 import torch.nn as nn
 import torch
 
-from ijepa_model import IJEPA_base
+from model import IJEPA_base
 
 
 '''
