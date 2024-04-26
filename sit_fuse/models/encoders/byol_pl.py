@@ -47,3 +47,6 @@ class BYOL_Learner(pl.LightningModule):
 
 
 
+    def on_validation_epoch_end(self, _):
+        torch.save(self.model.state_dict(), os.path.join(self.save_dir, "byol.ckpt"))
+
