@@ -14,14 +14,14 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader, TensorDataset
 from torch.utils.data.distributed import DistributedSampler
 
-
+from pprint import pprint
 import numpy as np
-
+import uuid
 
 #TODO add back in multi-layer heir
 class Heir_DC(pl.LightningModule):
     #take pretrained model path, number of classes, learning rate, weight decay, and drop path as input
-    def __init__(self, data, pretrained_model_path, num_classes, lr=1e-3, weight_decay=0, encoder_type=None, number_heads=1, min_samples=1000, encoder=None):
+    def __init__(self, data, pretrained_model_path, num_classes, lr=1e-3, weight_decay=0, encoder_type=None, number_heads=1, min_samples=1000, encoder=None, clust_tree_ckpt = None):
 
         super().__init__()
         self.save_hyperparameters(ignore=['data'])
@@ -74,8 +74,16 @@ class Heir_DC(pl.LightningModule):
         self.lab_full = {}
 
         self.module_list = nn.ModuleList([self.pretrained_model])
+
  
-        self.generate_label_set(data)
+        if clust_tree_ckpt is None: 
+            self.generate_label_set(data)
+        else:
+            state_dict = torch.load(clust_tree_ckpt)
+            pprint(state_dict)
+            self.clust_tree, self.lab_full = \
+                load_model(self.clust_tree, list(self.pretrained_model.mlp_head.children())[1].num_features, self, state_dict)        
+ 
         del data
 
     def generate_label_set(self, data):
@@ -225,4 +233,40 @@ class Heir_DC(pl.LightningModule):
                 "interval": "step",
             },
         }
+
+
+
+def get_state_dict(clust_tree, lab_full):
+
+    state_dict = {}
+    for lab1 in clust_tree.keys():
+        if lab1 == "0":
+            continue
+        if lab1 not in state_dict:
+            state_dict[lab1] = {}
+            for lab2 in clust_tree[lab1].keys():
+                if lab2 not in state_dict[lab1].keys():
+                    if clust_tree[lab1][lab2] is not None:
+                        if lab2 not in state_dict[lab1].keys():
+                            state_dict[lab1][lab2] = {}
+                        state_dict[lab1][lab2]["model"] = clust_tree[lab1][lab2].state_dict()
+                        uid = str(uuid.uuid1())
+    state_dict["labels"] = lab_full
+    return state_dict
+
+def load_model(clust_tree, n_visible, model, state_dict):
+        lab_full = state_dict["labels"]
+        for lab1 in clust_tree.keys():
+            if lab1 == "0":
+                continue
+            for lab2 in lab_full.keys():
+                clust_tree[lab1][lab2] = None
+                if lab2 in state_dict[lab1].keys():
+                    clust_tree[lab1][lab2] = MultiPrototypes(n_visible, model.num_classes, model.number_heads)
+                    clust_tree[lab1][lab2].load_state_dict(state_dict[lab1][lab2]["model"])
+        return clust_tree, lab_full
+
+
+
+
 
