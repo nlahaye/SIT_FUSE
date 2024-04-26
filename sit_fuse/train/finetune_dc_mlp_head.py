@@ -197,7 +197,7 @@ def dc_IJEPA(yml_conf, dataset):
 
     num_classes = yml_conf["cluster"]["num_classes"]
 
-    ckpt_path = os.path.join(encoder_dir, "checkpoint.ckpt")
+    ckpt_path = os.path.join(encoder_dir, "encoder.ckpt")
 
     model = IJEPA_DC(pretrained_model_path=ckpt_path, num_classes=num_classes)
     for param in model.pretrained_model.parameters():
@@ -273,6 +273,9 @@ def dc_BYOL(yml_conf, dataset):
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
+    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="deep_cluster.ckpt", every_n_epochs=1, save_on_train_epoch_end=False)
+
+
 
     os.makedirs(save_dir, exist_ok=True) 
     if use_wandb_logger:
@@ -285,7 +288,7 @@ def dc_BYOL(yml_conf, dataset):
             strategy=DDPStrategy(find_unused_parameters=True),
             precision=precision,
             max_epochs=max_epochs,
-            callbacks=[lr_monitor, model_summary],
+            callbacks=[lr_monitor, model_summary, checkpoint_callback],
             gradient_clip_val=gradient_clip_val,
             logger=wandb_logger
         )
@@ -297,7 +300,7 @@ def dc_BYOL(yml_conf, dataset):
             strategy=DDPStrategy(find_unused_parameters=True),
             precision=precision,
             max_epochs=max_epochs,
-            callbacks=[lr_monitor, model_summary],
+            callbacks=[lr_monitor, model_summary, checkpoint_callback],
             gradient_clip_val=gradient_clip_val,
         )
 
