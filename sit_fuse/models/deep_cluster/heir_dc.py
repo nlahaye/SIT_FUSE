@@ -42,6 +42,9 @@ class Heir_DC(pl.LightningModule):
             self.pretrained_model = DeepCluster.load_from_checkpoint(pretrained_model_path, img_size=3, in_chans=34) #Why arent these being saved
         elif encoder_type == "dbn":
             self.pretrained_model = DBN_DC.load_from_checkpoint(pretrained_model_path, pretrained_model=encoder)
+            self.pretrained_model.eval()
+            self.pretrained_model.pretrained_model.eval()
+            self.pretrained_model.mlp_head.eval()
         elif encoder_type == "ijepa":
             self.pretrained_model = IJEPA_DC.load_from_checkpoint(pretrained_model_path)
             self.pretrained_model.pretrained_model.model.mode = "test"

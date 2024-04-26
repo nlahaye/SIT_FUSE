@@ -4,6 +4,8 @@ import sys
 
 def IID_loss(x_out, x_tf_out, lamb=1.0, EPS=sys.float_info.epsilon):
   # has had softmax applied
+  if x_out is None:
+      return [0.0,0.0]
   _, k = x_out.size()
 
   start_time = time.monotonic()

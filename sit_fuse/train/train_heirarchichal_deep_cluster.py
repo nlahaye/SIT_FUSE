@@ -20,6 +20,7 @@ from sit_fuse.utils import read_yaml
 
 import wandb
 
+import uuid
 import argparse
 import os
 
@@ -71,11 +72,11 @@ def heir_dc(yml_conf, dataset, ckpt_path):
         nesterov_accel = tuple(yml_conf["encoder"]["training"]["nesterov_accel"])
 
 
-        save_dir = yml_conf["output"]["out_dir"]
+        save_dir_dbn = yml_conf["output"]["out_dir"]
         use_wandb_logger = yml_conf["logger"]["use_wandb"]
         if use_wandb_logger:
-            save_dir = os.path.join(yml_conf["output"]["out_dir"], yml_conf["logger"]["log_out_dir"])
-        encoder_dir = os.path.join(save_dir, "encoder")
+            save_dir_dbn = os.path.join(yml_conf["output"]["out_dir"], yml_conf["logger"]["log_out_dir"])
+        encoder_dir = os.path.join(save_dir_dbn, "encoder")
 
         enc_ckpt_path = os.path.join(encoder_dir, "dbn.ckpt")
 
