@@ -106,7 +106,8 @@ def pretrain_DBN(yml_conf, dataset):
         if use_wandb_logger:
             wandb.finish()
 
-        dbn.models[i] = model.model    
+        dbn.models[i] = model.model
+        torch.save(dbn.state_dict(), os.path.join(save_dir, "dbn.ckpt"))    
 
     torch.save(dbn.state_dict(), os.path.join(save_dir, "dbn.ckpt"))
 
@@ -222,6 +223,7 @@ def pretrain_BYOL(yml_conf, dataset):
  
     learner = BYOL_Learner(
         model,
+        save_dir = save_dir
         image_size = img_size,
         hidden_layer = hidden_layer,
         projection_size = projection_size,
@@ -231,6 +233,7 @@ def pretrain_BYOL(yml_conf, dataset):
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
+    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="deep_cluster.ckpt", every_n_epochs=1, save_on_train_epoch_end=False)
  
     os.makedirs(save_dir, exist_ok=True)
     if use_wandb_logger:
@@ -244,7 +247,7 @@ def pretrain_BYOL(yml_conf, dataset):
             strategy=DDPStrategy(find_unused_parameters=True),
             precision=precision,
             max_epochs=max_epochs,
-            callbacks=[lr_monitor, model_summary],
+            callbacks=[lr_monitor, model_summary, checkpoint_callback],
             gradient_clip_val=gradient_clip_val,
             logger=wandb_logger
         )
@@ -256,7 +259,7 @@ def pretrain_BYOL(yml_conf, dataset):
             strategy=DDPStrategy(find_unused_parameters=True),
             precision=precision,
             max_epochs=max_epochs,
-            callbacks=[lr_monitor, model_summary],
+            callbacks=[lr_monitor, model_summary, checkpoint_callback],
             gradient_clip_val=gradient_clip_val,
             logger=wandb_logger
         )
