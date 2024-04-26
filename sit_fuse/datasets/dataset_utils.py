@@ -209,22 +209,24 @@ def get_prediction_dataset(yml_conf, fname):
         )
 
 
+    read_func = get_read_func(data_reader)
+
     fbase = fname
     while isinstance(fbase, list):
         fbase = fbase[0]
     fbase = os.path.basename(fbase)
     
     fname_begin = os.path.basename(fbase) + ".clust"
-    if not conv:
-        data = DBNDataset()
-        data.read_and_preprocess_data([data_test[t]], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
+    if not tiled:
+        data = SFDataset()
+        data.read_and_preprocess_data([fname], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
             fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scaler=scaler, scale = scale_data, \
-            transform=transform,  subset=output_subset_count)
+            transform=transform)
     else:
-        data = DBNDatasetConv()
-        data.read_and_preprocess_data([data_test[t]], read_func, data_reader_kwargs,  delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
+        data = SFDatasetConv()
+        data.read_and_preprocess_data([fname], read_func, data_reader_kwargs,  delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
             fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, transform = transform, \
-            subset=output_subset_count, tile=tile, tile_size=tile_size, tile_step=tile_step)
+            tile=tile, tile_size=tile_size, tile_step=tile_step)
 
     return data, fname_begin
 

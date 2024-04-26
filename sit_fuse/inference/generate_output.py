@@ -1,13 +1,18 @@
 import pytorch_lightning as pl
 import torch
 
+from learnergy.models.deep import DBN
+
 from sit_fuse.models.deep_cluster.dc import DeepCluster
 from sit_fuse.models.deep_cluster.ijepa_dc import IJEPA_DC
 from sit_fuse.models.deep_cluster.dbn_dc import DBN_DC
 from sit_fuse.datasets.dataset_utils import get_prediction_dataset
+from sit_fuse.models.deep_cluster.heir_dc import Heir_DC
 
+from sit_fuse.utils import read_yaml
 
-
+import argparse
+import os
 
 def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, pin_mem = True, conv = False):
     output_full = None
@@ -38,7 +43,7 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, pin_mem = T
         else:
             dat_dev, lab_dev = data[0].cuda(), data[1].cuda()
 
-        with torch.no_grad()
+        with torch.no_grad():
             output = mdl.forward(dat_dev)
         if isinstance(output, list):
             output = output[0] #TODO improve usage uf multi-headed output after single-headed approach validated
@@ -131,35 +136,91 @@ def plot_clusters(coord, output_data, output_basename, pixel_padding=1):
 
 
 
+def get_model(yml_conf, n_visible):
+
+    use_wandb_logger = yml_conf["logger"]["use_wandb"]
+    log_model = None
+    save_dir = yml_conf["output"]["out_dir"]
+    project = None
+    if use_wandb_logger:
+        log_model = yml_conf["logger"]["log_model"]
+        save_dir = os.path.join(yml_conf["output"]["out_dir"], yml_conf["logger"]["log_out_dir"])
+        project = yml_conf["logger"]["project"]
+ 
+    heir_model_dir = os.path.join(save_dir, "full_model_heir")
+    full_model_dir = os.path.join(save_dir, "full_model")
+
+    accelerator = yml_conf["cluster"]["heir"]["training"]["accelerator"]
+    devices = yml_conf["cluster"]["heir"]["training"]["devices"]
+    precision = yml_conf["cluster"]["heir"]["training"]["precision"]
+    max_epochs = yml_conf["cluster"]["heir"]["training"]["epochs"]
+    gradient_clip_val = yml_conf["encoder"]["training"]["gradient_clip_val"]
+    heir_model_tiers = yml_conf["cluster"]["heir"]["tiers"] #TODO incorporate
+    heir_gauss_stdev = yml_conf["cluster"]["heir"]["gauss_noise_stdev"] #TODO incorporate
+    lambda_iid = yml_conf["cluster"]["heir"]["lambda"] #TODO incorporate 
+
+    num_classes = yml_conf["cluster"]["heir"]["num_classes"]
+    min_samples = yml_conf["cluster"]["heir"]["training"]["min_samples"]
+
+    heir_ckpt_path = os.path.join(heir_model_dir, "heir_fc.ckpt")
+    ckpt_path = os.path.join(full_model_dir, "checkpoint.ckpt")
+
+    encoder_type=None
+    if "encoder_type" in yml_conf:
+        encoder_type=yml_conf["encoder_type"]
+
+    encoder = None
+    if encoder_type is not None and  encoder_type == "dbn":
+        model_type = tuple(yml_conf["dbn"]["model_type"])
+        dbn_arch = tuple(yml_conf["dbn"]["dbn_arch"])
+        gibbs_steps = tuple(yml_conf["dbn"]["gibbs_steps"])
+        normalize_learnergy = tuple(yml_conf["dbn"]["normalize_learnergy"])
+        batch_normalize = tuple(yml_conf["dbn"]["batch_normalize"])
+        temp = tuple(yml_conf["dbn"]["temp"])
+
+        learning_rate = tuple(yml_conf["encoder"]["training"]["learning_rate"])
+        momentum = tuple(yml_conf["encoder"]["training"]["momentum"])
+        decay = tuple(yml_conf["encoder"]["training"]["weight_decay"])
+        nesterov_accel = tuple(yml_conf["encoder"]["training"]["nesterov_accel"])
+
+
+        save_dir_dbn = yml_conf["output"]["out_dir"]
+        use_wandb_logger = yml_conf["logger"]["use_wandb"]
+        if use_wandb_logger:
+            save_dir_dbn = os.path.join(yml_conf["output"]["out_dir"], yml_conf["logger"]["log_out_dir"])
+        encoder_dir = os.path.join(save_dir_dbn, "encoder")
+
+        enc_ckpt_path = os.path.join(encoder_dir, "dbn.ckpt")
+
+        encoder = DBN(model=model_type, n_visible=n_visible, n_hidden=dbn_arch, steps=gibbs_steps,
+            learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=True)
+
+        encoder.load_state_dict(torch.load(enc_ckpt_path))
+
+        encoder.eval()
+ 
+    model = Heir_DC(None, pretrained_model_path=ckpt_path, num_classes=num_classes, \
+        encoder_type=encoder_type, encoder=encoder, clust_tree_ckpt = heir_ckpt_path)
+    model.eval()
+
+    for key in model.clust_tree["1"].keys():
+        model.clust_tree["1"][key].eval()
+         
+    return model
+
+
 
 def main(yml_fpath):
 
     yml_conf = read_yaml(yml_fpath)
 
-    num_loader_workers = int(yml_conf["data"]["num_loader_workers"])
-    val_percent = int(yml_conf["data"]["val_percent"])
-    batch_size = yml_conf["cluster"]["training"]["batch_size"]
-    use_gpu = yml_conf["encoder"]["training"]["use_gpu"]
-    out_dir = yml_conf["output"]["out_dir"]
-
-    save_dir = yml_conf["output"]["out_dir"]
-    use_wandb_logger = yml_conf["logger"]["use_wandb"]
-    if use_wandb_logger:
-        save_dir = os.path.join(yml_conf["output"]["out_dir"], yml_conf["logger"]["log_out_dir"]) 
-    ckpt_path = os.path.join(os.path.join(save_dir, "full_model"), "checkpoint.ckpt")
-
-
-    model = None
-    if "encoder_type" in yml_conf:
-        if yml_conf["encoder_type"] == "dbn":
-            model = DBN_DC.load_from_checkpoint(ckpt_path)
-        elif yml_conf["encoder_type"] == "ijepa":
-            model = IJEPA_DC.load_from_checkpoint(ckpt_path)
-    else:
-        model = DeepCluster.load_from_checkpoint(ckpt_path)
-
     test_fnames = yml_conf["data"]["files_test"]
     train_fnames = yml_conf["data"]["files_train"]
+ 
+    data, _  = get_prediction_dataset(yml_conf, test_fnames[0])
+
+    model = get_model(yml_conf, data.data_full.shape[1])
+
 
     for i in range(len(test_fnames)):
         data, output_file  = get_prediction_dataset(yml_conf, test_fnames[i])
@@ -167,6 +228,7 @@ def main(yml_fpath):
     for i in range(len(train_fnames)):
         data, output_file = get_prediction_dataset(yml_conf, train_fnames[i])
         generate_output(data, model, use_gpu, out_dir, output_fle + ".clust", conv = conv)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
