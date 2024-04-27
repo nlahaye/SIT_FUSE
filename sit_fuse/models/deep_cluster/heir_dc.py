@@ -5,16 +5,17 @@ import torch
 
 from sit_fuse.losses.iid import IID_loss
 
+
 from sit_fuse.models.deep_cluster.byol_dc import BYOL_DC
 from sit_fuse.models.deep_cluster.ijepa_dc import IJEPA_DC
 from sit_fuse.models.deep_cluster.dbn_dc import DBN_DC
 from sit_fuse.models.deep_cluster.dc import DeepCluster
+from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes
 
 from tqdm import tqdm
 from torch.utils.data import DataLoader, TensorDataset
 from torch.utils.data.distributed import DistributedSampler
 
-from pprint import pprint
 import numpy as np
 import uuid
 
@@ -80,7 +81,6 @@ class Heir_DC(pl.LightningModule):
             self.generate_label_set(data)
         else:
             state_dict = torch.load(clust_tree_ckpt)
-            pprint(state_dict)
             self.clust_tree, self.lab_full = \
                 load_model(self.clust_tree, list(self.pretrained_model.mlp_head.children())[1].num_features, self, state_dict)        
  
