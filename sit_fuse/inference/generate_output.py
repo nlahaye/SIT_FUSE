@@ -1,5 +1,8 @@
 import pytorch_lightning as pl
 import torch
+from torch.utils.data import DataLoader, TensorDataset
+
+import pickle
 
 from learnergy.models.deep import DBN
 
@@ -8,17 +11,29 @@ from sit_fuse.models.deep_cluster.ijepa_dc import IJEPA_DC
 from sit_fuse.models.deep_cluster.dbn_dc import DBN_DC
 from sit_fuse.datasets.dataset_utils import get_prediction_dataset
 from sit_fuse.models.deep_cluster.heir_dc import Heir_DC
-
 from sit_fuse.utils import read_yaml
+
+from tqdm import tqdm
 
 import argparse
 import os
+import numpy as np
 
-def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, pin_mem = True, conv = False):
+import dask
+import dask.array as da
+
+import matplotlib
+matplotlib.use('agg')
+
+from osgeo import gdal, osr
+
+import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
+from sit_fuse.viz.CMAP import CMAP, CMAP_COLORS
+
+def generate_output(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled = False):
     output_full = None
     count = 0
-    dat.current_subset = -1
-    dat.next_subset()
 
     ind = 0
     output_batch_size = min(5000, max(int(dat.data_full.shape[0] / 5), dat.data_full.shape[0]))
@@ -44,10 +59,10 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, pin_mem = T
             dat_dev, lab_dev = data[0].cuda(), data[1].cuda()
 
         with torch.no_grad():
-            output = mdl.forward(dat_dev)
-        if isinstance(output, list):
+            _, output = mdl.forward(dat_dev)
+        if isinstance(output, list) or isinstance(output, tuple):
             output = output[0] #TODO improve usage uf multi-headed output after single-headed approach validated
-        output = torch.unsqueeze(torch.argmax(output, axis = 1), axis=1)
+        #output = torch.unsqueeze(torch.argmax(output, axis = 1), axis=1)
  
         if use_gpu == True:
             output = output.detach().cpu()
@@ -66,14 +81,13 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, mse_fle, pin_mem = T
         del output
         del dat_dev
         del lab_dev
-        del loader
         count = count + 1
 
     print("SAVING", os.path.join(out_dir, output_fle))
     torch.save(output_full, os.path.join(out_dir, output_fle), pickle_protocol=pickle.HIGHEST_PROTOCOL)
     torch.save(dat.targets_full, os.path.join(out_dir, output_fle + ".indices"), pickle_protocol=pickle.HIGHEST_PROTOCOL)
 
-    plot_clusters(dat.targets_full, output_full, os.path.join(out_dir, output_fle)) 
+    plot_clusters(dat.targets_full, output_full.numpy(), os.path.join(out_dir, output_fle)) 
 
 def plot_clusters(coord, output_data, output_basename, pixel_padding=1):
 
@@ -85,12 +99,11 @@ def plot_clusters(coord, output_data, output_basename, pixel_padding=1):
             labels = np.argmax(output_data, axis = 1)
         else:
             labels = output_data.astype(np.int32)
-            max_cluster = disc_data.max() #TODO this better!!!
+            max_cluster = labels.max() #TODO this better!!!
 
-        print(np.unique(disc_data).shape, "UNIQUE LABELS", np.unique(disc_data))
+        print(np.unique(labels).shape, "UNIQUE LABELS", np.unique(labels))
 
-
-        n_clusters_local = max_clust - min_clust
+        n_clusters_local = max_cluster - min_cluster
 
         data = []
         max_dim1 = max(coord[:,1])
@@ -101,7 +114,7 @@ def plot_clusters(coord, output_data, output_basename, pixel_padding=1):
         #1 subtracted to separate No Data from areas that have cluster value 0.
         data = np.zeros((((int)(max_dim1)+1+pixel_padding), ((int)(max_dim2)+pixel_padding+1))) - 1
         labels = np.array(labels)
-        print("ASSIGNING LABELS", min_clust, max_clust)
+        print("ASSIGNING LABELS", min_cluster, max_cluster)
         print(data.shape, labels.shape, coord.shape)
         for i in range(labels.shape[0]):
             data[coord[i,1], coord[i,2]] = labels[i]
@@ -117,9 +130,9 @@ def plot_clusters(coord, output_data, output_basename, pixel_padding=1):
         #del data
 
         da.to_zarr(data2,output_basename + "_" + str(n_clusters_local) + "clusters.zarr", overwrite=True)
-        img = plt.imshow(data, vmin=-1, vmax=max_clust)
+        img = plt.imshow(data, vmin=-1, vmax=max_cluster)
         print("HERE CLUSTERS MIN MAX MEAN STD", data.min(), data.max(), data.mean(), data.std(), data.shape)
-        cmap = ListedColormap(CMAP_COLORS[0:int(max_clust - (-1) + 1)])
+        cmap = ListedColormap(CMAP_COLORS[0:int(max_cluster - (-1) + 1)])
         img.set_cmap(cmap)
         plt.colorbar()
         plt.savefig(output_basename + "_" + str(n_clusters_local) + "clusters.png", dpi=400, bbox_inches='tight')
@@ -221,13 +234,32 @@ def main(yml_fpath):
 
     model = get_model(yml_conf, data.data_full.shape[1])
 
+    model = model.cuda()
+    model.pretrained_model = model.pretrained_model.cuda()
+    model.pretrained_model.mlp_head = model.pretrained_model.mlp_head.cuda()
+    model.pretrained_model.pretrained_model = model.pretrained_model.pretrained_model.cuda()
+    
+    for lab1 in model.clust_tree.keys():
+        if lab1 == "0":
+            continue
+        for lab2 in model.lab_full.keys():
+            if lab2 in model.clust_tree[lab1].keys():
+                if model.clust_tree[lab1][lab2] is not None:
+                    model.clust_tree[lab1][lab2] = model.clust_tree[lab1][lab2].cuda() 
+  
+ 
+    out_dir = yml_conf["output"]["out_dir"]
 
+    tiled = yml_conf["data"]["tile"]
+
+    #TODO make use_gpu configurable
     for i in range(len(test_fnames)):
+        output_fle = os.path.basename(test_fnames[i])
         data, output_file  = get_prediction_dataset(yml_conf, test_fnames[i])
-        generate_output(data, model, use_gpu, out_dir, output_fle + ".clust", conv = conv)
+        generate_output(data, model, True, out_dir, output_fle + ".clust.data", tiled = tiled)
     for i in range(len(train_fnames)):
         data, output_file = get_prediction_dataset(yml_conf, train_fnames[i])
-        generate_output(data, model, use_gpu, out_dir, output_fle + ".clust", conv = conv)
+        generate_output(data, model, True, out_dir, output_fle + ".clust.data", tiled = tiled)
 
 
 if __name__ == '__main__':

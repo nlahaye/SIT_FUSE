@@ -171,7 +171,7 @@ class Heir_DC(pl.LightningModule):
         x.requires_grad = True
         #print(keys)
         for key in keys:
-            if key != self.key:
+            if train and key != self.key:
                 continue
             inds = np.where(tmp2 == key)
             input_tmp = x[inds]
