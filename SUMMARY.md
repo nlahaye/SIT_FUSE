@@ -28,3 +28,4 @@
       * [Example DBN Config](user-guide/code-configuration/example-configs/example-dbn-config.md)
       * [Example BYOL Config](user-guide/code-configuration/example-configs/example-byol-config.md)
       * [Example I-JEPA Config](user-guide/code-configuration/example-configs/example-i-jepa-config.md)
+  * [Training Command Examples](user-guide/training-command-examples.md)
