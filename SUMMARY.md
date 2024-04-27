@@ -31,5 +31,6 @@
       * [Example I-JEPA Config](user-guide/code-configuration/example-configs/example-i-jepa-config.md)
   * [Dockerized Environment](user-guide/dockerized-environment.md)
   * [Conda Virtual Environment](user-guide/conda-virtual-environment.md)
+  * [Training Dataset Preprocessing Examples](user-guide/training-dataset-preprocessing-examples.md)
   * [Training Command Examples](user-guide/training-command-examples.md)
   * [Inference Command Examples](user-guide/inference-command-examples.md)
