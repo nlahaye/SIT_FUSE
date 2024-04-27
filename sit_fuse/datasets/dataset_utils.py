@@ -43,8 +43,6 @@ def get_train_dataset_sf(yml_conf):
     valid_min = yml_conf["data"]["valid_min"]
     valid_max = yml_conf["data"]["valid_max"]
     delete_chans = yml_conf["data"]["delete_chans"]
-    subset_count = yml_conf["data"]["subset_count"]
-    output_subset_count = yml_conf["data"]["output_subset_count"]
     scale_data = yml_conf["data"]["scale_data"]
 
     transform_chans = yml_conf["data"]["transform_default"]["chans"]
@@ -94,10 +92,6 @@ def get_train_dataset_sf(yml_conf):
 
 
     read_func = get_read_func(data_reader)
-
-    if subset_count > 1:
-        print("WARNING: Making subset count > 1 for training data may lead to suboptimal results")
-
 
     data = None
     if not tiled:
@@ -162,8 +156,6 @@ def get_prediction_dataset(yml_conf, fname):
     valid_min = yml_conf["data"]["valid_min"]
     valid_max = yml_conf["data"]["valid_max"]
     delete_chans = yml_conf["data"]["delete_chans"]
-    subset_count = yml_conf["data"]["subset_count"]
-    output_subset_count = yml_conf["data"]["output_subset_count"]
     scale_data = yml_conf["data"]["scale_data"]
 
     transform_chans = yml_conf["data"]["transform_default"]["chans"]

@@ -223,7 +223,7 @@ def pretrain_BYOL(yml_conf, dataset):
  
     learner = BYOL_Learner(
         model,
-        save_dir = save_dir
+        save_dir = save_dir,
         image_size = img_size,
         hidden_layer = hidden_layer,
         projection_size = projection_size,

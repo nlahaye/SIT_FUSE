@@ -15,7 +15,6 @@ class DBN_PL(pl.LightningModule):
     def __init__(
             self,
             model,
-            save_dir="./",
             previous_layers = None,
             learning_rate = 1e-5,
             momentum = 0.95,
@@ -26,7 +25,6 @@ class DBN_PL(pl.LightningModule):
         self.save_hyperparameters(ignore=['model', 'previous_layers'])
         
         #define models
-        self.save_dir=save_dir
         self.model = model
         self.previous_layers = previous_layers
         self.lr = learning_rate
@@ -120,10 +118,6 @@ class DBN_PL(pl.LightningModule):
 
     def configure_optimizers(self):
         return torch.optim.SGD(self.model.parameters(), lr=self.lr, momentum=self.momentum, weight_decay=self.decay, nesterov=self.nesterov_accel)
-
-
-    def on_validation_epoch_end(self, _):
-        torch.save(self.model.state_dict(), os.path.join(self.save_dir, "dbn.ckpt"))        
 
 
 

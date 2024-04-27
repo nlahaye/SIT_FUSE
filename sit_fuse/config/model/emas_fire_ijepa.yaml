@@ -61,13 +61,7 @@ scaler:
 
 output:
  out_dir: "/data/nlahaye/output/Learnergy/IJEPA_TEST_SMALL/"
- training_output: "output.data"
- training_mse: "rec_mse.data"
- testing_output: "output_test.data"
- testing_mse: "rec_mse_test.data"
  generate_train_output: True
- generate_output: True
- model: "dbn"
 
 logger:
  use_wandb: True

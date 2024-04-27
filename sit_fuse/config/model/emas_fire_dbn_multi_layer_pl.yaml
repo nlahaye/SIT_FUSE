@@ -9,8 +9,6 @@ data:
  fill_value: -9999.0
  valid_min:  -900.0
  valid_max: 100000000
- subset_count: 1
- output_subset_count: 10
  reader_type: "numpy"
  reader_kwargs:
   no_arg: "no_arg"
@@ -56,17 +54,9 @@ scaler:
 output:
  out_dir: "/data/nlahaye/output/Learnergy/DBN_eMAS_FULL_STRAT_MULTI_LAYER_PL/"
  generate_train_output: False
- generate_output: False
 
 
 dbn:
- conv: False
- subset_training: 2000000
- heir_tiers: 1
- overwrite_model: False
- tune_clust: False
- tune_dbn: False
- tune_scaler: False
  model_type: ["gaussian_selu", "gaussian_selu"]
  dbn_arch: [2000, 1000] #[250, 500, 2000] #, 2000]
  gibbs_steps: [1,1] #, 7, 7] #, 10] #, 25]
@@ -91,6 +81,7 @@ encoder:
   devices: 3
   gradient_clip_val: 0.1
   precision: "16-mixed"
+  save_dir: "wandb_encoder"
   stratify_data:
    kmeans: True
 
@@ -113,7 +104,7 @@ cluster:
   devices: 1
   gradient_clip_val: 0.1
   precision: "16-mixed"
-  save_dir: "wandb_dbn"
+  save_dir: "wandb_full_model"
 
  heir:
   tiers: 1
@@ -125,7 +116,7 @@ cluster:
    devices: 1
    gradient_clip_val: 0.1
    precision: "16-mixed"
-   save_dir: "wandb_dbn"
+   save_dir: "wandb_dbn_full_model_heir"
    batch_size: 100
    min_samples: 1000
    learning_rate: 0.0001

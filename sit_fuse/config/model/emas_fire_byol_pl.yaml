@@ -58,7 +58,6 @@ scaler:
 output:
  out_dir: "/data/nlahaye/output/Learnergy/eMAS_BYOL_PL/"
  generate_train_output: False
- generate_output: False
 
 
 byol:
