@@ -32,7 +32,7 @@ from datetime import datetime
 import regionmask
 import h5py
 from collections import OrderedDict
-ocean_basins_50 =  regionmask.defined_regions.natural_earth_v5_0_0.ocean_basins_50 
+ocean_basins_50 =  regionmask.defined_regions.natural_earth_v5_1_2.ocean_basins_50 
 
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
 from dask_ml.preprocessing import StandardScaler as DaskStandardScaler
