@@ -106,8 +106,13 @@ def plot_clusters(coord, output_data, output_basename, pixel_padding=1):
         n_clusters_local = max_cluster - min_cluster
 
         data = []
-        max_dim1 = max(coord[:,1])
-        max_dim2 = max(coord[:,2])
+        line_ind = 0
+        samp_ind = 1
+        if coord.shape[1] == 3:
+            line_ind = 1
+            samp_ind = 2
+        max_dim1 = max(coord[:,line_ind])
+        max_dim2 = max(coord[:,samp_ind])
         strt_dim1 = 0
         strt_dim2 = 0
 
@@ -117,7 +122,7 @@ def plot_clusters(coord, output_data, output_basename, pixel_padding=1):
         print("ASSIGNING LABELS", min_cluster, max_cluster)
         print(data.shape, labels.shape, coord.shape)
         for i in range(labels.shape[0]):
-            data[coord[i,1], coord[i,2]] = labels[i]
+            data[coord[i,line_ind], coord[i,samp_ind]] = labels[i]
             #print(data.shape, coord[i,1], coord[i,2], labels[i], max_dim1, max_dim2)
 
         print("FINISHED WITH LABEL ASSIGNMENT")
@@ -217,8 +222,9 @@ def get_model(yml_conf, n_visible):
     model.eval()
 
     for key in model.clust_tree["1"].keys():
-        model.clust_tree["1"][key].eval()
-         
+        if model.clust_tree["1"][key] is not None:
+            model.clust_tree["1"][key].eval()
+          
     return model
 
 

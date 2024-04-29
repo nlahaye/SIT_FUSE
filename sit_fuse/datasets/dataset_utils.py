@@ -167,7 +167,12 @@ def get_prediction_dataset(yml_conf, fname):
 
     
     tiled = yml_conf["data"]["tile"]
- 
+    tile_size = None
+    tile_step = None
+    if tiled:
+        tile_size = yml_conf["data"]["tile_size"]
+        tile_step = yml_conf["data"]["tile_step"]  
+
     tune_scaler = False
     if "encoder" in yml_conf:
         tune_scaler = yml_conf["encoder"]["tune_scaler"]

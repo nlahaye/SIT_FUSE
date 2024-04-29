@@ -1285,6 +1285,34 @@ def get_lat_lon(fname):
     return lonLat
 
 
+def read_emas_master_hdf(fname, **kwargs):
+
+    ds=SD.SD(fname)
+    r = ds.select('CalibratedData')
+    attrs = r.attributes(full=1)
+    scale_factor = attrs["scale_factor"][0]
+    fill = attrs["_FillValue"][0]
+    dat = r.get()
+ 
+    inds = np.where(dat == fill)
+    dat = dat.astype(np.float32)
+    dat[inds] = -999999
+     
+    inds = np.where(dat > -999999)
+    for i in range(dat.shape[1]):
+        dat[:,i,:] = dat[:,i,:] * scale_factor[i]
+
+    dat = dat.astype(np.float32)
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+                dat = dat[:,:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+
+
+    dat = np.swapaxes(dat, 0,1)
+    print(dat.shape, "HERE")
+    return dat
+
+
 def read_mspi(fname, **kwargs):
 
         data_fields = OrderedDict([
@@ -1707,6 +1735,12 @@ def get_read_func(data_reader):
         return read_mspi
     if data_reader == "mspi_geo":
         return read_mspi_geo
+    if data_reader == "emas_hdf":
+        return read_emas_master_hdf
+    if data_reader == "master_hdf":
+        return read_emas_master_hdf
+    if data_reader == "emas_master_hdf":
+        return read_emas_master_hdf
 
     #TODO return BCDP reader
     return None

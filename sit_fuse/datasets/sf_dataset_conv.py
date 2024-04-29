@@ -167,27 +167,26 @@ class SFDatasetConv(SFDataset):
 			pixel_padding = (window_size[dim1] - 1) //2
 
 			tgts = np.indices(data_local[r].shape[1:])
+                         
 			tgts[0,:,:] = tgts[0,:,:] + dat_begin[r][0]
 			tgts[1,:,:] = tgts[1,:,:] + dat_begin[r][1]
 			#tgts = tgts[:,pixel_padding:tgts.shape[1] - pixel_padding,pixel_padding:tgts.shape[2] - pixel_padding]
-			tgts = np.concatenate((np.full((1,tgts.shape[1], tgts.shape[2]),r, dtype=np.int16), tgts), axis=0)
+			#tgts = np.concatenate((np.full((1,tgts.shape[1], tgts.shape[2]),r, dtype=np.int16), tgts), axis=0)
 	
 			
 			if self.tile:
 				tmp = np.squeeze(view_as_windows(data_local[r], window_size, step=tile_step_final))
 				tmp = tmp.reshape((tmp.shape[0]*tmp.shape[1], tmp.shape[2], tmp.shape[3], tmp.shape[4]))			
 
-
-				window_size_tgt = [3,window_size[1],window_size[2]]
-				tile_step_tgt = [3,tile_step_final[1],tile_step_final[2]]
-				print(tgts.shape, tmp.shape, data_local[r].shape, window_size_tgt, tile_step_tgt)
+				window_size_tgt = [2,window_size[1],window_size[2]]
+				tile_step_tgt = [2,tile_step_final[1],tile_step_final[2]]
 				tgts2 = np.squeeze(view_as_windows(tgts, window_size_tgt, step=tile_step_tgt))
 				cntr = int(tile_step_final[1]/2)
-				print(tgts2.shape)
 				tgts2 = tgts2[:,:,:,cntr,cntr]
 				tgts2 = tgts2.reshape(tgts2.shape[0]*tgts2.shape[1], tgts2.shape[2])
 				#tgts = tgts.reshape((3,tgts.shape[1]*tgts.shape[2])).astype(np.int16)
 				#tgts = np.swapaxes(tgts, 0, 1)     
+				print("TESTING INDS", tmp.shape, tgts2.shape)                               
 
 
 				if isinstance(self.data, list):
@@ -237,7 +236,7 @@ class SFDatasetConv(SFDataset):
 				self.__stratify_k_means__(flatten=True)
 			else:
 				self.data_full = self.data_full[:self.subset_training,:,:,:]
-				self.targets_full = self.data_full[:self.subset_training,:,:]
+				self.targets_full = self.targets_full[:self.subset_training,:,:]
 
 		self.chan_dim = 1
 		self.mean_per_channel = []
@@ -292,7 +291,7 @@ class SFDatasetConv(SFDataset):
 
 		sample = self.data_full[idx]
 
-		return sample, self.targets[idx]
+		return sample, self.targets_full[idx]
 
 
  
