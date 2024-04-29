@@ -315,7 +315,7 @@ cluster:
   batch_size: 1000
   epochs: 30
   accelerator: "gpu"
-  devices: 1
+  devices: 3
   gradient_clip_val: 0.1
   precision: "16-mixed"
   save_dir: "wandb_dbn"

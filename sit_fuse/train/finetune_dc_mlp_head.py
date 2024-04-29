@@ -136,6 +136,7 @@ def dc_DBN(yml_conf, dataset):
         for param in model.parameters():
             param.requires_grad = False
     dbn.eval() 
+    dbn.models.eval()
 
     model = DBN_DC(dbn, num_classes=num_classes)
   

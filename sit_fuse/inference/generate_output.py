@@ -254,7 +254,10 @@ def main(yml_fpath):
 
     #TODO make use_gpu configurable
     for i in range(len(test_fnames)):
-        output_fle = os.path.basename(test_fnames[i])
+        if isinstance(test_fnames[i], list):
+            output_fle = os.path.basename(test_fnames[i][0])
+        else:
+            output_fle = os.path.basename(test_fnames[i])
         data, output_file  = get_prediction_dataset(yml_conf, test_fnames[i])
         generate_output(data, model, True, out_dir, output_fle + ".clust.data", tiled = tiled)
     for i in range(len(train_fnames)):
