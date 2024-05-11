@@ -62,6 +62,7 @@ scaler:
 output:
  out_dir: "/data/nlahaye/output/Learnergy/IJEPA_TEST_SMALL/"
  generate_train_output: True
+ generate_intermediate_output: True
 
 logger:
  use_wandb: True

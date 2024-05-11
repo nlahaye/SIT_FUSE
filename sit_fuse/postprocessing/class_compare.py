@@ -25,7 +25,7 @@ import copy
 import dbfread
 from osgeo import gdal
 
-from utils import numpy_to_torch, read_yaml, get_read_func
+from sit_fuse.utils import numpy_to_torch, read_yaml, get_read_func
 
 def calc_class_stats(new_data_label_counts, init_data_label_counts):
 
@@ -268,7 +268,7 @@ def run_compare_dbf(dbf_list):
         percentage = assign[1]
         index = assign[0]
         print(percentage)
-        if percentage >= 0.6:
+        if percentage >= 0.7: #0.51:
             assignment[index].append(key)
         else:
             assignment[-1].append(key)

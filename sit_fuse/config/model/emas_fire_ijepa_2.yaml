@@ -3,19 +3,23 @@ data:
  tile: True #True
  tile_size: [3,3,34]
  tile_step: [1,1,34]
- val_percent: 0.1
+ val_percent: 0.0
  num_loader_workers: 10
  scale_data: True
  pixel_padding: 1
- number_channels: 34
+ number_channels: 3 #34
  fill_value: -9999.0
  valid_min:  -900.0
  valid_max: 100000000
  subset_count: 1
- output_subset_count: 10
+ output_subset_count: 1
  reader_type: "numpy"
  reader_kwargs:
-  no_arg: "no_arg"
+  none: "none"
+  #start_line: 1000
+  #end_line: 1500
+  #start_sample: 300
+  #end_sample: 789
  chan_dim: 0
  delete_chans: [25,26,36,37]
  transform_default:
@@ -56,57 +60,62 @@ scaler:
  name: "standard" 
 
 output:
- out_dir: "/data/nlahaye/output/Learnergy/eMAS_BYOL_PL/"
- generate_train_output: False
-
-
-byol:
- hidden_layer: -1
- projection_size: 256
- projection_hidden_size: 4096
- moving_average_decay: 0.99
+ out_dir: "/data/nlahaye/output/Learnergy/IJEPA_TEST_SMALL_2/"
+ generate_train_output: True
+ generate_intermediate_output: True
 
 logger:
  use_wandb: True
  log_model: True
- log_out_dir: "wandb_byol"
+ log_out_dir: "wandb_small_full"
  project: "SIT-FUSE"
 
+ijepa:
+ patch_size: 1
+ embed_dim: 64
+ encoder_heads: 4
+ encoder_depth: 4
+ decoder_depth: 3
+ target_aspect_ratio: [1,1]
+ target_scale: [1,1]
+ context_aspect_ratio: 1
+ context_scale: [1,1]
+ number_target_blocks: 3
 
-
-encoder_type: "byol"
+encoder_type: "ijepa"
 encoder:
- subset_training: -1
+ subset_training: 2300000
  overwrite_model: False
  tune_scaler: False
  training:
   weight_decay: 0.05
   momentum: 0.996
-  momentum_start_end: [0.996, 1.0]
+  momentum_start_end: [0.996, 1.0] 
   learning_rate: 0.001
   batch_size: 16
-  epochs: 3
+  epochs: 100
   accelerator: "gpu"
-  devices: 3
+  devices: 4
   gradient_clip_val: 0.1
   precision: "16-mixed"
-  save_dir: "wandb_byol"
+  save_dir: "wandb_ijepa_small_full"
   stratify_data:
-   kmeans: False
+   kmeans: True
 
 cluster:
  gauss_noise_stdev:  [0.01]
  lambda: 1.0
  num_classes: 800
  training:
+  finetune_encoder: True
   learning_rate: 0.0001
   batch_size: 1000
-  epochs: 10
+  epochs: 30 
   accelerator: "gpu"
-  devices: 3
+  devices: 1
   gradient_clip_val: 0.1
   precision: "16-mixed"
-  save_dir: "wandb_byol"
+  save_dir: "wandb_ijepa_small_full"
 
  heir:
   tiers: 1
@@ -117,11 +126,10 @@ cluster:
    accelerator: "gpu"
    devices: 1
    gradient_clip_val: 0.1
-   precision: "16-mixed"
-   save_dir: "wandb_byol"
+   precision: "32"
+   save_dir: "wandb_ijepa_small_full"
    batch_size: 100
    min_samples: 1000
    epochs: 30
    lambda: 1.0
-
-
+ 

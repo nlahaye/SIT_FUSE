@@ -1,0 +1,32 @@
+
+
+data:
+ filename: [
+#"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203050000.tif.clust.data_78185clusters.zarr.smoke.tif",
+#"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203050010.tif.clust.data_78185clusters.zarr.smoke.tif",
+#"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203050020.tif.clust.data_78185clusters.zarr.smoke.tif",
+#"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203050030.tif.clust.data_78185clusters.zarr.smoke.tif",
+#"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203050050.tif.clust.data_78185clusters.zarr.smoke.tif",
+#"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203050100.tif.clust.data_78192clusters.zarr.smoke.tif",
+#"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203050110.tif.clust.data_78192clusters.zarr.smoke.tif",
+#"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060000.tif.clust.data_78185clusters.zarr.smoke.tif",
+#"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060020.tif.clust.data_78192clusters.zarr.smoke.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060010.tif.clust.data_78192clusters.zarr.smoke.tif",
+#"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060030.tif.clust.data_78192clusters.zarr.smoke.tif",
+#"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060050.tif.clust.data_78192clusters.zarr.smoke.tif",
+#"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060100.tif.clust.data_78192clusters.zarr.smoke.tif",
+#"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060110.tif.clust.data_78192clusters.zarr.smoke.tif",
+#"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203080110.tif.clust.data_78197clusters.zarr.smoke.tif",
+#"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203080120.tif.clust.data_78193clusters.zarr.smoke.tif",
+#"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203080130.tif.clust.data_78193clusters.zarr.smoke.tif",
+#"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203080140.tif.clust.data_78184clusters.zarr.smoke.tif",
+#"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203080150.tif.clust.data_78184clusters.zarr.smoke.tif"
+]
+ reader_type: "gtiff"
+ reader_kwargs:
+  None:
+
+remove_singles: True
+remove_singles_2: True
+write_geotiff: True
+contour_min_size: -1
