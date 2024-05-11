@@ -7,9 +7,12 @@ applicable U.S. export laws and regulations. User has the responsibility to obta
 required before exporting such information to foreign countries or providing access to foreign persons.
 """
 import numpy as np
+import dask.array as da
+import xarray as xr
+
 from pyresample.geometry import AreaDefinition
 from pyresample import area_config, bilinear, geometry, data_reduce, create_area_def, kd_tree
-from utils import numpy_to_torch, read_yaml, get_read_func
+from sit_fuse.utils import numpy_to_torch, read_yaml, get_read_func
 from osgeo import gdal, osr
 import argparse
 import os
@@ -73,12 +76,12 @@ def fuse_data(yml_conf):
 
 
         if len(hi_filenames) > 0:
-            hi_dat = read_func_hi(hi_filenames[i], **data_reader_kwargs_hi).astype(np.float64)
+            hi_dat = read_func_hi(hi_filenames[i], **data_reader_kwargs_hi).astype(np.float32)
             if len(hi_dat.shape) < 3:
                 hi_dat = np.expand_dims(hi_dat, hi_channel_dim)
                 print(hi_dat.shape)
 
-            hi_geo = read_func_geo_hi(hi_geoloc[i], **geo_data_reader_kwargs_hi).astype(np.float64)
+            hi_geo = read_func_geo_hi(hi_geoloc[i], **geo_data_reader_kwargs_hi).astype(np.float32)
             print(hi_geo.shape, hi_geoloc[i])
  
             if hi_channel_dim != 2:
@@ -102,12 +105,12 @@ def fuse_data(yml_conf):
             #Assumes reader or preprocessor has defaulted bad values to -9999
             np.ma.set_fill_value(hi_dat, -9999.0)
  
-        lo_dat = read_func_lo(lo_filenames[i], **data_reader_kwargs_lo).astype(np.float64)
+        lo_dat = read_func_lo(lo_filenames[i], **data_reader_kwargs_lo).astype(np.float32)
         if len(lo_dat.shape) < 3:
             lo_dat = np.expand_dims(lo_dat, lo_channel_dim)
 
         print(lo_dat.shape) 
-        lo_geo = read_func_geo_lo(lo_geoloc[i], **geo_data_reader_kwargs_lo).astype(np.float64)
+        lo_geo = read_func_geo_lo(lo_geoloc[i], **geo_data_reader_kwargs_lo).astype(np.float32)
         print(lo_geo.shape, lo_geoloc[i])
 
 
@@ -144,6 +147,7 @@ def fuse_data(yml_conf):
 
         print(area_extent, lo_dat.min(), lo_dat.max())
 
+        print(area_id, projection, area_extent, final_resolution, projection_units)
         area_def = create_area_def(area_id, projection, area_extent=area_extent, resolution = final_resolution, units = projection_units)
         lonsa, latsa = area_def.get_lonlats()
 
@@ -153,21 +157,30 @@ def fuse_data(yml_conf):
         lo_dat = np.ma.masked_where((lo_dat < valid_min_lo) | (lo_dat > valid_max_lo), lo_dat)
         np.ma.set_fill_value(lo_dat, -9999.0)
         print(lo_dat.min(), lo_dat.max(), lo_dat.mean(), lo_dat.std(), "STATS INIT")
+        #lo_dat = lo_dat.transpose(1,0,2)
+        #lo_dat = xr.DataArray(da.from_array(lo_dat), dims=['x','y','bands'], coords={'lon': (['y','x'], np.squeeze(lo_geo[tuple(slc_lon_lo)])), 'lat': (['y','x'], np.squeeze(lo_geo[tuple(slc_lat_lo)])), 'bands': range(lo_dat.shape[2])})
+ 
 
         if resample_n_procs > 1:
             from pyresample._spatial_mp import cKDTree_MP as kdtree_class
         else:
             kdtree_class = KDTree
  
+        lo_dat = lo_dat.astype(np.float32)
 
         if len(hi_filenames) > 0:
             print("BEFORE RESAMPLING", hi_dat.shape, lo_dat.shape)
- 
-            if use_bilinear:
-                resampler = bilinear.NumpyBilinearResampler(source_def_hi, area_def, resample_radius, neighbours=resample_n_neighbors) 
+            hi_dat = hi_dat.astype(np.float32)
+            #hi_dat = hi_dat.transpose(1,0,2) 
+            #hi_dat = xr.DataArray(da.from_array(hi_dat), dims=['x','y','bands'], coords={'lon': (['y','x'], np.squeeze(lo_geo[tuple(slc_lon_lo)])), 'lat': (['y','x'], np.squeeze(lo_geo[tuple(slc_lat_lo)])), 'bands': range(hi_dat.shape[2])})
 
+            if use_bilinear:
+                #resampler = bilinear.XArrayBilinearResampler(source_def_hi, area_def, resample_radius, neighbours=resample_n_neighbors) 
+                resampler = bilinear.NumpyBilinearResampler(source_def_hi, area_def, resample_radius, neighbours=resample_n_neighbors)  
+ 
                 resampler.get_bil_info(kdtree_class=kdtree_class, nprocs=resample_n_procs)
                 result = resampler.get_sample_from_bil_info(hi_dat, fill_value=-9999.0, output_shape=None)
+                #result = resampler.resample(hi_dat, fill_value=-9999.0)
 
                 #result = bilinear.resample_bilinear(hi_dat, source_def_hi, area_def, radius= resample_radius, neighbours= resample_n_neighbors, nprocs= resample_n_procs, fill_value = -9999.0)
             else:
@@ -179,9 +192,11 @@ def fuse_data(yml_conf):
             print("BEFORE RESAMPLING2", hi_dat.shape, lo_dat.shape, result.shape)
 
         if use_bilinear: 
+            #resampler = bilinear.XArrayBilinearResampler(source_def_lo, area_def, resample_radius, neighbours=resample_n_neighbors)
             resampler = bilinear.NumpyBilinearResampler(source_def_lo, area_def, resample_radius, neighbours=resample_n_neighbors)
             resampler.get_bil_info(kdtree_class=kdtree_class, nprocs=resample_n_procs)
             result2 = resampler.get_sample_from_bil_info(lo_dat, fill_value=-9999.0, output_shape=None)    
+            #result2 = resampler.resample(lo_dat, fill_value=-9999.0)
             #result2 = bilinear.resample_bilinear(lo_dat, source_def_lo, area_def, radius= resample_radius, neighbours= resample_n_neighbors, nprocs= resample_n_procs, fill_value = -9999.0)
 
         else:
