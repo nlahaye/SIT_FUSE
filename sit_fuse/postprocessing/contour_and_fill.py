@@ -11,7 +11,7 @@ import zarr
 import argparse
 import numpy as np
 from osgeo import gdal, osr
-from utils import get_read_func, read_yaml
+from sit_fuse.utils import get_read_func, read_yaml
 import cv2
 
 import diplib as dip
