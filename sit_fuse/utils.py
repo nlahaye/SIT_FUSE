@@ -437,8 +437,9 @@ def read_goes_netcdf(filenames, **kwargs):
                 rad = tmp
         else:
             rad = f.variables['Rad'][:]
-        f.close()
+        #f.close()
         f = None
+        print(rad.shape)
         data1.append(rad)
     if not fire:
         refShp = data1[3].shape
@@ -453,6 +454,60 @@ def read_goes_netcdf(filenames, **kwargs):
         dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
     print(dat.shape)
     return dat
+ 
+
+def read_goes_netcdf_geo(filenames, **kwargs):
+    f = Dataset(filenames[3])
+    lat, lon = calculate_degrees(f)
+
+    dat = np.array([lat, lon])
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+            dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+    return dat
+
+
+#Please acknowledge the NOAA/NESDIS/STAR Aerosols and Atmospheric Composition Science Team if using any of this code in your work/research!
+# Calculate latitude and longitude from GOES ABI fixed grid projection data
+# GOES ABI fixed grid projection is a map projection relative to the GOES satellite
+# Units: latitude in °N (°S < 0), longitude in °E (°W < 0)
+# See GOES-R Product User Guide (PUG) Volume 5 (L2 products) Section 4.2.8 for details & example of calculations
+# "file_id" is an ABI L1b or L2 .nc file opened using the netCDF4 library
+
+def calculate_degrees(file_id):
+    
+    # Read in GOES ABI fixed grid projection variables and constants
+    x_coordinate_1d = file_id.variables['x'][:]  # E/W scanning angle in radians
+    y_coordinate_1d = file_id.variables['y'][:]  # N/S elevation angle in radians
+    projection_info = file_id.variables['goes_imager_projection']
+    lon_origin = projection_info.longitude_of_projection_origin
+    H = projection_info.perspective_point_height+projection_info.semi_major_axis
+    r_eq = projection_info.semi_major_axis
+    r_pol = projection_info.semi_minor_axis
+    
+    # Create 2D coordinate matrices from 1D coordinate vectors
+    x_coordinate_2d, y_coordinate_2d = np.meshgrid(x_coordinate_1d, y_coordinate_1d)
+    
+    # Equations to calculate latitude and longitude
+    lambda_0 = (lon_origin*np.pi)/180.0  
+    a_var = np.power(np.sin(x_coordinate_2d),2.0) + (np.power(np.cos(x_coordinate_2d),2.0)*(np.power(np.cos(y_coordinate_2d),2.0)+(((r_eq*r_eq)/(r_pol*r_pol))*np.power(np.sin(y_coordinate_2d),2.0))))
+    b_var = -2.0*H*np.cos(x_coordinate_2d)*np.cos(y_coordinate_2d)
+    c_var = (H**2.0)-(r_eq**2.0)
+    r_s = (-1.0*b_var - np.sqrt((b_var**2)-(4.0*a_var*c_var)))/(2.0*a_var)
+    s_x = r_s*np.cos(x_coordinate_2d)*np.cos(y_coordinate_2d)
+    s_y = - r_s*np.sin(x_coordinate_2d)
+    s_z = r_s*np.cos(x_coordinate_2d)*np.sin(y_coordinate_2d)
+    
+    # Ignore numpy errors for sqrt of negative number; occurs for GOES-16 ABI CONUS sector data
+    np.seterr(all='ignore')
+    
+    abi_lat = (180.0/np.pi)*(np.arctan(((r_eq*r_eq)/(r_pol*r_pol))*((s_z/np.sqrt(((H-s_x)*(H-s_x))+(s_y*s_y))))))
+    abi_lon = (lambda_0 - np.arctan(s_y/(H-s_x)))*(180.0/np.pi)
+    
+    return abi_lat, abi_lon
+
+
+
 
 def read_gk2a_netcdf(filenames, **kwargs):
     data1 = []
@@ -1305,12 +1360,44 @@ def read_emas_master_hdf(fname, **kwargs):
     dat = dat.astype(np.float32)
 
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
-                dat = dat[:,:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+                dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
 
 
     dat = np.swapaxes(dat, 0,1)
     print(dat.shape, "HERE")
     return dat
+
+
+def read_emas_master_hdf_geo(fname, **kwargs):
+
+    ds=SD.SD(fname)
+    r = ds.select('PixelLatitude')
+    attrs = r.attributes(full=1)
+    fill = attrs["_FillValue"][0]
+    dat = r.get()
+    inds = np.where(dat == fill)
+    dat = dat.astype(np.float32)
+    dat[inds] = -999999
+
+    r2 = ds.select('PixelLongitude')
+    attrs2 = r2.attributes(full=1)
+    fill2 = attrs2["_FillValue"][0]
+    dat2 = r2.get()
+    inds2 = np.where(dat2 == fill)
+    dat2 = dat2.astype(np.float32)
+    dat2[inds2] = -999999
+
+
+    dat = np.array([dat2,dat], dtype=np.float32)
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+                dat = dat[:,kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+
+
+    print(dat.shape, "HERE")
+    return dat
+
+
 
 
 def read_mspi(fname, **kwargs):
@@ -1373,12 +1460,8 @@ def read_mspi_geo(fname, **kwargs):
         print(fname)
         geo = []
         #geo.append(f['HDFEOS']['GRIDS']['Ancillary']['Data Fields']['XDim'][:])
-        x = np.expand_dims(f['HDFEOS']['GRIDS']['Ancillary']['Data Fields']['XDim'][:], 0)
-        y = np.expand_dims(f['HDFEOS']['GRIDS']['Ancillary']['Data Fields']['YDim'][:], 1)
-        print("GEO1", x.shape, y.shape)
-        x = np.repeat(x,y.shape[0],axis=0)
-        y = np.repeat(y,x.shape[1],axis=1)
-        print(x.shape, y.shape, "GEO", x)
+        x = f['HDFEOS']['GRIDS']['Ancillary']['Data Fields']['Longitude'][:].astype(np.float32)
+        y = f['HDFEOS']['GRIDS']['Ancillary']['Data Fields']['Latitude'][:].astype(np.float32)
         geo = [x,y]
         #geo.append(f['HDFEOS']['GRIDS']['Ancillary']['Data Fields']['YDim'][:])
         print(geo[0].shape)
@@ -1669,6 +1752,8 @@ def get_read_func(data_reader):
         return read_misr_sim
     if data_reader == "goes_netcdf":
         return read_goes_netcdf
+    if data_reader == "goes_netcdf_geo":
+        return read_goes_netcdf_geo
     if data_reader == "s3_netcdf":
         return read_s3_netcdf     
     if data_reader == "s3_netcdf_geo":
@@ -1741,6 +1826,8 @@ def get_read_func(data_reader):
         return read_emas_master_hdf
     if data_reader == "emas_master_hdf":
         return read_emas_master_hdf
+    if data_reader == "emas_master_hdf_geo":
+        return read_emas_master_hdf_geo
 
     #TODO return BCDP reader
     return None
