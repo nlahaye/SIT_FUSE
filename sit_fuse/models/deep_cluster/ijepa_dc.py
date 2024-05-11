@@ -26,10 +26,7 @@ class IJEPA_DC(pl.LightningModule):
 
         #define model layers
         self.pretrained_model = IJEPA_PL.load_from_checkpoint(pretrained_model_path)
-        self.pretrained_model.model.mode = "test"
         self.pretrained_model.model.layer_dropout = 0.0
-        self.pretrained_model.eval()
-        self.pretrained_model.model.eval()
  
         #self.average_pool = nn.AvgPool1d((self.pretrained_model.embed_dim), stride=1)
         #mlp head

@@ -46,6 +46,14 @@ class Heir_DC(pl.LightningModule):
             self.pretrained_model.eval()
             self.pretrained_model.pretrained_model.eval()
             self.pretrained_model.mlp_head.eval()
+
+            for param in self.pretrained_model.pretrained_model.parameters():
+                param.requires_grad = False
+            for param in self.pretrained_model.mlp_head.parameters():
+                param.requires_grad = False
+            for param in self.pretrained_model.parameters():
+                param.requires_grad = False
+
         elif encoder_type == "ijepa":
             self.pretrained_model = IJEPA_DC.load_from_checkpoint(pretrained_model_path)
             self.pretrained_model.pretrained_model.model.mode = "test"
@@ -53,6 +61,16 @@ class Heir_DC(pl.LightningModule):
             self.pretrained_model.pretrained_model.eval()
             self.pretrained_model.mlp_head.eval()
             self.pretrained_model.pretrained_model.model.eval()
+
+            for param in self.pretrained_model.pretrained_model.model.parameters():
+                param.requires_grad = False
+            for param in self.pretrained_model.pretrained_model.parameters():
+                param.requires_grad = False
+            for param in self.pretrained_model.mlp_head.parameters():
+                param.requires_grad = False
+            for param in self.pretrained_model.parameters():
+                param.requires_grad = False
+
             #getattr(self.pretrained_model.mlp_head, "batch_norm0").track_running_stats = True
             #self.pretrained_model.pretrained_model.model.layer_dropout = 0.0
         elif encoder_type == "byol":
