@@ -268,6 +268,7 @@ class SFDataset(torch.utils.data.Dataset):
 			sub_data_total = view_as_windows(data_local[r], [size_wind, size_wind, data_local[r].shape[2]], step=1)
 			sub_data_total = sub_data_total.reshape((sub_data_total.shape[0]*sub_data_total.shape[1], -1))		
 
+			print(sub_data_total.shape, sub_data_total.min(), sub_data_total.max(), sub_data_total.mean())
 			#No sample is used that contains a fill value
 			del_inds = np.where(sub_data_total <= -999998)[0]
 			sub_data_total = np.delete(sub_data_total, del_inds, 0)
@@ -349,19 +350,19 @@ class SFDataset(torch.utils.data.Dataset):
 			kmeans = MiniBatchKMeans(n_clusters=20,
                                 random_state=0,
                                 max_iter=50,
-                                n_init="auto").fit(torch.flatten(self.data, start_dim=1).numpy())
+                                n_init="auto").fit(torch.flatten(self.data_full, start_dim=1).numpy())
 		else:
 			kmeans = MiniBatchKMeans(n_clusters=20,
 				random_state=0,
 				max_iter=50,
-				n_init="auto").fit(self.data)
+				n_init="auto").fit(self.data_full)
 
 		end = timer()
 		print("KMEANS RUNTIME", end-start)
 		if flatten:
-			self.stratify_training = kmeans.predict(torch.flatten(self.data, start_dim=1).numpy())
+			self.stratify_training = kmeans.predict(torch.flatten(self.data_full, start_dim=1).numpy())
 		else:
-			self.stratify_training = kmeans.predict(self.data)
+			self.stratify_training = kmeans.predict(self.data_full)
 		self.__stratify_training__()
  
 

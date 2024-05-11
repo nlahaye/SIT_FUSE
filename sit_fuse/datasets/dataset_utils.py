@@ -55,11 +55,9 @@ def get_train_dataset_sf(yml_conf):
     tiled = yml_conf["data"]["tile"]
 
     tune_scaler = False
-    overwrite_model = False
     subset_training = -1
     if "encoder" in yml_conf:
         tune_scaler = yml_conf["encoder"]["tune_scaler"]
-        overwrite_model = yml_conf["encoder"]["overwrite_model"]
         subset_training = yml_conf["encoder"]["subset_training"]
 
     stratify_data = None
@@ -81,7 +79,7 @@ def get_train_dataset_sf(yml_conf):
 
 
     scaler_tune = True
-    if not os.path.exists(scaler_fname) or (preprocess_train == True and overwrite_model):
+    if not os.path.exists(scaler_fname) or preprocess_train == True:
         scaler_type = yml_conf["scaler"]["name"]
         scaler, scaler_train = get_scaler(scaler_type)
     else:
@@ -189,7 +187,7 @@ def get_prediction_dataset(yml_conf, fname):
         preprocess_train = False
 
     scaler_tune = False
-    if not os.path.exists(scaler_fname) or (preprocess_train == True and overwrite_model):
+    if not os.path.exists(scaler_fname) or preprocess_train == True:
         scaler_type = yml_conf["scaler"]["name"]
         scaler, scaler_train = get_scaler(scaler_type)
     else:
