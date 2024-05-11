@@ -51,7 +51,7 @@ def heir_dc(yml_conf, dataset, ckpt_path):
     min_samples = yml_conf["cluster"]["heir"]["training"]["min_samples"]
 
 
-    ckpt_path = os.path.join(full_model_dir, "checkpoint.ckpt")
+    ckpt_path = os.path.join(full_model_dir, "deep_cluster.ckpt")
 
     encoder_type=None
     if "encoder_type" in yml_conf:
@@ -92,8 +92,13 @@ def heir_dc(yml_conf, dataset, ckpt_path):
                 param.requires_grad = False
         encoder.eval()
 
+    heir_ckpt_path = os.path.join(save_dir, "heir_fc.ckpt")
+    if os.path.exists(heir_ckpt_path): #TODO make optional
+        model = Heir_DC(None, pretrained_model_path=ckpt_path, num_classes=num_classes, \
+            encoder_type=encoder_type, encoder=encoder, clust_tree_ckpt = heir_ckpt_path)
+    else: 
+        model = Heir_DC(dataset, pretrained_model_path=ckpt_path, num_classes=num_classes, encoder_type=encoder_type, encoder=encoder)
 
-    model = Heir_DC(dataset, pretrained_model_path=ckpt_path, num_classes=num_classes, encoder_type=encoder_type, encoder=encoder)
     for param in model.pretrained_model.parameters():
         param.requires_grad = False
 
@@ -118,6 +123,10 @@ def heir_dc(yml_conf, dataset, ckpt_path):
  
 
         n_visible = list(model.pretrained_model.mlp_head.children())[1].num_features
+
+        if key in model.clust_tree["1"] and model.clust_tree["1"][key] is not None:
+            continue #TODO make optional
+
         model.clust_tree["1"][key] = MultiPrototypes(n_visible, model.num_classes, model.number_heads)
 
         model.clust_tree["1"][key].train() 

@@ -198,13 +198,24 @@ def dc_IJEPA(yml_conf, dataset):
 
     num_classes = yml_conf["cluster"]["num_classes"]
 
+    finetune_encoder = yml_conf["cluster"]["training"]["finetune_encoder"]
+
     ckpt_path = os.path.join(encoder_dir, "encoder.ckpt")
 
     model = IJEPA_DC(pretrained_model_path=ckpt_path, num_classes=num_classes)
     for param in model.pretrained_model.parameters():
-        param.requires_grad = True
+        param.requires_grad = finetune_encoder
     for param in model.mlp_head.parameters():
         param.requires_grad = True
+
+    model.mlp_head.train()
+    model.pretrained_model.train()
+    model.pretrained_model.model.train()
+    model.pretrained_model.model.mode = "test"
+ 
+    if not finetune_encoder:
+        model.pretrained_model.eval()
+        model.pretrained_model.model.eval()
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
