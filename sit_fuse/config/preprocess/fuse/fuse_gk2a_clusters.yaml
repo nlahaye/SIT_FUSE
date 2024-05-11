@@ -1,0 +1,155 @@
+
+low_res:
+ data:
+  valid_min: 0.0000001
+  valid_max: 100000000
+  reader_type: "zarr_to_numpy"
+  reader_kwargs:
+   no_arg: ''
+  geo_reader_type: "gk2a_netcdf_geo"
+  geo_reader_kwargs:
+      no_arg: ''
+  filenames: [
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203050000.tif.clust.data_78185clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203050010.tif.clust.data_78185clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203050020.tif.clust.data_78185clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203050030.tif.clust.data_78185clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203050050.tif.clust.data_78185clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203050100.tif.clust.data_78192clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203050110.tif.clust.data_78192clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060000.tif.clust.data_78185clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060020.tif.clust.data_78192clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060030.tif.clust.data_78192clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060050.tif.clust.data_78192clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060100.tif.clust.data_78192clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060110.tif.clust.data_78192clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060320.tif.clust.data_78185clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060330.tif.clust.data_78184clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060340.tif.clust.data_78185clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060350.tif.clust.data_75087clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060400.tif.clust.data_75087clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060410.tif.clust.data_75087clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060420.tif.clust.data_78185clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203070000.tif.clust.data_78197clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203070010.tif.clust.data_78197clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203070020.tif.clust.data_78197clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203070030.tif.clust.data_78197clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203070050.tif.clust.data_78197clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203070100.tif.clust.data_78197clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203070110.tif.clust.data_78197clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203080110.tif.clust.data_78197clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203080120.tif.clust.data_78193clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203080130.tif.clust.data_78193clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203080140.tif.clust.data_78184clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203080150.tif.clust.data_78184clusters.zarr"
+]
+  geo_filenames: [
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+"/data/nlahaye/remoteSensing/GK2A/gk2a_ami_ea020lc_latlon.nc",
+]
+  chan_dim: 0
+  geo_coord_dim: 0
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+high_res:
+ data:
+  valid_min: 0.0
+  valid_max: 100000000
+  reader_type: "numpy"
+  reader_kwargs:
+   no_arg: "no_arg"
+  geo_reader_type: "numpy"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: []
+  geo_filenames: []
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+fusion:
+ projection_id: 4326
+ description: "Generating GK2A GeoTiffs"
+ area_id: "S. Korea"
+ projection_proj4:
+  proj: "longlat"
+  datum: "WGS84" 
+ final_resolution: 0.018
+ projection_units: "degrees"
+ resample_radius: 5000
+ resample_n_neighbors: 64
+ resample_n_procs: 10
+ resample_epsilon: 1.6
+ use_bilinear: False
+       
+output_files: [
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203050000.tif.clust.data_78185clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203050010.tif.clust.data_78185clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203050020.tif.clust.data_78185clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203050030.tif.clust.data_78185clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203050050.tif.clust.data_78185clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203050100.tif.clust.data_78192clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203050110.tif.clust.data_78192clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060000.tif.clust.data_78185clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060020.tif.clust.data_78192clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060030.tif.clust.data_78192clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060050.tif.clust.data_78192clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060100.tif.clust.data_78192clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060110.tif.clust.data_78192clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060320.tif.clust.data_78185clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060330.tif.clust.data_78184clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060340.tif.clust.data_78185clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060350.tif.clust.data_75087clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060400.tif.clust.data_75087clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060410.tif.clust.data_75087clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203060420.tif.clust.data_78185clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203070000.tif.clust.data_78197clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203070010.tif.clust.data_78197clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203070020.tif.clust.data_78197clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203070030.tif.clust.data_78197clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203070050.tif.clust.data_78197clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203070100.tif.clust.data_78197clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203070110.tif.clust.data_78197clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203080110.tif.clust.data_78197clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203080120.tif.clust.data_78193clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203080130.tif.clust.data_78193clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203080140.tif.clust.data_78184clusters.tif",
+"/data/nlahaye/output/Learnergy/GK2A_DBN/gk2a_ami_le1b_ir087_ea020lc_202203080150.tif.clust.data_78184clusters.tif"
+]
+
+
+

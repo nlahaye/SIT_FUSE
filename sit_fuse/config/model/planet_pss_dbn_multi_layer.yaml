@@ -1,0 +1,188 @@
+
+data:
+ tile: False
+ val_percent: 0.1
+ num_loader_workers: 10
+ scale_data: True
+ pixel_padding: 1
+ number_channels: 4
+ fill_value: 0.0
+ valid_min: 0.0000001
+ valid_max: 100000000
+ subset_count: 1
+ output_subset_count: 1
+ reader_type: "gtiff"
+ reader_kwargs:
+  no_arg: ''
+ chan_dim: 0
+ delete_chans: []
+ transform_default:
+  chans: []
+  transform: []
+ files_train: [
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_182903_1003_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_165440_1054_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190810_181729_0e3a_3B_AnalyticMS_clip.tif"]
+
+
+ files_test: [
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_182621_1035_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_165922_0f44_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190810_165807_104e_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_183904_96_105d_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_182859_1003_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190810_181730_0e3a_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_182904_1003_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190808_182604_101f_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_165925_0f44_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190810_165416_0f4d_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_165921_0f44_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190806_182859_0f34_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_182622_1035_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190808_182606_101f_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190808_183352_07_1067_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_183909_04_105d_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_183200_0f22_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190810_183047_0f34_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190810_165418_0f4d_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190808_182954_1001_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190810_184311_16_1066_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_183158_0f22_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190808_182957_1001_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_183150_41_106b_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190808_182955_1001_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_183201_0f22_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_183907_00_105d_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190806_182857_0f34_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_183228_25_1065_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190810_165807_1_104e_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190810_165417_0f4d_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_182348_1021_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190810_183049_0f34_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190808_182956_1001_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_182620_1035_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_165441_1054_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190808_182953_1001_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_182618_1035_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_183148_35_106b_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190808_183356_19_1067_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_182347_1021_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_165439_1054_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_182350_1021_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190810_165420_0f4d_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_183202_0f22_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_181428_0e26_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190810_183048_0f34_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190808_182607_101f_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_182349_1021_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_181427_0e26_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190806_182900_0f34_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_182619_1035_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_182351_1021_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_183232_41_1065_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190810_183046_0f34_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190810_183051_0f34_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_181430_0e26_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190806_182858_0f34_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_182616_1035_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_165924_0f44_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190810_165419_0f4d_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_181431_0e26_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_165923_0f44_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_182901_1003_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_183159_0f22_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190808_182605_101f_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190810_184309_15_1066_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190808_183354_13_1067_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_181429_0e26_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190810_183052_0f34_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_183230_33_1065_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_182902_1003_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190808_182608_101f_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190806_182856_0f34_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190806_184211_23_105e_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190806_184209_19_105e_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190810_165416_1_0f4d_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_182900_1003_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_183152_48_106b_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_165442_1054_3B_AnalyticMS_clip.tif"]
+
+
+
+scaler:
+ name: "standard" 
+
+output:
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_PLANET_PSS_FULL_STRAT_MULTI_LAYER_PL/"
+ generate_intermediate_output: True
+
+
+dbn:
+ model_type: ["gaussian_selu", "gaussian_selu"]
+ dbn_arch: [2000, 1000] #[250, 500, 2000] #, 2000]
+ gibbs_steps: [1,1] #, 7, 7] #, 10] #, 25]
+ temp: [1.0, 1.0] #, 1.0, 1.0] ##[0.9, 0.75, 0.5] #, 1.0] #, 0.5] #, 0.5] 
+ normalize_learnergy: [False, True]
+ batch_normalize: [False, False]
+
+encoder_type: "dbn"
+encoder:
+ tiled: False
+ tune_scaler: False
+ subset_training: 8000000
+ overwrite_model: False
+ training:
+  learning_rate: [0.00001, 0.00001]
+  momentum: [0.95,0.95]
+  weight_decay: [0.0001, 0.0001]
+  nesterov_accel: [True, True]
+  batch_size: 128
+  epochs: 30
+  accelerator: "gpu"
+  devices: 3
+  gradient_clip_val: 0.1
+  precision: "16-mixed"
+  save_dir: "wandb_encoder"
+  stratify_data:
+   kmeans: True
+
+
+logger:
+ use_wandb: True
+ log_model: True
+ log_out_dir: "wandb_dbn"
+ project: "SIT-FUSE"
+
+cluster:
+ gauss_noise_stdev:  [0.01]
+ lambda: 1.0
+ num_classes: 800
+ training:
+  learning_rate: 0.0001
+  batch_size: 1000
+  epochs: 30
+  accelerator: "gpu"
+  devices: 1
+  gradient_clip_val: 0.1
+  precision: "16-mixed"
+  save_dir: "wandb_full_model"
+
+ heir:
+  tiers: 1
+  gauss_noise_stdev:  [0.01]
+  lambda: 1.0
+  num_classes: 100
+  training:
+   accelerator: "gpu"
+   devices: 1
+   gradient_clip_val: 0.1
+   precision: "16-mixed"
+   save_dir: "wandb_dbn_full_model_heir"
+   batch_size: 100
+   min_samples: 1000
+   learning_rate: 0.0001
+   batch_size: 1000
+   epochs: 30
+
+
+

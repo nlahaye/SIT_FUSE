@@ -1,5 +1,5 @@
 
-FROM nvcr.io/nvidia/pytorch:22.12-py3
+FROM nvcr.io/nvidia/pytorch:24.03-py3
  
 WORKDIR /app
 
@@ -9,11 +9,18 @@ RUN DEBIAN_FRONTEND=noninteractive; add-apt-repository ppa:ubuntugis/ppa
 RUN DEBIAN_FRONTEND=noninteractive; apt-get update
 RUN DEBIAN_FRONTEND=noninteractive; apt-get --assume-yes install gdal-bin
 RUN DEBIAN_FRONTEND=noninteractive; apt-get --assume-yes install libgdal-dev
+RUN DEBIAN_FRONTEND=noninteractive; apt-get --assume-yes install git
 RUN export CPLUS_INCLUDE_PATH=/usr/include/gdal
 RUN export C_INCLUDE_PATH=/usr/include/gdal
-RUN pip install GDAL==3.3.2
-RUN pip install GPUtil geopandas geocube dask_ml zarr scikit-image diplib pyresample
-RUN pip install netCDF4 ray tabulate "ray[tune]"
+RUN pip install GDAL GPUtil geopandas geocube dask_ml zarr scikit-image pyresample wandb
+RUN pip install netCDF4 ray tabulate "ray[tune]" pytorch-lightning pyhdf h5py regionmask
+
+RUN git clone https://github.com/nlahaye/x-transformers.git
+RUN git clone https://github.com/nlahaye/I-JEPA.git
+RUN git clone https://github.com/nlahaye/SIT_FUSE.git --branch v1_transition
+RUN git clone https://github.com/nlahaye/learnergy.git
+
+RUN echo 'export PYTHONPATH=${PYTHONPATH}:/app/learnergy/:/app/SIT_FUSE/:/app/x-transformers/:/app/I-JEPA/:/app/byol-pytorch/' >> ~/.bashrc
 
 RUN chmod -R a+rwx /app
 

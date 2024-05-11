@@ -1,9 +1,0 @@
-conda activate rapids-22.08 
-export PYTHONPATH=${PYTHONPATH}:/home/nlahaye/learn_nla/:/home/nlahaye/SIT_FUSE_DEV/
-export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/home/nlahaye/.conda/envs/rapids-22.08/lib/ 
-torchrun --rdzv-backend=c10d --nnodes=1 --nproc-per-node=5 --rdzv-endpoint=localhost:12355 dbn_learnergy_heirarchical.py --yaml config/
-dbn/emit_dbn.yaml >& EMIT_HEIR 
-
-
-
-

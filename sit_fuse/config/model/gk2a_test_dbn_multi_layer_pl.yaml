@@ -1,0 +1,148 @@
+
+data:
+ tile: False
+ val_percent: 0.1
+ num_loader_workers: 10
+ scale_data: True
+ pixel_padding: 1
+ number_channels: 16
+ fill_value:  0.0
+ valid_min:  0.0000001
+ valid_max: 100000000
+ reader_type: "gtiff"
+ reader_kwargs:
+  start_line: 1100
+  start_sample: 2600
+  end_line: 1700
+  end_sample: 3000
+ chan_dim: 0
+ delete_chans: []
+ transform_default:
+  chans: []
+  transform: []
+
+ files_train: [
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/00/gk2a_ami_le1b_ir087_ea020lc_202203060000.tif",
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/01/gk2a_ami_le1b_ir087_ea020lc_202203060110.tif",
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/01/gk2a_ami_le1b_ir087_ea020lc_202203060100.tif",
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/05/00/gk2a_ami_le1b_ir087_ea020lc_202203050020.tif",
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/05/00/gk2a_ami_le1b_ir087_ea020lc_202203050010.tif",
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/05/00/gk2a_ami_le1b_ir087_ea020lc_202203050000.tif",
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/07/00/gk2a_ami_le1b_ir087_ea020lc_202203070050.tif",
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/07/00/gk2a_ami_le1b_ir087_ea020lc_202203070000.tif",
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/07/01/gk2a_ami_le1b_ir087_ea020lc_202203070110.tif",
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/07/01/gk2a_ami_le1b_ir087_ea020lc_202203070100.tif"]
+ 
+ files_test: [
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/00/gk2a_ami_le1b_ir087_ea020lc_202203060010.tif",
+#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/00/gk2a_ami_le1b_ir087_ea020lc_202203060030.tif",
+#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/00/gk2a_ami_le1b_ir087_ea020lc_202203060020.tif",
+#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/00/gk2a_ami_le1b_ir087_ea020lc_202203060050.tif",
+#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/03/gk2a_ami_le1b_ir087_ea020lc_202203060320.tif",
+#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/03/gk2a_ami_le1b_ir087_ea020lc_202203060330.tif",
+#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/03/gk2a_ami_le1b_ir087_ea020lc_202203060340.tif",
+#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/03/gk2a_ami_le1b_ir087_ea020lc_202203060350.tif",
+#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/04/gk2a_ami_le1b_ir087_ea020lc_202203060410.tif",
+#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/04/gk2a_ami_le1b_ir087_ea020lc_202203060400.tif",
+#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/04/gk2a_ami_le1b_ir087_ea020lc_202203060420.tif",
+#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/01/gk2a_ami_le1b_ir087_ea020lc_202203060100.tif",
+#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/08/01/gk2a_ami_le1b_ir087_ea020lc_202203080120.tif",
+#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/08/01/gk2a_ami_le1b_ir087_ea020lc_202203080110.tif",
+#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/08/01/gk2a_ami_le1b_ir087_ea020lc_202203080130.tif",
+#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/08/01/gk2a_ami_le1b_ir087_ea020lc_202203080150.tif",
+#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/08/01/gk2a_ami_le1b_ir087_ea020lc_202203080140.tif",
+#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/05/00/gk2a_ami_le1b_ir087_ea020lc_202203050020.tif",
+#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/05/00/gk2a_ami_le1b_ir087_ea020lc_202203050030.tif",
+#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/05/00/gk2a_ami_le1b_ir087_ea020lc_202203050050.tif",
+#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/05/01/gk2a_ami_le1b_ir087_ea020lc_202203050100.tif",
+#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/05/01/gk2a_ami_le1b_ir087_ea020lc_202203050110.tif",
+#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/07/00/gk2a_ami_le1b_ir087_ea020lc_202203070030.tif",
+#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/07/00/gk2a_ami_le1b_ir087_ea020lc_202203070010.tif",
+#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/07/00/gk2a_ami_le1b_ir087_ea020lc_202203070020.tif"
+]
+
+scaler:
+ name: "standard" 
+
+output:
+ out_dir: "/data/nlahaye/output/Learnergy/GK2A_DBN/"
+ generate_train_output: False
+ generate_intermediate_output: True
+ 
+
+
+dbn:
+ conv: False
+ subset_training: 2000000
+ heir_tiers: 1
+ overwrite_model: False
+ tune_clust: False
+ tune_dbn: False
+ tune_scaler: False
+ model_type: ["gaussian_selu", "gaussian_selu"]
+ dbn_arch: [2000, 1000] #[250, 500, 2000] #, 2000]
+ gibbs_steps: [1,1] #, 7, 7] #, 10] #, 25]
+ temp: [1.0, 1.0] #, 1.0, 1.0] ##[0.9, 0.75, 0.5] #, 1.0] #, 0.5] #, 0.5] 
+ normalize_learnergy: [False, True]
+ batch_normalize: [False, False]
+
+encoder_type: "dbn"
+encoder:
+ tiled: False
+ tune_scaler: False
+ subset_training: -1
+ overwrite_model: False
+ training:
+  learning_rate: [0.00001, 0.00001]
+  momentum: [0.95,0.95]
+  weight_decay: [0.0001, 0.0001]
+  nesterov_accel: [True, True]
+  batch_size: 128
+  epochs: 30
+  accelerator: "gpu"
+  devices: 1
+  gradient_clip_val: 0.1
+  precision: "16-mixed"
+  stratify_data:
+   kmeans: True
+
+
+logger:
+ use_wandb: True
+ log_model: True
+ log_out_dir: "wandb_dbn"
+ project: "SIT-FUSE"
+
+cluster:
+ gauss_noise_stdev:  [0.01]
+ lambda: 1.0
+ num_classes: 800
+ training:
+  learning_rate: 0.0001
+  batch_size: 1000
+  epochs: 30
+  accelerator: "gpu"
+  devices: 1
+  gradient_clip_val: 0.1
+  precision: "16-mixed"
+  save_dir: "wandb_dbn"
+
+ heir:
+  tiers: 1
+  gauss_noise_stdev:  [0.01]
+  lambda: 1.0
+  num_classes: 100
+  training:
+   accelerator: "gpu"
+   devices: 1
+   gradient_clip_val: 0.1
+   precision: "16-mixed"
+   save_dir: "wandb_dbn"
+   batch_size: 100
+   min_samples: 1000
+   learning_rate: 0.0001
+   batch_size: 1000
+   epochs: 30
+
+
+

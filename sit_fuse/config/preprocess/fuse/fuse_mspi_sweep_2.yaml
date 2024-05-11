@@ -1,0 +1,275 @@
+
+low_res:
+ data:
+  fill_value: -9999.0
+  valid_min: -900.0 #0.0000001
+  valid_max: 100000000
+  reader_type: "mspi"
+  reader_kwargs:
+   no_arg: ''
+  geo_reader_type: "mspi_geo"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: [
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_183320Z_MT-ThompsonFalls_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_185006Z_ID-Sagle_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_185057Z_ID-Careywood_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_185926Z_ID-SaintMaries_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_190634Z_ID-ClearwaterCounty_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_190725Z_ID-Avery_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_191554Z_MT-Huson_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_193421Z_MT-SeeleyLake_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_193512Z_MT-Charlo_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_194341Z_MT-TroutCreek_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_200205Z_ID-Sandpoint_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_200256Z_MT-Troy_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_201521Z_MT-Somers_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_201611Z_MT-Lakeside_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_202441Z_MT-Arlee_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_204105Z_MT-LewisandClarkCounty_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_204155Z_MT-LewisandClarkCounty_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_205025Z_MT-Choteau_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_210237Z_MT-Choteau_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_210328Z_MT-Choteau_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_211157Z_MT-LewisandClarkCounty_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_212032Z_MT-Drummond_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_212123Z_MT-Drummond_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_212952Z_MT-Superior_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_214809Z_ID-Riggins_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_214900Z_ID-Riggins_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_215729Z_ID-Ola_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190812_183535Z_CA-Azusa_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190812_183626Z_CA-LaVerne_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190812_184456Z_CA-Hemet_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190812_185923Z_CA-Corona_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190812_190013Z_CA-ChinoHills_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190812_190843Z_CA-Castaic_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_214220Z_CA-YosemiteValley_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_214309Z_CA-MariposaCounty_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_215200Z_NV-Dyer_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_220748Z_NV-Tonopah_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_220839Z_NV-NyeCounty_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_221707Z_NV-Pioche_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_222651Z_NV-Pioche_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_222742Z_NV-NyeCounty_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_223610Z_NV-Tonopah_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_224958Z_NV-MineralCounty_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_225047Z_NV-Mina_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_225938Z_CA-BassLake_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_230636Z_CA-MaderaCounty_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_230725Z_CA-MaderaCounty_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_231616Z_NV-Mina_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_232109Z_NV-Mina_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_232158Z_NV-Mina_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190815_185413Z_CA-Hanford_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190815_185502Z_CA-Hanford_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190815_190353Z_CA-Mariposa_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190815_191034Z_CA-YosemiteValley_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190815_191123Z_CA-MariposaCounty_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190815_192014Z_NV-EsmeraldaCounty_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190815_193540Z_NV-NyeCounty_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190815_193631Z_NV-Tonopah_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190815_194458Z_NV-Pioche_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_202429Z_NV-ClarkCounty_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_202520Z_NV-LasVegas_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_203350Z_NV-BoulderCity_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_204759Z_AZ-MohaveCounty_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_204848Z_AZ-MohaveCounty_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_205740Z_AZ-Cameron_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_210605Z_AZ-Page_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_210654Z_AZ-MarbleCanyon_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_211545Z_AZ-Littlefield_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_212317Z_AZ-Supai_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_212406Z_AZ-Supai_SWPF_F01_V006.hdf.tif","
+]
+  
+
+
+  geo_filenames: [
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_183320Z_MT-ThompsonFalls_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_185006Z_ID-Sagle_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_185057Z_ID-Careywood_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_185926Z_ID-SaintMaries_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_190634Z_ID-ClearwaterCounty_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_190725Z_ID-Avery_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_191554Z_MT-Huson_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_193421Z_MT-SeeleyLake_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_193512Z_MT-Charlo_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_194341Z_MT-TroutCreek_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_200205Z_ID-Sandpoint_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_200256Z_MT-Troy_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_201521Z_MT-Somers_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_201611Z_MT-Lakeside_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_202441Z_MT-Arlee_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_204105Z_MT-LewisandClarkCounty_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_204155Z_MT-LewisandClarkCounty_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_205025Z_MT-Choteau_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_210237Z_MT-Choteau_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_210328Z_MT-Choteau_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_211157Z_MT-LewisandClarkCounty_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_212032Z_MT-Drummond_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_212123Z_MT-Drummond_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_212952Z_MT-Superior_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_214809Z_ID-Riggins_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_214900Z_ID-Riggins_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_215729Z_ID-Ola_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190812_183535Z_CA-Azusa_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190812_183626Z_CA-LaVerne_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190812_184456Z_CA-Hemet_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190812_185923Z_CA-Corona_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190812_190013Z_CA-ChinoHills_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190812_190843Z_CA-Castaic_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_214220Z_CA-YosemiteValley_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_214309Z_CA-MariposaCounty_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_215200Z_NV-Dyer_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_220748Z_NV-Tonopah_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_220839Z_NV-NyeCounty_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_221707Z_NV-Pioche_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_222651Z_NV-Pioche_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_222742Z_NV-NyeCounty_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_223610Z_NV-Tonopah_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_224958Z_NV-MineralCounty_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_225047Z_NV-Mina_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_225938Z_CA-BassLake_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_230636Z_CA-MaderaCounty_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_230725Z_CA-MaderaCounty_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_231616Z_NV-Mina_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_232109Z_NV-Mina_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_232158Z_NV-Mina_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190815_185413Z_CA-Hanford_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190815_185502Z_CA-Hanford_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190815_190353Z_CA-Mariposa_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190815_191034Z_CA-YosemiteValley_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190815_191123Z_CA-MariposaCounty_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190815_192014Z_NV-EsmeraldaCounty_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190815_193540Z_NV-NyeCounty_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190815_193631Z_NV-Tonopah_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190815_194458Z_NV-Pioche_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_202429Z_NV-ClarkCounty_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_202520Z_NV-LasVegas_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_203350Z_NV-BoulderCity_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_204759Z_AZ-MohaveCounty_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_204848Z_AZ-MohaveCounty_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_205740Z_AZ-Cameron_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_210605Z_AZ-Page_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_210654Z_AZ-MarbleCanyon_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_211545Z_AZ-Littlefield_SWPF_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_212317Z_AZ-Supai_SWPA_F01_V006.hdf.tif",",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_212406Z_AZ-Supai_SWPF_F01_V006.hdf.tif","
+]
+  chan_dim: 0
+  geo_coord_dim: 0
+  geo_lat_index: 1
+  geo_lon_index: 0
+
+
+high_res:
+ data:
+  valid_min: 0.0
+  valid_max: 100000000
+  reader_type: "numpy"
+  reader_kwargs:
+   no_arg: "no_arg"
+  geo_reader_type: "numpy"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: []
+  geo_filenames: []
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 1
+  geo_lon_index: 0
+
+
+fusion:
+ projection_id: 4326
+ description: "Generating MSPI GeoTiffs"
+ area_id: "MSPI SWP"
+ projection_proj4:
+  #proj: "utm"
+  #zone: 11
+  proj: "longlat"
+  datum: "WGS84" 
+ final_resolution: 0.000406 #0.00225 #0.000225
+ projection_units: "degrees"
+ resample_radius: 5000
+ resample_n_neighbors: 64
+ resample_n_procs: 10
+ resample_epsilon: 1.6
+ use_bilinear: True 
+       
+output_files: [
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_183320Z_MT-ThompsonFalls_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_185006Z_ID-Sagle_SWPA_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_185057Z_ID-Careywood_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_185926Z_ID-SaintMaries_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_190634Z_ID-ClearwaterCounty_SWPA_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_190725Z_ID-Avery_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_191554Z_MT-Huson_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_193421Z_MT-SeeleyLake_SWPA_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_193512Z_MT-Charlo_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_194341Z_MT-TroutCreek_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_200205Z_ID-Sandpoint_SWPA_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_200256Z_MT-Troy_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_201521Z_MT-Somers_SWPA_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_201611Z_MT-Lakeside_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_202441Z_MT-Arlee_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_204105Z_MT-LewisandClarkCounty_SWPA_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_204155Z_MT-LewisandClarkCounty_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_205025Z_MT-Choteau_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_210237Z_MT-Choteau_SWPA_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_210328Z_MT-Choteau_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_211157Z_MT-LewisandClarkCounty_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_212032Z_MT-Drummond_SWPA_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_212123Z_MT-Drummond_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_212952Z_MT-Superior_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_214809Z_ID-Riggins_SWPA_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_214900Z_ID-Riggins_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190808_215729Z_ID-Ola_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190812_183535Z_CA-Azusa_SWPA_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190812_183626Z_CA-LaVerne_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190812_184456Z_CA-Hemet_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190812_185923Z_CA-Corona_SWPA_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190812_190013Z_CA-ChinoHills_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190812_190843Z_CA-Castaic_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_214220Z_CA-YosemiteValley_SWPA_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_214309Z_CA-MariposaCounty_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_215200Z_NV-Dyer_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_220748Z_NV-Tonopah_SWPA_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_220839Z_NV-NyeCounty_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_221707Z_NV-Pioche_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_222651Z_NV-Pioche_SWPA_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_222742Z_NV-NyeCounty_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_223610Z_NV-Tonopah_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_224958Z_NV-MineralCounty_SWPA_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_225047Z_NV-Mina_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_225938Z_CA-BassLake_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_230636Z_CA-MaderaCounty_SWPA_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_230725Z_CA-MaderaCounty_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_231616Z_NV-Mina_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_232109Z_NV-Mina_SWPA_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190813_232158Z_NV-Mina_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190815_185413Z_CA-Hanford_SWPA_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190815_185502Z_CA-Hanford_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190815_190353Z_CA-Mariposa_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190815_191034Z_CA-YosemiteValley_SWPA_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190815_191123Z_CA-MariposaCounty_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190815_192014Z_NV-EsmeraldaCounty_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190815_193540Z_NV-NyeCounty_SWPA_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190815_193631Z_NV-Tonopah_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190815_194458Z_NV-Pioche_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_202429Z_NV-ClarkCounty_SWPA_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_202520Z_NV-LasVegas_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_203350Z_NV-BoulderCity_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_204759Z_AZ-MohaveCounty_SWPA_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_204848Z_AZ-MohaveCounty_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_205740Z_AZ-Cameron_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_210605Z_AZ-Page_SWPA_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_210654Z_AZ-MarbleCanyon_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_211545Z_AZ-Littlefield_SWPF_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_212317Z_AZ-Supai_SWPA_F01_V006.hdf.tif",
+"/data/nlahaye/remoteSensing/MSPI/sweep/AirMSPI_ER2_GRP_TERRAIN_20190816_212406Z_AZ-Supai_SWPF_F01_V006.hdf.tif"
+]
+
+
+
