@@ -14,7 +14,7 @@ from sklearn.metrics import confusion_matrix
 from osgeo import gdal, osr
 import argparse
 import os
-from utils import numpy_to_torch, read_yaml, get_read_func
+from sit_fuse.utils import numpy_to_torch, read_yaml, get_read_func
 import zarr
 
 import matplotlib
@@ -145,6 +145,7 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 			continue		
 
 		dbnDat1 = read_func(cluster_data[p], **data_reader_kwargs).astype(np.float32)
+		print("DBNDAT1", dbnDat1.shape)
 		#dbnDat1 = np.fliplr(dbnDat1)
 		dat = gdal.Open(gtiff_data[p])
 		imgData = dat.ReadAsArray()
@@ -231,11 +232,11 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 				context_name = [context_name]
 			for j in range(len(context_clusters)):
 				outDat = np.zeros(dbnDat1.shape, dtype=np.float32)
-				inds = np.where(imgData < 0)
+				inds = np.where(dbnDat1 < 0)
 				outDat[inds] = -1
 
 				outDat2 = np.zeros(dbnDat1.shape, dtype=np.float32)
-				inds = np.where(imgData < 0)
+				inds = np.where(dbnDat1 < 0)
 				outDat2[inds] = -1
 
 				for i in range(len(context_clusters[j])):
