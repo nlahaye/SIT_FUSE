@@ -59,7 +59,10 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tile
             dat_dev, lab_dev = data[0].cuda(), data[1].cuda()
 
         with torch.no_grad():
-            _, output = mdl.forward(dat_dev)
+            if hasattr(mdl, 'clust_tree'):
+                _, output = mdl.forward(dat_dev)
+            else:
+                output = mdl.forward(dat_dev)
         if isinstance(output, list) or isinstance(output, tuple):
             output = output[0] #TODO improve usage uf multi-headed output after single-headed approach validated
         #output = torch.unsqueeze(torch.argmax(output, axis = 1), axis=1)
@@ -84,8 +87,8 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tile
         count = count + 1
 
     print("SAVING", os.path.join(out_dir, output_fle))
-    torch.save(output_full, os.path.join(out_dir, output_fle), pickle_protocol=pickle.HIGHEST_PROTOCOL)
-    torch.save(dat.targets_full, os.path.join(out_dir, output_fle + ".indices"), pickle_protocol=pickle.HIGHEST_PROTOCOL)
+    #torch.save(output_full, os.path.join(out_dir, output_fle), pickle_protocol=pickle.HIGHEST_PROTOCOL)
+    #torch.save(dat.targets_full, os.path.join(out_dir, output_fle + ".indices"), pickle_protocol=pickle.HIGHEST_PROTOCOL)
 
     plot_clusters(dat.targets_full, output_full.numpy(), os.path.join(out_dir, output_fle)) 
 
@@ -134,6 +137,7 @@ def plot_clusters(coord, output_data, output_basename, pixel_padding=1):
         data2 = da.from_array(data)
         #del data
 
+        print(data.shape, data2.shape, "HERE TEST")
         da.to_zarr(data2,output_basename + "_" + str(n_clusters_local) + "clusters.zarr", overwrite=True)
         img = plt.imshow(data, vmin=-1, vmax=max_cluster)
         print("HERE CLUSTERS MIN MAX MEAN STD", data.min(), data.max(), data.mean(), data.std(), data.shape)
@@ -181,7 +185,7 @@ def get_model(yml_conf, n_visible):
     min_samples = yml_conf["cluster"]["heir"]["training"]["min_samples"]
 
     heir_ckpt_path = os.path.join(heir_model_dir, "heir_fc.ckpt")
-    ckpt_path = os.path.join(full_model_dir, "checkpoint.ckpt")
+    ckpt_path = os.path.join(full_model_dir, "deep_cluster.ckpt")
 
     encoder_type=None
     if "encoder_type" in yml_conf:
@@ -236,7 +240,7 @@ def main(yml_fpath):
     test_fnames = yml_conf["data"]["files_test"]
     train_fnames = yml_conf["data"]["files_train"]
  
-    data, _  = get_prediction_dataset(yml_conf, test_fnames[0])
+    data, _  = get_prediction_dataset(yml_conf, train_fnames[0])
 
     model = get_model(yml_conf, data.data_full.shape[1])
 
@@ -255,6 +259,7 @@ def main(yml_fpath):
   
  
     out_dir = yml_conf["output"]["out_dir"]
+    generate_intermediate_output = yml_conf["output"]["generate_intermediate_output"]
 
     tiled = yml_conf["data"]["tile"]
 
@@ -265,11 +270,25 @@ def main(yml_fpath):
         else:
             output_fle = os.path.basename(test_fnames[i])
         data, output_file  = get_prediction_dataset(yml_conf, test_fnames[i])
+        if data.data_full is None:
+            print("SKIPPING", test_fnames[i], " No valid samples")
+            continue
         generate_output(data, model, True, out_dir, output_fle + ".clust.data", tiled = tiled)
+        if generate_intermediate_output:
+            generate_output(data, model.pretrained_model, True, out_dir, output_fle + ".no_heir.clust.data", tiled = tiled)
     for i in range(len(train_fnames)):
         data, output_file = get_prediction_dataset(yml_conf, train_fnames[i])
+        if data.data_full is None:
+            print("SKIPPING", train_fnames[i], " No valid samples")
+            continue
+        if isinstance(train_fnames[i], list):
+            output_fle = os.path.basename(train_fnames[i][0])
+        else:
+            output_fle = os.path.basename(train_fnames[i])
         generate_output(data, model, True, out_dir, output_fle + ".clust.data", tiled = tiled)
-
+        if generate_intermediate_output:
+            generate_output(data, model.pretrained_model, True, out_dir, output_fle + ".no_heir.clust.data", tiled = tiled)
+ 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
