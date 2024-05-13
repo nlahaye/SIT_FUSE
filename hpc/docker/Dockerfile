@@ -17,7 +17,7 @@ RUN pip install netCDF4 ray tabulate "ray[tune]" pytorch-lightning pyhdf h5py re
 
 RUN git clone https://github.com/nlahaye/x-transformers.git
 RUN git clone https://github.com/nlahaye/I-JEPA.git
-RUN git clone https://github.com/nlahaye/SIT_FUSE.git --branch v1_transition
+RUN git clone https://github.com/nlahaye/SIT_FUSE.git 
 RUN git clone https://github.com/nlahaye/learnergy.git
 
 RUN echo 'export PYTHONPATH=${PYTHONPATH}:/app/learnergy/:/app/SIT_FUSE/:/app/x-transformers/:/app/I-JEPA/:/app/byol-pytorch/' >> ~/.bashrc
