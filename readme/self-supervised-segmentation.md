@@ -5,7 +5,7 @@ description: >-
   a user-specified set of classes.
 ---
 
-# 🔳 Self-Supervised Segmentation
+# 🔲 Self-Supervised Segmentation
 
 This is done by attaching one or more Multi-Layer Perceptron (MLP) heads to the encoder and either just training the head(s) or also allowing the encoder to be fine-tuned alongside the MLP head(s). This is done using Information Invariant Clustering (IIC) loss, where the optimizer aims to find parameters that allow the model to make label assignments in a way that maximizes the mutual information between samples x and a perturbed version of those samples x'.
 
@@ -16,4 +16,3 @@ This is done by attaching one or more Multi-Layer Perceptron (MLP) heads to the 
 References:
 
 * Xu Ji, João F. Henriques, Andrea Vedaldi: “Invariant Information Clustering for Unsupervised Image Classification and Segmentation”, 2018; [arXiv:1807.06653](http://arxiv.org/abs/1807.06653).
-
