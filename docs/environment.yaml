@@ -364,7 +364,7 @@ dependencies:
       - jupyterlab-widgets==3.0.10
       - kiwisolver==1.4.5
       - lazy-loader==0.4
-      - git+https://github.com/nlahaye/learnergy.git
+      - git+https://github.com/nlahaye/learnergy.git@module_list_update
       - lightning-utilities==0.11.2
       - markdown==3.6
       - matplotlib==3.8.4
