@@ -34,3 +34,4 @@
   * [Training Dataset Preprocessing Examples](user-guide/training-dataset-preprocessing-examples.md)
   * [Training Command Examples](user-guide/training-command-examples.md)
   * [Inference Command Examples](user-guide/inference-command-examples.md)
+  * [Training Summary](user-guide/training-summary.md)
