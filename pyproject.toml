@@ -1,6 +1,3 @@
-[build-system]
-requires = []
-
 [project]
 name = "sit_fuse"
 authors = [{name = "Nick", email = "nlahaye@jpl.nasa.gov"}]
