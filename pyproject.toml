@@ -1,7 +1,4 @@
-[project]
-name = "sit_fuse"
-authors = [{name = "Nick", email = "nlahaye@jpl.nasa.gov"}]
-dynamic = ["version", "description"]
-
+[tool.black]
+line-length = 88
 
 
