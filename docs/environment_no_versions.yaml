@@ -447,3 +447,8 @@ dependencies:
     - yarl
     - zarr
     - zipp
+    - git+https://github.com/nlahaye/I-JEPA.git
+    - git+https://github.com/nlahaye/learnergy.git@module_list_update
+    - git+https://github.com/nlahaye/x-transformers.git
+    - git+https://github.com/nlahaye/SIT_FUSE.git
+

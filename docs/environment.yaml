@@ -455,4 +455,5 @@ dependencies:
       - git+https://github.com/nlahaye/x-transformers.git
       - yarl==1.9.4
       - zarr==2.18.0
+      - git+https://github.com/nlahaye/SIT_FUSE.git
 prefix: /home/nlahaye/.conda/envs/sit_fuse
