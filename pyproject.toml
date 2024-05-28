@@ -6,6 +6,6 @@ name = "sit_fuse"
 dynamic = ["version"]
 
 [tool.setuptools]
-py-modules = ["sit_fuse"]
-
+packages = ["sit_fuse"]
+py-modules = ["__init__"]
 
