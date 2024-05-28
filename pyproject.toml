@@ -1,6 +1,8 @@
 [tool.black]
 line-length = 88
 
+[project]
+name = "sit_fuse"
 
 [tool.setuptools]
 py-modules = ["sit_fuse"]
