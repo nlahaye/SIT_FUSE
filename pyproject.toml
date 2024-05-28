@@ -3,6 +3,6 @@ line-length = 88
 
 
 [tool.setuptools]
-py-modules = [sit_fuse]
+py-modules = ["sit_fuse"]
 
 
