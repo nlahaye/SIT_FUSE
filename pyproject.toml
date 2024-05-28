@@ -5,6 +5,11 @@ line-length = 88
 name = "sit_fuse"
 dynamic = ["version"]
 
+
+[build-system]
+requires = ["setuptools>=43.0.0"]
+
+
 [tool.setuptools]
 packages = ["sit_fuse"]
 py-modules = ["__init__"]
