@@ -5,6 +5,8 @@ name = "sit_fuse"
 authors = [{name = "Nick", email = "nlahaye@jpl.nasa.gov"}]
 dynamic = ["version", "description"]
 
+requires = ["setuptools", "wheel"] 
+
 dependencies = [
     "x-transformers @ git+https://github.com/nlahaye/x-transformers.git@main",
     "byol-pytorch @ git+https://github.com/nlahaye/byol-pytorch.git@master",
