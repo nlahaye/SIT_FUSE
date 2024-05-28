@@ -3,6 +3,7 @@ line-length = 88
 
 [project]
 name = "sit_fuse"
+dynamic = ["version"]
 
 [tool.setuptools]
 py-modules = ["sit_fuse"]
