@@ -11,10 +11,7 @@ data:
  valid_max: 100000000
  reader_type: "gtiff"
  reader_kwargs:
-  start_line: 1100
-  start_sample: 2600
-  end_line: 1700
-  end_sample: 3000
+   no_arg: ''
  chan_dim: 0
  delete_chans: []
  transform_default:

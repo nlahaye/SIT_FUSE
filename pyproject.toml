@@ -1,15 +1,13 @@
-[build-system]
+[tool.black]
+line-length = 88
 
 [project]
 name = "sit_fuse"
-authors = [{name = "Nick", email = "nlahaye@jpl.nasa.gov"}]
-dynamic = ["version", "description"]
+dynamic = ["version"]
 
-dependencies = [
-    "x-transformers @ git+https://github.com/nlahaye/x-transformers.git@main",
-    "byol-pytorch @ git+https://github.com/nlahaye/byol-pytorch.git@master",
-    "I-JEPA @ git+https://github.com/nlahaye/I-JEPA.git@main",
-    "learnergy @ git+https://github.com/nlahaye/learnergy.git@module_list_update"
-]
+
+[build-system]
+requires = ["setuptools>=43.0.0"]
+build-backend = "setuptools.build_meta"
 
 
