@@ -14,6 +14,7 @@ class DeepConvEncoder(nn.Module):
         self.flatten = flatten
         #self.add_module("flatten" + str(i), nn.Flatten())
         od = in_chans
+        self.in_chans = in_chans
         print(od)
         i = 0
         j = 0
