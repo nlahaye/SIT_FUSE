@@ -663,12 +663,40 @@ def read_s6_netcdf_geo(filename, **kwargs):
         return dat
 
 
-def read_gtiff_multifile_generic(files, **kwargs):
+def read_s2_gtiff(files, **kwargs):
     print(files)
     data1 = []
     for j in range(0, len(files)):
         dat1 = gdal.Open(files[j]).ReadAsArray()
         print(dat1.shape, len(data1))
+        if len(data1) > 0:
+            print(dat1.shape, data1[0].shape)
+        if len(data1) > 0:
+            if dat1.shape[0] != data1[0].shape[0] or dat1.shape[1] != data1[0].shape[1]:
+                print(dat1.shape, data1[0].shape)
+                dat1 = cv2.resize(dat1, (data1[0].shape[1], data1[0].shape[0]), interpolation=cv2.INTER_CUBIC)
+
+        if len(data1) == 0 or len(dat1.shape) == 2:
+            data1.append(dat1)
+        print(dat1.shape)
+    dat = np.array(data1).astype(np.float32)
+    if len(dat.shape) == 4:
+        dat = np.squeeze(dat)
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+        dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+    print(dat.shape)
+    return dat
+
+
+
+def read_gtiff_multifile_generic(files, **kwargs):
+    print(files)
+    data1 = []
+    for j in range(0, len(files)):
+        dat1 = gdal.Open(files[j]).ReadAsArray()
+        print(dat1.shape, len(data1), files[j])
+        if "grayscale" and dat1.ndim > 2:
+            dat1 = dat1[0,:,:]
         if len(data1) > 0:
             print(dat1.shape, data1[0].shape)
         if len(data1) > 0:
@@ -1750,6 +1778,8 @@ def get_read_func(data_reader):
         return read_emit
     if data_reader == "misr_sim":
         return read_misr_sim
+    if data_reader == "s2_gtiff":
+        return read_s2_gtiff
     if data_reader == "goes_netcdf":
         return read_goes_netcdf
     if data_reader == "goes_netcdf_geo":
