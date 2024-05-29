@@ -94,7 +94,7 @@ scaler:
 
 output:
  out_dir: "/data/nlahaye/output/Learnergy/GOES_DBN/"
- generate_train_output: False
+ generate_train_output: True
  generate_intermediate_output: True
  
 

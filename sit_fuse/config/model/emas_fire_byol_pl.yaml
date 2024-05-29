@@ -1,7 +1,7 @@
 
 data:
  tile: True #True
- tile_size: [3,3,34]
+ tile_size: [5,5,34]
  tile_step: [1,1,34]
  val_percent: 0.1
  num_loader_workers: 10
@@ -57,7 +57,7 @@ scaler:
 
 output:
  out_dir: "/data/nlahaye/output/Learnergy/eMAS_BYOL_PL/"
- generate_train_output: False
+ generate_intermediate_output: True
 
 
 byol:
@@ -87,7 +87,7 @@ encoder:
   batch_size: 16
   epochs: 3
   accelerator: "gpu"
-  devices: 3
+  devices: 5
   gradient_clip_val: 0.1
   precision: "16-mixed"
   save_dir: "wandb_byol"
@@ -103,7 +103,7 @@ cluster:
   batch_size: 1000
   epochs: 10
   accelerator: "gpu"
-  devices: 3
+  devices: 1
   gradient_clip_val: 0.1
   precision: "16-mixed"
   save_dir: "wandb_byol"
