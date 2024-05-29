@@ -33,6 +33,7 @@ class SFHeirDataModule(pl.LightningDataModule):
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             shuffle=self.shuffle,
+            drop_last=True
         )
 
     def val_dataloader(self):
@@ -41,6 +42,7 @@ class SFHeirDataModule(pl.LightningDataModule):
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             shuffle=False,
+            drop_last=True
         )
 
 
