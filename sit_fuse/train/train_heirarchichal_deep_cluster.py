@@ -10,6 +10,7 @@ from pytorch_lightning.loggers import WandbLogger
 
 from learnergy.models.deep import DBN
 
+from sit_fuse.models.encoders.cnn_encoder import DeepConvEncoder
 from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes
 from sit_fuse.models.deep_cluster.heir_dc import Heir_DC, get_state_dict
 from sit_fuse.datasets.sf_heir_dataset_module import SFHeirDataModule
@@ -91,6 +92,25 @@ def heir_dc(yml_conf, dataset, ckpt_path):
             for param in model.parameters():
                 param.requires_grad = False
         encoder.eval()
+
+    elif encoder_type is not None and encoder_type == "byol":
+        save_dir_byol = yml_conf["output"]["out_dir"]
+ 
+        if use_wandb_logger:
+            log_model = yml_conf["logger"]["log_model"]
+            save_dir_byol = os.path.join(yml_conf["output"]["out_dir"], yml_conf["logger"]["log_out_dir"])
+            project = yml_conf["logger"]["project"]
+
+        encoder_dir = os.path.join(save_dir_byol, "encoder")
+        in_chans = yml_conf["data"]["tile_size"][2]
+        encoder_ckpt_path = os.path.join(encoder_dir, "byol.ckpt")
+        encoder = DeepConvEncoder(in_chans=in_chans, flatten=True)
+        encoder.load_state_dict(torch.load(encoder_ckpt_path))
+
+        for param in encoder.parameters():
+            param.requires_grad = False
+        encoder.eval()
+ 
 
     heir_ckpt_path = os.path.join(save_dir, "heir_fc.ckpt")
     if os.path.exists(heir_ckpt_path): #TODO make optional
