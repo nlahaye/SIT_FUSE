@@ -78,6 +78,14 @@ class Heir_DC(pl.LightningModule):
             self.pretrained_model.eval()
             self.pretrained_model.pretrained_model.eval()
             self.pretrained_model.mlp_head.eval()
+
+            for param in self.pretrained_model.pretrained_model.parameters():
+                param.requires_grad = False
+            for param in self.pretrained_model.mlp_head.parameters():
+                param.requires_grad = False
+            for param in self.pretrained_model.parameters():
+                param.requires_grad = False
+
         else: 
             self.pretrained_model = DeepCluster.load_from_checkpoint(pretrained_model_path) #Why arent these being saved
 
@@ -112,7 +120,7 @@ class Heir_DC(pl.LightningModule):
         output_sze = data.data_full.shape[0]
 
         test_loader = DataLoader(data, batch_size=batch_size, shuffle=False, \
-        num_workers = 0, drop_last = False, pin_memory = True)
+        num_workers = 0, drop_last = True, pin_memory = True)
         ind = 0
         ind2 = 0
 
@@ -187,13 +195,11 @@ class Heir_DC(pl.LightningModule):
         tmp3 = tmp
         keys = np.unique(tmp2)
         x.requires_grad = True
-        #print(keys)
         for key in keys:
             if train and key != self.key:
                 continue
             inds = np.where(tmp2 == key)
             input_tmp = x[inds]
-            #print(input_tmp.shape)
             if key in self.clust_tree["1"].keys() and self.clust_tree["1"][key] is not None:
                 tmp = self.clust_tree["1"][key].forward(input_tmp) #torch.unsqueeze(x[inds],dim=0))
                 if isinstance(tmp,tuple):
