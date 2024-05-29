@@ -26,7 +26,8 @@ class BYOL_DC(pl.LightningModule):
 
         #define model layers
         #TODO compute
-        self.mlp_head =  MultiPrototypes(4896, self.num_classes, self.number_heads)
+        #256*in channels # 8704 4096 - pretrained_model.net.in_chans * pretrained_model.learner.projection_size
+        self.mlp_head =  MultiPrototypes(5376, self.num_classes, self.number_heads)
 
 
         #define loss

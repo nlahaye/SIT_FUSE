@@ -1,0 +1,76 @@
+gen_from_geotiffs: False
+
+data:
+ clust_reader_type: "zarr_to_numpy"
+ reader_kwargs:
+   no_arg: "no_arg" 
+ subset_inds: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
+ create_separate: False
+ gtiff_data: [
+"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/VIIRS/inputs/noaa20_viirs_m01_20190806_191800_wgs84_fit.tif",
+"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/VIIRS/inputs/noaa20_viirs_m01_20190806_210000_wgs84_fit.tif",
+"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/VIIRS/inputs/noaa20_viirs_m01_20190807_203600_wgs84_fit.tif",
+"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/VIIRS/inputs/noaa20_viirs_m01_20190808_201800_wgs84_fit.tif",
+"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/VIIRS/inputs/noaa20_viirs_m01_20190808_220000_wgs84_fit.tif",
+"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/VIIRS/inputs/noaa20_viirs_m01_20190809_200000_wgs84_fit.tif",
+"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/VIIRS/inputs/noaa20_viirs_m01_20190809_214200_wgs84_fit.tif",
+"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/VIIRS/inputs/noaa20_viirs_m01_20190810_194200_wgs84_fit.tif",
+"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/VIIRS/inputs/noaa20_viirs_m01_20190810_212400_wgs84_fit.tif",
+"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/VIIRS/inputs/noaa20_viirs_m01_20190811_192400_wgs84_fit.tif",
+"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/VIIRS/inputs/noaa20_viirs_m01_20190811_210600_wgs84_fit.tif",
+"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/VIIRS/inputs/noaa20_viirs_m01_20190812_204200_wgs84_fit.tif",
+"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/VIIRS/inputs/noaa20_viirs_m01_20190812_204800_wgs84_fit.tif",
+"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/VIIRS/inputs/npp_viirs_m01_20190806_200600_wgs84_fit.tif",
+"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/VIIRS/inputs/npp_viirs_m01_20190806_214800_wgs84_fit.tif",
+"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/VIIRS/inputs/npp_viirs_m01_20190807_194800_wgs84_fit.tif",
+"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/VIIRS/inputs/npp_viirs_m01_20190807_213000_wgs84_fit.tif",
+"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/VIIRS/inputs/npp_viirs_m01_20190808_193000_wgs84_fit.tif",
+"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/VIIRS/inputs/npp_viirs_m01_20190808_211200_wgs84_fit.tif",
+"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/VIIRS/inputs/npp_viirs_m01_20190809_191200_wgs84_fit.tif",
+"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/VIIRS/inputs/npp_viirs_m01_20190809_205400_wgs84_fit.tif",
+"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/VIIRS/inputs/npp_viirs_m01_20190810_203600_wgs84_fit.tif",
+"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/VIIRS/inputs/npp_viirs_m01_20190811_201200_wgs84_fit.tif",
+"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/VIIRS/inputs/npp_viirs_m01_20190811_215400_wgs84_fit.tif",
+"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/VIIRS/inputs/npp_viirs_m01_20190812_195400_wgs84_fit.tif",
+"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/VIIRS/inputs/npp_viirs_m01_20190812_213600_wgs84_fit.tif" 
+]
+
+ cluster_fnames: [
+"/data/nlahaye/output/Learnergy/VIIRS_FIREX/noaa20_viirs_m01_20190806_191800_wgs84_fit.tif.clust.data_76999clusters.zarr",
+"/data/nlahaye/output/Learnergy/VIIRS_FIREX/noaa20_viirs_m01_20190806_210000_wgs84_fit.tif.clust.data_76999clusters.zarr",
+"/data/nlahaye/output/Learnergy/VIIRS_FIREX/noaa20_viirs_m01_20190808_201800_wgs84_fit.tif.clust.data_76999clusters.zarr",
+"/data/nlahaye/output/Learnergy/VIIRS_FIREX/noaa20_viirs_m01_20190808_220000_wgs84_fit.tif.clust.data_76999clusters.zarr",
+"/data/nlahaye/output/Learnergy/VIIRS_FIREX/noaa20_viirs_m01_20190809_200000_wgs84_fit.tif.clust.data_76999clusters.zarr",
+"/data/nlahaye/output/Learnergy/VIIRS_FIREX/noaa20_viirs_m01_20190809_214200_wgs84_fit.tif.clust.data_76999clusters.zarr",
+"/data/nlahaye/output/Learnergy/VIIRS_FIREX/noaa20_viirs_m01_20190810_194200_wgs84_fit.tif.clust.data_76999clusters.zarr",
+"/data/nlahaye/output/Learnergy/VIIRS_FIREX/noaa20_viirs_m01_20190810_212400_wgs84_fit.tif.clust.data_76999clusters.zarr",
+"/data/nlahaye/output/Learnergy/VIIRS_FIREX/noaa20_viirs_m01_20190811_192400_wgs84_fit.tif.clust.data_76999clusters.zarr",
+"/data/nlahaye/output/Learnergy/VIIRS_FIREX/noaa20_viirs_m01_20190811_210600_wgs84_fit.tif.clust.data_76999clusters.zarr",
+"/data/nlahaye/output/Learnergy/VIIRS_FIREX/noaa20_viirs_m01_20190812_204800_wgs84_fit.tif.clust.data_76999clusters.zarr",
+"/data/nlahaye/output/Learnergy/VIIRS_FIREX/npp_viirs_m01_20190806_200600_wgs84_fit.tif.clust.data_76999clusters.zarr",
+"/data/nlahaye/output/Learnergy/VIIRS_FIREX/npp_viirs_m01_20190806_214800_wgs84_fit.tif.clust.data_76999clusters.zarr",
+"/data/nlahaye/output/Learnergy/VIIRS_FIREX/npp_viirs_m01_20190807_194800_wgs84_fit.tif.clust.data_76999clusters.zarr",
+"/data/nlahaye/output/Learnergy/VIIRS_FIREX/npp_viirs_m01_20190807_213000_wgs84_fit.tif.clust.data_76999clusters.zarr",
+"/data/nlahaye/output/Learnergy/VIIRS_FIREX/npp_viirs_m01_20190808_193000_wgs84_fit.tif.clust.data_76999clusters.zarr",
+"/data/nlahaye/output/Learnergy/VIIRS_FIREX/npp_viirs_m01_20190808_211200_wgs84_fit.tif.clust.data_76999clusters.zarr",
+"/data/nlahaye/output/Learnergy/VIIRS_FIREX/npp_viirs_m01_20190809_191200_wgs84_fit.tif.clust.data_76999clusters.zarr",
+"/data/nlahaye/output/Learnergy/VIIRS_FIREX/npp_viirs_m01_20190809_205400_wgs84_fit.tif.clust.data_76999clusters.zarr",
+"/data/nlahaye/output/Learnergy/VIIRS_FIREX/npp_viirs_m01_20190810_203600_wgs84_fit.tif.clust.data_76999clusters.zarr",
+"/data/nlahaye/output/Learnergy/VIIRS_FIREX/npp_viirs_m01_20190811_201200_wgs84_fit.tif.clust.data_76999clusters.zarr",
+"/data/nlahaye/output/Learnergy/VIIRS_FIREX/npp_viirs_m01_20190811_215400_wgs84_fit.tif.clust.data_76999clusters.zarr",
+"/data/nlahaye/output/Learnergy/VIIRS_FIREX/npp_viirs_m01_20190812_195400_wgs84_fit.tif.clust.data_76999clusters.zarr",
+"/data/nlahaye/output/Learnergy/VIIRS_FIREX/npp_viirs_m01_20190812_213600_wgs84_fit.tif.clust.data_76999clusters.zarr"
+]
+
+
+context:
+ apply_context: False
+ clusters: []
+ name: []
+ compare_truth: false
+ generate_union: false
+ cluster_dependencies:
+
+
+
+

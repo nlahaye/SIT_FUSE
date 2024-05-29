@@ -3,14 +3,17 @@ import torch
 from byol_pytorch import BYOL
 import pytorch_lightning as pl
 
+import os
 
 class BYOL_Learner(pl.LightningModule):
-    def __init__(self, net, lr=1e-6,
+    def __init__(self, save_dir, net, lr=1e-6,
             weight_decay=0.05, **kwargs):
         super().__init__()
         self.lr = lr
+        self.save_dir = save_dir
         self.weight_decay = weight_decay
-        self.learner = BYOL(net, **kwargs)
+        self.model = net
+        self.learner = BYOL(self.model, **kwargs)
 
     def forward(self, images):
         return self.learner(images)
@@ -47,6 +50,6 @@ class BYOL_Learner(pl.LightningModule):
 
 
 
-    def on_validation_epoch_end(self, _):
+    def on_validation_epoch_end(self):
         torch.save(self.model.state_dict(), os.path.join(self.save_dir, "byol.ckpt"))
 

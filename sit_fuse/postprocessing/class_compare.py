@@ -268,7 +268,7 @@ def run_compare_dbf(dbf_list):
         percentage = assign[1]
         index = assign[0]
         print(percentage)
-        if percentage >= 0.7: #0.51:
+        if percentage >= 0.4: #0.51:
             assignment[index].append(key)
         else:
             assignment[-1].append(key)

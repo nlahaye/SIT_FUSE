@@ -145,10 +145,10 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 			continue		
 
 		dbnDat1 = read_func(cluster_data[p], **data_reader_kwargs).astype(np.float32)
-		print("DBNDAT1", dbnDat1.shape)
 		#dbnDat1 = np.fliplr(dbnDat1)
 		dat = gdal.Open(gtiff_data[p])
 		imgData = dat.ReadAsArray()
+		print("DBNDAT1", dbnDat1.shape, imgData.shape) 
 
 		#TODO beter generalize here - needed for GIM GeoTiff generation
 		#dat = gdal.Open("NETCDF:{0}:{1}".format("/data/nlahaye/remoteSensing/GIM/jpli/2022/jpli0050.22i.nc", "tecmap"))
@@ -175,6 +175,7 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
  
 		if len(imgData.shape) > 2:
 			imgData = np.squeeze(imgData[0,:,:])
+		print(imgData.shape)
 		nx = max(dbnDat1.shape[1],imgData.shape[1])
 		ny = max(dbnDat1.shape[0],imgData.shape[0])
 		metadata=dat.GetMetadata()
@@ -193,7 +194,7 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 		outDat = np.zeros((ny,nx), dtype=np.float32)
 		#dbnDat1 = dbnDat1 / 1000.0
 		dbnDat1 = dbnDat1.astype(np.float32)
-		print(outDat.shape, subset_inds, dbnDat1.shape)
+		print(subset_inds[p], len(subset_inds[p]), outDat.shape)
 		if len(subset_inds[p]) > 0:
 			outDat[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = dbnDat1
 		else:
@@ -273,7 +274,9 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 				out_ds.GetRasterBand(1).WriteArray(outDatFull)
 				out_ds.FlushCache()
 				out_ds = None
-	
+
+
+				print(np.unique(outDatFull), cluster_data[p], file_ext)
 				fname = cluster_data[p] + file_ext + ".FullColor.tif"
 				out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
 				out_ds.SetGeoTransform(geoTransform)
@@ -509,7 +512,7 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
 
 
 
-def apply_dependencies(clust_deps, inds, dbnDat, window = 10): #TODO configurable
+def apply_dependencies(clust_deps, inds, dbnDat, window = 3): #TODO configurable
 
     final_inds_y = []
     final_inds_x = []
@@ -523,7 +526,7 @@ def apply_dependencies(clust_deps, inds, dbnDat, window = 10): #TODO configurabl
         for d in range(len(clust_deps)):
             if clust_deps[d] in dbnDat[wind_min_y:wind_max_y,wind_min_x:wind_max_x]:
                     running_count += len(np.where(dbnDat[wind_min_y:wind_max_y,wind_min_x:wind_max_x] == clust_deps[d])[0])
-                    if running_count > 10:
+                    if running_count > 4:
                         final_inds_y.append(inds[0][i])
                         final_inds_x.append(inds[1][i])
                         break

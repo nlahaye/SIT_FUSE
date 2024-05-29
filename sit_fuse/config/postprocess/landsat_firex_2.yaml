@@ -1,0 +1,42 @@
+
+gen_from_geotiffs: false
+
+data:
+ clust_reader_type: "zarr_to_numpy"
+ reader_kwargs:
+   no_arg: "no_arg" 
+ subset_inds: [[],[],[],[],[],[],[],[]]
+ create_separate: false
+   
+
+ gtiff_data: [
+"/data/nlahaye/remoteSensing/CSDSA/Landsat8L1G/LC08_L1TP_044026_20190807_20200827_02_T1_B1.TIF",
+"/data/nlahaye/remoteSensing/CSDSA/Landsat8L1G/LC08_L1TP_044027_20190807_20200827_02_T1_B1.TIF",
+"/data/nlahaye/remoteSensing/CSDSA/Landsat8L1G/LC08_L1TP_045026_20190814_20200827_02_T1_B1.TIF",
+"/data/nlahaye/remoteSensing/CSDSA/Landsat8L1G/LC08_L1TP_045027_20190814_20200827_02_T1_B1.TIF",
+]
+
+  
+ cluster_fnames: [
+"/data/nlahaye/output/Learnergy/DBN_LANDSAT_FIREX/LC08_L1TP_044026_20190807_20200827_02_T1_B1.TIF.clust.data_69554clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_LANDSAT_FIREX/LC08_L1TP_044027_20190807_20200827_02_T1_B1.TIF.clust.data_69554clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_LANDSAT_FIREX/LC08_L1TP_045026_20190814_20200827_02_T1_B1.TIF.clust.data_69554clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_LANDSAT_FIREX/LC08_L1TP_045027_20190814_20200827_02_T1_B1.TIF.clust.data_69554clusters.zarr"
+]
+
+ 
+context:
+ apply_context: True
+ clusters: [[13.832, 13.866, 13.894, 23.214, 23.278, 35.986, 35.992, 55.207, 55.233, 55.257, 55.281, 55.283, 55.285, 55.292, 55.299, 66.257]]
+ name: ["smoke"]
+ compare_truth: false
+ generate_union: false
+ cluster_dependencies: 
+  -1: [-1]
+  #129: [42,346]
+  #289: [42,346]
+  #354: [42,346]
+  #181: [42,346]
+
+
+
