@@ -52,6 +52,7 @@ def train_dc_no_pt(yml_conf, dataset):
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
+    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="deep_cluster", every_n_epochs=1, save_on_train_epoch_end=False)
 
     os.makedirs(save_dir, exist_ok=True)
     if use_wandb_logger:
@@ -65,7 +66,7 @@ def train_dc_no_pt(yml_conf, dataset):
             strategy=DDPStrategy(find_unused_parameters=True),
             precision=precision,
             max_epochs=max_epochs,
-            callbacks=[lr_monitor, model_summary],
+            callbacks=[lr_monitor, model_summary, checkpoint_callback],
             gradient_clip_val=gradient_clip_val,
             logger=wandb_logger
         )
@@ -77,7 +78,7 @@ def train_dc_no_pt(yml_conf, dataset):
             strategy=DDPStrategy(find_unused_parameters=True),
             precision=precision,
             max_epochs=max_epochs,
-            callbacks=[lr_monitor, model_summary],
+            callbacks=[lr_monitor, model_summary, checkpoint_callback],
             gradient_clip_val=gradient_clip_val
         )
 
@@ -142,6 +143,7 @@ def dc_DBN(yml_conf, dataset):
   
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
+    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="deep_cluster", every_n_epochs=1, save_on_train_epoch_end=False)
 
     os.makedirs(save_dir, exist_ok=True)
     if use_wandb_logger:
@@ -155,7 +157,7 @@ def dc_DBN(yml_conf, dataset):
             strategy=DDPStrategy(find_unused_parameters=True),
             precision=precision,
             max_epochs=max_epochs,
-            callbacks=[lr_monitor, model_summary],
+            callbacks=[lr_monitor, model_summary, checkpoint_callback],
             gradient_clip_val=gradient_clip_val,
             logger=wandb_logger
         )
@@ -167,7 +169,7 @@ def dc_DBN(yml_conf, dataset):
             strategy=DDPStrategy(find_unused_parameters=True),
             precision=precision,
             max_epochs=max_epochs,
-            callbacks=[lr_monitor, model_summary],
+            callbacks=[lr_monitor, model_summary, checkpoint_callback],
             gradient_clip_val=gradient_clip_val
         )
 
@@ -278,14 +280,14 @@ def dc_BYOL(yml_conf, dataset):
 
     in_chans = yml_conf["data"]["tile_size"][2]
     ckpt_path = os.path.join(encoder_dir, "byol.ckpt")
-    model = DeepConvEncoder(in_chans=in_chans, flatten=True)
-    model.load_state_dict(torch.load(ckpt_path))
+    model_init = DeepConvEncoder(in_chans=in_chans, flatten=True)
+    model_init.load_state_dict(torch.load(ckpt_path))
 
-    model = BYOL_DC(pretrained_model=model, num_classes=num_classes)
+    model = BYOL_DC(pretrained_model=model_init, num_classes=num_classes)
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
-    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="deep_cluster.ckpt", every_n_epochs=1, save_on_train_epoch_end=False)
+    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="deep_cluster", every_n_epochs=1, save_on_train_epoch_end=False)
 
 
 
