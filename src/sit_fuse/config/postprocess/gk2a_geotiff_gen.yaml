@@ -83,7 +83,7 @@ data:
 ]
 
 context: 
- apply_context: True
+ apply_context: False
  clusters: [
 #[7.248],
 [57.312,57.303,57.357],
