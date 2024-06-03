@@ -5,44 +5,30 @@ data:
  clust_reader_type: "gtiff"
  reader_kwargs:
    no_arg: "no_arg" 
- subset_inds: [[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000],[1100,1700,2600,3000]]
+ subset_inds: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
  create_separate: False
 
  
  gtiff_data: [
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/05/00/gk2a_ami_le1b_ir087_ea020lc_202203050000.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/05/00/gk2a_ami_le1b_ir087_ea020lc_202203050010.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/05/00/gk2a_ami_le1b_ir087_ea020lc_202203050020.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/05/00/gk2a_ami_le1b_ir087_ea020lc_202203050030.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/05/00/gk2a_ami_le1b_ir087_ea020lc_202203050050.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/05/01/gk2a_ami_le1b_ir087_ea020lc_202203050100.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/05/01/gk2a_ami_le1b_ir087_ea020lc_202203050110.tif",
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/05/00/gk2a_ami_le1b_ir087_ea020lc_202203050000.tif",
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/05/00/gk2a_ami_le1b_ir087_ea020lc_202203050010.tif",
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/05/00/gk2a_ami_le1b_ir087_ea020lc_202203050020.tif",
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/05/00/gk2a_ami_le1b_ir087_ea020lc_202203050030.tif",
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/05/00/gk2a_ami_le1b_ir087_ea020lc_202203050050.tif",
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/05/01/gk2a_ami_le1b_ir087_ea020lc_202203050100.tif",
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/05/01/gk2a_ami_le1b_ir087_ea020lc_202203050110.tif",
 "/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/00/gk2a_ami_le1b_ir087_ea020lc_202203060010.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/00/gk2a_ami_le1b_ir087_ea020lc_202203060000.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/00/gk2a_ami_le1b_ir087_ea020lc_202203060020.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/00/gk2a_ami_le1b_ir087_ea020lc_202203060030.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/00/gk2a_ami_le1b_ir087_ea020lc_202203060050.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/01/gk2a_ami_le1b_ir087_ea020lc_202203060100.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/01/gk2a_ami_le1b_ir087_ea020lc_202203060110.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/03/gk2a_ami_le1b_ir087_ea020lc_202203060320.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/03/gk2a_ami_le1b_ir087_ea020lc_202203060330.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/03/gk2a_ami_le1b_ir087_ea020lc_202203060340.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/03/gk2a_ami_le1b_ir087_ea020lc_202203060350.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/04/gk2a_ami_le1b_ir087_ea020lc_202203060400.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/04/gk2a_ami_le1b_ir087_ea020lc_202203060410.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/04/gk2a_ami_le1b_ir087_ea020lc_202203060420.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/07/00/gk2a_ami_le1b_ir087_ea020lc_202203070000.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/07/00/gk2a_ami_le1b_ir087_ea020lc_202203070010.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/07/00/gk2a_ami_le1b_ir087_ea020lc_202203070020.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/07/00/gk2a_ami_le1b_ir087_ea020lc_202203070030.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/07/00/gk2a_ami_le1b_ir087_ea020lc_202203070050.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/07/01/gk2a_ami_le1b_ir087_ea020lc_202203070100.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/07/01/gk2a_ami_le1b_ir087_ea020lc_202203070110.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/08/01/gk2a_ami_le1b_ir087_ea020lc_202203080110.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/08/01/gk2a_ami_le1b_ir087_ea020lc_202203080120.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/08/01/gk2a_ami_le1b_ir087_ea020lc_202203080130.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/08/01/gk2a_ami_le1b_ir087_ea020lc_202203080140.tif",
-#"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/08/01/gk2a_ami_le1b_ir087_ea020lc_202203080150.tif"
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/00/gk2a_ami_le1b_ir087_ea020lc_202203060000.tif",
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/00/gk2a_ami_le1b_ir087_ea020lc_202203060020.tif",
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/00/gk2a_ami_le1b_ir087_ea020lc_202203060030.tif",
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/00/gk2a_ami_le1b_ir087_ea020lc_202203060050.tif",
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/01/gk2a_ami_le1b_ir087_ea020lc_202203060100.tif",
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/06/01/gk2a_ami_le1b_ir087_ea020lc_202203060110.tif",
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/08/01/gk2a_ami_le1b_ir087_ea020lc_202203080110.tif",
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/08/01/gk2a_ami_le1b_ir087_ea020lc_202203080120.tif",
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/08/01/gk2a_ami_le1b_ir087_ea020lc_202203080130.tif",
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/08/01/gk2a_ami_le1b_ir087_ea020lc_202203080140.tif",
+"/data/nlahaye/remoteSensing/GK2A/GK2A/L1B/EA/202203/08/01/gk2a_ami_le1b_ir087_ea020lc_202203080150.tif"
 ]
 
  
