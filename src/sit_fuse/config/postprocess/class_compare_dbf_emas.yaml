@@ -2,6 +2,7 @@
 
 
 dbf: True
+dbf_percentage_thresh: 0.51
 dbf_list: [
 ["/data/nlahaye/output/Context_Assignment_eMAS_V2/output_DBFs/emas_19910_06_background_output.dbf",
 "/data/nlahaye/output/Context_Assignment_eMAS_V2/output_DBFs/emas_19910_08_background_output.dbf",

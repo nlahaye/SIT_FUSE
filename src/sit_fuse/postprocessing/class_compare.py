@@ -221,7 +221,7 @@ def read_label_counts_dbfs(dbf_list):
     return new_data_label_counts, init_data_label_counts
 
 
-def run_compare_dbf(dbf_list):
+def run_compare_dbf(dbf_list, percent_threshold):
 
     new_data_label_counts, init_data_label_counts = read_label_counts_dbfs(dbf_list)
         
@@ -268,7 +268,7 @@ def run_compare_dbf(dbf_list):
         percentage = assign[1]
         index = assign[0]
         print(percentage)
-        if percentage >= 0.4: #0.51:
+        if percentage >= percent_threshold:
             assignment[index].append(key)
         else:
             assignment[-1].append(key)
@@ -609,7 +609,7 @@ def main(yml_fpath):
     #Run 
 
     if yml_conf["dbf"]:
-        run_compare_dbf(yml_conf["dbf_list"])
+        run_compare_dbf(yml_conf["dbf_list"], yml_conf["dbf_percentage_thresh"])
  
     else:
         init_data = yml_conf["init_data"]
