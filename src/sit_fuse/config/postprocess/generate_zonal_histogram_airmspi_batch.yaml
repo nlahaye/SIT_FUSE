@@ -84,4 +84,4 @@ shp_files:
     ["/Users/easley/Desktop/shapefiles/AIRMISPI AND GOES/AirMSPI_radiances/smoke labels/AirMSPI_ER2_GRP_TERRAIN_20190808_181007Z_WA-Mansfield_SWPA_F01_V006.hdf_smoke.shp"]
   ]
 
-out_file: "MASTER_Batch_full.json"
+out_file: "AIRMSPI_Batch_full.json"
