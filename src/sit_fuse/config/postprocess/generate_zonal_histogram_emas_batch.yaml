@@ -26,19 +26,19 @@ input_files:
 
 shp_files:
   [
-      ["/Users/easley/Desktop/shapefiles_notiff/eMAS_Radiances_v2-002/20190806/files/eMASL1B_19910_06_20190806_1815_1824_V03/shape files/eMASL1B_19910_06_20190806_1815_1824_V03_smoke.shp"
-"/Users/easley/Desktop/shapefiles_notiff/eMAS_Radiances_v2-002/20190806/files/eMASL1B_19910_06_20190806_1815_1824_V03/shape files/eMASL1B_19910_06_20190806_1815_1824_V03_burnscar.shp"
-"/Users/easley/Desktop/shapefiles_notiff/eMAS_Radiances_v2-002/20190806/files/eMASL1B_19910_06_20190806_1815_1824_V03/shape files/eMASL1B_19912_07_20190808_1806_1821_V03_fire.shp"
+      ["/Users/easley/Desktop/shapefiles_notiff/eMAS_Radiances_v2-002/20190806/files/eMASL1B_19910_06_20190806_1815_1824_V03/shape files/eMASL1B_19910_06_20190806_1815_1824_V03_smoke.shp",
+"/Users/easley/Desktop/shapefiles_notiff/eMAS_Radiances_v2-002/20190806/files/eMASL1B_19910_06_20190806_1815_1824_V03/shape files/eMASL1B_19910_06_20190806_1815_1824_V03_burnscar.shp",
+"/Users/easley/Desktop/shapefiles_notiff/eMAS_Radiances_v2-002/20190806/files/eMASL1B_19910_06_20190806_1815_1824_V03/shape files/eMASL1B_19912_07_20190808_1806_1821_V03_fire.shp",
 "/Users/easley/Desktop/shapefiles_notiff/eMAS_Radiances_v2-002/20190806/files/eMASL1B_19910_06_20190806_1815_1824_V03/shape files/eMASL1B_19910_06_20190806_1815_1824_V03_background.shp"],
 
-      ["/Users/easley/Desktop/shapefiles_notiff/eMAS_Radiances_v2-002/20190807/files/eMASL1B_19911_05_20190807_1817_1833_V03/shape files/eMASL1B_19911_05_20190807_1817_1833_V03_fire.shp"
-"/Users/easley/Desktop/shapefiles_notiff/eMAS_Radiances_v2-002/20190807/files/eMASL1B_19911_05_20190807_1817_1833_V03/shape files/eMASL1B_19911_05_20190807_1817_1833_V03_burnscar.shp"
-"/Users/easley/Desktop/shapefiles_notiff/eMAS_Radiances_v2-002/20190807/files/eMASL1B_19911_05_20190807_1817_1833_V03/shape files/eMASL1B_19911_05_20190807_1817_1833_V03_smoke.shp"
+      ["/Users/easley/Desktop/shapefiles_notiff/eMAS_Radiances_v2-002/20190807/files/eMASL1B_19911_05_20190807_1817_1833_V03/shape files/eMASL1B_19911_05_20190807_1817_1833_V03_fire.shp",
+"/Users/easley/Desktop/shapefiles_notiff/eMAS_Radiances_v2-002/20190807/files/eMASL1B_19911_05_20190807_1817_1833_V03/shape files/eMASL1B_19911_05_20190807_1817_1833_V03_burnscar.shp",
+"/Users/easley/Desktop/shapefiles_notiff/eMAS_Radiances_v2-002/20190807/files/eMASL1B_19911_05_20190807_1817_1833_V03/shape files/eMASL1B_19911_05_20190807_1817_1833_V03_smoke.shp",
 "/Users/easley/Desktop/shapefiles_notiff/eMAS_Radiances_v2-002/20190807/files/eMASL1B_19911_05_20190807_1817_1833_V03/shape files/eMASL1B_19911_05_20190807_1817_1833_V03_background.shp"],
 
-      ["/Users/easley/Desktop/shapefiles_notiff/eMAS_Radiances_v2-002/20190808/files/shape files/eMASL1B_19912_07_20190808_1806_1821_V03_burnscar.shp"
-"/Users/easley/Desktop/shapefiles_notiff/eMAS_Radiances_v2-002/20190808/files/shape files/eMASL1B_19912_07_20190808_1806_1821_V03_background.shp"
-"/Users/easley/Desktop/shapefiles_notiff/eMAS_Radiances_v2-002/20190808/files/shape files/eMASL1B_19912_07_20190808_1806_1821_V03_smoke.shp"
+      ["/Users/easley/Desktop/shapefiles_notiff/eMAS_Radiances_v2-002/20190808/files/shape files/eMASL1B_19912_07_20190808_1806_1821_V03_burnscar.shp",
+"/Users/easley/Desktop/shapefiles_notiff/eMAS_Radiances_v2-002/20190808/files/shape files/eMASL1B_19912_07_20190808_1806_1821_V03_background.shp",
+"/Users/easley/Desktop/shapefiles_notiff/eMAS_Radiances_v2-002/20190808/files/shape files/eMASL1B_19912_07_20190808_1806_1821_V03_smoke.shp",
 "/Users/easley/Desktop/shapefiles_notiff/eMAS_Radiances_v2-002/20190808/files/shape files/eMASL1B_19912_07_20190808_1806_1821_V03_fire.shp"]
   ]
 
