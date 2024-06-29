@@ -451,4 +451,7 @@ dependencies:
     - git+https://github.com/nlahaye/learnergy.git@module_list_update
     - git+https://github.com/nlahaye/x-transformers.git
     - git+https://github.com/nlahaye/SIT_FUSE.git
+    - git+https://github.com/nlahaye/vit-pytorch.git
+    - git+https://github.com/nlahaye/pytorch-segmentation.git
+    - git+https://github.com/nlahaye/pixel-level-contrastive-learning.git
 

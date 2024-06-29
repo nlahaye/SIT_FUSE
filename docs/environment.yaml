@@ -456,4 +456,7 @@ dependencies:
       - yarl==1.9.4
       - zarr==2.18.0
       - git+https://github.com/nlahaye/SIT_FUSE.git
+      - git+https://github.com/nlahaye/vit-pytorch.git
+      - git+https://github.com/nlahaye/pytorch-segmentation.git
+      - git+https://github.com/nlahaye/pixel-level-contrastive-learning.git
 prefix: /home/nlahaye/.conda/envs/sit_fuse
