@@ -117,12 +117,10 @@ class Heir_DC(pl.LightningModule):
             if self.encoder_type == "ijepa":
                 encoder_output_size = get_output_shape(self.pretrained_model, (1, yml_conf["data"]["tile_size"][2],self.pretrained_model.pretrained_model.img_size,self.pretrained_model.pretrained_model.img_size))
                 n_visible = encoder_output_size[1]
-                print("N_VISIBLE", encoder_output_size)
             elif self.encoder_type == "dbn":
                 encoder_output_size = (1, self.pretrained_model.pretrained_model.models[-1].n_hidden)
             elif self.encoder_type == "conv_dbn":
                 encoder_output_size = get_output_shape(self.pretrained_model.pretrained_model, (1, yml_conf["data"]["tile_size"][2], yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
-                print("N_VISIBLE", encoder_output_size)
                 n_visible = encoder_output_size[1]
             elif self.encoder_type == "byol":
                 encoder_output_size = get_output_shape(self.pretrained_model.pretrained_model, (1, yml_conf["data"]["tile_size"][2], yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
@@ -151,12 +149,9 @@ class Heir_DC(pl.LightningModule):
             dat_dev = data2[0].to(device=self.pretrained_model.device, non_blocking=True, dtype=torch.float32)
 
             lab = self.pretrained_model.forward(dat_dev)
-            print(lab.shape, lab.min(), lab.max(), lab.mean(), lab.std())
-            print(dat_dev.shape, dat_dev.min(), dat_dev.max(), dat_dev.mean(), dat_dev.std())
             if lab.ndim > 2: #or B,C,H,W
                 lab = lab.flatten(start_dim=2).permute(0,2,1).flatten(start_dim=0, end_dim=1)
             lab = torch.argmax(lab, axis = 1)
-            print(lab.shape, lab.min(), lab.max(), torch.unique(lab))
             lab = lab.detach().cpu()
             dat_dev = dat_dev.detach().cpu()
 
@@ -203,7 +198,6 @@ class Heir_DC(pl.LightningModule):
                     x = x + torch.from_numpy(self.rng.normal(0.0, 0.01, \
                                         x.shape)).type(x.dtype).to(x.device)
 
-            print("HERE ENCODER X SHAPE", x.shape)
             if self.encoder_type == "ijepa":
                 x = self.pretrained_model.mlp_head.ups3(x)
                 x = self.pretrained_model.mlp_head.ups2(x)
@@ -213,9 +207,7 @@ class Heir_DC(pl.LightningModule):
                 x = x.permute(0, 2, 1)
                 x = torch.reshape(x, (x.shape[0], x.shape[1], 224, 224))
                 x = self.pretrained_model.mlp_head.shuffle(x)
-                print(x.shape)
                 x = transforms.Resize((224, 224))(x)
-                print(x.shape)
     
                 x = self.pretrained_model.mlp_head.out(x)
 
@@ -229,14 +221,12 @@ class Heir_DC(pl.LightningModule):
   
         tmp_subset = None
         tmp = y.clone()
-        print(y.shape, y.ndim, x.ndim)
         if (y.ndim == 2 and y.shape[1] > 1) or (y.ndim == 4 and y.shape[1] > 1):
             tmp = torch.argmax(y, dim=1)
         elif (y.ndim == 3 and y.shape[0] > 1):
             tmp = torch.argmax(y, dim=0) 
 
         tmp_full = None
-        print(y.ndim, "WHAT THE NDIM")
         if y.ndim == 2:
             if train:
                 tmp_full = torch.zeros((y.shape[0], self.num_classes), device=y.device, dtype=torch.float32)
@@ -253,8 +243,6 @@ class Heir_DC(pl.LightningModule):
             else:
                 tmp_full = torch.zeros((y.shape[0], 1, y.shape[-2], y.shape[-1]), device=y.device, dtype=torch.float32)
 
-        print("HERE SHAPE ISSUES0", y.shape, tmp_full.shape)
-
         f = lambda z: str(z)
         tmp2 = np.vectorize(f)(tmp.detach().cpu())
         tmp3 = tmp.clone()
@@ -270,7 +258,6 @@ class Heir_DC(pl.LightningModule):
             if train and key != self.key:
                 continue
 
-            print(tmp.ndim, "WHAT THE NDIMV2")
             inds = np.where(tmp2 == key)
 
             if tmp.ndim == 1 or tmp.ndim == 2:
@@ -298,11 +285,7 @@ class Heir_DC(pl.LightningModule):
             input_tmp = input_tmp[inds2,:] 
 
 
-            print("HERE LABELS", np.unique(np.ravel(tmp2)), self.key)
-            print("HERE SHAPE ISSUE", tmp.shape, tmp2.shape, tmp3.shape, inds, inds2)
-            print((tmp4 is None), (input_tmp is None))
             if key in self.clust_tree["1"].keys() and self.clust_tree["1"][key] is not None:
-                print("HERE SHAPE ISSUE 2", tmp.shape, tmp2.shape, tmp3.shape, tmp4.shape, input_tmp.shape)
                 tmp = self.clust_tree["1"][key].forward(input_tmp) #torch.unsqueeze(x[inds],dim=0))
                 if isinstance(tmp,tuple):
                     tmp = tmp[0]
@@ -311,21 +294,17 @@ class Heir_DC(pl.LightningModule):
 
                 if train == False:
                     tmp = torch.unsqueeze(torch.argmax(tmp, dim=1), dim=1)
-                    print(tmp.shape, tmp4.shape, tmp4[inds2].shape)
                     tmp = tmp + self.num_classes*tmp4[inds2]
             elif train == False:
                 tmp = self.num_classes*tmp4[inds2]
             else:
                 continue
-            print("HERE TMP SHAPE", tmp.shape)
 
             if tmp_subset is None:
                 tmp_subset = tmp.clone()
             else:
-                print("HERE TMP SUBSET COMBO", tmp_subset.shape, tmp.shape)
                 tmp_subset = torch.cat((tmp_subset, tmp), dim=0)
 
-            print("HERE TMP_SUBSET", tmp_subset.shape)
 
 
             if y.ndim == 2:

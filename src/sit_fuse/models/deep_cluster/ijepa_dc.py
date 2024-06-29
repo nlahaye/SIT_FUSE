@@ -36,7 +36,6 @@ class IJEPA_DC(pl.LightningModule):
        
         #self.mlp_head =  MultiPrototypes(self.pretrained_model.num_tokens, 800, 1)
         #self.mlp_head =  MultiPrototypes(self.pretrained_model.num_tokens*self.pretrained_model.embed_dim, self.num_classes, self.number_heads)
-        print("HERE", self.pretrained_model.patch_size, self.pretrained_model.embed_dim, self.num_classes, self.pretrained_model.num_tokens, self.pretrained_model.img_size)
         #self.mlp_head = OutputProjection(self.pretrained_model.img_size, self.pretrained_model.patch_size, self.pretrained_model.embed_dim, self.num_classes)
 
         self.mlp_head = JEPA_Seg()
@@ -52,9 +51,7 @@ class IJEPA_DC(pl.LightningModule):
         self.rng = np.random.default_rng(None)
  
     def forward(self, x):
-        print("HERE WAHT", x.mean(), x.min(), x.max(), x.std())
         x = self.pretrained_model.model(x)
-        print("HERE WAHT2", x.mean(), x.min(), x.max(), x.std())
         ###x = x.flatten(start_dim=1)
         #x = self.average_pool(x) #conduct average pool like in paper
         ###x = x.squeeze(-1)

@@ -26,18 +26,12 @@ class Up_Linear(nn.Module):
         self.size = size
 
     def forward(self, x):
-        print(x.shape, x.min(), x.max(), x.mean(), x.std())
         #x = self.insrm(x)
         x = self.ln(x)
-        print(x.shape, x.min(), x.max(), x.mean(), x.std())
         x = x.permute(0, 2, 1)
-        print(x.shape, x.min(), x.max(), x.mean(), x.std())
         x = torch.reshape(x, (x.shape[0], x.shape[1], self.size, self.size))
-        print(x.shape, x.min(), x.max(), x.mean(), x.std())
         x = self.shuffle(x)
-        print(x.shape, x.min(), x.max(), x.mean(), x.std())
         x = torch.reshape(x, (x.shape[0], x.shape[1], self.size*self.size*16))
-        print(x.shape, x.min(), x.max(), x.mean(), x.std())
         x = x.permute(0, 2, 1)
         return x
 
@@ -76,7 +70,6 @@ class JEPA_Seg(nn.Module):
 
 
     def forward(self, x):
-        print("FIRST")
         x = self.insrm(x)
         x = self.ups3(x)
         #x = self.ups2(x)
@@ -86,14 +79,10 @@ class JEPA_Seg(nn.Module):
         x = x.permute(0, 2, 1)
         x = torch.reshape(x, (x.shape[0], x.shape[1], 64, 64))
         #x = self.shuffle(x)
-        print(x.shape, x.min(), x.max(), x.mean(), x.std())
         #x = transforms.Resize((224, 224))(x)
-        print(x.shape, x.min(), x.max(), x.mean(), x.std())
 
         x = self.out(x)
-        print(x.shape, x.min(), x.max(), x.mean(), x.std())
         x = self.smax(x)
-        print(x.shape, x.min(), x.max(), x.mean(), x.std(), "FINAL LAYER")
         return x
 
 
@@ -175,17 +164,13 @@ class MultiPrototypes(nn.Module):
     def forward(self, x):
         out = []
         for i in range(self.nmb_heads):
-            print(x.shape)
             x = getattr(self, "flatten" + str(i))(x)
-            print(x.shape)
             #x = getattr(self, "batch_norm" + str(i))(x)
-            print(x.shape)
             for j in range(0,self.n_layers):
                 x = getattr(self, "prototypes" + str(i) + "_" + str(j))(x)
                 if  j < self.n_layers - 1:
                     x = getattr(self, "activ" + str(i) + "_" + str(j))(x)
             out.append(x)
-        print(len(out), x.shape)
         return out
 
 
@@ -201,7 +186,6 @@ class DeepMultiPrototypes(nn.Module):
             self.n_layers = 0
             self.add_module("flatten" + str(i), nn.Flatten())
             od = output_dim
-            print(od)
             j = 0
             while od < 2000:
                 self.n_layers =  self.n_layers + 1
@@ -211,13 +195,11 @@ class DeepMultiPrototypes(nn.Module):
                 j = j + 1
             self.add_module("batch_norm", nn.BatchNorm1d(od))
             #self.n_layers =  self.n_layers + 1
-            #print(od)
             #self.add_module("prototypes" + str(i) + "_" + str(j), nn.Linear(od, int(od/2)))
             #self.add_module("prototypes_act" + str(i) + "_" + str(j), nn.SELU()) #LeakyReLU(0.1))
             #od = int(od/2)
             #j = j + 1            
             #self.n_layers =  self.n_layers + 1
-            #print(od)
             #self.add_module("prototypes" + str(i) + "_" + str(j), nn.Linear(od, int(od/2)))
             #self.add_module("prototypes_act" + str(i) + "_" + str(j), nn.SELU()) #LeakyReLU(0.1))
             #od = int(od/2)
@@ -262,7 +244,6 @@ class DeepConvMultiPrototypes(nn.Module):
             self.n_layers = 0
             #self.add_module("flatten" + str(i), nn.Flatten())
             od = output_dim
-            print(od)
             j = 0
             #while od < 5000:
             self.n_layers =  self.n_layers + 1
@@ -272,7 +253,6 @@ class DeepConvMultiPrototypes(nn.Module):
             j = j + 1
             #while od > 1000:
             self.n_layers =  self.n_layers + 1
-            print(od1)
             od2 = int(od1*2)
             self.add_module("prototypes" + str(i) + "_" + str(j), nn.Conv2d(od1, od2, kernel_size=3,stride=1,padding=1))
             self.add_module("prototypes_act" + str(i) + "_" + str(j), nn.LeakyReLU(0.1))
@@ -298,17 +278,11 @@ class DeepConvMultiPrototypes(nn.Module):
         out = []
         for i in range(self.nmb_heads):
             for j in range(0,self.n_layers-1):
-                print(x.shape)
                 x = getattr(self, "prototypes" + str(i) + "_" + str(j))(x)
-                print(x.shape)
                 x = getattr(self, "prototypes_act" + str(i) + "_" + str(j))(x)
-                print(x.shape)
             x = getattr(self, "batch_norm")(x)
-            print(x.shape)
             x = getattr(self, "prototypes" + str(i) + "_" + str(self.n_layers-1))(x)
-            print(x.shape)
             x = getattr(self, "prototypes_act"  + str(i) + "_" + str(self.n_layers-1))(x)
-            print(x.shape)
             out.append(x)
         return out
 

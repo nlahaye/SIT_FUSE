@@ -59,9 +59,6 @@ class BYOL_DC(pl.LightningModule):
         #x = F.softmax(x, dim=1) #.flatten(start_dim=2).permute(0,2,1).flatten(start_dim=0,end_dim=1)
         #x2 = F.softmax(x2, dim=1) #.flatten(start_dim=2).permute(0,2,1).flatten(start_dim=0,end_dim=1)
 
-        print(torch.unique(torch.argmax(x, dim=1)), "Y labels")
-        print(torch.unique(torch.argmax(x2, dim=1)), "Y2 labels")
-
         loss = self.criterion(x,x2, lamb=1.0)[0] #calculate loss
         return loss
 
@@ -69,7 +66,6 @@ class BYOL_DC(pl.LightningModule):
 
         encoder = self.pretrained_model[0]
         decoder = self.pretrained_model[1]
-        print("MODULES", len(list(self._modules.items()))) 
 
         x = batch
         x, x1, x2, x3, x4 = encoder.full_forward(x)
@@ -89,8 +85,6 @@ class BYOL_DC(pl.LightningModule):
         x = decoder.forward(x, x1, x2, x3, x4)
         x_2 = decoder.forward(x_2, x1_2, x2_2, x3_2, x4_2)
 
-        print(x.shape, x_2.shape) 
-
         x = F.softmax(x, dim=1).flatten(start_dim=2).permute(0,2,1).flatten(start_dim=0,end_dim=1)
         x_2 = F.softmax(x_2, dim=1).flatten(start_dim=2).permute(0,2,1).flatten(start_dim=0,end_dim=1)
 
@@ -109,15 +103,12 @@ class BYOL_DC(pl.LightningModule):
         H, W = x.size(2), x.size(3)
         x, low_level_features = self.pretrained_model.backbone(x)
  
-        print("HERE STATS", x.min(), x.max(), x.mean(), x.std())
-        print("HERE2 STATS", low_level_features.min(), low_level_features.max(), low_level_features.mean(), low_level_features.std())
 
         x2 = x.clone() + torch.from_numpy(self.rng.normal(0.0, 0.01, \
                                 (x.shape))).type(x.dtype).to(x.device)
         x2_l = low_level_features.clone() + torch.from_numpy(self.rng.normal(0.0, 0.01, \
                                 (low_level_features.shape))).type(low_level_features.dtype).to(low_level_features.device)
 
-        print(x.shape, low_level_features.shape)
         x = self.pretrained_model.ASSP(x)
         x = self.pretrained_model.decoder(x, low_level_features)
         x = F.interpolate(x, size=(H, W), mode='bilinear', align_corners=True)
@@ -126,7 +117,6 @@ class BYOL_DC(pl.LightningModule):
         x2 = self.pretrained_model.decoder(x2, x2_l)
         x2 = F.interpolate(x2, size=(H, W), mode='bilinear', align_corners=True)
 
-        print("HERE", x.shape, x2.shape)
 
         x = F.softmax(x, dim=1).flatten(start_dim=2).permute(0,2,1).flatten(start_dim=0,end_dim=1)
         x2 = F.softmax(x2, dim=1).flatten(start_dim=2).permute(0,2,1).flatten(start_dim=0,end_dim=1)

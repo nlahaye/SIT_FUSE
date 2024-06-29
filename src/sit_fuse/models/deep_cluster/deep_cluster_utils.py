@@ -39,13 +39,10 @@ def get_deep_cluster_heirarchical(yml_conf, deep_cluster, train_data=None):
  
     for tiers in range(0,heir_model_tiers):
 
-        print("HEIRARCHICAL TIER ", str(tiers + 1))
-
         heir_mdl_file = heir_model_file + ""
         if tiers > 0:
             heir_mdl_file = heir_model_file + "_" + str(tiers)
 
-        print(heir_mdl_file)
         if not os.path.exists(heir_mdl_file + ".ckpt") or overwrite_model:
             heir_clust = HeirClust(final_model, n_heir_classes, use_gpu=use_gpu, min_samples=heir_min_samples, gauss_stdevs = heir_gauss_stdevs, train_data)
 

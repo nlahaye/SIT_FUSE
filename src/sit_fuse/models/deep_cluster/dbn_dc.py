@@ -27,7 +27,6 @@ class DBN_DC(pl.LightningModule):
 
         self.pretrained_model = pretrained_model
  
-        print(self.conv)
         if not self.conv:
             self.mlp_head = MultiPrototypes(self.pretrained_model.models[-1].n_hidden, self.num_classes, self.number_heads)
         else:
