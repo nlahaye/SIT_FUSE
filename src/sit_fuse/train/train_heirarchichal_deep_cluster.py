@@ -179,12 +179,10 @@ def heir_dc(yml_conf, dataset, ckpt_path):
         if yml_conf["encoder_type"] == "ijepa":
             encoder_output_size = get_output_shape(model.pretrained_model, (1, in_chans,model.pretrained_model.pretrained_model.img_size,model.pretrained_model.pretrained_model.img_size))
             n_visible = encoder_output_size[1]
-            print("N_VISIBLE", encoder_output_size)
         elif yml_conf["encoder_type"] == "dbn":
             encoder_output_size = (1, model.pretrained_model.pretrained_model.models[-1].n_hidden)
         elif yml_conf["encoder_type"] == "conv_dbn":
             encoder_output_size = get_output_shape(model.pretrained_model.pretrained_model, (1, yml_conf["data"]["tile_size"][2], yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
-            print("N_VISIBLE", encoder_output_size)
             n_visible = encoder_output_size[1]
         elif yml_conf["encoder_type"] == "byol":
             encoder_output_size = get_output_shape(model.pretrained_model.pretrained_model, (1, yml_conf["data"]["tile_size"][2], yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
