@@ -2,30 +2,36 @@ import numpy as np
 import pytorch_lightning as pl
 import torch.nn as nn
 import torch
+import torch.nn.functional as F
 
 from sit_fuse.models.encoders.dbn_pl import DBN_PL
 
 from sit_fuse.losses.iid import IID_loss
-from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes
+from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes, DeepConvMultiPrototypes
 import numpy as np
 
 
 class DBN_DC(pl.LightningModule):
     #take pretrained model path, number of classes, learning rate, weight decay, and drop path as input
-    def __init__(self, pretrained_model, num_classes, lr=1e-3, weight_decay=0, number_heads=1):
+    def __init__(self, pretrained_model, num_classes, lr=1e-3, weight_decay=0, number_heads=1, conv=False):
 
         super().__init__()
         self.save_hyperparameters(ignore=['pretrained_model'])
         self.num_classes = num_classes
         self.number_heads = number_heads
+        self.conv = conv
 
         #set parameters
         self.lr = lr
         self.weight_decay = weight_decay
 
         self.pretrained_model = pretrained_model
-
-        self.mlp_head =  MultiPrototypes(self.pretrained_model.models[-1].n_hidden, self.num_classes, self.number_heads)
+ 
+        print(self.conv)
+        if not self.conv:
+            self.mlp_head = MultiPrototypes(self.pretrained_model.models[-1].n_hidden, self.num_classes, self.number_heads)
+        else:
+            self.mlp_head = DeepConvMultiPrototypes(self.pretrained_model.models[-1].n_filters, self.num_classes, self.number_heads)
 
         #define loss
         self.criterion = IID_loss
@@ -40,10 +46,13 @@ class DBN_DC(pl.LightningModule):
         x = batch
         y = self.pretrained_model(x)
         y2 = y.clone() + torch.from_numpy(self.rng.normal(0.0, 0.01, \
-                                y.shape[1]*y.shape[0]).reshape(y.shape[0],\
-                                y.shape[1])).type(y.dtype).to(y.device)
+                                y.shape)).type(y.dtype).to(y.device)
         y = self.mlp_head(y)[0] 
         y2 = self.mlp_head(y2)[0]
+        if self.conv:
+            y = y.flatten(start_dim=2).permute(0,2,1).flatten(start_dim=0,end_dim=1)
+            y2 = y2.flatten(start_dim=2).permute(0,2,1).flatten(start_dim=0,end_dim=1) 
+  
         loss = self.criterion(y,y2)[0] #calculate loss
         self.log('train_loss', loss, sync_dist=True)
         return loss
@@ -52,10 +61,14 @@ class DBN_DC(pl.LightningModule):
         x = batch
         y = self.pretrained_model(x)
         y2 = y.clone() + torch.from_numpy(self.rng.normal(0.0, 0.01, \
-                                y.shape[1]*y.shape[0]).reshape(y.shape[0],\
-                                y.shape[1])).type(y.dtype).to(y.device)
+                                y.shape)).type(y.dtype).to(y.device)
         y = self.mlp_head(y)[0]
         y2 = self.mlp_head(y2)[0]
+
+        if self.conv:
+            y = y.flatten(start_dim=2).permute(0,2,1).flatten(start_dim=0,end_dim=1)
+            y2 = y2.flatten(start_dim=2).permute(0,2,1).flatten(start_dim=0,end_dim=1)
+
         loss = self.criterion(y,y2)[0] #calculate loss
         self.log('val_loss', loss, sync_dist=True)
         return loss

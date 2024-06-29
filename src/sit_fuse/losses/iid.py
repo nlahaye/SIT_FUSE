@@ -6,8 +6,14 @@ def IID_loss(x_out, x_tf_out, lamb=1.0, EPS=sys.float_info.epsilon):
   # has had softmax applied
   if x_out is None:
       return [0.0,0.0]
-  _, k = x_out.size()
 
+  #if x_out.ndim > 2:
+  #   x_out = torch.flatten(x_out, start_dim=2).permute(0,2,1).flatten(start_ind=0,end_ind=1)
+  #   x_tf_out = torch.flatten(x_tf_out, start_dim=2).permute(0,2,1).flatten(start_ind=0,end_ind=1)
+  _, k = x_out.size()
+ 
+  loss_lst = []
+  loss_nl_lst = [] 
   start_time = time.monotonic()
   p_i_j = compute_joint(x_out, x_tf_out)
   end_time = time.monotonic()
@@ -24,7 +30,7 @@ def IID_loss(x_out, x_tf_out, lamb=1.0, EPS=sys.float_info.epsilon):
 
 
   # avoid NaN losses. Effect will get cancelled out by p_i_j tiny anyway
-
+        
   p_i_j = torch.clamp(p_i_j, min=EPS)
   p_i = torch.clamp(p_i, min=EPS)
   p_j = torch.clamp(p_j, min=EPS)
@@ -49,6 +55,7 @@ def IID_loss(x_out, x_tf_out, lamb=1.0, EPS=sys.float_info.epsilon):
 
   loss_no_lamb = loss_no_lamb.sum()
   end_time = time.monotonic()
+
 
   return loss, loss_no_lamb
 

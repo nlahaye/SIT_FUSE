@@ -1,5 +1,8 @@
 import numpy as np
 import pytorch_lightning as pl
+
+import copy
+
 import torch.nn as nn
 import torch
 
@@ -10,11 +13,13 @@ from sit_fuse.models.deep_cluster.byol_dc import BYOL_DC
 from sit_fuse.models.deep_cluster.ijepa_dc import IJEPA_DC
 from sit_fuse.models.deep_cluster.dbn_dc import DBN_DC
 from sit_fuse.models.deep_cluster.dc import DeepCluster
-from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes
+from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes, OutputProjection
+from sit_fuse.utils import read_yaml, get_output_shape
 
 from tqdm import tqdm
 from torch.utils.data import DataLoader, TensorDataset
 from torch.utils.data.distributed import DistributedSampler
+from torchvision import transforms
 
 import numpy as np
 import uuid
@@ -22,7 +27,7 @@ import uuid
 #TODO add back in multi-layer heir
 class Heir_DC(pl.LightningModule):
     #take pretrained model path, number of classes, learning rate, weight decay, and drop path as input
-    def __init__(self, data, pretrained_model_path, num_classes, lr=1e-3, weight_decay=0, encoder_type=None, number_heads=1, min_samples=1000, encoder=None, clust_tree_ckpt = None):
+    def __init__(self, data, pretrained_model_path, num_classes, yml_conf, lr=1e-3, weight_decay=0, encoder_type=None, number_heads=1, min_samples=1000, encoder=None, clust_tree_ckpt = None, generate_labels = True):
 
         super().__init__()
         self.save_hyperparameters(ignore=['data'])
@@ -40,9 +45,10 @@ class Heir_DC(pl.LightningModule):
         #define model layers
         self.pretrained_model = None
         if encoder_type is None:
-            self.pretrained_model = DeepCluster.load_from_checkpoint(pretrained_model_path, img_size=3, in_chans=34) #Why arent these being saved
-        elif encoder_type == "dbn":
+            self.pretrained_model = DeepCluster.load_from_checkpoint(pretrained_model_path, img_size=yml_conf["data"]["tile_size"][0], in_chans=yml_conf["data"]["tile_size"][2]) #Why arent these being saved
+        elif "dbn" in encoder_type:
             self.pretrained_model = DBN_DC.load_from_checkpoint(pretrained_model_path, pretrained_model=encoder)
+            self.encoder = encoder
             self.pretrained_model.eval()
             self.pretrained_model.pretrained_model.eval()
             self.pretrained_model.mlp_head.eval()
@@ -62,6 +68,7 @@ class Heir_DC(pl.LightningModule):
             self.pretrained_model.mlp_head.eval()
             self.pretrained_model.pretrained_model.model.eval()
 
+            self.encoder = self.pretrained_model.pretrained_model.model
             for param in self.pretrained_model.pretrained_model.model.parameters():
                 param.requires_grad = False
             for param in self.pretrained_model.pretrained_model.parameters():
@@ -74,14 +81,12 @@ class Heir_DC(pl.LightningModule):
             #getattr(self.pretrained_model.mlp_head, "batch_norm0").track_running_stats = True
             #self.pretrained_model.pretrained_model.model.layer_dropout = 0.0
         elif encoder_type == "byol":
+            self.encoder = encoder
             self.pretrained_model = BYOL_DC.load_from_checkpoint(pretrained_model_path)
             self.pretrained_model.eval()
             self.pretrained_model.pretrained_model.eval()
-            self.pretrained_model.mlp_head.eval()
 
             for param in self.pretrained_model.pretrained_model.parameters():
-                param.requires_grad = False
-            for param in self.pretrained_model.mlp_head.parameters():
                 param.requires_grad = False
             for param in self.pretrained_model.parameters():
                 param.requires_grad = False
@@ -103,19 +108,37 @@ class Heir_DC(pl.LightningModule):
         self.module_list = nn.ModuleList([self.pretrained_model])
 
  
-        if clust_tree_ckpt is None: 
+        self.clust_tree_ckpt = clust_tree_ckpt
+        if clust_tree_ckpt is None and generate_labels: 
             self.generate_label_set(data)
-        else:
+        elif clust_tree_ckpt is not None:
+            
+            encoder_output_size = None
+            if self.encoder_type == "ijepa":
+                encoder_output_size = get_output_shape(self.pretrained_model, (1, yml_conf["data"]["tile_size"][2],self.pretrained_model.pretrained_model.img_size,self.pretrained_model.pretrained_model.img_size))
+                n_visible = encoder_output_size[1]
+                print("N_VISIBLE", encoder_output_size)
+            elif self.encoder_type == "dbn":
+                encoder_output_size = (1, self.pretrained_model.pretrained_model.models[-1].n_hidden)
+            elif self.encoder_type == "conv_dbn":
+                encoder_output_size = get_output_shape(self.pretrained_model.pretrained_model, (1, yml_conf["data"]["tile_size"][2], yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
+                print("N_VISIBLE", encoder_output_size)
+                n_visible = encoder_output_size[1]
+            elif self.encoder_type == "byol":
+                encoder_output_size = get_output_shape(self.pretrained_model.pretrained_model, (1, yml_conf["data"]["tile_size"][2], yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
+            n_visible = encoder_output_size[1]
+
             state_dict = torch.load(clust_tree_ckpt)
             self.clust_tree, self.lab_full = \
-                load_model(self.clust_tree, list(self.pretrained_model.mlp_head.children())[1].num_features, self, state_dict)        
+                load_model(self.clust_tree, n_visible, self, state_dict, self.pretrained_model.device) 
+                #list(self.pretrained_model.mlp_head.children())[1].num_features, self, state_dict)        
  
         del data
 
     def generate_label_set(self, data):
         count = 0
         self.lab_full = {}
-        batch_size = max(700, self.min_samples)
+        batch_size = 1 #max(700, self.min_samples)
 
         output_sze = data.data_full.shape[0]
 
@@ -128,7 +151,12 @@ class Heir_DC(pl.LightningModule):
             dat_dev = data2[0].to(device=self.pretrained_model.device, non_blocking=True, dtype=torch.float32)
 
             lab = self.pretrained_model.forward(dat_dev)
+            print(lab.shape, lab.min(), lab.max(), lab.mean(), lab.std())
+            print(dat_dev.shape, dat_dev.min(), dat_dev.max(), dat_dev.mean(), dat_dev.std())
+            if lab.ndim > 2: #or B,C,H,W
+                lab = lab.flatten(start_dim=2).permute(0,2,1).flatten(start_dim=0, end_dim=1)
             lab = torch.argmax(lab, axis = 1)
+            print(lab.shape, lab.min(), lab.max(), torch.unique(lab))
             lab = lab.detach().cpu()
             dat_dev = dat_dev.detach().cpu()
 
@@ -153,94 +181,213 @@ class Heir_DC(pl.LightningModule):
  
     def forward(self, x, perturb = False, train=False):
         #TODO fix for multi-head
+
         dt = x.dtype
         y = self.pretrained_model.forward(x)
  
-        if hasattr(self.pretrained_model, 'pretrained_model'):
-            if hasattr(self.pretrained_model.pretrained_model, 'model'):
-                x = self.pretrained_model.pretrained_model.model(x).flatten(start_dim=1)
+        #if hasattr(self.pretrained_model, 'pretrained_model'):
+        #    #if hasattr(self.pretrained_model.pretrained_model, 'model'):
+        #        x = self.pretrained_model.pretrained_model.model(x) #.flatten(start_dim=1)
+        #    else:
+        #        x = self.pretrained_model.pretrained_model.forward(x) #.flatten(start_dim=1) 
+        #else:
+        if hasattr(self, 'encoder') and self.encoder is not None:
+
+            if  self.encoder_type == "byol" and self.pretrained_model.model_type == "Unet":
+               x, x1, x2, x3, x4 = self.encoder[0].full_forward(x)   
+
             else:
-                x = self.pretrained_model.pretrained_model.forward(x).flatten(start_dim=1) 
-        else:
-            if hasattr(self, 'encoder') and self.encoder is not None:
-                x = self.encoder(x).flatten(start_dim=1)
-            else:
-                modules = list(self.pretrained_model.model.children())[:-2]
-                self.encoder = nn.Sequential(*modules)
-                self.encoder.eval()
-                x = self.encoder(x).flatten(start_dim=1)
+                x = self.encoder(x) #.flatten(start_dim=1)
+ 
+                if perturb:
+                    x = x + torch.from_numpy(self.rng.normal(0.0, 0.01, \
+                                        x.shape)).type(x.dtype).to(x.device)
+
+            print("HERE ENCODER X SHAPE", x.shape)
+            if self.encoder_type == "ijepa":
+                x = self.pretrained_model.mlp_head.ups3(x)
+                x = self.pretrained_model.mlp_head.ups2(x)
+                x = self.pretrained_model.mlp_head.ups1(x)
+                x = self.pretrained_model.mlp_head.ups0(x)
+
+                x = x.permute(0, 2, 1)
+                x = torch.reshape(x, (x.shape[0], x.shape[1], 224, 224))
+                x = self.pretrained_model.mlp_head.shuffle(x)
+                print(x.shape)
+                x = transforms.Resize((224, 224))(x)
+                print(x.shape)
+    
+                x = self.pretrained_model.mlp_head.out(x)
+
 
         if isinstance(y,tuple):
-            y = y[0]
+            y = y #[0]
 
         if isinstance(y,list):
-            y = y[0]
+            y = y #[0]
 
- 
-        if perturb:
-            x = x + torch.from_numpy(self.rng.normal(0.0, 0.01, \
-                                x.shape[1]*x.shape[0]).reshape(x.shape[0],\
-                                x.shape[1])).type(x.dtype).to(x.device)
- 
-        if train == False: 
-            tmp_full = torch.zeros((y.shape[0], 1), device=y.device, dtype=torch.int64)
-        else:
-            tmp_full = torch.zeros((y.shape[0], self.num_classes), device=y.device, dtype=torch.float32)
+  
         tmp_subset = None
-        tmp = y
-        if y.ndim > 1 and y.shape[1] > 1:
+        tmp = y.clone()
+        print(y.shape, y.ndim, x.ndim)
+        if (y.ndim == 2 and y.shape[1] > 1) or (y.ndim == 4 and y.shape[1] > 1):
             tmp = torch.argmax(y, dim=1)
+        elif (y.ndim == 3 and y.shape[0] > 1):
+            tmp = torch.argmax(y, dim=0) 
+
+        tmp_full = None
+        print(y.ndim, "WHAT THE NDIM")
+        if y.ndim == 2:
+            if train:
+                tmp_full = torch.zeros((y.shape[0], self.num_classes), device=y.device, dtype=torch.float32)
+            else:
+                tmp_full = torch.zeros((y.shape[0], 1), device=y.device, dtype=torch.float32)
+        elif y.ndim == 3:
+            if train:
+                tmp_full = torch.zeros((self.num_classes, y.shape[-2], y.shape[-1]), device=y.device, dtype=torch.float32)
+            else:
+                tmp_full = torch.zeros((1, y.shape[-2], y.shape[-1]), device=y.device, dtype=torch.float32)
+        elif y.ndim == 4:
+            if train:
+                tmp_full = torch.zeros((y.shape[0], self.num_classes, y.shape[-2], y.shape[-1]), device=y.device, dtype=torch.float32)
+            else:
+                tmp_full = torch.zeros((y.shape[0], 1, y.shape[-2], y.shape[-1]), device=y.device, dtype=torch.float32)
+
+        print("HERE SHAPE ISSUES0", y.shape, tmp_full.shape)
+
         f = lambda z: str(z)
         tmp2 = np.vectorize(f)(tmp.detach().cpu())
-        tmp3 = tmp
-        keys = np.unique(tmp2)
+        tmp3 = tmp.clone()
         x.requires_grad = True
+        keys = np.unique(tmp2)
         for key in keys:
+            tmp = y.clone()
+            inds = None
+            inds2 = None
+            tmp2_2 = None
+            tmp4 = None
+            input_tmp = None
             if train and key != self.key:
                 continue
+
+            print(tmp.ndim, "WHAT THE NDIMV2")
             inds = np.where(tmp2 == key)
-            input_tmp = x[inds]
+
+            if tmp.ndim == 1 or tmp.ndim == 2:
+                inds2 = inds[0]
+                tmp2_2 = copy.deepcopy(tmp2)
+                tmp4 = tmp3.clone()
+            elif tmp.ndim == 3:
+                tmp2_2 = tmp2.reshape(tmp2.shape[0], -1).transpose(1,0)
+                tmp4 = torch.flatten(tmp3, start_dim=1).permute(1,0)
+                inds2 = np.where(tmp2_2 == key)[0]
+                input_tmp = torch.flatten(x, start_dim=1).permute(1,0)
+               
+            elif tmp.ndim == 4:
+                tmp2_2 = tmp2.reshape(tmp2.shape[0], -1).transpose(1,0)
+                tmp4 = torch.flatten(tmp3, start_dim=1).permute(1,0)
+                inds2 = np.where(tmp2_2 == key)[0]            
+
+            if x.ndim == 2:
+                input_tmp = x.clone()
+            elif x.ndim == 3:
+                input_tmp = torch.flatten(x, start_dim=1).permute(1,0)
+            elif x.ndim == 4:
+                input_tmp = torch.flatten(x.permute(1,0,2,3), start_dim=1).permute(1,0)
+              
+            input_tmp = input_tmp[inds2,:] 
+
+
+            print("HERE LABELS", np.unique(np.ravel(tmp2)), self.key)
+            print("HERE SHAPE ISSUE", tmp.shape, tmp2.shape, tmp3.shape, inds, inds2)
+            print((tmp4 is None), (input_tmp is None))
             if key in self.clust_tree["1"].keys() and self.clust_tree["1"][key] is not None:
+                print("HERE SHAPE ISSUE 2", tmp.shape, tmp2.shape, tmp3.shape, tmp4.shape, input_tmp.shape)
                 tmp = self.clust_tree["1"][key].forward(input_tmp) #torch.unsqueeze(x[inds],dim=0))
                 if isinstance(tmp,tuple):
                     tmp = tmp[0]
                 if isinstance(tmp,list):
                     tmp = tmp[0]
- 
+
                 if train == False:
                     tmp = torch.unsqueeze(torch.argmax(tmp, dim=1), dim=1)
-                    tmp[:,0] = tmp[:,0] + (self.num_classes*tmp3[inds[0]])
+                    print(tmp.shape, tmp4.shape, tmp4[inds2].shape)
+                    tmp = tmp + self.num_classes*tmp4[inds2]
+            elif train == False:
+                tmp = self.num_classes*tmp4[inds2]
             else:
-                tmp = torch.unsqueeze((self.num_classes*tmp3[inds[0]]), dim=1)
-            if tmp_subset is None:
-                tmp_subset = tmp
-            else:
-                tmp_subset = torch.cat((tmp_subset, tmp), dim=0)
-            tmp_full[inds] = tmp
+                continue
+            print("HERE TMP SHAPE", tmp.shape)
 
+            if tmp_subset is None:
+                tmp_subset = tmp.clone()
+            else:
+                print("HERE TMP SUBSET COMBO", tmp_subset.shape, tmp.shape)
+                tmp_subset = torch.cat((tmp_subset, tmp), dim=0)
+
+            print("HERE TMP_SUBSET", tmp_subset.shape)
+
+
+            if y.ndim == 2:
+                tmp_full[inds[0],:] = tmp.type(tmp_full.dtype)
+            elif y.ndim == 3:
+                tmp_full[:,inds[0],inds[1]] = tmp.type(tmp_full.dtype)
+            elif y.ndim == 4:
+                tmp_full[inds[0],:,inds[1],inds[2]] = tmp.type(tmp_full.dtype)
+            del tmp
+
+
+        if tmp_subset is None or tmp_full is None:
+            return None
         return tmp_subset, tmp_full
 
     
     def training_step(self, batch, batch_idx):
         torch.set_grad_enabled(True)
         x = batch
-        y, y1  = self.forward(x, train=True)
-        y2, y21 = self.forward(x.clone(), perturb=True, train=True)
+
+        output  = self.forward(x, train=True)
+        y = None
+        y2 = None
+        if output is None:
+            return None
+        else:
+            y = output[0]
+
+        output2  = self.forward(x.clone(), perturb=True, train=True)
+        if output2 is None:
+            return None
+        else:
+            y2 = output2[0]
+
         loss, loss2 = self.criterion(y,y2) #calculate loss
         self.log('train_loss', loss, sync_dist=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
         x = batch 
-        y, _ = self.forward(x, train=False)
-        y2, _ = self.forward(x.clone(), perturb=True, train=False)
+
+        output  = self.forward(x, train=True)
+        y = None
+        y2 = None
+        if output is None:
+            return None
+        else:
+            y = output[0]
+
+        output2  = self.forward(x.clone(), perturb=True, train=True)
+        if output2 is None:
+            return None
+        else:
+            y2 = output2[0]
+
         loss = self.criterion(y,y2)[0] #calculate loss
         self.log('val_loss', loss, sync_dist=True)
         return loss
 
     def predict_step(self, batch, batch_idx, dataloader_idx):
         
-        y, y1  = self.forward(x, train=False)
+        _, y  = self.forward(x, train=False)
         return y
     
     def configure_optimizers(self):
@@ -278,7 +425,7 @@ def get_state_dict(clust_tree, lab_full):
     state_dict["labels"] = lab_full
     return state_dict
 
-def load_model(clust_tree, n_visible, model, state_dict):
+def load_model(clust_tree, n_visible, model, state_dict, device):
         lab_full = state_dict["labels"]
         for lab1 in clust_tree.keys():
             if lab1 == "0":
@@ -286,7 +433,8 @@ def load_model(clust_tree, n_visible, model, state_dict):
             for lab2 in lab_full.keys():
                 clust_tree[lab1][lab2] = None
                 if lab2 in state_dict[lab1].keys():
-                    clust_tree[lab1][lab2] = MultiPrototypes(n_visible, model.num_classes, model.number_heads)
+                    #clust_tree[lab1][lab2] = OutputProjection(224, model.pretrained_model.patch_size, model.pretrained_model.embed_dim, model.num_classes)
+                    clust_tree[lab1][lab2] = MultiPrototypes(n_visible, model.num_classes, model.number_heads).to(device)
                     clust_tree[lab1][lab2].load_state_dict(state_dict[lab1][lab2]["model"])
         return clust_tree, lab_full
 

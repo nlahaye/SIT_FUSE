@@ -5,8 +5,11 @@ import torch
 
 from sit_fuse.models.encoders.ijepa_pl import IJEPA_PL
 from sit_fuse.losses.iid import IID_loss
-from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes
+from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes, OutputProjection, JEPA_Seg
 
+from torchmetrics.clustering import MutualInfoScore
+
+import sys
 import numpy as np
 
 
@@ -31,9 +34,13 @@ class IJEPA_DC(pl.LightningModule):
         #self.average_pool = nn.AvgPool1d((self.pretrained_model.embed_dim), stride=1)
         #mlp head
        
-        print(self.pretrained_model.num_tokens)
         #self.mlp_head =  MultiPrototypes(self.pretrained_model.num_tokens, 800, 1)
-        self.mlp_head =  MultiPrototypes(self.pretrained_model.num_tokens*self.pretrained_model.embed_dim, self.num_classes, self.number_heads)
+        #self.mlp_head =  MultiPrototypes(self.pretrained_model.num_tokens*self.pretrained_model.embed_dim, self.num_classes, self.number_heads)
+        print("HERE", self.pretrained_model.patch_size, self.pretrained_model.embed_dim, self.num_classes, self.pretrained_model.num_tokens, self.pretrained_model.img_size)
+        #self.mlp_head = OutputProjection(self.pretrained_model.img_size, self.pretrained_model.patch_size, self.pretrained_model.embed_dim, self.num_classes)
+
+        self.mlp_head = JEPA_Seg()
+  
 
         #nn.Sequential(
         #    nn.LayerNorm(self.pretrained_model.num_tokens),
@@ -41,38 +48,49 @@ class IJEPA_DC(pl.LightningModule):
         #)
 
         #define loss
-        self.criterion = IID_loss
+        self.criterion = IID_loss #IIDLoss(1.0, sys.float_info.epsilon)  #IID_loss
         self.rng = np.random.default_rng(None)
  
     def forward(self, x):
+        print("HERE WAHT", x.mean(), x.min(), x.max(), x.std())
         x = self.pretrained_model.model(x)
-        x = x.flatten(start_dim=1)
+        print("HERE WAHT2", x.mean(), x.min(), x.max(), x.std())
+        ###x = x.flatten(start_dim=1)
         #x = self.average_pool(x) #conduct average pool like in paper
-        x = x.squeeze(-1)
-        x = self.mlp_head(x)[0] #pass through mlp head
+        ###x = x.squeeze(-1)
+        x = self.mlp_head(x) #pass through mlp head
         return x
     
     def training_step(self, batch, batch_idx):
-        x = batch
-        y = self.pretrained_model.model(x).flatten(start_dim=1)
+        y = batch
+        y = self.pretrained_model.model(y)
+        ###y = self.pretrained_model.model(x).flatten(start_dim=1)
+        ###y2 = y.clone() + torch.from_numpy(self.rng.normal(0.0, 0.01, \
+        ###                        y.shape[1]*y.shape[0]).reshape(y.shape[0],\
+        ###                        y.shape[1])).type(y.dtype).to(y.device)
         y2 = y.clone() + torch.from_numpy(self.rng.normal(0.0, 0.01, \
-                                y.shape[1]*y.shape[0]).reshape(y.shape[0],\
-                                y.shape[1])).type(y.dtype).to(y.device)
-        y = self.mlp_head(y)[0] 
-        y2 = self.mlp_head(y2)[0]
-        loss = self.criterion(y,y2)[0] #calculate loss
+                                (y.shape))).type(y.dtype).to(y.device)
+        y = torch.flatten(torch.moveaxis(self.mlp_head(y),1,3), start_dim=0, end_dim=-2)
+        y2 = torch.flatten(torch.moveaxis(self.mlp_head(y2),1,3), start_dim=0, end_dim=-2)
+        print(torch.unique(torch.argmax(y, dim=1)), "Y labels")
+        print(torch.unique(torch.argmax(y2, dim=1)), "Y2 labels")
+        loss = self.criterion(y,y2, lamb=1.0)[0] #calculate loss
         self.log('train_loss', loss, sync_dist=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
-        x = batch
-        y = self.pretrained_model.model(x).flatten(start_dim=1)
+        y = batch
+        y = self.pretrained_model.model(y)
+        ###y = self.pretrained_model.model(x).flatten(start_dim=1)
+        ###y2 = y.clone() + torch.from_numpy(self.rng.normal(0.0, 0.01, \
+        ###                        y.shape[1]*y.shape[0]).reshape(y.shape[0],\
+        ###                        y.shape[1])).type(y.dtype).to(y.device)
         y2 = y.clone() + torch.from_numpy(self.rng.normal(0.0, 0.01, \
-                                y.shape[1]*y.shape[0]).reshape(y.shape[0],\
-                                y.shape[1])).type(y.dtype).to(y.device)
-        y = self.mlp_head(y)[0]
-        y2 = self.mlp_head(y2)[0]
-        loss = self.criterion(y,y2)[0] #calculate loss
+                                (y.shape))).type(y.dtype).to(y.device)
+ 
+        y = torch.flatten(torch.moveaxis(self.mlp_head(y),1,3), start_dim=0, end_dim=-2)
+        y2 = torch.flatten(torch.moveaxis(self.mlp_head(y2),1,3), start_dim=0, end_dim=-2)
+        loss = self.criterion(y,y2, lamb=1.0)[0] #calculate loss
         self.log('val_loss', loss, sync_dist=True)
         return loss
 

@@ -34,7 +34,7 @@ class SFDatasetConv(SFDataset):
 	def __init__(self):
 		pass
 
-	def read_data_preprocessed(self, data_filename, indices_filename, transform = None):
+	def read_data_preprocessed(self, data_filename, indices_filename, transform = None, subset_training = -1, stratify_data = None):
 
 		self.data_full = np.load(data_filename, allow_pickle=True)
 		self.targets_full = np.load(indices_filename, allow_pickle=True)
@@ -46,8 +46,18 @@ class SFDatasetConv(SFDataset):
 		self.data = self.data_full
 		self.targets = self.targets_full
 
+		self.subset_training = subset_training
+		self.stratify_data = stratify_data
 
-	def read_and_preprocess_data(self, filenames, read_func, read_func_kwargs, delete_chans, valid_min, valid_max, fill_value = -999999, chan_dim = 0, transform_chans = [], transform_values = [], transform=None, tile = False, tile_size = None, tile_step = None, subset_training = -1, stratify_data = None, data_fraction = 1, data_fraction_index = 1):
+		if (((self.subset_training < self.data_full.shape[0] and self.subset_training > 0)) and (self.stratify_data or self.stratify_data["kmeans"])):
+			if self.subset_training > 0 and self.stratify_data and self.stratify_data["kmeans"]:
+				self.__stratify_k_means__(flatten=True)
+			else:
+				self.data_full = self.data_full[:self.subset_training,:]
+				self.targets_full = self.targets_full[:self.subset_training,:]
+
+
+	def read_and_preprocess_data(self, filenames, read_func, read_func_kwargs, delete_chans, valid_min, valid_max, fill_value = -999999, chan_dim = 0, transform_chans = [], transform_values = [], transform=None, tile = False, tile_size = None, tile_step = None, subset_training = -1, stratify_data = None, data_fraction = 1, data_fraction_index = 1, basic_preprocess = False):
 		#Scaler info isnt used here, but keeping same interface as SFDataset
 
                 #TODO Employ stratification
@@ -71,9 +81,11 @@ class SFDatasetConv(SFDataset):
 		self.tile_step = tile_step
 		self.stratify_data = stratify_data
 		self.subset_training = subset_training
-	
+
+		self.init_data_shape = None
 		self.data_fraction = data_fraction
 		self.data_fraction_index = data_fraction_index
+		self.basic_preprocess = basic_preprocess
 
 		self.__loaddata__()
 
@@ -173,7 +185,8 @@ class SFDatasetConv(SFDataset):
 			#tgts = tgts[:,pixel_padding:tgts.shape[1] - pixel_padding,pixel_padding:tgts.shape[2] - pixel_padding]
 			#tgts = np.concatenate((np.full((1,tgts.shape[1], tgts.shape[2]),r, dtype=np.int16), tgts), axis=0)
 	
-			
+			if self.init_data_shape is None:
+				self.init_data_shape = data_local[r].shape        	
 			if self.tile:
 				tmp = np.squeeze(view_as_windows(data_local[r], window_size, step=tile_step_final))
 				tmp = tmp.reshape((tmp.shape[0]*tmp.shape[1], tmp.shape[2], tmp.shape[3], tmp.shape[4]))			
@@ -181,8 +194,8 @@ class SFDatasetConv(SFDataset):
 				window_size_tgt = [2,window_size[1],window_size[2]]
 				tile_step_tgt = [2,tile_step_final[1],tile_step_final[2]]
 				tgts2 = np.squeeze(view_as_windows(tgts, window_size_tgt, step=tile_step_tgt))
-				cntr = int(tile_step_final[1]/2)
-				tgts2 = tgts2[:,:,:,cntr,cntr]
+				###cntr = int(tile_step_final[1]/2)
+				tgts2 = tgts2[:,:,:,0,0]
 				tgts2 = tgts2.reshape(tgts2.shape[0]*tgts2.shape[1], tgts2.shape[2])
 				#tgts = tgts.reshape((3,tgts.shape[1]*tgts.shape[2])).astype(np.int16)
 				#tgts = np.swapaxes(tgts, 0, 1)     
@@ -197,8 +210,12 @@ class SFDatasetConv(SFDataset):
 					self.targets = np.append(self.targets, tgts2, axis=0)		
 			else:
 				if(data_local[r].max() > -999999):
-					np.append(self.data,data_local[r], axis = 0)	
-					np.append(self.targets,[r,0,0], axis = 0)			
+					if(data_local[r].mean() == 0.0 and data_local[r].std()):
+						count = count + 1
+						continue
+					else:
+						np.append(self.data,data_local[r], axis = 0)	
+						np.append(self.targets,[r,0,0], axis = 0)			
 				else:
 					count = count + 1
 					continue
@@ -224,6 +241,8 @@ class SFDatasetConv(SFDataset):
  
 		del self.data
 		del self.targets
+		if self.basic_preprocess:
+			return
 
 
 		#Subset data for training and/or stratify
@@ -350,7 +369,7 @@ def main(yml_fpath):
     x2.read_and_preprocess_data(data_train, read_func, data_reader_kwargs, delete_chans=delete_chans, \
             valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
             transform_values=transform_values, transform=None, tile=tile, tile_size=tile_size, tile_step=tile_step,
-            subset_training = subset_training, stratify_data=stratify_data)
+            subset_training = subset_training, stratify_data=stratify_data, basic_preprocess=True)
 
     if x2.train_indices is not None:
         np.save(os.path.join(out_dir, "train_indices"), x2.train_indices)
@@ -358,9 +377,10 @@ def main(yml_fpath):
 
     np.save(os.path.join(out_dir, "train_data.indices"), x2.targets_full)
     np.save(os.path.join(out_dir, "train_data"), x2.data_full)
-
-    state_dict = {"mean_per_channel" : x2.mean_per_channel, "std_per_channel" : x2.std_per_channel}
-    torch.save(state_dict, os.path.join(out_dir, "encoder_data_transform.ckpt"))
+ 
+    if hasattr(x2, "mean_per_channel"):
+        state_dict = {"mean_per_channel" : x2.mean_per_channel, "std_per_channel" : x2.std_per_channel}
+        torch.save(state_dict, os.path.join(out_dir, "encoder_data_transform.ckpt"))
 
 
 

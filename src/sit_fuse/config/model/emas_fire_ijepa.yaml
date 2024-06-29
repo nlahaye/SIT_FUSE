@@ -109,7 +109,7 @@ cluster:
  training:
   learning_rate: 0.0001
   batch_size: 1000
-  epochs: 30 
+  epochs: 5 
   accelerator: "gpu"
   devices: 3
   gradient_clip_val: 0.1

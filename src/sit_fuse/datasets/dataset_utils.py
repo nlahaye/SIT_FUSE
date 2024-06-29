@@ -107,7 +107,7 @@ def get_train_dataset_sf(yml_conf):
                 transform=None, subset_training = subset_training, stratify_data=stratify_data)
         else:
             data = SFDataset()
-            data.read_data_preprocessed(data_fname, targets_fname, scaler)
+            data.read_data_preprocessed(data_fname, targets_fname, scaler, subset_training = subset_training, stratify_data=stratify_data)
     else:
         if preprocess_train:
             data = SFDatasetConv()
@@ -123,7 +123,7 @@ def get_train_dataset_sf(yml_conf):
                                 transforms.Normalize(state_dict["mean_per_channel"], state_dict["std_per_channel"])
                         )
            data = SFDatasetConv()
-           data.read_data_preprocessed(data_fname, targets_fname, transform=transform)
+           data.read_data_preprocessed(data_fname, targets_fname, transform=transform, subset_training = subset_training, stratify_data=stratify_data)
 
     print(data.data_full.shape)
     if data.train_indices is not None:

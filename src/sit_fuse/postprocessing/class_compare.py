@@ -236,7 +236,10 @@ def run_compare_dbf(dbf_list, percent_threshold):
     for key in init_data_label_counts.keys():
         init_data_label_percentage[key] = {}
         for key2 in init_data_label_counts[key].keys():
-            init_data_label_percentage[key][key2] = float(init_data_label_counts[key][key2]) / float(init_data_label_counts[key]['total'])
+            if float(init_data_label_counts[key]['total']) > 0.0:
+                init_data_label_percentage[key][key2] = float(init_data_label_counts[key][key2]) / float(init_data_label_counts[key]['total'])
+            else:
+                init_data_label_percentage[key][key2] = 0.0
 
     for key in init_data_label_percentage.keys():
             init_data_label_percentage[key] = OrderedDict(sorted(init_data_label_percentage[key].items(), reverse = True, key=lambda item: item[1]))
