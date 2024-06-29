@@ -1,0 +1,25 @@
+ 
+ 
+
+dbf: True
+dbf_percentage_thresh: 0.5
+dbf_list: [
+[
+"/data/nlahaye/output/Planet_Context_Assignment/PLANET_BACKGROUND_IMPROVED_2.dbf",
+"/data/nlahaye/output/Planet_Context_Assignment/PLANET_IMPROVED_BACKGROUND_4.dbf"
+],
+[
+"/data/nlahaye/output/Planet_Context_Assignment/PLANET_SMOKE_IMPROVED_2.dbf",
+"/data/nlahaye/output/Planet_Context_Assignment/PLANET_IMPROVED_SMOKE_4.dbf"
+],
+[
+"/data/nlahaye/output/Planet_Context_Assignment/PLANET_BURN_SCAR_IMPROVED_2.dbf"
+],
+[
+"/data/nlahaye/output/Planet_Context_Assignment/PLANET_FIRE_IMPROVED.dbf",
+"/data/nlahaye/output/Planet_Context_Assignment/PLANET_IMPROVED_FIRE_4.dbf"
+]
+]
+ 
+
+

@@ -1,0 +1,16 @@
+
+
+data:
+ filename: [
+"/data/nlahaye/output/Learnergy/DBN_PLANET_PSS_FULL_STRAT_MULTI_LAYER_PL/20190807_183159_0f22_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.fire.tif",
+"/data/nlahaye/output/Learnergy/DBN_PLANET_PSS_FULL_STRAT_MULTI_LAYER_PL/20190807_183200_0f22_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.fire.tif",
+"/data/nlahaye/output/Learnergy/DBN_PLANET_PSS_FULL_STRAT_MULTI_LAYER_PL/20190808_183354_13_1067_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr.fire.tif"
+] 
+ reader_type: "gtiff"
+ reader_kwargs:
+  None:
+
+remove_singles: True
+remove_singles_2: True
+write_geotiff: True
+contour_min_size: 20
