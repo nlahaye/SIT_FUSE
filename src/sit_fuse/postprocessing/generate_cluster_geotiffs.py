@@ -512,7 +512,7 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
 
 
 
-def apply_dependencies(clust_deps, inds, dbnDat, window = 3): #TODO configurable
+def apply_dependencies(clust_deps, inds, dbnDat, window = 20): #TODO configurable
 
     final_inds_y = []
     final_inds_x = []
@@ -526,7 +526,7 @@ def apply_dependencies(clust_deps, inds, dbnDat, window = 3): #TODO configurable
         for d in range(len(clust_deps)):
             if clust_deps[d] in dbnDat[wind_min_y:wind_max_y,wind_min_x:wind_max_x]:
                     running_count += len(np.where(dbnDat[wind_min_y:wind_max_y,wind_min_x:wind_max_x] == clust_deps[d])[0])
-                    if running_count > 4:
+                    if running_count > 20:
                         final_inds_y.append(inds[0][i])
                         final_inds_x.append(inds[1][i])
                         break

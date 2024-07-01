@@ -1,0 +1,171 @@
+
+data:
+ tile: True
+ tile_size: [224,224,16]
+ tile_step: [224,224,16]
+ val_percent: 0.1
+ num_loader_workers: 10
+ scale_data: True
+ pixel_padding: 1
+ number_channels: 16
+ fill_value:  0.0
+ valid_min:  0.0000001
+ valid_max: 100000000
+ reader_type: "gtiff"
+ reader_kwargs:
+   no_arg: ''
+ chan_dim: 0
+ delete_chans: []
+ transform_default:
+  chans: []
+  transform: []
+
+ files_train: [
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131730.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131800.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/LOW_CLD/gk2a_ami_le1b_ir087_ea020lc_202309151300.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/LOW_CLD/gk2a_ami_le1b_ir087_ea020lc_202309151330.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202109301900.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202109301930.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/TWILIGHT_FALSE/gk2a_ami_le1b_ir087_ea020lc_202405072100.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/TWILIGHT_FALSE/gk2a_ami_le1b_ir087_ea020lc_202405072130.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131000.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131030.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131100.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131130.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131200.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131230.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131300.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131330.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131400.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131430.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131500.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131530.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131600.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131630.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131700.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131830.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131900.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131930.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203132000.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203132030.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203132100.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203132130.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203132200.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203132230.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203132300.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203132330.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203140000.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/LOW_CLD/gk2a_ami_le1b_ir087_ea020lc_202309151200.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/LOW_CLD/gk2a_ami_le1b_ir087_ea020lc_202309151230.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/LOW_CLD/gk2a_ami_le1b_ir087_ea020lc_202309151400.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/LOW_CLD/gk2a_ami_le1b_ir087_ea020lc_202309151430.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/LOW_CLD/gk2a_ami_le1b_ir087_ea020lc_202309151500.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/LOW_CLD/gk2a_ami_le1b_ir087_ea020lc_202309151530.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/LOW_CLD/gk2a_ami_le1b_ir087_ea020lc_202309151600.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/LOW_CLD/gk2a_ami_le1b_ir087_ea020lc_202309151630.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202109301700.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202109301730.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202109301800.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202109301830.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202109302000.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202109302030.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202109302100.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202109302130.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202109302200.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202109302230.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202109302300.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202109302330.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202110010000.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202110010030.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202110010100.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202110010130.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202110010200.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202110010230.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202110010300.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202110010330.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/TWILIGHT_FALSE/gk2a_ami_le1b_ir087_ea020lc_202405072000.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/TWILIGHT_FALSE/gk2a_ami_le1b_ir087_ea020lc_202405072030.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/TWILIGHT_FALSE/gk2a_ami_le1b_ir087_ea020lc_202405072200.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/TWILIGHT_FALSE/gk2a_ami_le1b_ir087_ea020lc_202405072230.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/TWILIGHT_FALSE/gk2a_ami_le1b_ir087_ea020lc_202405072300.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/TWILIGHT_FALSE/gk2a_ami_le1b_ir087_ea020lc_202405072330.tif"
+]
+
+
+encoder_type: "byol"
+encoder:
+ tune_scaler: False
+ subset_training: -1
+ overwrite_model: False
+ training:
+  weight_decay: 0.05
+  momentum: 0.996
+  momentum_start_end: [0.996, 1.0]
+  learning_rate: 0.001
+  batch_size: 16
+  epochs: 3
+  accelerator: "gpu"
+  devices: 3
+  gradient_clip_val: 0.1
+  precision: "16-mixed"
+  save_dir: "wandb_byol"
+  stratify_data:
+   kmeans: True
+
+
+scaler:
+ name: "standard" 
+
+output:
+ out_dir: "/data/nlahaye/output/Learnergy/GK2A_FOG_BYOL/"
+ generate_train_output: True
+ generate_intermediate_output: True
+ 
+
+byol:
+ hidden_layer: -1
+ projection_size: 256
+ projection_hidden_size: 4096
+ moving_average_decay: 0.99
+
+
+logger:
+ use_wandb: True
+ log_model: True
+ log_out_dir: "wandb_dbn"
+ project: "SIT-FUSE"
+
+cluster:
+ gauss_noise_stdev:  [0.01]
+ lambda: 1.0
+ num_classes: 800
+ training:
+  learning_rate: 0.0001
+  batch_size: 1000
+  epochs: 30
+  accelerator: "gpu"
+  devices: 1
+  gradient_clip_val: 0.1
+  precision: "16-mixed"
+  save_dir: "wandb_dbn"
+
+ heir:
+  tiers: 1
+  gauss_noise_stdev:  [0.01]
+  lambda: 1.0
+  num_classes: 100
+  training:
+   accelerator: "gpu"
+   devices: 1
+   gradient_clip_val: 0.1
+   precision: "16-mixed"
+   save_dir: "wandb_dbn"
+   batch_size: 100
+   min_samples: 1000
+   learning_rate: 0.0001
+   batch_size: 1000
+   epochs: 30
+
+
+

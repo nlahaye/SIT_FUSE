@@ -1,0 +1,14 @@
+
+
+data:
+ filename: [
+"/data/nlahaye/output/Learnergy/DBN_PLANET_PSS_FULL_STRAT_MULTI_LAYER_PL/20220305_011431_11_242b_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.fire.tif"
+] 
+ reader_type: "gtiff"
+ reader_kwargs:
+  None:
+
+remove_singles: True
+remove_singles_2: True
+write_geotiff: True
+contour_min_size: -1

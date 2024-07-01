@@ -39,6 +39,27 @@ from dask_ml.preprocessing import StandardScaler as DaskStandardScaler
 
 from sit_fuse.preprocessing.misc_utils import lee_filter
 
+
+def get_output_shape(model, image_dim):
+        with torch.no_grad():
+            tmp = torch.rand(*(image_dim)).to(next(model.parameters()).device)
+            return model.forward(tmp).data.shape
+
+
+def concat_numpy_files(np_files, final_file):
+    full = None
+    for i in range(len(np_files)):
+        print(i, np_files[i])
+        tmp = np.load(np_files[i])
+        if full is None:
+            full = tmp
+        else:
+            np.concatenate((full, tmp), axis=0)
+
+        del tmp
+    np.save(final_file, full)
+
+
 def torch_to_numpy(trch):
     dat = trch.numpy()
 

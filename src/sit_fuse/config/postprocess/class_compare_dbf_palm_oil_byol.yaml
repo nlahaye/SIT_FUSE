@@ -1,0 +1,37 @@
+dbf: True
+
+
+dbf_list: [
+[
+"/data/nlahaye/output/Context_Assignment_Palm_Oil/output_DBFs/Palm_Oil_BG_OUTPUT_0.dbf",
+"/data/nlahaye/output/Context_Assignment_Palm_Oil/output_DBFs/Palm_Oil_BG_OUTPUT_10.dbf",
+"/data/nlahaye/output/Context_Assignment_Palm_Oil/output_DBFs/Palm_Oil_BG_OUTPUT_11.dbf",
+"/data/nlahaye/output/Context_Assignment_Palm_Oil/output_DBFs/Palm_Oil_BG_OUTPUT_1.dbf",
+"/data/nlahaye/output/Context_Assignment_Palm_Oil/output_DBFs/Palm_Oil_BG_OUTPUT_2.dbf",
+"/data/nlahaye/output/Context_Assignment_Palm_Oil/output_DBFs/Palm_Oil_BG_OUTPUT_3.dbf",
+"/data/nlahaye/output/Context_Assignment_Palm_Oil/output_DBFs/Palm_Oil_BG_OUTPUT_4.dbf",
+"/data/nlahaye/output/Context_Assignment_Palm_Oil/output_DBFs/Palm_Oil_BG_OUTPUT_5.dbf",
+"/data/nlahaye/output/Context_Assignment_Palm_Oil/output_DBFs/Palm_Oil_BG_OUTPUT_6.dbf",
+"/data/nlahaye/output/Context_Assignment_Palm_Oil/output_DBFs/Palm_Oil_BG_OUTPUT_7.dbf",
+"/data/nlahaye/output/Context_Assignment_Palm_Oil/output_DBFs/Palm_Oil_BG_OUTPUT_8.dbf",
+"/data/nlahaye/output/Context_Assignment_Palm_Oil/output_DBFs/Palm_Oil_BG_OUTPUT_9.dbf",
+],
+[
+"/data/nlahaye/output/Context_Assignment_Palm_Oil/output_DBFs/Dataset_Ucayali_Palm_V2_OUTPUT_0.dbf",
+"/data/nlahaye/output/Context_Assignment_Palm_Oil/output_DBFs/Dataset_Ucayali_Palm_V2_OUTPUT_10.dbf",
+"/data/nlahaye/output/Context_Assignment_Palm_Oil/output_DBFs/Dataset_Ucayali_Palm_V2_OUTPUT_11.dbf",
+"/data/nlahaye/output/Context_Assignment_Palm_Oil/output_DBFs/Dataset_Ucayali_Palm_V2_OUTPUT_1.dbf",
+"/data/nlahaye/output/Context_Assignment_Palm_Oil/output_DBFs/Dataset_Ucayali_Palm_V2_OUTPUT_2.dbf",
+"/data/nlahaye/output/Context_Assignment_Palm_Oil/output_DBFs/Dataset_Ucayali_Palm_V2_OUTPUT_3.dbf",
+"/data/nlahaye/output/Context_Assignment_Palm_Oil/output_DBFs/Dataset_Ucayali_Palm_V2_OUTPUT_4.dbf",
+"/data/nlahaye/output/Context_Assignment_Palm_Oil/output_DBFs/Dataset_Ucayali_Palm_V2_OUTPUT_5.dbf",
+"/data/nlahaye/output/Context_Assignment_Palm_Oil/output_DBFs/Dataset_Ucayali_Palm_V2_OUTPUT_6.dbf",
+"/data/nlahaye/output/Context_Assignment_Palm_Oil/output_DBFs/Dataset_Ucayali_Palm_V2_OUTPUT_7.dbf",
+"/data/nlahaye/output/Context_Assignment_Palm_Oil/output_DBFs/Dataset_Ucayali_Palm_V2_OUTPUT_8.dbf",
+"/data/nlahaye/output/Context_Assignment_Palm_Oil/output_DBFs/Dataset_Ucayali_Palm_V2_OUTPUT_9.dbf",
+],
+]
+
+
+
+

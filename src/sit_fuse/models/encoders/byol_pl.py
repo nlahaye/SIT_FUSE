@@ -1,7 +1,7 @@
 import torch
 
-from byol_pytorch import BYOL
 import pytorch_lightning as pl
+from pixel_level_contrastive_learning import PixelCL
 
 import os
 
@@ -13,7 +13,7 @@ class BYOL_Learner(pl.LightningModule):
         self.save_dir = save_dir
         self.weight_decay = weight_decay
         self.model = net
-        self.learner = BYOL(self.model, **kwargs)
+        self.learner = PixelCL(self.model, **kwargs)
 
     def forward(self, images):
         return self.learner(images)
@@ -45,8 +45,8 @@ class BYOL_Learner(pl.LightningModule):
 
 
     def on_before_zero_grad(self, _):
-        if self.learner.use_momentum:
-            self.learner.update_moving_average()
+        #if self.learner.use_momentum:
+        self.learner.update_moving_average()
 
 
 

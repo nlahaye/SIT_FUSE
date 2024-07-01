@@ -46,7 +46,7 @@ class SFDataset(torch.utils.data.Dataset):
 		"""
 		pass	
 
-	def init_from_array(self, data, targets, scaler = None, transform = None):
+	def init_from_array(self, data, targets, scaler = None, transform = None, subset_training = -1, stratify_data = None):
 		"""
 		Initializes Dataset from pre-existing external array(s).
 
@@ -69,8 +69,18 @@ class SFDataset(torch.utils.data.Dataset):
 			self.transform = transform        
 		self.data_full = self.data
 		self.targets_full = self.targets
+		self.subset_training = subset_training
+		self.stratify_data = stratify_data                
 
-	def read_data_preprocessed(self, data_filename, indices_filename, scaler = None):
+		if (((self.subset_training < self.data_full.shape[0] and self.subset_training > 0)) and (self.stratify_data or self.stratify_data["kmeans"])):
+			if self.subset_training > 0 and self.stratify_data and self.stratify_data["kmeans"]:
+				self.__stratify_k_means__()
+			else:   
+				self.data_full = self.data_full[:self.subset_training,:]
+				self.targets_full = self.targets_full[:self.subset_training,:]
+
+
+	def read_data_preprocessed(self, data_filename, indices_filename, scaler = None, subset_training = -1, stratify_data = None):
 		"""
 		Initializes Dataset from files that contain preprocessed samples. Data should have N_samples x N_features dimensionality.
 	
@@ -92,6 +102,16 @@ class SFDataset(torch.utils.data.Dataset):
 			self.scale = True
 		self.data_full = self.data
 		self.targets_full = self.targets
+   
+		self.subset_training = subset_training
+		self.stratify_data = stratify_data
+
+		if (((self.subset_training < self.data_full.shape[0] and self.subset_training > 0)) and (self.stratify_data or self.stratify_data["kmeans"])):
+			if self.subset_training > 0 and self.stratify_data and self.stratify_data["kmeans"]:
+				self.__stratify_k_means__()
+			else:   
+				self.data_full = self.data_full[:self.subset_training,:]
+				self.targets_full = self.targets_full[:self.subset_training,:]
 
 
 	def read_and_preprocess_data(self, filenames, read_func, read_func_kwargs, pixel_padding, delete_chans, valid_min, valid_max, fill_value = -999999, chan_dim = 0, transform_chans = [], transform_values = [], scaler = None, scale=False, transform=None, train_scaler = False, subset_training = -1, stratify_data = None):
@@ -346,6 +366,11 @@ class SFDataset(torch.utils.data.Dataset):
        		
 		print("Running Mini-Batch K-Means Stratification") 
 		start = timer()
+		to_np = False
+		if isinstance(self.data_full, np.ndarray):
+			to_np = True
+			self.data_full = torch.from_numpy(self.data_full)
+			self.targets_full = torch.from_numpy(self.targets_full)
 		if flatten:
 			kmeans = MiniBatchKMeans(n_clusters=20,
                                 random_state=0,
@@ -364,7 +389,9 @@ class SFDataset(torch.utils.data.Dataset):
 		else:
 			self.stratify_training = kmeans.predict(self.data_full)
 		self.__stratify_training__()
- 
+		if to_np:
+			self.data_full = self.data_full.numpy()
+			self.targets_full = self.targets_full.numpy()
 
 
 	def __stratify_training__(self):
