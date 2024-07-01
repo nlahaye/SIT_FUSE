@@ -115,8 +115,8 @@ shp_files: [
 #    "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/smoke/20190807_165441_1054_3B_AnalyticMS_clip_smoke.shp"
   ],
 
-  [ "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/background/20190807_165442_1054_3B_AnalyticMS_clip_background.shp",
-    "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/smoke/20190807_165442_1054_3B_AnalyticMS_clip_smoke.shp" ],
+#  [ "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/background/20190807_165442_1054_3B_AnalyticMS_clip_background.shp",
+#    "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/smoke/20190807_165442_1054_3B_AnalyticMS_clip_smoke.shp" ],
 
   [ "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/background/20190807_181427_0e26_3B_AnalyticMS_clip_background.shp",
     "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/smoke/20190807_181427_0e26_3B_AnalyticMS_clip_smoke.shp" ],
@@ -133,8 +133,8 @@ shp_files: [
   [ "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/background/20190807_181431_0e26_3B_AnalyticMS_clip_background.shp",
     "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/smoke/20190807_181431_0e26_3B_AnalyticMS_clip_smoke.shp" ],
 
-  [ "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/background/20190807_182616_1035_3B_AnalyticMS_clip_background.shp",
-    "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/smoke/20190807_182616_1035_3B_AnalyticMS_clip_smoke.shp" ],
+#  [ "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/background/20190807_182616_1035_3B_AnalyticMS_clip_background.shp",
+#    "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/smoke/20190807_182616_1035_3B_AnalyticMS_clip_smoke.shp" ],
 
   #  [ "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/background/20190807_182618_1035_3B_AnalyticMS_clip_background.shp",
   #    "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/smoke/20190807_182618_1035_3B_AnalyticMS_clip_smoke.shp" ],
