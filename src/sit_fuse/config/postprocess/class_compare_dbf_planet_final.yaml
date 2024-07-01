@@ -1,0 +1,90 @@
+dbf: True
+dbf_percentage_thresh: 0.51
+dbf_list:
+  [
+    [
+      "/Users/easley/Desktop/shapefiles/PSScene/20190806/shapes/smoke/20190806_182857_0f34_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190806/shapes/smoke/20190806_182858_0f34_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190806/shapes/smoke/20190806_182859_0f34_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190806/shapes/smoke/20190806_184209_19_105e_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190806/shapes/smoke/20190806_184211_23_105e_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/smoke/20190807_165439_1054_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/smoke/20190807_181427_0e26_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/smoke/20190807_181428_0e26_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/smoke/20190807_181430_0e26_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/smoke/20190807_181431_0e26_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/smoke/20190807_182619_1035_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/smoke/20190807_182620_1035_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/smoke/20190807_182621_1035_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/smoke/20190807_182622_1035_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/smoke/20190807_183158_0f22_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/smoke/20190807_183159_0f22_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/smoke/20190807_183200_0f22_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/smoke/20190807_183201_0f22_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/smoke/20190807_183230_33_1065_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+
+      "/Users/easley/Desktop/shapefiles/PSScene/20190808/shapes/smoke/20190808_182605_101f_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190808/shapes/smoke/20190808_182606_101f_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190808/shapes/smoke/20190808_182607_101f_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190808/shapes/smoke/20190808_182608_101f_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190808/shapes/smoke/20190808_182955_1001_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190808/shapes/smoke/20190808_182956_1001_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190808/shapes/smoke/20190808_182957_1001_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190808/shapes/smoke/20190808_183352_07_1067_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190808/shapes/smoke/20190808_183354_13_1067_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190808/shapes/smoke/20190808_183356_19_1067_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+
+      "/Users/easley/Desktop/shapefiles/PSScene/20190810/shapes/smoke/20190810_183047_0f34_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190810/shapes/smoke/20190810_183048_0f34_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190810/shapes/smoke/20190810_183051_0f34_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190810/shapes/smoke/20190810_184309_15_1066_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190810/shapes/smoke/20190810_184311_16_1066_3B_AnalyticMS_clip_smoke_OUTPUT_0.dbf" ],
+
+    [
+
+      "/Users/easley/Desktop/shapefiles/PSScene/20190806/shapes/background/20190806_182856_0f34_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190806/shapes/background/20190806_182857_0f34_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190806/shapes/background/20190806_182858_0f34_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190806/shapes/background/20190806_182859_0f34_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190806/shapes/background/20190806_184209_19_105e_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190806/shapes/background/20190806_184211_23_105e_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/background/20190807_165439_1054_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/background/20190807_165441_1054_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/background/20190807_181427_0e26_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/background/20190807_181428_0e26_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/background/20190807_181430_0e26_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/background/20190807_181431_0e26_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/background/20190807_182619_1035_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/background/20190807_182620_1035_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/background/20190807_182621_1035_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/background/20190807_182622_1035_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/background/20190807_183158_0f22_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/background/20190807_183159_0f22_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/background/20190807_183200_0f22_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/background/20190807_183201_0f22_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/background/20190807_183202_0f22_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190807/shapes/background/20190807_183230_33_1065_3B_AnalyticMS_clip_background_OUTPUT_0.dbf"
+
+      "/Users/easley/Desktop/shapefiles/PSScene/20190808/shapes/background/20190808_182604_101f_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190808/shapes/background/20190808_182605_101f_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190808/shapes/background/20190808_182606_101f_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190808/shapes/background/20190808_182607_101f_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190808/shapes/background/20190808_182608_101f_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190808/shapes/background/20190808_182953_1001_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190808/shapes/background/20190808_182955_1001_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190808/shapes/background/20190808_182956_1001_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190808/shapes/background/20190808_182957_1001_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190808/shapes/background/20190808_183352_07_1067_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190808/shapes/background/20190808_183354_13_1067_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190808/shapes/background/20190808_183356_19_1067_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+
+      "/Users/easley/Desktop/shapefiles/PSScene/20190810/shapes/background/20190810_183047_0f34_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190810/shapes/background/20190810_183048_0f34_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190810/shapes/background/20190810_183051_0f34_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190810/shapes/background/20190810_183052_0f34_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190810/shapes/background/20190810_184309_15_1066_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+      "/Users/easley/Desktop/shapefiles/PSScene/20190810/shapes/background/20190810_184311_16_1066_3B_AnalyticMS_clip_background_OUTPUT_0.dbf",
+    ]
+  ]
