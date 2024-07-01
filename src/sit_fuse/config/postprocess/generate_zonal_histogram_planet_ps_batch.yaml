@@ -78,7 +78,7 @@ input_files:
 
 
 
-shp",_files: [
+shp_files: [
   [ "/Users/easley/Desktop/shapefiles/PSScene/20190806/shapes/background/20190806_182856_0f34_3B_AnalyticMS_clip_background.shp",
     "/Users/easley/Desktop/shapefiles/PSScene/20190806/shapes/smoke/20190806_182856_0f34_3B_AnalyticMS_clip_smoke.shp" ],
   
