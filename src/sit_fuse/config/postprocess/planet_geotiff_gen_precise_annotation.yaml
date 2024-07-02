@@ -1,4 +1,4 @@
-gen_from_geotiffs: false
+gen_from_geotiffs: True
 
 data:
   clust_reader_type: "zarr_to_numpy"
