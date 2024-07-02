@@ -26,6 +26,7 @@ class SFDataModule(pl.LightningDataModule):
         dataset = get_train_dataset_sf(self.yml_conf)        
         self.n_visible = dataset.data_full.shape[1]
         train_max = int(dataset.data_full.shape[0]*(1.0-self.val_percent))
+        print(train_max, "HERE TRAIN MAX")
         self.train_dataset = SimpleDataset(torch.from_numpy(dataset.data_full[:train_max]))
         self.val_dataset = SimpleDataset(torch.from_numpy(dataset.data_full[train_max:]))
 

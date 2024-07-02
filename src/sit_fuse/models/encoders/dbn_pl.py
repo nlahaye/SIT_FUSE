@@ -54,8 +54,16 @@ class DBN_PL(pl.LightningModule):
                 ).detach()
         else:
             samples = batch
-
-        samples = samples.reshape(len(samples), self.model.n_visible)
+ 
+        if hasattr(self.model, "n_visible"):
+            samples = samples.reshape(len(samples), self.model.n_visible)
+        else:
+            samples = samples.reshape(
+                          len(samples),
+                          self.model.n_channels,
+                          self.model.visible_shape[0],
+                          self.model.visible_shape[1],
+                      )
 
         # Performs the Gibbs sampling procedure
         _, _, _, _, visible_states = self.model.gibbs_sampling(samples)
@@ -68,10 +76,12 @@ class DBN_PL(pl.LightningModule):
         batch_mse = torch.div(
             torch.sum(torch.pow(samples - visible_states, 2)), batch.shape[0] 
         ).detach()
-        batch_pl = self.model.pseudo_likelihood(samples).detach()
         self.log('train_loss', loss, sync_dist=True)
         self.log('train_batch_mse',  batch_mse, sync_dist=True)
-        self.log('train_batch_pl', batch_pl, sync_dist=True)        
+ 
+        if hasattr(self.model, "n_visible"):
+            batch_pl = self.model.pseudo_likelihood(samples).detach()
+            self.log('train_batch_pl', batch_pl, sync_dist=True)        
           
         return loss
     
@@ -90,7 +100,16 @@ class DBN_PL(pl.LightningModule):
         else:
             samples = batch
 
-        samples = samples.reshape(len(samples), self.model.n_visible)
+        if hasattr(self.model, "n_visible"):
+            samples = samples.reshape(len(samples), self.model.n_visible)
+        else:
+            samples = samples.reshape(
+                          len(samples),
+                          self.model.n_channels,
+                          self.model.visible_shape[0],
+                          self.model.visible_shape[1],
+                      )
+
 
         # Performs the Gibbs sampling procedure
         _, _, _, _, visible_states = self.model.gibbs_sampling(samples)
@@ -104,10 +123,12 @@ class DBN_PL(pl.LightningModule):
             torch.sum(torch.pow(samples - visible_states, 2)), batch.shape[0]
         ).detach()
         print(self.model.device, samples.device)
-        batch_pl = self.model.pseudo_likelihood(samples).detach()
         self.log('val_loss', loss, sync_dist=True)
         self.log('val_batch_mse',  batch_mse, sync_dist=True)
-        self.log('val_batch_pl', batch_pl, sync_dist=True) 
+
+        if hasattr(self.model, "n_visible"):
+            batch_pl = self.model.pseudo_likelihood(samples).detach()
+            self.log('train_batch_pl', batch_pl, sync_dist=True)
 
         return loss
 

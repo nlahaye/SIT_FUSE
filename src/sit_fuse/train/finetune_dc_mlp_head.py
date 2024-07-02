@@ -8,20 +8,26 @@ from pytorch_lightning.callbacks import (
 from pytorch_lightning.strategies import DDPStrategy
 from pytorch_lightning.loggers import WandbLogger
 
-from learnergy.models.deep import DBN
+from learnergy.models.deep import DBN, ConvDBN
 
 from sit_fuse.models.deep_cluster.dc import DeepCluster
 from sit_fuse.models.encoders.cnn_encoder import DeepConvEncoder
 from sit_fuse.models.deep_cluster.ijepa_dc import IJEPA_DC
 from sit_fuse.models.deep_cluster.dbn_dc import DBN_DC
 from sit_fuse.models.deep_cluster.byol_dc import BYOL_DC
+from sit_fuse.models.encoders.byol_pl import BYOL_Learner
+from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes
 from sit_fuse.datasets.sf_dataset_module import SFDataModule
 from sit_fuse.utils import read_yaml
+ 
+from segmentation.models.deeplabv3_plus_xception import DeepLab
+from segmentation.models.gcn import GCN
+from segmentation.models.unet import UNetEncoder, UNetDecoder
 
 import argparse
 import os
 
-def train_dc_no_pt(yml_conf, dataset):
+def train_dc_no_pt(yml_conf, dataset, conv=False):
 
     use_wandb_logger = yml_conf["logger"]["use_wandb"]
     log_model = None
@@ -86,11 +92,10 @@ def train_dc_no_pt(yml_conf, dataset):
 
 
 
-def dc_DBN(yml_conf, dataset):
+def dc_DBN(yml_conf, dataset, conv=False):
 
     dataset.setup()
 
-    model_type = tuple(yml_conf["dbn"]["model_type"])
     dbn_arch = tuple(yml_conf["dbn"]["dbn_arch"])
     gibbs_steps = tuple(yml_conf["dbn"]["gibbs_steps"])
     normalize_learnergy = tuple(yml_conf["dbn"]["normalize_learnergy"])
@@ -126,8 +131,19 @@ def dc_DBN(yml_conf, dataset):
 
     ckpt_path = os.path.join(encoder_dir, "dbn.ckpt")
 
-    dbn = DBN(model=model_type, n_visible=dataset.n_visible, n_hidden=dbn_arch, steps=gibbs_steps,
-        learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=True)
+    if not conv:
+        model_type = tuple(yml_conf["dbn"]["model_type"])
+        dbn = DBN(model=model_type, n_visible=dataset.n_visible, n_hidden=dbn_arch, steps=gibbs_steps,
+             learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=True)
+    else:
+        model_type = yml_conf["dbn"]["model_type"]
+        visible_shape = yml_conf["data"]["tile_size"]
+        number_channel = yml_conf["data"]["number_channels"]
+        #stride = yml_conf["dbn"]["stride"]
+        #padding = yml_conf["dbn"]["padding"]
+        dbn = ConvDBN(model=model_type, visible_shape=visible_shape, filter_shape = dbn_arch[1], n_filters = dbn_arch[0], \
+            n_channels=number_channel, steps=gibbs_steps, learning_rate=learning_rate, momentum=momentum, \
+            decay=decay, use_gpu=True) #, maxpooling=mp)
 
     dbn.load_state_dict(torch.load(ckpt_path))
 
@@ -139,7 +155,7 @@ def dc_DBN(yml_conf, dataset):
     dbn.eval() 
     dbn.models.eval()
 
-    model = DBN_DC(dbn, num_classes=num_classes)
+    model = DBN_DC(dbn, num_classes=num_classes, conv=conv)
   
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
@@ -204,7 +220,7 @@ def dc_IJEPA(yml_conf, dataset):
 
     ckpt_path = os.path.join(encoder_dir, "encoder.ckpt")
 
-    model = IJEPA_DC(pretrained_model_path=ckpt_path, num_classes=num_classes)
+    model = IJEPA_DC(ckpt_path, num_classes)
     for param in model.pretrained_model.parameters():
         param.requires_grad = finetune_encoder
     for param in model.mlp_head.parameters():
@@ -279,11 +295,41 @@ def dc_BYOL(yml_conf, dataset):
     num_classes = yml_conf["cluster"]["num_classes"]
 
     in_chans = yml_conf["data"]["tile_size"][2]
+    img_size = yml_conf["data"]["tile_size"][0]
     ckpt_path = os.path.join(encoder_dir, "byol.ckpt")
-    model_init = DeepConvEncoder(in_chans=in_chans, flatten=True)
-    model_init.load_state_dict(torch.load(ckpt_path))
+    #model_init = DeepConvEncoder(in_chans=in_chans, flatten=True)
 
-    model = BYOL_DC(pretrained_model=model_init, num_classes=num_classes)
+
+    model_type = cutout_ratio_range = yml_conf["byol"]["model_type"]
+    model_2 = None
+    if model_type == "GCN":
+        model_2 = GCN(num_classes, in_chans)
+        model_2.load_state_dict(torch.load(ckpt_path))
+    elif model_type == "DeepLab":
+        model_2 = DeepLab(num_classes, in_chans, backbone='resnet', pretrained=True, checkpoint_path=encoder_dir)
+        model_2.load_state_dict(torch.load(ckpt_path))
+    elif model_type == "Unet":
+        m1 = UNetEncoder(num_classes, in_channels=in_chans) 
+        m1.load_state_dict(torch.load(ckpt_path))
+        m2 = UNetDecoder(num_classes, in_channels=in_chans)  
+        model_2 = torch.nn.Sequential(m1, m2)
+    elif model_type == "DCE":
+        m1 = DeepConvEncoder(in_chans)
+        m1 = m1.eval()
+        output_dim = in_chans*8*img_size*img_size
+        m2 =  MultiPrototypes(output_dim, num_classes, 1)
+        model_2 = torch.nn.Sequential(m1, m2)
+    if hasattr(model_2, "backbone"):
+        for param in model_2.backbone.parameters():
+                param.requires_grad = False
+        model_2.backbone.eval()
+    else:
+        for param in model_2[0].parameters():
+                param.requires_grad = False
+        model_2[0].eval()  
+
+
+    model = BYOL_DC(pretrained_model=model_2, num_classes=num_classes, lr=1e-3, weight_decay=0, number_heads=1, tile_size =img_size, in_chans = in_chans, model_type = model_type)
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
@@ -333,8 +379,8 @@ def main(yml_fpath):
     dataset = SFDataModule(yml_conf, batch_size, num_loader_workers, val_percent=val_percent)
 
     if "encoder_type" in yml_conf:
-        if yml_conf["encoder_type"] == "dbn":
-            dc_DBN(yml_conf, dataset)
+        if "dbn" in yml_conf["encoder_type"]:
+            dc_DBN(yml_conf, dataset, ("conv" in yml_conf["encoder_type"]))
         elif yml_conf["encoder_type"] == "ijepa":
             dc_IJEPA(yml_conf, dataset)
         elif yml_conf["encoder_type"] == "byol":
