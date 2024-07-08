@@ -7,7 +7,7 @@ data:
   subset_inds: [ [ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ], [ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ] ]
   create_separate: False
 
-exit
+
   gtiff_data: [
     "/data/nlahaye/remoteSensing/MSPI_Radiances/AirMSPI_ER2_GRP_TERRAIN_20190806_181433Z_WA-Harrington_SWPA_F01_V006.hdf.tif",
     "/data/nlahaye/remoteSensing/MSPI_Radiances/AirMSPI_ER2_GRP_TERRAIN_20190806_181534Z_WA-Creston_SWPF_F01_V006.hdf.tif",
