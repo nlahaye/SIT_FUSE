@@ -30,4 +30,4 @@ data:
 remove_singles: True
 remove_singles_2: True
 write_geotiff: True
-contour_min_size: 100
+contour_min_size: -1
