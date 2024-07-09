@@ -1,13 +1,14 @@
 data:
   filename: [
-    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190806_182856_0f34_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
+#    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190806_182856_0f34_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190806_182857_0f34_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190806_182858_0f34_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190806_182859_0f34_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190806_184209_19_105e_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190806_184211_23_105e_3B_AnalyticMS_clip.tif.clust.data_74580clusters.smoke.tif",
+
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_165439_1054_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
-    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_165441_1054_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
+#    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_165441_1054_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_181427_0e26_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_181428_0e26_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_181430_0e26_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
@@ -22,22 +23,24 @@ data:
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_183201_0f22_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_183202_0f22_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_183230_33_1065_3B_AnalyticMS_clip.tif.clust.data_74580clusters.smoke.tif",
+
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_182604_101f_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_182605_101f_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_182606_101f_3B_AnalyticMS_clip.tif.clust.data_74580clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_182607_101f_3B_AnalyticMS_clip.tif.clust.data_74580clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_182608_101f_3B_AnalyticMS_clip.tif.clust.data_74580clusters.smoke.tif",
-    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_182953_1001_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
+#    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_182953_1001_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_182955_1001_3B_AnalyticMS_clip.tif.clust.data_74580clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_182956_1001_3B_AnalyticMS_clip.tif.clust.data_74575clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_182957_1001_3B_AnalyticMS_clip.tif.clust.data_69173clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_183352_07_1067_3B_AnalyticMS_clip.tif.clust.data_74580clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_183354_13_1067_3B_AnalyticMS_clip.tif.clust.data_74580clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_183356_19_1067_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
+
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_183047_0f34_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_183048_0f34_3B_AnalyticMS_clip.tif.clust.data_74580clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_183051_0f34_3B_AnalyticMS_clip.tif.clust.data_74575clusters.smoke.tif",
-    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_183052_0f34_3B_AnalyticMS_clip.tif.clust.data_74575clusters.smoke.tif",
+#    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_183052_0f34_3B_AnalyticMS_clip.tif.clust.data_74575clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_184309_15_1066_3B_AnalyticMS_clip.tif.clust.data_74580clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_184311_16_1066_3B_AnalyticMS_clip.tif.clust.data_74580clusters.smoke.tif"
   ]
