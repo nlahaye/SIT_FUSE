@@ -78,5 +78,5 @@ shp_files:
 #      "/Users/easley/Desktop/shapefiles/GOES/GOES_Radiances/shape_files/smoke/OR_ABI-L1b-RadC-M6C01_G17_s20192210221197_e20192210223570_c20192210224025_smoke.shp" ]
   ]
 
-output_files: "GOES_Batch_Full_Real.json"
+out_file: "GOES_Batch_Full_Real.json"
 
