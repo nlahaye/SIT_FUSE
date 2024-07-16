@@ -18,9 +18,32 @@ dbf_list:
       "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190821_p00r24_background_OUTPUT_0.dbf",
       "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190821_p00r25_background_OUTPUT_0.dbf",
       "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190821_p00r26_background_OUTPUT_0.dbf",
-      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190821_p00r27_background_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190821_p00r27_background_OUTPUT_0.dbf"
     ],
 
+    [ "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190806_p00r09_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190806_p00r10_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190806_p00r11_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190806_p00r13_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190806_p00r16_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190806_p00r18_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190807_p00r11_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190807_p00r12_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190807_p00r14_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190821_p00r23_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190821_p00r27_fire_OUTPUT_0.dbf"
+    ],
+
+    [ "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190806_p00r09_burnscar_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190806_p00r10_burnscar_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190806_p00r11_burnscar_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190806_p00r13_burnscar_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190806_p00r16_burnscar_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190806_p00r18_burnscar_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190807_p00r11_burnscar_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190807_p00r12_burnscar_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190807_p00r14_burnscar_OUTPUT_0.dbf"
+    ],
 
     [ "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190806_p00r09_smoke_OUTPUT_0.dbf",
       "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190806_p00r10_smoke_OUTPUT_0.dbf",
@@ -38,5 +61,5 @@ dbf_list:
       "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190821_p00r24_smoke_OUTPUT_0.dbf",
       "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190821_p00r25_smoke_OUTPUT_0.dbf",
       "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190821_p00r26_smoke_OUTPUT_0.dbf",
-      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190821_p00r27_smoke_OUTPUT_0.dbf", ]
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190821_p00r27_smoke_OUTPUT_0.dbf" ]
   ]
