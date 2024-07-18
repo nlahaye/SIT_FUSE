@@ -1,0 +1,18 @@
+dbf: True
+dbf_percentage_thresh: 0.51
+dbf_list:
+  [
+    [ "/home/stasya/DBF_files/eMAS_test_dbf/eMASL1B_19911_05_20190807_1817_1833_V03_smoke_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/eMAS_test_dbf/eMASL1B_19911_08_20190807_1928_1942_V03_smoke_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/eMAS_test_dbf/eMASL1B_19911_09_20190807_1947_2002_V03_smoke_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/eMAS_test_dbf/eMASL1B_19911_10_20190807_2004_2016_V03_smoke_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/eMAS_test_dbf/eMASL1B_19911_11_20190807_2021_2035_V03_smoke_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/eMAS_test_dbf/eMASL1B_19911_12_20190807_2039_2051_V03_smoke_OUTPUT_0.dbf" ],
+
+    [ "/home/stasya/DBF_files/eMAS_test_dbf/eMASL1B_19911_05_20190807_1817_1833_V03_smoke_background_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/eMAS_test_dbf/eMASL1B_19911_08_20190807_1928_1942_V03_smoke_background_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/eMAS_test_dbf/eMASL1B_19911_09_20190807_1947_2002_V03_smoke_background_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/eMAS_test_dbf/eMASL1B_19911_10_20190807_2004_2016_V03_smoke_background_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/eMAS_test_dbf/eMASL1B_19911_11_20190807_2021_2035_V03_smoke_background_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/eMAS_test_dbf/eMASL1B_19911_12_20190807_2039_2051_V03_smoke_background_OUTPUT_0.dbf" ]
+  ]
