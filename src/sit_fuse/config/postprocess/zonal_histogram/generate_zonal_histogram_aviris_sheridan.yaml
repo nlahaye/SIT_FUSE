@@ -27,7 +27,7 @@ shp_files: [
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190821/FULL/shapes/labels/background/aviris_20190821_p00r24_background.shp',
     #    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190821/FULL/shapes/labels/fire/aviris_20190821_p00r24_fire.shp',
     #    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190821/FULL/shapes/labels/burnscar/aviris_20190821_p00r24_burnscar.shp',
-  ]
+  ],
   [
     #    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190821/FULL/shapes/background/burnscar_background/aviris_20190821_p00r25_burnscar_background.shp',
     #    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190821/FULL/shapes/background/fire_background/aviris_20190821_p00r25_fire_background.shp',
@@ -36,7 +36,7 @@ shp_files: [
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190821/FULL/shapes/labels/background/aviris_20190821_p00r25_background.shp',
     #    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190821/FULL/shapes/labels/fire/aviris_20190821_p00r25_fire.shp',
     #    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190821/FULL/shapes/labels/burnscar/aviris_20190821_p00r25_burnscar.shp',
-  ]
+  ],
   [
     #    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190821/FULL/shapes/background/burnscar_background/aviris_20190821_p00r26_burnscar_background.shp',
     #    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190821/FULL/shapes/background/fire_background/aviris_20190821_p00r26_fire_background.shp',
@@ -45,7 +45,7 @@ shp_files: [
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190821/FULL/shapes/labels/background/aviris_20190821_p00r26_background.shp',
     #    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190821/FULL/shapes/labels/fire/aviris_20190821_p00r26_fire.shp',
     #    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190821/FULL/shapes/labels/burnscar/aviris_20190821_p00r26_burnscar.shp',
-  ]
+  ],
   [
     #    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190821/FULL/shapes/background/burnscar_background/aviris_20190821_p00r27_burnscar_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190821/FULL/shapes/background/fire_background/aviris_20190821_p00r27_fire_background.shp',
