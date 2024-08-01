@@ -1,0 +1,41 @@
+input_files:
+  [
+    [ "'/Users/easley/Desktop/AVIRIS-C_SIT_FUSE/aviris_20190821_p00r23.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
+    [ "'/Users/easley/Desktop/AVIRIS-C_SIT_FUSE/aviris_20190821_p00r24.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
+    [ "'/Users/easley/Desktop/AVIRIS-C_SIT_FUSE/aviris_20190821_p00r25.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
+    [ "'/Users/easley/Desktop/AVIRIS-C_SIT_FUSE/aviris_20190821_p00r26.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
+    [ "'/Users/easley/Desktop/AVIRIS-C_SIT_FUSE/aviris_20190821_p00r27.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
+  ]
+
+
+
+shp_files: [
+  [ "/Users/easley/Desktop/AVIRIS-C/20190821/FULL/shapes/background/aviris_20190821_p00r23_background.shp",
+    "/Users/easley/Desktop/AVIRIS-C/20190821/FULL/shapes/burnscar/aviris_20190821_p00r23_burnscar.shp",
+    "/Users/easley/Desktop/AVIRIS-C/20190821/FULL/shapes/fire/aviris_20190821_p00r23_fire.shp",
+    "/Users/easley/Desktop/AVIRIS-C/20190821/FULL/shapes/smoke/aviris_20190821_p00r23_smoke.shp" ],
+
+  [ "/Users/easley/Desktop/AVIRIS-C/20190821/FULL/shapes/background/aviris_20190821_p00r24_background.shp",
+#    "/Users/easley/Desktop/AVIRIS-C/20190821/FULL/shapes/burnscar/aviris_20190821_p00r24_burnscar.shp",
+#    "/Users/easley/Desktop/AVIRIS-C/20190821/FULL/shapes/fire/aviris_20190821_p00r24_fire.shp",
+    "/Users/easley/Desktop/AVIRIS-C/20190821/FULL/shapes/smoke/aviris_20190821_p00r24_smoke.shp" ],
+
+  [ "/Users/easley/Desktop/AVIRIS-C/20190821/FULL/shapes/background/aviris_20190821_p00r25_background.shp",
+#    "/Users/easley/Desktop/AVIRIS-C/20190821/FULL/shapes/burnscar/aviris_20190821_p00r25_burnscar.shp",
+#    "/Users/easley/Desktop/AVIRIS-C/20190821/FULL/shapes/fire/aviris_20190821_p00r25_fire.shp",
+    "/Users/easley/Desktop/AVIRIS-C/20190821/FULL/shapes/smoke/aviris_20190821_p00r25_smoke.shp" ],
+
+  [ "/Users/easley/Desktop/AVIRIS-C/20190821/FULL/shapes/background/aviris_20190821_p00r26_background.shp",
+#    "/Users/easley/Desktop/AVIRIS-C/20190821/FULL/shapes/burnscar/aviris_20190821_p00r26_burnscar.shp",
+#    "/Users/easley/Desktop/AVIRIS-C/20190821/FULL/shapes/fire/aviris_20190821_p00r26_fire.shp",
+    "/Users/easley/Desktop/AVIRIS-C/20190821/FULL/shapes/smoke/aviris_20190821_p00r26_smoke.shp" ],
+
+  [ "/Users/easley/Desktop/AVIRIS-C/20190821/FULL/shapes/background/aviris_20190821_p00r27_background.shp",
+#    "/Users/easley/Desktop/AVIRIS-C/20190821/FULL/shapes/burnscar/aviris_20190821_p00r27_burnscar.shp",
+    "/Users/easley/Desktop/AVIRIS-C/20190821/FULL/shapes/fire/aviris_20190821_p00r27_fire.shp",
+    "/Users/easley/Desktop/AVIRIS-C/20190821/FULL/shapes/smoke/aviris_20190821_p00r27_smoke.shp" ],
+]
+
+
+
+out_file: "AVIRIS_Sheridan_Batch_Full.json"

@@ -1,0 +1,83 @@
+input_files:
+  [
+    [ "'/Users/easley/Desktop/SIT_FUSE_Geo/MASTER/MASTERL1B_1981719_02_20190806_1851_1900_V01.tif.clust.data_79199clusters.zarr.full_geo.tif'" ],
+    [ "'/Users/easley/Desktop/SIT_FUSE_Geo/MASTER/MASTERL1B_1981719_05_20190806_2033_2039_V01.tif.clust.data_79199clusters.zarr.full_geo.tif'" ],
+    [ "'/Users/easley/Desktop/SIT_FUSE_Geo/MASTER/MASTERL1B_1981719_06_20190806_2153_2156_V01.tif.clust.data_79093clusters.zarr.full_geo.tif'" ],
+    [ "'/Users/easley/Desktop/SIT_FUSE_Geo/MASTER/MASTERL1B_1981719_07_20190806_2226_2231_V01.tif.clust.data_79199clusters.zarr.full_geo.tif'" ],
+
+    [ "'/Users/easley/Desktop/SIT_FUSE_Geo/MASTER/MASTERL1B_1981720_07_20190808_0055_0103_V01.tif.clust.data_79199clusters.zarr.full_geo.tif'" ],
+    [ "'/Users/easley/Desktop/SIT_FUSE_Geo/MASTER/MASTERL1B_1981720_09_20190808_0237_0238_V01.tif.clust.data_78290clusters.zarr.full_geo.tif'" ],
+
+    [ "'/Users/easley/Desktop/SIT_FUSE_Geo/MASTER/MASTERL1B_1981721_02_20190809_0120_0121_V01.tif.clust.data_79175clusters.zarr.full_geo.tif'" ]
+  ]
+
+shp_files:
+  [
+    [
+      '/Users/easley/Desktop/shapefiles/MASTER/20190806/shapes/background/burnscar_background/MASTERL1B_1981719_02_20190806_1851_1900_V01_georeferenced_burnscar_background.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190806/shapes/background/fire_background/MASTERL1B_1981719_02_20190806_1851_1900_V01_georeferenced_fire_background.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190806/shapes/background/smoke_background/MASTERL1B_1981719_02_20190806_1851_1900_V01_georeferenced_smoke_background.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190806/shapes/labels/smoke/MASTERL1B_1981719_02_20190806_1851_1900_V01_georeferenced_smoke.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190806/shapes/labels/background/MASTERL1B_1981719_02_20190806_1851_1900_V01_georeferenced_background.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190806/shapes/labels/fire/MASTERL1B_1981719_02_20190806_1851_1900_V01_georeferenced_fire.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190806/shapes/labels/burnscar/MASTERL1B_1981719_02_20190806_1851_1900_V01_georeferenced_burnscar.shp' ],
+
+    [ '/Users/easley/Desktop/shapefiles/MASTER/20190806/shapes/background/burnscar_background/MASTERL1B_1981719_05_20190806_2033_2039_V01_georeferenced_burnscar_background.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190806/shapes/background/fire_background/MASTERL1B_1981719_05_20190806_2033_2039_V01_georeferenced_fire_background.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190806/shapes/background/smoke_background/MASTERL1B_1981719_05_20190806_2033_2039_V01_georeferenced_smoke_background.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190806/shapes/labels/smoke/MASTERL1B_1981719_05_20190806_2033_2039_V01_georeferenced_smoke.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190806/shapes/labels/background/MASTERL1B_1981719_05_20190806_2033_2039_V01_georeferenced_background.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190806/shapes/labels/fire/MASTERL1B_1981719_05_20190806_2033_2039_V01_georeferenced_fire.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190806/shapes/labels/burnscar/MASTERL1B_1981719_05_20190806_2033_2039_V01_georeferenced_burnscar.shp' ],
+
+    [ '/Users/easley/Desktop/shapefiles/MASTER/20190806/shapes/background/burnscar_background/MASTERL1B_1981719_06_20190806_2153_2156_V01_georeferenced_burnscar_background.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190806/shapes/background/fire_background/MASTERL1B_1981719_06_20190806_2153_2156_V01_georeferenced_fire_background.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190806/shapes/background/smoke_background/MASTERL1B_1981719_06_20190806_2153_2156_V01_georeferenced_smoke_background.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190806/shapes/labels/smoke/MASTERL1B_1981719_06_20190806_2153_2156_V01_georeferenced_smoke.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190806/shapes/labels/background/MASTERL1B_1981719_06_20190806_2153_2156_V01_georeferenced_background.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190806/shapes/labels/fire/MASTERL1B_1981719_06_20190806_2153_2156_V01_georeferenced_fire.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190806/shapes/labels/burnscar/MASTERL1B_1981719_06_20190806_2153_2156_V01_georeferenced_burnscar.shp' ],
+    [
+      #     '/Users/easley/Desktop/shapefiles/MASTER/20190806/shapes/background/burnscar_background/MASTERL1B_1981719_07_20190806_2226_2231_V01_georeferenced_burnscar_background.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190806/shapes/background/fire_background/MASTERL1B_1981719_07_20190806_2226_2231_V01_georeferenced_fire_background.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190806/shapes/background/smoke_background/MASTERL1B_1981719_07_20190806_2226_2231_V01_georeferenced_smoke_background.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190806/shapes/labels/smoke/MASTERL1B_1981719_07_20190806_2226_2231_V01_georeferenced_smoke.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190806/shapes/labels/background/MASTERL1B_1981719_07_20190806_2226_2231_V01_georeferenced_background.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190806/shapes/labels/fire/MASTERL1B_1981719_07_20190806_2226_2231_V01_georeferenced_fire.shp',
+      #      '/Users/easley/Desktop/shapefiles/MASTER/20190806/shapes/labels/burnscar/MASTERL1B_1981719_07_20190806_2226_2231_V01_georeferenced_burnscar.shp'
+    ],
+
+
+    [
+      #    '/Users/easley/Desktop/shapefiles/MASTER/20190808/shapes/background/burnscar_background/MASTERL1B_1981720_07_20190808_0055_0103_V01_georeferenced_burnscar_background.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190808/shapes/background/fire_background/MASTERL1B_1981720_07_20190808_0055_0103_V01_georeferenced_fire_background.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190808/shapes/background/smoke_background/MASTERL1B_1981720_07_20190808_0055_0103_V01_georeferenced_smoke_background.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190808/shapes/labels/smoke/MASTERL1B_1981720_07_20190808_0055_0103_V01_georeferenced_smoke.shp',
+      #      '/Users/easley/Desktop/shapefiles/MASTER/20190808/shapes/labels/background/MASTERL1B_1981720_07_20190808_0055_0103_V01_georeferenced_background.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190808/shapes/labels/fire/MASTERL1B_1981720_07_20190808_0055_0103_V01_georeferenced_fire.shp',
+      #      '/Users/easley/Desktop/shapefiles/MASTER/20190808/shapes/labels/burnscar/MASTERL1B_1981720_07_20190808_0055_0103_V01_georeferenced_burnscar.shp'
+    ],
+
+    [
+      #    '/Users/easley/Desktop/shapefiles/MASTER/20190808/shapes/background/burnscar_background/MASTERL1B_1981720_09_20190808_0237_0238_V01_georeferenced_burnscar_background.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190808/shapes/background/fire_background/MASTERL1B_1981720_09_20190808_0237_0238_V01_georeferenced_fire_background.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190808/shapes/background/smoke_background/MASTERL1B_1981720_09_20190808_0237_0238_V01_georeferenced_smoke_background.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190808/shapes/labels/smoke/MASTERL1B_1981720_09_20190808_0237_0238_V01_georeferenced_smoke.shp',
+      #      '/Users/easley/Desktop/shapefiles/MASTER/20190808/shapes/labels/background/MASTERL1B_1981720_09_20190808_0237_0238_V01_georeferenced_background.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190808/shapes/labels/fire/MASTERL1B_1981720_09_20190808_0237_0238_V01_georeferenced_fire.shp',
+      #      '/Users/easley/Desktop/shapefiles/MASTER/20190808/shapes/labels/burnscar/MASTERL1B_1981720_09_20190808_0237_0238_V01_georeferenced_burnscar.shp'
+    ],
+
+
+    [
+      #    '/Users/easley/Desktop/shapefiles/MASTER/20190809/shapes/background/burnscar_background/MASTERL1B_1981721_02_20190809_0120_0121_V01_georeferenced_burnscar_background.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190809/shapes/background/fire_background/MASTERL1B_1981721_02_20190809_0120_0121_V01_georeferenced_fire_background.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190809/shapes/background/smoke_background/MASTERL1B_1981721_02_20190809_0120_0121_V01_georeferenced_smoke_background.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190809/shapes/labels/smoke/MASTERL1B_1981721_02_20190809_0120_0121_V01_georeferenced_smoke.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190809/shapes/labels/background/MASTERL1B_1981721_02_20190809_0120_0121_V01_georeferenced_background.shp',
+      '/Users/easley/Desktop/shapefiles/MASTER/20190809/shapes/labels/fire/MASTERL1B_1981721_02_20190809_0120_0121_V01_georeferenced_fire.shp',
+      #      '/Users/easley/Desktop/shapefiles/MASTER/20190809/shapes/labels/burnscar/MASTERL1B_1981721_02_20190809_0120_0121_V01_georeferenced_burnscar.shp'
+    ]
+  ]
+
+out_file: "MASTER_FIREX_Batch_Full.json"
