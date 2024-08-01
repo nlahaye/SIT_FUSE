@@ -1,10 +1,10 @@
 input_files:
   [
-    [ "'/Users/easley/Desktop/AVIRIS-C_SIT_FUSE/aviris_20190821_p00r23.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
-    [ "'/Users/easley/Desktop/AVIRIS-C_SIT_FUSE/aviris_20190821_p00r24.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
-    [ "'/Users/easley/Desktop/AVIRIS-C_SIT_FUSE/aviris_20190821_p00r25.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
-    [ "'/Users/easley/Desktop/AVIRIS-C_SIT_FUSE/aviris_20190821_p00r26.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
-    [ "'/Users/easley/Desktop/AVIRIS-C_SIT_FUSE/aviris_20190821_p00r27.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
+    [ "'/Users/easley/Desktop/SIT_FUSE_Geo/AVIRIS/aviris_20190821_p00r23.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
+    [ "'/Users/easley/Desktop/SIT_FUSE_Geo/AVIRIS/aviris_20190821_p00r24.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
+    [ "'/Users/easley/Desktop/SIT_FUSE_Geo/AVIRIS/aviris_20190821_p00r25.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
+    [ "'/Users/easley/Desktop/SIT_FUSE_Geo/AVIRIS/aviris_20190821_p00r26.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
+    [ "'/Users/easley/Desktop/SIT_FUSE_Geo/AVIRIS/aviris_20190821_p00r27.tif.clust.data_79099clusters.zarr.full_geo.tif'" ]
   ]
 
 

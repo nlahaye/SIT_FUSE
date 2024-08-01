@@ -1,131 +1,131 @@
 input_files:
-  [ [ "'/Users/easley/Desktop/AVIRIS-C_SIT_FUSE/aviris_20190806_p00r09.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
-    [ "'/Users/easley/Desktop/AVIRIS-C_SIT_FUSE/aviris_20190806_p00r10.tif.clust.data_79097clusters.zarr.full_geo.tif'" ],
-    [ "'/Users/easley/Desktop/AVIRIS-C_SIT_FUSE/aviris_20190806_p00r11.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
-    [ "'/Users/easley/Desktop/AVIRIS-C_SIT_FUSE/aviris_20190806_p00r13.tif.clust.data_79097clusters.zarr.full_geo.tif'" ],
-    [ "'/Users/easley/Desktop/AVIRIS-C_SIT_FUSE/aviris_20190806_p00r14.tif.clust.data_79097clusters.zarr.full_geo.tif'" ],
-    #["'/Users/easley/Desktop/AVIRIS-C_SIT_FUSE/aviris_20190806_p00r15.tif.clust.data_79090clusters.zarr.full_geo.tif'"],
-    [ "'/Users/easley/Desktop/AVIRIS-C_SIT_FUSE/aviris_20190806_p00r16.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
-    [ "'/Users/easley/Desktop/AVIRIS-C_SIT_FUSE/aviris_20190806_p00r17.tif.clust.data_79097clusters.zarr.full_geo.tif'" ],
-    [ "'/Users/easley/Desktop/AVIRIS-C_SIT_FUSE/aviris_20190806_p00r18.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
+  [ [ "'/Users/easley/Desktop/SIT_FUSE_Geo/AVIRIS/aviris_20190806_p00r09.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
+    [ "'/Users/easley/Desktop/SIT_FUSE_Geo/AVIRIS/aviris_20190806_p00r10.tif.clust.data_79097clusters.zarr.full_geo.tif'" ],
+    [ "'/Users/easley/Desktop/SIT_FUSE_Geo/AVIRIS/aviris_20190806_p00r11.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
+    [ "'/Users/easley/Desktop/SIT_FUSE_Geo/AVIRIS/aviris_20190806_p00r13.tif.clust.data_79097clusters.zarr.full_geo.tif'" ],
+    [ "'/Users/easley/Desktop/SIT_FUSE_Geo/AVIRIS/aviris_20190806_p00r14.tif.clust.data_79097clusters.zarr.full_geo.tif'" ],
+    #["'/Users/easley/Desktop/SIT_FUSE_Geo/AVIRIS/aviris_20190806_p00r15.tif.clust.data_79090clusters.zarr.full_geo.tif'"],
+    [ "'/Users/easley/Desktop/SIT_FUSE_Geo/AVIRIS/aviris_20190806_p00r16.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
+    [ "'/Users/easley/Desktop/SIT_FUSE_Geo/AVIRIS/aviris_20190806_p00r17.tif.clust.data_79097clusters.zarr.full_geo.tif'" ],
+    [ "'/Users/easley/Desktop/SIT_FUSE_Geo/AVIRIS/aviris_20190806_p00r18.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
 
-    [ "'/Users/easley/Desktop/AVIRIS-C_SIT_FUSE/aviris_20190807_p00r11.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
-    [ "'/Users/easley/Desktop/AVIRIS-C_SIT_FUSE/aviris_20190807_p00r12.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
-    [ "'/Users/easley/Desktop/AVIRIS-C_SIT_FUSE/aviris_20190807_p00r13.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
-    [ "'/Users/easley/Desktop/AVIRIS-C_SIT_FUSE/aviris_20190807_p00r14.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
+    [ "'/Users/easley/Desktop/SIT_FUSE_Geo/AVIRIS/aviris_20190807_p00r11.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
+    [ "'/Users/easley/Desktop/SIT_FUSE_Geo/AVIRIS/aviris_20190807_p00r12.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
+    [ "'/Users/easley/Desktop/SIT_FUSE_Geo/AVIRIS/aviris_20190807_p00r13.tif.clust.data_79099clusters.zarr.full_geo.tif'" ],
+    [ "'/Users/easley/Desktop/SIT_FUSE_Geo/AVIRIS/aviris_20190807_p00r14.tif.clust.data_79099clusters.zarr.full_geo.tif'" ]
   ]
 
 
 
 shp_files: [
-    ['/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/burnscar_background/aviris_20190806_p00r09_burnscar_background.shp',
+  [ '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/burnscar_background/aviris_20190806_p00r09_burnscar_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/fire_background/aviris_20190806_p00r09_fire_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/smoke_background/aviris_20190806_p00r09_smoke_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/smoke/aviris_20190806_p00r09_smoke.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/background/aviris_20190806_p00r09_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/fire/aviris_20190806_p00r09_fire.shp',
-    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/burnscar/aviris_20190806_p00r09_burnscar.shp'],
+    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/burnscar/aviris_20190806_p00r09_burnscar.shp' ],
 
-    ['/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/burnscar_background/aviris_20190806_p00r10_burnscar_background.shp',
+  [ '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/burnscar_background/aviris_20190806_p00r10_burnscar_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/fire_background/aviris_20190806_p00r10_fire_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/smoke_background/aviris_20190806_p00r10_smoke_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/smoke/aviris_20190806_p00r10_smoke.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/background/aviris_20190806_p00r10_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/fire/aviris_20190806_p00r10_fire.shp',
-    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/burnscar/aviris_20190806_p00r10_burnscar.shp'],
+    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/burnscar/aviris_20190806_p00r10_burnscar.shp' ],
 
-    ['/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/burnscar_background/aviris_20190806_p00r11_burnscar_background.shp',
+  [ '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/burnscar_background/aviris_20190806_p00r11_burnscar_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/fire_background/aviris_20190806_p00r11_fire_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/smoke_background/aviris_20190806_p00r11_smoke_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/smoke/aviris_20190806_p00r11_smoke.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/background/aviris_20190806_p00r11_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/fire/aviris_20190806_p00r11_fire.shp',
-    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/burnscar/aviris_20190806_p00r11_burnscar.shp'],
+    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/burnscar/aviris_20190806_p00r11_burnscar.shp' ],
 
-    ['/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/burnscar_background/aviris_20190806_p00r13_burnscar_background.shp',
+  [ '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/burnscar_background/aviris_20190806_p00r13_burnscar_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/fire_background/aviris_20190806_p00r13_fire_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/smoke_background/aviris_20190806_p00r13_smoke_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/smoke/aviris_20190806_p00r13_smoke.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/background/aviris_20190806_p00r13_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/fire/aviris_20190806_p00r13_fire.shp',
-    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/burnscar/aviris_20190806_p00r13_burnscar.shp'],
+    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/burnscar/aviris_20190806_p00r13_burnscar.shp' ],
 
-    [
-#        '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/burnscar_background/aviris_20190806_p00r14_burnscar_background.shp',
-#    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/fire_background/aviris_20190806_p00r14_fire_background.shp',
+  [
+    #        '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/burnscar_background/aviris_20190806_p00r14_burnscar_background.shp',
+    #    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/fire_background/aviris_20190806_p00r14_fire_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/smoke_background/aviris_20190806_p00r14_smoke_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/smoke/aviris_20190806_p00r14_smoke.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/background/aviris_20190806_p00r14_background.shp',
-#    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/fire/aviris_20190806_p00r14_fire.shp',
-#    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/burnscar/aviris_20190806_p00r14_burnscar.shp'
-    ],
+    #    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/fire/aviris_20190806_p00r14_fire.shp',
+    #    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/burnscar/aviris_20190806_p00r14_burnscar.shp'
+  ],
 
-    ['/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/burnscar_background/aviris_20190806_p00r16_burnscar_background.shp',
+  [ '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/burnscar_background/aviris_20190806_p00r16_burnscar_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/fire_background/aviris_20190806_p00r16_fire_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/smoke_background/aviris_20190806_p00r16_smoke_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/smoke/aviris_20190806_p00r16_smoke.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/background/aviris_20190806_p00r16_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/fire/aviris_20190806_p00r16_fire.shp',
-    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/burnscar/aviris_20190806_p00r16_burnscar.shp'],
+    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/burnscar/aviris_20190806_p00r16_burnscar.shp' ],
 
-    [
-#        '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/burnscar_background/aviris_20190806_p00r17_burnscar_background.shp',
-#    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/fire_background/aviris_20190806_p00r17_fire_background.shp',
+  [
+    #        '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/burnscar_background/aviris_20190806_p00r17_burnscar_background.shp',
+    #    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/fire_background/aviris_20190806_p00r17_fire_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/smoke_background/aviris_20190806_p00r17_smoke_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/smoke/aviris_20190806_p00r17_smoke.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/background/aviris_20190806_p00r17_background.shp',
-#    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/fire/aviris_20190806_p00r17_fire.shp',
-#    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/burnscar/aviris_20190806_p00r17_burnscar.shp'
-    ],
+    #    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/fire/aviris_20190806_p00r17_fire.shp',
+    #    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/burnscar/aviris_20190806_p00r17_burnscar.shp'
+  ],
 
-    ['/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/burnscar_background/aviris_20190806_p00r18_burnscar_background.shp',
+  [ '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/burnscar_background/aviris_20190806_p00r18_burnscar_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/fire_background/aviris_20190806_p00r18_fire_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/background/smoke_background/aviris_20190806_p00r18_smoke_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/smoke/aviris_20190806_p00r18_smoke.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/background/aviris_20190806_p00r18_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/fire/aviris_20190806_p00r18_fire.shp',
-    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/burnscar/aviris_20190806_p00r18_burnscar.shp'],
+    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190806/FULL/shapes/labels/burnscar/aviris_20190806_p00r18_burnscar.shp' ],
 
 
 
 
 
-    ['/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/background/burnscar_background/aviris_20190807_p00r11_burnscar_background.shp',
+  [ '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/background/burnscar_background/aviris_20190807_p00r11_burnscar_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/background/fire_background/aviris_20190807_p00r11_fire_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/background/smoke_background/aviris_20190807_p00r11_smoke_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/labels/smoke/aviris_20190807_p00r11_smoke.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/labels/background/aviris_20190807_p00r11_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/labels/fire/aviris_20190807_p00r11_fire.shp',
-    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/labels/burnscar/aviris_20190807_p00r11_burnscar.shp'],
+    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/labels/burnscar/aviris_20190807_p00r11_burnscar.shp' ],
 
 
-    ['/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/background/burnscar_background/aviris_20190807_p00r12_burnscar_background.shp',
+  [ '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/background/burnscar_background/aviris_20190807_p00r12_burnscar_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/background/fire_background/aviris_20190807_p00r12_fire_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/background/smoke_background/aviris_20190807_p00r12_smoke_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/labels/smoke/aviris_20190807_p00r12_smoke.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/labels/background/aviris_20190807_p00r12_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/labels/fire/aviris_20190807_p00r12_fire.shp',
-    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/labels/burnscar/aviris_20190807_p00r12_burnscar.shp'],
+    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/labels/burnscar/aviris_20190807_p00r12_burnscar.shp' ],
 
 
-    [
-#        '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/background/burnscar_background/aviris_20190807_p00r13_burnscar_background.shp',
-#    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/background/fire_background/aviris_20190807_p00r13_fire_background.shp',
+  [
+    #        '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/background/burnscar_background/aviris_20190807_p00r13_burnscar_background.shp',
+    #    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/background/fire_background/aviris_20190807_p00r13_fire_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/background/smoke_background/aviris_20190807_p00r13_smoke_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/labels/smoke/aviris_20190807_p00r13_smoke.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/labels/background/aviris_20190807_p00r13_background.shp',
-#    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/labels/fire/aviris_20190807_p00r13_fire.shp',
-#    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/labels/burnscar/aviris_20190807_p00r13_burnscar.shp'
-    ],
+    #    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/labels/fire/aviris_20190807_p00r13_fire.shp',
+    #    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/labels/burnscar/aviris_20190807_p00r13_burnscar.shp'
+  ],
 
 
-    ['/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/background/burnscar_background/aviris_20190807_p00r14_burnscar_background.shp',
+  [ '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/background/burnscar_background/aviris_20190807_p00r14_burnscar_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/background/fire_background/aviris_20190807_p00r14_fire_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/background/smoke_background/aviris_20190807_p00r14_smoke_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/labels/smoke/aviris_20190807_p00r14_smoke.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/labels/background/aviris_20190807_p00r14_background.shp',
     '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/labels/fire/aviris_20190807_p00r14_fire.shp',
-    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/labels/burnscar/aviris_20190807_p00r14_burnscar.shp']
+    '/Users/easley/Desktop/shapefiles/AVIRIS-C/20190807/FULL/shapes/labels/burnscar/aviris_20190807_p00r14_burnscar.shp' ]
 ]
 
 
