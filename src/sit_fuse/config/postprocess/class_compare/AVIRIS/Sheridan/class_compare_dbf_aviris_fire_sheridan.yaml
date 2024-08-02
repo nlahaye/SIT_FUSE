@@ -1,0 +1,10 @@
+dbf: True
+dbf_percentage_thresh: 0.51
+dbf_list:
+  [
+    [ "/home/stasya/DBF_final/AVIRIS/Sheridan/20190821/FULL/shapes/labels/fire/aviris_20190821_p00r23_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_final/AVIRIS/Sheridan/20190821/FULL/shapes/labels/fire/aviris_20190821_p00r27_fire_OUTPUT_0.dbf" ],
+
+    [ "/home/stasya/DBF_final/AVIRIS/Sheridan/20190821/FULL/shapes/background/fire_background/aviris_20190821_p00r23_fire_background_OUTPUT_0.dbf",
+      "/home/stasya/DBF_final/AVIRIS/Sheridan/20190821/FULL/shapes/background/fire_background/aviris_20190821_p00r27_fire_background_OUTPUT_0.dbf" ]
+  ]

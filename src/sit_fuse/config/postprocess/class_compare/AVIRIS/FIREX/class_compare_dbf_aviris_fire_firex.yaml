@@ -1,0 +1,27 @@
+dbf: True
+dbf_percentage_thresh: 0.51
+dbf_list:
+  [
+
+    [ "/home/stasya/DBF_final/AVIRIS/FIREX/20190806/FULL/shapes/labels/fire/aviris_20190806_p00r09_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_final/AVIRIS/FIREX/20190806/FULL/shapes/labels/fire/aviris_20190806_p00r10_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_final/AVIRIS/FIREX/20190806/FULL/shapes/labels/fire/aviris_20190806_p00r11_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_final/AVIRIS/FIREX/20190806/FULL/shapes/labels/fire/aviris_20190806_p00r13_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_final/AVIRIS/FIREX/20190806/FULL/shapes/labels/fire/aviris_20190806_p00r16_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_final/AVIRIS/FIREX/20190806/FULL/shapes/labels/fire/aviris_20190806_p00r18_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_final/AVIRIS/FIREX/20190807/FULL/shapes/labels/fire/aviris_20190807_p00r11_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_final/AVIRIS/FIREX/20190807/FULL/shapes/labels/fire/aviris_20190807_p00r12_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_final/AVIRIS/FIREX/20190807/FULL/shapes/labels/fire/aviris_20190807_p00r14_fire_OUTPUT_0.dbf" ],
+
+    [ "/home/stasya/DBF_final/AVIRIS/FIREX/20190806/FULL/shapes/background/fire_background/aviris_20190806_p00r09_fire_background_OUTPUT_0.dbf",
+      "/home/stasya/DBF_final/AVIRIS/FIREX/20190806/FULL/shapes/background/fire_background/aviris_20190806_p00r10_fire_background_OUTPUT_0.dbf",
+      "/home/stasya/DBF_final/AVIRIS/FIREX/20190806/FULL/shapes/background/fire_background/aviris_20190806_p00r11_fire_background_OUTPUT_0.dbf",
+      "/home/stasya/DBF_final/AVIRIS/FIREX/20190806/FULL/shapes/background/fire_background/aviris_20190806_p00r13_fire_background_OUTPUT_0.dbf",
+      "/home/stasya/DBF_final/AVIRIS/FIREX/20190806/FULL/shapes/background/fire_background/aviris_20190806_p00r16_fire_background_OUTPUT_0.dbf",
+      "/home/stasya/DBF_final/AVIRIS/FIREX/20190806/FULL/shapes/background/fire_background/aviris_20190806_p00r18_fire_background_OUTPUT_0.dbf",
+      "/home/stasya/DBF_final/AVIRIS/FIREX/20190807/FULL/shapes/background/fire_background/aviris_20190807_p00r11_fire_background_OUTPUT_0.dbf",
+      "/home/stasya/DBF_final/AVIRIS/FIREX/20190807/FULL/shapes/background/fire_background/aviris_20190807_p00r12_fire_background_OUTPUT_0.dbf",
+      "/home/stasya/DBF_final/AVIRIS/FIREX/20190807/FULL/shapes/background/fire_background/aviris_20190807_p00r14_fire_background_OUTPUT_0.dbf" ]
+
+
+  ]

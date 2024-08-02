@@ -1,0 +1,7 @@
+dbf: True
+dbf_percentage_thresh: 0.51
+dbf_list:
+  [
+    [ "/home/stasya/DBF_final/AVIRIS/Sheridan/20190821/FULL/shapes/labels/burnscar/aviris_20190821_p00r23_burnscar_OUTPUT_0.dbf" ],
+    [ "/home/stasya/DBF_final/AVIRIS/Sheridan/20190821/FULL/shapes/background/burnscar_background/aviris_20190821_p00r23_burnscar_background_OUTPUT_0.dbf" ]
+  ]
