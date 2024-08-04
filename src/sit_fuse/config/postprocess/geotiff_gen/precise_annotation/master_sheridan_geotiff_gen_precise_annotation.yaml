@@ -9,14 +9,14 @@ data:
 
 
   gtiff_data: [
-    "/Users/easley/Desktop/SIT_FUSE_Geo/MASTER/MASTERL1B_1981724_02_20190816_0033_0033_V01.tif.clust.data_79092clusters.zarr.full_geo.tif" ,
-    "/Users/easley/Desktop/SIT_FUSE_Geo/MASTER/MASTERL1B_1981724_04_20190816_0106_0107_V01.tif.clust.data_79046clusters.zarr.full_geo.tif" ,
-    "/Users/easley/Desktop/SIT_FUSE_Geo/MASTER/MASTERL1B_1981724_05_20190816_0124_0125_V01.tif.clust.data_78299clusters.zarr.full_geo.tif" ,
-    "/Users/easley/Desktop/SIT_FUSE_Geo/MASTER/MASTERL1B_1981724_06_20190816_0139_0140_V01.tif.clust.data_78299clusters.zarr.full_geo.tif" ,
-    #    [ "/Users/easley/Desktop/SIT_FUSE_Geo/MASTER/MASTERL1B_1981724_08_20190816_0215_0216_V01.tif.clust.data_78289clusters.zarr.full_geo.tif" ],
+    "/data/nlahaye/SIT_FUSE_Geo/MASTER/MASTERL1B_1981724_02_20190816_0033_0033_V01.tif.clust.data_79092clusters.zarr.full_geo.tif" ,
+    "/data/nlahaye/SIT_FUSE_Geo/MASTER/MASTERL1B_1981724_04_20190816_0106_0107_V01.tif.clust.data_79046clusters.zarr.full_geo.tif" ,
+    "/data/nlahaye/SIT_FUSE_Geo/MASTER/MASTERL1B_1981724_05_20190816_0124_0125_V01.tif.clust.data_78299clusters.zarr.full_geo.tif" ,
+    "/data/nlahaye/SIT_FUSE_Geo/MASTER/MASTERL1B_1981724_06_20190816_0139_0140_V01.tif.clust.data_78299clusters.zarr.full_geo.tif" ,
+    #    [ "/data/nlahaye/SIT_FUSE_Geo/MASTER/MASTERL1B_1981724_08_20190816_0215_0216_V01.tif.clust.data_78289clusters.zarr.full_geo.tif" ],
 
-    "/Users/easley/Desktop/SIT_FUSE_Geo/MASTER/MASTERL1B_1981725_01_20190817_0004_0007_V01.tif.clust.data_79093clusters.zarr.full_geo.tif" ,
-    "/Users/easley/Desktop/SIT_FUSE_Geo/MASTER/MASTERL1B_1981725_02_20190817_0025_0026_V01.tif.clust.data_79046clusters.zarr.full_geo.tif"
+    "/data/nlahaye/SIT_FUSE_Geo/MASTER/MASTERL1B_1981725_01_20190817_0004_0007_V01.tif.clust.data_79093clusters.zarr.full_geo.tif" ,
+    "/data/nlahaye/SIT_FUSE_Geo/MASTER/MASTERL1B_1981725_02_20190817_0025_0026_V01.tif.clust.data_79046clusters.zarr.full_geo.tif"
   ]
 
 
