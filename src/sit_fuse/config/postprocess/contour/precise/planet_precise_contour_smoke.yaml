@@ -20,11 +20,11 @@ data:
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_183158_0f22_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_183159_0f22_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_183200_0f22_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
-    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_183201_0f22_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
-    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_183202_0f22_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
+#    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_183201_0f22_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
+#    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_183202_0f22_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_183230_33_1065_3B_AnalyticMS_clip.tif.clust.data_74580clusters.smoke.tif",
 
-    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_182604_101f_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
+#    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_182604_101f_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_182605_101f_3B_AnalyticMS_clip.tif.clust.data_74590clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_182606_101f_3B_AnalyticMS_clip.tif.clust.data_74580clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_182607_101f_3B_AnalyticMS_clip.tif.clust.data_74580clusters.smoke.tif",
@@ -42,7 +42,8 @@ data:
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_183051_0f34_3B_AnalyticMS_clip.tif.clust.data_74575clusters.smoke.tif",
 #    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_183052_0f34_3B_AnalyticMS_clip.tif.clust.data_74575clusters.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_184309_15_1066_3B_AnalyticMS_clip.tif.clust.data_74580clusters.smoke.tif",
-    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_184311_16_1066_3B_AnalyticMS_clip.tif.clust.data_74580clusters.smoke.tif"
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_184311_16_1066_3B_AnalyticMS_clip.tif.clust.data_74580clusters.smoke.tif",
+
   ]
   reader_type: "gtiff"
   reader_kwargs:
