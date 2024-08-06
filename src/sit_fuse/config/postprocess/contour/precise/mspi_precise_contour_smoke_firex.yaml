@@ -33,7 +33,7 @@ data:
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/MSPI_zarrs/AirMSPI_ER2_GRP_TERRAIN_20190806_211311Z_WA-Chewelah_SWPA_F01_V006.hdf.tif.clust.data_79298clusters.zarr.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/MSPI_zarrs/AirMSPI_ER2_GRP_TERRAIN_20190806_211401Z_WA-Hunters_SWPF_F01_V006.hdf.tif.clust.data_79296clusters.zarr.smoke.tif",
 
-    "/data/nlahaye/SIT_FUSE_Geo/zarrs/MSPI_zarrs/AirMSPI_ER2_GRP_TERRAIN_20190807_182220Z_WA-Mansfield_SWPA_F01_V006.hdf.tif.clust.data_79298clusters.zarr.smoke.tif",
+#    "/data/nlahaye/SIT_FUSE_Geo/zarrs/MSPI_zarrs/AirMSPI_ER2_GRP_TERRAIN_20190807_182220Z_WA-Mansfield_SWPA_F01_V006.hdf.tif.clust.data_79298clusters.zarr.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/MSPI_zarrs/AirMSPI_ER2_GRP_TERRAIN_20190807_182311Z_WA-GrandCoulee_SWPF_F01_V006.hdf.tif.clust.data_79298clusters.zarr.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/MSPI_zarrs/AirMSPI_ER2_GRP_TERRAIN_20190807_183140Z_WA-Springdale_SWPF_F01_V006.hdf.tif.clust.data_79298clusters.zarr.smoke.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/MSPI_zarrs/AirMSPI_ER2_GRP_TERRAIN_20190807_183615Z_ID-TwinLakes_SWPA_F01_V006.hdf.tif.clust.data_79298clusters.zarr.smoke.tif",
