@@ -1,4 +1,4 @@
-gen_from_geotiffs: True
+gen_from_geotiffs: False
 
 data:
   clust_reader_type: "gtiff"
