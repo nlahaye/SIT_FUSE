@@ -1,12 +1,12 @@
 data:
   filename: [
-"/data/nlahaye/SIT_FUSE_Geo/zarrs/MASTER_zarrs/MASTERL1B_1981724_02_20190816_0033_0033_V01.tif.clust.data_79092clusters.smoke.tif",
-"/data/nlahaye/SIT_FUSE_Geo/zarrs/MASTER_zarrs/MASTERL1B_1981724_04_20190816_0106_0107_V01.tif.clust.data_79046clusters.smoke.tif",
-"/data/nlahaye/SIT_FUSE_Geo/zarrs/MASTER_zarrs/MASTERL1B_1981724_05_20190816_0124_0125_V01.tif.clust.data_78299clusters.smoke.tif",
-"/data/nlahaye/SIT_FUSE_Geo/zarrs/MASTER_zarrs/MASTERL1B_1981724_06_20190816_0139_0140_V01.tif.clust.data_78299clusters.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/zarrs/MASTER_zarrs/MASTERL1B_1981724_02_20190816_0033_0033_V01.tif.clust.data_79092clusters.zarr.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/zarrs/MASTER_zarrs/MASTERL1B_1981724_04_20190816_0106_0107_V01.tif.clust.data_79046clusters.zarr.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/zarrs/MASTER_zarrs/MASTERL1B_1981724_05_20190816_0124_0125_V01.tif.clust.data_78299clusters.zarr.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/zarrs/MASTER_zarrs/MASTERL1B_1981724_06_20190816_0139_0140_V01.tif.clust.data_78299clusters.zarr.smoke.tif",
 
-"/data/nlahaye/SIT_FUSE_Geo/zarrs/MASTER_zarrs/MASTERL1B_1981725_01_20190817_0004_0007_V01.tif.clust.data_79093clusters.smoke.tif",
-"/data/nlahaye/SIT_FUSE_Geo/zarrs/MASTER_zarrs/MASTERL1B_1981725_02_20190817_0025_0026_V01.tif.clust.data_79046clusters.smoke.tif"
+"/data/nlahaye/SIT_FUSE_Geo/zarrs/MASTER_zarrs/MASTERL1B_1981725_01_20190817_0004_0007_V01.tif.clust.data_79093clusters.zarr.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/zarrs/MASTER_zarrs/MASTERL1B_1981725_02_20190817_0025_0026_V01.tif.clust.data_79046clusters.zarr.smoke.tif"
 
 
   ]
@@ -17,4 +17,4 @@ data:
 remove_singles: True
 remove_singles_2: True
 write_geotiff: True
-contour_min_size: -1
+contour_min_size: 100
