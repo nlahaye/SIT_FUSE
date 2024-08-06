@@ -4,7 +4,7 @@ data:
   clust_reader_type: "zarr_to_numpy"
   reader_kwargs:
     no_arg: "no_arg"
-  subset_inds: [ [ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ] ]
+  subset_inds: [ [ ],[ ],[ ],[ ],[ ],[ ] ]
   create_separate: False
 
 
