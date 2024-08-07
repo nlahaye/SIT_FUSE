@@ -37,7 +37,7 @@ class IJEPA_DC(pl.LightningModule):
         #self.mlp_head =  MultiPrototypes(self.pretrained_model.num_tokens, 800, 1)
         #self.mlp_head =  MultiPrototypes(self.pretrained_model.num_tokens*self.pretrained_model.embed_dim, self.num_classes, self.number_heads)
         #self.mlp_head = OutputProjection(self.pretrained_model.img_size, self.pretrained_model.patch_size, self.pretrained_model.embed_dim, self.num_classes)
-
+        self.mlp_head = MultiPrototypes(3072*16, 800, 1, single=True)  
         self.mlp_head = JEPA_Seg()
   
 
@@ -69,9 +69,11 @@ class IJEPA_DC(pl.LightningModule):
                                 (y.shape))).type(y.dtype).to(y.device)
         y = torch.flatten(torch.moveaxis(self.mlp_head(y),1,3), start_dim=0, end_dim=-2)
         y2 = torch.flatten(torch.moveaxis(self.mlp_head(y2),1,3), start_dim=0, end_dim=-2)
+        #y = self.mlp_head(y)
+        #y2 = self.mlp_head(y2)
         print(torch.unique(torch.argmax(y, dim=1)), "Y labels")
         print(torch.unique(torch.argmax(y2, dim=1)), "Y2 labels")
-        loss = self.criterion(y,y2, lamb=1.0)[0] #calculate loss
+        loss = self.criterion(y,y2, lamb=2.0)[0] #calculate loss
         self.log('train_loss', loss, sync_dist=True)
         return loss
 
@@ -85,9 +87,11 @@ class IJEPA_DC(pl.LightningModule):
         y2 = y.clone() + torch.from_numpy(self.rng.normal(0.0, 0.01, \
                                 (y.shape))).type(y.dtype).to(y.device)
  
+        #y = self.mlp_head(y) 
+        #y2 = self.mlp_head(y2)
         y = torch.flatten(torch.moveaxis(self.mlp_head(y),1,3), start_dim=0, end_dim=-2)
         y2 = torch.flatten(torch.moveaxis(self.mlp_head(y2),1,3), start_dim=0, end_dim=-2)
-        loss = self.criterion(y,y2, lamb=1.0)[0] #calculate loss
+        loss = self.criterion(y,y2, lamb=2.0)[0] #calculate loss
         self.log('val_loss', loss, sync_dist=True)
         return loss
 

@@ -2,7 +2,7 @@ import numpy as np
 import pytorch_lightning as pl
 import torch.nn as nn
 import torch
-
+import os
 from learnergy.models.deep import DBN
 
 import argparse
@@ -15,6 +15,7 @@ class DBN_PL(pl.LightningModule):
     def __init__(
             self,
             model,
+            save_dir,
             previous_layers = None,
             learning_rate = 1e-5,
             momentum = 0.95,
@@ -26,6 +27,7 @@ class DBN_PL(pl.LightningModule):
         
         #define models
         self.model = model
+        self.save_dir = save_dir
         self.previous_layers = previous_layers
         self.lr = learning_rate
         self.momentum = momentum
@@ -122,7 +124,7 @@ class DBN_PL(pl.LightningModule):
         batch_mse = torch.div(
             torch.sum(torch.pow(samples - visible_states, 2)), batch.shape[0]
         ).detach()
-        print(self.model.device, samples.device)
+        #print(self.model.device, samples.device)
         self.log('val_loss', loss, sync_dist=True)
         self.log('val_batch_mse',  batch_mse, sync_dist=True)
 
@@ -135,6 +137,9 @@ class DBN_PL(pl.LightningModule):
     
     def predict_step(self, batch, batch_idx, dataloader_idx):
         return self(batch)
+
+    def on_validation_epoch_end(self):
+        torch.save(self.model.state_dict(), os.path.join(self.save_dir, "dbn.ckpt"))
 
 
     def configure_optimizers(self):

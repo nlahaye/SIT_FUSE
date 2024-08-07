@@ -18,6 +18,8 @@ from subprocess import DEVNULL, run, Popen, PIPE
 from scipy.ndimage import uniform_filter
 from scipy.ndimage import variance
 
+#from sit_fuse.utils import get_lat_lon #read_uavsar
+
 TIF_RE = "(\w+_\w+_)\w+(_\d+_\d+)_wgs84_fit.tif"
 MODIS_BAND_ORDER = ["vis01", "vis02", "vis03", "vis04", "vis05", "vis06", "vis07",  "bt20", "bt21", "bt22", "bt23", "bt24", "bt25", "vis26", "bt27", "bt28", "bt29", "bt30", "bt31", "bt32", "bt33", "bt34", "bt35", "bt36"]
 
@@ -83,7 +85,6 @@ def uavsar_to_geotiff(in_fps, out_dir, **kwargs):
               Complex-valued (unlike polarization) data will be split into separate phase and amplitude channels. 
     """
     
-    from utils import read_uavsar
     
     if "ann_fps" in kwargs:
         ann_fps = kwargs["ann_fps"]
@@ -282,22 +283,6 @@ def combine_modis_gtiffs(tiff_dirs):
             zarr.save(fn, data)
 
 
-def combine_modis_gtiffs_laads(file_list):
-    for i in range(len(file_list)):
-        data1 = []
-        for j in range(len(file_list[i])):
-            fn = file_list[i][j]
-            dat = gdal.Open(fn)
-            band = dat.GetRasterBand(1).ReadAsArray()
-            band[np.where(band > 65535)] = -9999
-            band[np.where(band < -0.0000000005)] = -9999 
-            data1.append(band)
-        dat = np.array(data1)
-        fn = os.path.join(file_list[i][0] + "Full_Bands.zarr")
-        zarr.save(fn, dat)     
-        genLatLon([file_list[i][0]])
-
- 
 def dummyLatLonS6(fnames, from_data=False):
 
     data_read = get_read_func("s6_netcdf")
@@ -353,16 +338,6 @@ def dummyLatLonS6(fnames, from_data=False):
         print(outFname)
         zarr.save(outFname, new_geo)
 
-
-def genLatLon(fnames):
-
-    for i in range(len(fnames)):
-        fname = fnames[i]
-        lonLat = get_lat_lon(fname)
- 
-        outFname = fname + ".lonlat.zarr"
-        print(outFname)
-        zarr.save(outFname, lonLat)
 
 
 

@@ -7,7 +7,7 @@ applicable U.S. export laws and regulations. User has the responsibility to obta
 required before exporting such information to foreign countries or providing access to foreign persons.
 """
 import numpy as np
-from utils import numpy_to_torch, read_yaml, get_read_func
+from utils import numpy_to_torch, read_yaml, get_read_func, get_lat_lon
 from osgeo import gdal, osr
 import argparse
 import os

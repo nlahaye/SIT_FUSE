@@ -115,16 +115,18 @@ class Heir_DC(pl.LightningModule):
             
             encoder_output_size = None
             if self.encoder_type == "ijepa":
-                encoder_output_size = get_output_shape(self.pretrained_model, (1, yml_conf["data"]["tile_size"][2],self.pretrained_model.pretrained_model.img_size,self.pretrained_model.pretrained_model.img_size))
+                encoder_output_size = get_output_shape(self.encoder, (1, yml_conf["data"]["tile_size"][2],self.pretrained_model.pretrained_model.img_size,self.pretrained_model.pretrained_model.img_size))
                 n_visible = encoder_output_size[1]
             elif self.encoder_type == "dbn":
                 encoder_output_size = (1, self.pretrained_model.pretrained_model.models[-1].n_hidden)
             elif self.encoder_type == "conv_dbn":
-                encoder_output_size = get_output_shape(self.pretrained_model.pretrained_model, (1, yml_conf["data"]["tile_size"][2], yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
+                encoder_output_size = get_output_shape(self.encoder, (1, yml_conf["data"]["tile_size"][2], yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
                 n_visible = encoder_output_size[1]
             elif self.encoder_type == "byol":
-                encoder_output_size = get_output_shape(self.pretrained_model.pretrained_model, (1, yml_conf["data"]["tile_size"][2], yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
+                encoder_output_size = get_output_shape(self.encoder, (1, yml_conf["data"]["tile_size"][2], yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
             n_visible = encoder_output_size[1]
+
+            #print(encoder_output_size, "HERE")
 
             state_dict = torch.load(clust_tree_ckpt)
             self.clust_tree, self.lab_full = \
@@ -179,6 +181,7 @@ class Heir_DC(pl.LightningModule):
 
         dt = x.dtype
         y = self.pretrained_model.forward(x)
+        #print(y.shape, "Y_SHAPE")
  
         #if hasattr(self.pretrained_model, 'pretrained_model'):
         #    #if hasattr(self.pretrained_model.pretrained_model, 'model'):
@@ -199,17 +202,25 @@ class Heir_DC(pl.LightningModule):
                                         x.shape)).type(x.dtype).to(x.device)
 
             if self.encoder_type == "ijepa":
-                x = self.pretrained_model.mlp_head.ups3(x)
-                x = self.pretrained_model.mlp_head.ups2(x)
-                x = self.pretrained_model.mlp_head.ups1(x)
-                x = self.pretrained_model.mlp_head.ups0(x)
+                #x = self.pretrained_model.mlp_head.ups3(x)
+                #x = self.pretrained_model.mlp_head.ups2(x)
+                #x = self.pretrained_model.mlp_head.ups1(x)
+                #x = self.pretrained_model.mlp_head.ups0(x)
 
-                x = x.permute(0, 2, 1)
-                x = torch.reshape(x, (x.shape[0], x.shape[1], 224, 224))
-                x = self.pretrained_model.mlp_head.shuffle(x)
-                x = transforms.Resize((224, 224))(x)
-    
                 x = self.pretrained_model.mlp_head.out(x)
+                print(x.shape)
+                x = x.permute(0, 2, 1)
+                x = torch.reshape(x, (x.shape[0], x.shape[1], 4, 4))
+                x = self.pretrained_model.mlp_head.out2(x)
+                print(x.shape, x.min(), x.max(), x.mean(), x.std())
+                #x = self.smax(x)
+
+                #x = x.permute(0, 2, 1)
+                #x = torch.reshape(x, (x.shape[0], x.shape[1], 224, 224))
+                #x = self.pretrained_model.mlp_head.shuffle(x)
+                #x = transforms.Resize((224, 224))(x)
+    
+                #x = self.pretrained_model.mlp_head.out(x)
 
 
         if isinstance(y,tuple):
@@ -217,6 +228,8 @@ class Heir_DC(pl.LightningModule):
 
         if isinstance(y,list):
             y = y #[0]
+
+        #print("HERE OUTPUT", y.shape, x.shape)
 
   
         tmp_subset = None
@@ -248,6 +261,7 @@ class Heir_DC(pl.LightningModule):
         tmp3 = tmp.clone()
         x.requires_grad = True
         keys = np.unique(tmp2)
+        print("HERE KEYS", keys)
         for key in keys:
             tmp = y.clone()
             inds = None
@@ -269,11 +283,14 @@ class Heir_DC(pl.LightningModule):
                 tmp4 = torch.flatten(tmp3, start_dim=1).permute(1,0)
                 inds2 = np.where(tmp2_2 == key)[0]
                 input_tmp = torch.flatten(x, start_dim=1).permute(1,0)
-               
+ 
             elif tmp.ndim == 4:
                 tmp2_2 = tmp2.reshape(tmp2.shape[0], -1).transpose(1,0)
                 tmp4 = torch.flatten(tmp3, start_dim=1).permute(1,0)
                 inds2 = np.where(tmp2_2 == key)[0]            
+
+            #print(tmp.shape, tmp.ndim)
+            #print(tmp2.shape, tmp2_2.shape, tmp4.shape, tmp3.shape, tmp.ndim)
 
             if x.ndim == 2:
                 input_tmp = x.clone()
@@ -293,10 +310,13 @@ class Heir_DC(pl.LightningModule):
                     tmp = tmp[0]
 
                 if train == False:
-                    tmp = torch.unsqueeze(torch.argmax(tmp, dim=1), dim=1)
+
+                    tmp = torch.argmax(tmp, dim=1)
                     tmp = tmp + self.num_classes*tmp4[inds2]
+                    tmp = torch.unsqueeze(tmp, dim=1)
             elif train == False:
                 tmp = self.num_classes*tmp4[inds2]
+                tmp = torch.unsqueeze(tmp, dim=1)
             else:
                 continue
 
@@ -305,7 +325,7 @@ class Heir_DC(pl.LightningModule):
             else:
                 tmp_subset = torch.cat((tmp_subset, tmp), dim=0)
 
-
+            print(y.shape, tmp.shape, tmp_full.shape)
 
             if y.ndim == 2:
                 tmp_full[inds[0],:] = tmp.type(tmp_full.dtype)
@@ -314,7 +334,6 @@ class Heir_DC(pl.LightningModule):
             elif y.ndim == 4:
                 tmp_full[inds[0],:,inds[1],inds[2]] = tmp.type(tmp_full.dtype)
             del tmp
-
 
         if tmp_subset is None or tmp_full is None:
             return None
@@ -339,7 +358,7 @@ class Heir_DC(pl.LightningModule):
         else:
             y2 = output2[0]
 
-        loss, loss2 = self.criterion(y,y2) #calculate loss
+        loss, loss2 = self.criterion(y,y2, lamb = 2.0) #calculate loss
         self.log('train_loss', loss, sync_dist=True)
         return loss
 
@@ -360,7 +379,7 @@ class Heir_DC(pl.LightningModule):
         else:
             y2 = output2[0]
 
-        loss = self.criterion(y,y2)[0] #calculate loss
+        loss = self.criterion(y,y2, lamb = 2.0)[0] #calculate loss
         self.log('val_loss', loss, sync_dist=True)
         return loss
 
