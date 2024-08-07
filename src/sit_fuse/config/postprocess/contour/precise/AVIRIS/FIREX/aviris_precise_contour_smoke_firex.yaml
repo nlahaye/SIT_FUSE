@@ -1,0 +1,25 @@
+data:
+  filename: [
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/AVIRIS_zarrs/aviris_20190806_p00r09.tif.clust.data_79099clusters.zarr.smoke.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/AVIRIS_zarrs/aviris_20190806_p00r10.tif.clust.data_79097clusters.zarr.smoke.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/AVIRIS_zarrs/aviris_20190806_p00r11.tif.clust.data_79099clusters.zarr.smoke.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/AVIRIS_zarrs/aviris_20190806_p00r13.tif.clust.data_79097clusters.zarr.smoke.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/AVIRIS_zarrs/aviris_20190806_p00r14.tif.clust.data_79097clusters.zarr.smoke.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/AVIRIS_zarrs/aviris_20190806_p00r16.tif.clust.data_79099clusters.zarr.smoke.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/AVIRIS_zarrs/aviris_20190806_p00r17.tif.clust.data_79097clusters.zarr.smoke.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/AVIRIS_zarrs/aviris_20190806_p00r18.tif.clust.data_79099clusters.zarr.smoke.tif",
+
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/AVIRIS_zarrs/aviris_20190807_p00r11.tif.clust.data_79099clusters.zarr.smoke.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/AVIRIS_zarrs/aviris_20190807_p00r12.tif.clust.data_79099clusters.zarr.smoke.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/AVIRIS_zarrs/aviris_20190807_p00r13.tif.clust.data_79099clusters.zarr.smoke.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/AVIRIS_zarrs/aviris_20190807_p00r14.tif.clust.data_79099clusters.zarr.smoke.tif"
+
+  ]
+  reader_type: "gtiff"
+  reader_kwargs:
+    None:
+
+remove_singles: True
+remove_singles_2: True
+write_geotiff: True
+contour_min_size: 100

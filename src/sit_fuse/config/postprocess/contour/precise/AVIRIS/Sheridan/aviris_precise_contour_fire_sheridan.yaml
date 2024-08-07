@@ -1,0 +1,17 @@
+data:
+  filename: [
+    
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/AVIRIS_zarrs/aviris_20190821_p00r23.tif.clust.data_79099clusters.zarr.fire.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/AVIRIS_zarrs/aviris_20190821_p00r24.tif.clust.data_79099clusters.zarr.fire.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/AVIRIS_zarrs/aviris_20190821_p00r25.tif.clust.data_79099clusters.zarr.fire.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/AVIRIS_zarrs/aviris_20190821_p00r26.tif.clust.data_79099clusters.zarr.fire.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/AVIRIS_zarrs/aviris_20190821_p00r27.tif.clust.data_79099clusters.zarr.fire.tif"
+  ]
+  reader_type: "gtiff"
+  reader_kwargs:
+    None:
+
+remove_singles: True
+remove_singles_2: True
+write_geotiff: True
+contour_min_size: -1

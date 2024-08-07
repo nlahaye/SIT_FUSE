@@ -21,7 +21,7 @@ data:
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/eMAS_zarrs/eMASL1B_19911_11_20190807_2021_2035_V03.hdf.clust.data_78197clusters.background.tif",
     "/data/nlahaye/SIT_FUSE_Geo/zarrs/eMAS_zarrs/eMASL1B_19911_12_20190807_2039_2051_V03.hdf.clust.data_78197clusters.background.tif",
 
-    #    "/data/nlahaye/SIT_FUSE_Geo/zarrs/eMAS_zarrs/eMASL1B_19912_07_20190808_1806_1821_V03.hdf.clust.data_74288clusters.background.tif"
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/eMAS_zarrs/eMASL1B_19912_07_20190808_1806_1821_V03.hdf.clust.data_74288clusters.background.tif"
   ]
   reader_type: "gtiff"
   reader_kwargs:
