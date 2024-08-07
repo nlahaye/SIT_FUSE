@@ -10,40 +10,44 @@ data:
 
  
  gtiff_data: [
-"/data/nlahaye/remoteSensing/MSPI/2019-08-06/183954Z_WA-Keller/AirMSPI_ER2_GRP_ELLIPSOID_20190806_184317Z_WA-Keller_STEP_AND_STARE_FUSE.npy_0.LONLAT.tif",
-"/data/nlahaye/remoteSensing/MSPI/2019-08-06/190416Z_WA-Keller/AirMSPI_ER2_GRP_ELLIPSOID_20190806_190738Z_WA-Keller_STEP_AND_STARE_FUSE.npy_0.LONLAT.tif",
-"/data/nlahaye/remoteSensing/MSPI/2019-08-06/194843Z_WA-Keller/AirMSPI_ER2_GRP_ELLIPSOID_20190806_195205Z_WA-Keller_STEP_AND_STARE_FUSE.npy_0.LONLAT.tif",
-"/data/nlahaye/remoteSensing/MSPI/2019-08-06/200630Z_WA-Keller/AirMSPI_ER2_GRP_ELLIPSOID_20190806_200308Z_WA-Keller_STEP_AND_STARE_FUSE.npy_0.LONLAT.tif",
-"/data/nlahaye/remoteSensing/MSPI/2019-08-06/202501Z_WA-Creston/AirMSPI_ER2_GRP_ELLIPSOID_20190806_202139Z_WA-Creston_STEP_AND_STARE_FUSE.npy_0.LONLAT.tif",
-"/data/nlahaye/remoteSensing/MSPI/2019-08-06/204143Z_WA-Keller/AirMSPI_ER2_GRP_ELLIPSOID_20190806_203821Z_WA-Keller_STEP_AND_STARE_FUSE.npy_0.LONLAT.tif",
-"/data/nlahaye/remoteSensing/MSPI/2019-08-06/205939Z_WA-Wilbur/AirMSPI_ER2_GRP_ELLIPSOID_20190806_205617Z_WA-Wilbur_STEP_AND_STARE_FUSE.npy_0.LONLAT.tif",
-"/data/nlahaye/remoteSensing/MSPI/2019-08-06/211816Z_WA-Wilbur/AirMSPI_ER2_GRP_ELLIPSOID_20190806_211454Z_WA-Wilbur_STEP_AND_STARE_FUSE.npy_0.LONLAT.tif",
-"/data/nlahaye/remoteSensing/MSPI/2019-08-07/182726Z_WA-Inchelium/AirMSPI_ER2_GRP_ELLIPSOID_20190807_182404Z_WA-Inchelium_STEP_AND_STARE_FUSE.npy_0.LONLAT.tif",
-"/data/nlahaye/remoteSensing/MSPI/2019-08-07/193536Z_WA-Inchelium/AirMSPI_ER2_GRP_ELLIPSOID_20190807_193859Z_WA-Inchelium_STEP_AND_STARE_FUSE.npy_0.LONLAT.tif",
-"/data/nlahaye/remoteSensing/MSPI/2019-08-07/195548Z_WA-Inchelium/AirMSPI_ER2_GRP_ELLIPSOID_20190807_195226Z_WA-Inchelium_STEP_AND_STARE_FUSE.npy_0.LONLAT.tif",
-"/data/nlahaye/remoteSensing/MSPI/2019-08-07/201039Z_WA-Lincoln/AirMSPI_ER2_GRP_ELLIPSOID_20190807_200717Z_WA-Lincoln_STEP_AND_STARE_FUSE.npy_0.LONLAT.tif",
-"/data/nlahaye/remoteSensing/MSPI/2019-08-07/202824Z_WA-Inchelium/AirMSPI_ER2_GRP_ELLIPSOID_20190807_202502Z_WA-Inchelium_STEP_AND_STARE_FUSE.npy_0.LONLAT.tif",
-"/data/nlahaye/remoteSensing/MSPI/2019-08-07/204554Z_WA-Inchelium/AirMSPI_ER2_GRP_ELLIPSOID_20190807_204916Z_WA-Inchelium_STEP_AND_STARE_FUSE.npy_0.LONLAT.tif",
-"/data/nlahaye/remoteSensing/MSPI/2019-08-08/181513Z_WA-Inchelium/AirMSPI_ER2_GRP_ELLIPSOID_20190808_181835Z_WA-Inchelium_STEP_AND_STARE_FUSE.npy_0.LONLAT.tif"
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190806_183632Z_WA-Keller_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190806_190054Z_WA-Keller_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190806_194520Z_WA-Keller_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190806_200308Z_WA-Keller_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190806_202139Z_WA-Creston_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190806_203821Z_WA-Keller_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190806_205617Z_WA-Wilbur_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190806_211454Z_WA-Wilbur_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190807_182404Z_WA-Inchelium_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190807_193214Z_WA-Inchelium_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190807_195226Z_WA-Inchelium_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190807_200717Z_WA-Lincoln_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190807_202502Z_WA-Inchelium_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190807_204231Z_WA-Inchelium_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190808_174846Z_WA-Connell_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190808_181151Z_WA-Inchelium_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190821_224247Z_AZ-Flagstaff_F01_V006.tif"
 ]
 
  
  cluster_fnames: [
-"/data/nlahaye/output/Learnergy/DBN_MSPI_STEP_AND_STARE_PAD_MULTI_LAYER/AirMSPI_ER2_GRP_ELLIPSOID_20190806_184317Z_WA-Keller_STEP_AND_STARE_FUSE.npy.heir_clust1output_test.data_75999clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_MSPI_STEP_AND_STARE_PAD_MULTI_LAYER/AirMSPI_ER2_GRP_ELLIPSOID_20190806_190738Z_WA-Keller_STEP_AND_STARE_FUSE.npy.heir_clust1output_test.data_59392clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_MSPI_STEP_AND_STARE_PAD_MULTI_LAYER/AirMSPI_ER2_GRP_ELLIPSOID_20190806_195205Z_WA-Keller_STEP_AND_STARE_FUSE.npy.heir_clust1output.data_67798clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_MSPI_STEP_AND_STARE_PAD_MULTI_LAYER/AirMSPI_ER2_GRP_ELLIPSOID_20190806_200308Z_WA-Keller_STEP_AND_STARE_FUSE.npy.heir_clust1output.data_67798clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_MSPI_STEP_AND_STARE_PAD_MULTI_LAYER/AirMSPI_ER2_GRP_ELLIPSOID_20190806_202139Z_WA-Creston_STEP_AND_STARE_FUSE.npy.heir_clust1output.data_59397clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_MSPI_STEP_AND_STARE_PAD_MULTI_LAYER/AirMSPI_ER2_GRP_ELLIPSOID_20190806_203821Z_WA-Keller_STEP_AND_STARE_FUSE.npy.heir_clust1output.data_77098clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_MSPI_STEP_AND_STARE_PAD_MULTI_LAYER/AirMSPI_ER2_GRP_ELLIPSOID_20190806_205617Z_WA-Wilbur_STEP_AND_STARE_FUSE.npy.heir_clust1output_test.data_59397clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_MSPI_STEP_AND_STARE_PAD_MULTI_LAYER/AirMSPI_ER2_GRP_ELLIPSOID_20190806_211454Z_WA-Wilbur_STEP_AND_STARE_FUSE.npy.heir_clust1output.data_75999clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_MSPI_STEP_AND_STARE_PAD_MULTI_LAYER/AirMSPI_ER2_GRP_ELLIPSOID_20190807_182404Z_WA-Inchelium_STEP_AND_STARE_FUSE.npy.heir_clust1output_test.data_76297clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_MSPI_STEP_AND_STARE_PAD_MULTI_LAYER/AirMSPI_ER2_GRP_ELLIPSOID_20190807_193859Z_WA-Inchelium_STEP_AND_STARE_FUSE.npy.heir_clust1output_test.data_67728clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_MSPI_STEP_AND_STARE_PAD_MULTI_LAYER/AirMSPI_ER2_GRP_ELLIPSOID_20190807_195226Z_WA-Inchelium_STEP_AND_STARE_FUSE.npy.heir_clust1output.data_76298clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_MSPI_STEP_AND_STARE_PAD_MULTI_LAYER/AirMSPI_ER2_GRP_ELLIPSOID_20190807_200717Z_WA-Lincoln_STEP_AND_STARE_FUSE.npy.heir_clust1output.data_77097clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_MSPI_STEP_AND_STARE_PAD_MULTI_LAYER/AirMSPI_ER2_GRP_ELLIPSOID_20190807_202502Z_WA-Inchelium_STEP_AND_STARE_FUSE.npy.heir_clust1output_test.data_76268clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_MSPI_STEP_AND_STARE_PAD_MULTI_LAYER/AirMSPI_ER2_GRP_ELLIPSOID_20190807_204916Z_WA-Inchelium_STEP_AND_STARE_FUSE.npy.heir_clust1output.data_58195clusters.zarr",
-"/data/nlahaye/output/Learnergy/DBN_MSPI_STEP_AND_STARE_PAD_MULTI_LAYER/AirMSPI_ER2_GRP_ELLIPSOID_20190808_181835Z_WA-Inchelium_STEP_AND_STARE_FUSE.npy.heir_clust1output_test.data_58157clusters.zarr"
+"/data/nlahaye/output/Learnergy/DBN_MSPI_SAS_MULTI_LAYER_PL/AirMSPI_ER2_GRP_TERRAIN_20190806_183632Z_WA-Keller_F01_V006.tif.clust.data_53397clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MSPI_SAS_MULTI_LAYER_PL/AirMSPI_ER2_GRP_TERRAIN_20190806_190054Z_WA-Keller_F01_V006.tif.clust.data_78396clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MSPI_SAS_MULTI_LAYER_PL/AirMSPI_ER2_GRP_TERRAIN_20190806_194520Z_WA-Keller_F01_V006.tif.clust.data_78398clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MSPI_SAS_MULTI_LAYER_PL/AirMSPI_ER2_GRP_TERRAIN_20190806_200308Z_WA-Keller_F01_V006.tif.clust.data_78398clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MSPI_SAS_MULTI_LAYER_PL/AirMSPI_ER2_GRP_TERRAIN_20190806_202139Z_WA-Creston_F01_V006.tif.clust.data_78397clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MSPI_SAS_MULTI_LAYER_PL/AirMSPI_ER2_GRP_TERRAIN_20190806_203821Z_WA-Keller_F01_V006.tif.clust.data_78394clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MSPI_SAS_MULTI_LAYER_PL/AirMSPI_ER2_GRP_TERRAIN_20190806_205617Z_WA-Wilbur_F01_V006.tif.clust.data_78397clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MSPI_SAS_MULTI_LAYER_PL/AirMSPI_ER2_GRP_TERRAIN_20190806_211454Z_WA-Wilbur_F01_V006.tif.clust.data_53377clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MSPI_SAS_MULTI_LAYER_PL/AirMSPI_ER2_GRP_TERRAIN_20190807_182404Z_WA-Inchelium_F01_V006.tif.clust.data_53397clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MSPI_SAS_MULTI_LAYER_PL/AirMSPI_ER2_GRP_TERRAIN_20190807_193214Z_WA-Inchelium_F01_V006.tif.clust.data_78399clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MSPI_SAS_MULTI_LAYER_PL/AirMSPI_ER2_GRP_TERRAIN_20190807_195226Z_WA-Inchelium_F01_V006.tif.clust.data_78399clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MSPI_SAS_MULTI_LAYER_PL/AirMSPI_ER2_GRP_TERRAIN_20190807_200717Z_WA-Lincoln_F01_V006.tif.clust.data_78398clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MSPI_SAS_MULTI_LAYER_PL/AirMSPI_ER2_GRP_TERRAIN_20190807_202502Z_WA-Inchelium_F01_V006.tif.clust.data_74615clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MSPI_SAS_MULTI_LAYER_PL/AirMSPI_ER2_GRP_TERRAIN_20190807_204231Z_WA-Inchelium_F01_V006.tif.clust.data_78399clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MSPI_SAS_MULTI_LAYER_PL/AirMSPI_ER2_GRP_TERRAIN_20190808_174846Z_WA-Connell_F01_V006.tif.clust.data_74655clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MSPI_SAS_MULTI_LAYER_PL/AirMSPI_ER2_GRP_TERRAIN_20190808_181151Z_WA-Inchelium_F01_V006.tif.clust.data_53391clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_MSPI_SAS_MULTI_LAYER_PL/AirMSPI_ER2_GRP_TERRAIN_20190821_224247Z_AZ-Flagstaff_F01_V006.tif.clust.data_78393clusters.zarr"
 ]
 
 

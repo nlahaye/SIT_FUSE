@@ -12,6 +12,8 @@ from learnergy.models.deep import DBN, ConvDBN
 
 from segmentation.models.gcn import GCN
 from segmentation.models.deeplabv3_plus_xception import DeepLab
+from sit_fuse.models.encoders.cnn_encoder import DeepConvEncoder
+
 
 from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes
 from sit_fuse.models.deep_cluster.heir_dc import Heir_DC, get_state_dict
@@ -131,10 +133,14 @@ def heir_dc(yml_conf, dataset, ckpt_path):
             encoder = GCN(num_classes, in_chans)
         elif model_type == "DeepLab":
             encoder = DeepLab(num_classes, in_chans, backbone='resnet', pretrained=True, checkpoint_path=encoder_dir)
+        elif model_type == "DCE":
+            encoder = DeepConvEncoder(in_chans)
         encoder.load_state_dict(torch.load(encoder_ckpt_path))
+            #encoder.eval()
+            #output_dim = in_chans*8*tile_size*tile_size
+            #m2 =  MultiPrototypes(output_dim, num_classes, 1)
+            #model_2 = torch.nn.Sequential(encoder, m2)
 
-
-        encoder.load_state_dict(torch.load(encoder_ckpt_path))
 
         for param in encoder.parameters():
             param.requires_grad = False
@@ -185,8 +191,9 @@ def heir_dc(yml_conf, dataset, ckpt_path):
             encoder_output_size = get_output_shape(model.pretrained_model.pretrained_model, (1, yml_conf["data"]["tile_size"][2], yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
             n_visible = encoder_output_size[1]
         elif yml_conf["encoder_type"] == "byol":
-            encoder_output_size = get_output_shape(model.pretrained_model.pretrained_model, (1, yml_conf["data"]["tile_size"][2], yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
+            encoder_output_size = get_output_shape(encoder, (1, yml_conf["data"]["tile_size"][2], yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
 
+        print("HERE ENCODER SHAPE", encoder_output_size)
 
         if key in model.clust_tree["1"] and model.clust_tree["1"][key] is not None:
             continue #TODO make optional
@@ -220,6 +227,7 @@ def heir_dc(yml_conf, dataset, ckpt_path):
             wandb_logger = WandbLogger(project=project, log_model=log_model, save_dir = save_dir)
 
             trainer = pl.Trainer(
+                limit_train_batches=1000,
                 default_root_dir=save_dir,
                 accelerator=accelerator,
                 devices=devices,
@@ -232,6 +240,7 @@ def heir_dc(yml_conf, dataset, ckpt_path):
             )
         else:
             trainer = pl.Trainer(
+                limit_train_batches=1000,
                 default_root_dir=save_dir,
                 accelerator=accelerator,
                 devices=devices,

@@ -13,9 +13,10 @@ import numpy as np
 
 class BYOL_DC(pl.LightningModule):
     #take pretrained model path, number of classes, learning rate, weight decay, and drop path as input
-    def __init__(self, pretrained_model, num_classes, lr=1e-3, weight_decay=0, number_heads=1, tile_size =5, in_chans=3, model_type = "GCN"):
+    def __init__(self, pretrained_model, num_classes, lr=1e-3, weight_decay=0, number_heads=1, tile_size =5, in_chans=3, model_type = "GCN", save_dir = "."):
 
         super().__init__()
+        self.save_dir = save_dir
         self.save_hyperparameters()
         self.num_classes = num_classes   
         self.number_heads = number_heads
@@ -40,6 +41,11 @@ class BYOL_DC(pl.LightningModule):
             x, x1, x2, x3, x4 = encoder.full_forward(x)
             x = decoder.forward(x, x1, x2, x3, x4)
             x = F.softmax(x, dim=1) #.flatten(start_dim=2).permute(0,2,1).flatten(start_dim=0,end_dim=1)
+        elif self.model_type == "DCE":
+            print(self.pretrained_model(x)[0].shape, x.shape, "DCE DIMS")
+            x = self.pretrained_model(x)[0]
+            print(x.shape)
+            print(torch.unique(torch.argmax(x, dim=1)), "Y labels")
         else:
             x = F.softmax(self.pretrained_model(x), dim=1)
         return x
@@ -59,7 +65,15 @@ class BYOL_DC(pl.LightningModule):
         #x = F.softmax(x, dim=1) #.flatten(start_dim=2).permute(0,2,1).flatten(start_dim=0,end_dim=1)
         #x2 = F.softmax(x2, dim=1) #.flatten(start_dim=2).permute(0,2,1).flatten(start_dim=0,end_dim=1)
 
-        loss = self.criterion(x,x2, lamb=1.0)[0] #calculate loss
+        print(x.shape, x2.shape, "BYOL DC SHAPE")
+        x = x.permute(0,2,3,1).flatten(start_dim=0,end_dim=2)
+        x2 = x2.permute(0,2,3,1).flatten(start_dim=0,end_dim=2)
+
+
+        print(torch.unique(torch.argmax(x, dim=1)), "Y labels")
+        print(torch.unique(torch.argmax(x2, dim=1)), "Y2 labels")
+
+        loss = self.criterion(x,x2, lamb=2.0)[0] #calculate loss
         return loss
 
     def unet_training_val_step(self, batch, batch_idx):

@@ -10,6 +10,7 @@ import torch
 import yaml
 import cv2
 import os
+import zarr
 import numpy as np
 import rioxarray
 from shapely.geometry import mapping
@@ -43,7 +44,12 @@ from sit_fuse.preprocessing.misc_utils import lee_filter
 def get_output_shape(model, image_dim):
         with torch.no_grad():
             tmp = torch.rand(*(image_dim)).to(next(model.parameters()).device)
-            return model.forward(tmp).data.shape
+            if isinstance(tmp, list) or isinstance(tmp, tuple):
+                tmp = tmp[0] 
+            tmp = model.forward(tmp)
+            if isinstance(tmp, list) or isinstance(tmp, tuple):
+                tmp = tmp[0]
+            return tmp.data.shape
 
 
 def concat_numpy_files(np_files, final_file):
@@ -118,7 +124,7 @@ def numpy_from_zarr(filename, **kwargs):
     dat = np.array(zarr_load(filename).compute())
     
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
-                dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+                dat = dat[kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
     return dat
 
 
@@ -131,11 +137,94 @@ def read_emit(filename, **kwargs):
                 dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
     return dat
 
+def read_emit_l2(filename, **kwargs):
+
+    ds = Dataset(filename[0])
+    #dat = ds.variables['reflectance'][:]
+
+    dat = gdal.Open(filename[1]).ReadAsArray() 
+
+    print(dat.shape)
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+                dat = dat[:,kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+
+    print(dat.shape)
+
+    if "start_wl" in kwargs and "end_wl" in kwargs:
+        wls = ds.groups["sensor_band_parameters"]["wavelengths"][:]
+        inds = np.where(((wls >= kwargs["start_wl"]) & (wls <= kwargs["end_wl"])))
+        print(len(inds), inds)
+        dat = dat[inds[0],:,:]
+
+    print(dat.shape)
+
+    if "mask_shp" in kwargs:
+
+        loc = read_zarr_geo(filename[2], **kwargs)
+
+        print(loc[0,:,0].shape, loc[:,0,1].shape, dat.shape)
+        print(loc[:,0,0], loc[0,:,1])
+
+
+        emit_xr = xr.Dataset(coords=dict(bands=(["band"],np.linspace(0,dat.shape[0],dat.shape[0])), lon=(["x"],loc[0,:,1]),\
+        lat=(["y"],loc[:,0,0])))
+
+       
+
+        emit_xr["emit"] = (['band', 'y', 'x'],  dat)
+
+        emit_xr = emit_xr.rename({'x': 'lon','y': 'lat'})
+        #emit_xr["emit"] = emit_xr["emit"].rename({'x': 'lon','y': 'lat'})
+        emit_xr["emit"].rio.set_spatial_dims("lat", "lon", inplace=True)
+        emit_xr["emit"].rio.write_crs("epsg:4326", inplace=True)
+        emit_xr.rio.write_crs("epsg:4326", inplace=True) 
+        emit_xr.rio.set_spatial_dims("lat", "lon", inplace=True)
+     
+
+        mask = gpd.read_file(kwargs["mask_shp"], crs="epsg:4326")
+        mask.crs = 'epsg:4326'
+        print(mask.crs)
+        
+        geometries = mask.geometry.apply(mapping)
+
+        emit_xr = xr.open_dataset(filename[1], engine='rasterio')
+        print(emit_xr.rio)
+        print(emit_xr["spatial_ref"])
+        emit_temp = emit_xr.rio.clip(geometries, drop=False)
+        print(np.unique(emit_temp["band_data"]))
+        tmp2 = emit_temp["band_data"].isnull().to_numpy().astype(np.bool_)
+        print(np.unique(tmp2))
+        dat[tmp2] = -999999       
+        print(np.unique(dat))
+
+    return dat
+
+def read_emit_geo(filename, **kwargs):
+
+    ds = Dataset(filename)
+    dat1 = ds['location']["lon"][:]
+    dat2 = ds['location']["lat"][:]
+
+    dat = np.array([dat1, dat2])
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+                dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+
+    return dat
+
+def read_zarr_geo(filename, **kwargs):
+
+    dat = zarr.load(filename)
+    print(filename, dat.shape)
+    return dat
+    
+
 
 def read_s3_oc(filename, **kwargs):
 
-    vrs = ["CHL.chlor_a", "KD.Kd_490", "RRS.aot_865", "RRS.angstrom"]
-    #,"RRS.Rrs_400","RRS.Rrs_412","RRS.Rrs_443","RRS.Rrs_490","RRS.Rrs_510","RRS.Rrs_560","RRS.Rrs_620","RRS.Rrs_665","RRS.Rrs_674","RRS.Rrs_681", "RRS.Rrs_709"]
+    #vrs = ["CHL.chlor_a", "KD.Kd_490", "RRS.aot_865", "RRS.angstrom"]
+    vrs = ["RRS.Rrs_400","RRS.Rrs_412","RRS.Rrs_443","RRS.Rrs_490","RRS.Rrs_510","RRS.Rrs_560","RRS.Rrs_620","RRS.Rrs_665","RRS.Rrs_674","RRS.Rrs_681", "RRS.Rrs_709"]
  
     data1 = None
     for i in range(len(vrs)):
@@ -781,20 +870,20 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         date = uniques[dateind]
         #    find associated cluster
         if "sif" in input_file_type:
-            clust_fname = os.path.join(os.path.join(clusters_dir, "sif_finalday_" + str(ind) + ".heir_clust1output*data*clusters.zarr.tif"))
+            clust_fname = os.path.join(os.path.join(clusters_dir, "sif_finalday_" + str(ind) + ".clust.data_*clusters.tif"))
         else:
             if "S3B" in input_file_type:     
-                clust_fname = os.path.join(os.path.join(clusters_dir, "S3B_OLCI_ERRNT." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".heir_clust1output*data*clusters.zarr.tif"))
+                clust_fname = os.path.join(os.path.join(clusters_dir, "S3B_OLCI_ERRNT." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".clust.data_*clusters.tif"))
             elif "S3A" in input_file_type:
-                clust_fname = os.path.join(os.path.join(clusters_dir, "S3A_OLCI_ERRNT." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".heir_clust1output*data*clusters.zarr.tif"))
+                clust_fname = os.path.join(os.path.join(clusters_dir, "S3A_OLCI_ERRNT." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".clust.data_*clusters.tif"))
             elif "SNPP_VIIRS" in input_file_type:
-                clust_fname = os.path.join(os.path.join(clusters_dir, "SNPP_VIIRS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".heir_clust1output*data*clusters.zarr.tif"))
+                clust_fname = os.path.join(os.path.join(clusters_dir, "SNPP_VIIRS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".clust.data_*clusters.tif"))
             elif "JPSS1_VIIRS" in input_file_type:
-                clust_fname = os.path.join(os.path.join(clusters_dir, "JPSS1_VIIRS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".heir_clust1output*data*clusters.zarr.tif"))
+                clust_fname = os.path.join(os.path.join(clusters_dir, "JPSS1_VIIRS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".clust.data_*clusters.tif"))
             elif "AQUA_MODIS" in input_file_type:
-                clust_fname = os.path.join(os.path.join(clusters_dir, "AQUA_MODIS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".heir_clust1output*data*clusters.zarr.tif"))
+                clust_fname = os.path.join(os.path.join(clusters_dir, "AQUA_MODIS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".clust.data_*clusters.tif"))
             elif "TERRA_MODIS" in input_file_type:
-                clust_fname = os.path.join(os.path.join(clusters_dir, "TERRA_MODIS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".heir_clust1output*data*clusters.zarr.tif"))
+                clust_fname = os.path.join(os.path.join(clusters_dir, "TERRA_MODIS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".clust.data_*clusters.tif"))
 
         ind = ind + 1
 
@@ -1367,8 +1456,9 @@ def get_lat_lon(fname):
     ds = gdal.Open(fname)
     xoffset, px_w, rot1, yoffset, px_h, rot2 = ds.GetGeoTransform()
     dataArr = ds.ReadAsArray()
+    print(dataArr.shape)
 
-    lonLat = np.zeros((dataArr.shape[0], dataArr.shape[1], 2))
+    lonLat = np.zeros((dataArr.shape[1], dataArr.shape[2], 2))
 
     # get CRS from dataset 
     crs = osr.SpatialReference()
@@ -1378,8 +1468,8 @@ def get_lat_lon(fname):
     crsGeo = osr.SpatialReference()
     crsGeo.ImportFromEPSG(4326) # 4326 is the EPSG id of lat/long crs 
     t = osr.CoordinateTransformation(crs, crsGeo)
-    for j in range(dataArr.shape[1]):
-        for k in range(dataArr.shape[0]):
+    for j in range(dataArr.shape[2]):
+        for k in range(dataArr.shape[1]):
             posX = px_w * j + rot1 * k + (px_w * 0.5) + (rot1 * 0.5) + xoffset
             posY = px_h * j + rot2 * k + (px_h * 0.5) + (rot2 * 0.5) + yoffset
 
@@ -1387,6 +1477,32 @@ def get_lat_lon(fname):
             lonLat[k,j,1] = lon
             lonLat[k,j,0] = lat
     return lonLat
+
+def genLatLon(fnames):
+
+    for i in range(len(fnames)):
+        fname = fnames[i]
+        lonLat = get_lat_lon(fname)
+
+        outFname = fname + ".lonlat.zarr"
+        print(outFname)
+        zarr.save(outFname, lonLat)
+
+
+def combine_modis_gtiffs_laads(file_list):
+    for i in range(len(file_list)):
+        data1 = []
+        for j in range(len(file_list[i])):
+            fn = file_list[i][j]
+            dat = gdal.Open(fn)
+            band = dat.GetRasterBand(1).ReadAsArray()
+            band[np.where(band > 65535)] = -9999
+            band[np.where(band < -0.0000000005)] = -9999
+            data1.append(band)
+        dat = np.array(data1)
+        fn = os.path.join(file_list[i][0] + "Full_Bands.zarr")
+        zarr.save(fn, dat)
+        genLatLon([file_list[i][0]])
 
 
 def read_emas_master_hdf(fname, **kwargs):
@@ -1797,6 +1913,10 @@ def read_annotation(ann_file):
 def get_read_func(data_reader):
     if data_reader == "emit":
         return read_emit
+    if data_reader == "emit_l2":
+        return read_emit_l2
+    if data_reader == "emit_geo":
+        return read_emit_geo
     if data_reader == "misr_sim":
         return read_misr_sim
     if data_reader == "s2_gtiff":

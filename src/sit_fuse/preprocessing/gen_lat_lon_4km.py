@@ -2,7 +2,7 @@
 import numpy as np
 import dask
 import dask.array as da
-from utils import read_oc_geo
+from sit_fuse.utils import read_oc_geo
 
 #start_lon = -97.8985
 #end_lon = -80.5301
