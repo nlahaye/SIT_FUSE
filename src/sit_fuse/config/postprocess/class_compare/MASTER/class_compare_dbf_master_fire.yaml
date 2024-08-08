@@ -1,0 +1,12 @@
+dbf: True
+dbf_percentage_thresh: 0.51
+dbf_list:
+  [
+
+    [ "/home/stasya/DBF_files/MASTER_dbf/MASTERL1B_1981719_02_20190806_1851_1900_V01_georeferenced_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/MASTER_dbf/MASTERL1B_1981719_05_20190806_2033_2039_V01_georeferenced_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/MASTER_dbf/MASTERL1B_1981719_06_20190806_2153_2156_V01_georeferenced_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/MASTER_dbf/MASTERL1B_1981719_08_20190806_2249_2259_V01_georeferenced_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/MASTER_dbf/MASTERL1B_1981721_02_20190809_0120_0121_V01_georeferenced_fire_OUTPUT_0.dbf" ]
+
+  ]

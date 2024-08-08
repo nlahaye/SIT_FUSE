@@ -1,0 +1,53 @@
+input_files:
+  [
+    /Users/easley/Desktop/MASTER_sheridian/20190816/MASTERL1B_1981724_02_20190816_0033_0033_V01.tif
+      /Users/easley/Desktop/MASTER_sheridian/20190816/MASTERL1B_1981724_04_20190816_0106_0107_V01.tif
+      /Users/easley/Desktop/MASTER_sheridian/20190816/MASTERL1B_1981724_05_20190816_0124_0125_V01.tif
+      /Users/easley/Desktop/MASTER_sheridian/20190816/MASTERL1B_1981724_06_20190816_0139_0140_V01.tif
+      /Users/easley/Desktop/MASTER_sheridian/20190816/MASTERL1B_1981724_08_20190816_0215_0216_V01.tif
+      /Users/easley/Desktop/MASTER_sheridian/20190817/MASTERL1B_1981725_01_20190817_0004_0007_V01.tif
+      /Users/easley/Desktop/MASTER_sheridian/20190817/MASTERL1B_1981725_02_20190817_0025_0026_V01.tif
+  ]
+
+shp_files:
+  [
+    /Users/easley/Desktop/MASTER_sheridian/20190816/shapes/background/MASTERL1B_1981724_02_20190816_0033_0033_V01_background.shp
+      /Users/easley/Desktop/MASTER_sheridian/20190816/shapes/burnscar/MASTERL1B_1981724_02_20190816_0033_0033_V01_burnscar.shp
+      /Users/easley/Desktop/MASTER_sheridian/20190816/shapes/fire/MASTERL1B_1981724_02_20190816_0033_0033_V01_fire.shp
+      /Users/easley/Desktop/MASTER_sheridian/20190816/shapes/smoke/MASTERL1B_1981724_02_20190816_0033_0033_V01_smoke.shp
+      
+      /Users/easley/Desktop/MASTER_sheridian/20190816/shapes/background/MASTERL1B_1981724_04_20190816_0106_0107_V01_background.shp
+      /Users/easley/Desktop/MASTER_sheridian/20190816/shapes/burnscar/MASTERL1B_1981724_04_20190816_0106_0107_V01_burnscar.shp
+      /Users/easley/Desktop/MASTER_sheridian/20190816/shapes/fire/MASTERL1B_1981724_04_20190816_0106_0107_V01_fire.shp
+      /Users/easley/Desktop/MASTER_sheridian/20190816/shapes/smoke/MASTERL1B_1981724_04_20190816_0106_0107_V01_smoke.shp
+      
+      /Users/easley/Desktop/MASTER_sheridian/20190816/shapes/background/MASTERL1B_1981724_05_20190816_0124_0125_V01_background.shp
+      /Users/easley/Desktop/MASTER_sheridian/20190816/shapes/burnscar/MASTERL1B_1981724_05_20190816_0124_0125_V01_burnscar.shp
+      /Users/easley/Desktop/MASTER_sheridian/20190816/shapes/fire/MASTERL1B_1981724_05_20190816_0124_0125_V01_fire.shp
+      /Users/easley/Desktop/MASTER_sheridian/20190816/shapes/smoke/MASTERL1B_1981724_05_20190816_0124_0125_V01_smoke.shp
+      
+      /Users/easley/Desktop/MASTER_sheridian/20190816/shapes/background/MASTERL1B_1981724_06_20190816_0139_0140_V01_background.shp
+      /Users/easley/Desktop/MASTER_sheridian/20190816/shapes/burnscar/MASTERL1B_1981724_06_20190816_0139_0140_V01_burnscar.shp
+      /Users/easley/Desktop/MASTER_sheridian/20190816/shapes/fire/MASTERL1B_1981724_06_20190816_0139_0140_V01_fire.shp
+      /Users/easley/Desktop/MASTER_sheridian/20190816/shapes/smoke/MASTERL1B_1981724_06_20190816_0139_0140_V01_smoke.shp
+
+      /Users/easley/Desktop/MASTER_sheridian/20190816/shapes/background/MASTERL1B_1981724_08_20190816_0215_0216_V01_background.shp
+      /Users/easley/Desktop/MASTER_sheridian/20190816/shapes/burnscar/MASTERL1B_1981724_08_20190816_0215_0216_V01_burnscar.shp
+      /Users/easley/Desktop/MASTER_sheridian/20190816/shapes/fire/MASTERL1B_1981724_08_20190816_0215_0216_V01_fire.shp
+      /Users/easley/Desktop/MASTER_sheridian/20190816/shapes/smoke/MASTERL1B_1981724_08_20190816_0215_0216_V01_smoke.shp
+      
+      
+      
+      
+      /Users/easley/Desktop/MASTER_sheridian/20190817/shapes/background/MASTERL1B_1981725_01_20190817_0004_0007_V01_background.shp
+      /Users/easley/Desktop/MASTER_sheridian/20190817/shapes/burnscar/MASTERL1B_1981725_01_20190817_0004_0007_V01_burnscar.shp
+      /Users/easley/Desktop/MASTER_sheridian/20190817/shapes/fire/MASTERL1B_1981725_01_20190817_0004_0007_V01_fire.shp
+      /Users/easley/Desktop/MASTER_sheridian/20190817/shapes/smoke/MASTERL1B_1981725_01_20190817_0004_0007_V01_smoke.shp
+      
+      /Users/easley/Desktop/MASTER_sheridian/20190817/shapes/background/MASTERL1B_1981725_02_20190817_0025_0026_V01_background.shp
+      /Users/easley/Desktop/MASTER_sheridian/20190817/shapes/burnscar/MASTERL1B_1981725_02_20190817_0025_0026_V01_burnscar.shp      
+      /Users/easley/Desktop/MASTER_sheridian/20190817/shapes/fire/MASTERL1B_1981725_02_20190817_0025_0026_V01_fire.shp
+      /Users/easley/Desktop/MASTER_sheridian/20190817/shapes/smoke/MASTERL1B_1981725_02_20190817_0025_0026_V01_smoke.shp
+  ]
+
+out_file: "MASTER_Batch_Full_Real.json"
