@@ -1,0 +1,17 @@
+data:
+  filename: [
+      "/data/nlahaye/SIT_FUSE_Geo/zarrs/eMAS_test_zarrs/eMASL1B_19911_05_20190807_1817_1833_V03.hdf.clust.data_78197clusters.smoke.tif",
+      "/data/nlahaye/SIT_FUSE_Geo/zarrs/eMAS_test_zarrs/eMASL1B_19911_08_20190807_1928_1942_V03.hdf.clust.data_78197clusters.smoke.tif",
+      "/data/nlahaye/SIT_FUSE_Geo/zarrs/eMAS_test_zarrs/eMASL1B_19911_09_20190807_1947_2002_V03.hdf.clust.data_74288clusters.smoke.tif",
+      "/data/nlahaye/SIT_FUSE_Geo/zarrs/eMAS_test_zarrs/eMASL1B_19911_10_20190807_2004_2016_V03.hdf.clust.data_78197clusters.smoke.tif",
+      "/data/nlahaye/SIT_FUSE_Geo/zarrs/eMAS_test_zarrs/eMASL1B_19911_11_20190807_2021_2035_V03.hdf.clust.data_78197clusters.smoke.tif",
+      "/data/nlahaye/SIT_FUSE_Geo/zarrs/eMAS_test_zarrs/eMASL1B_19911_12_20190807_2039_2051_V03.hdf.clust.data_78197clusters.smoke.tif"
+  ]
+  reader_type: "gtiff"
+  reader_kwargs:
+    None:
+
+remove_singles: True
+remove_singles_2: True
+write_geotiff: True
+contour_min_size: -1

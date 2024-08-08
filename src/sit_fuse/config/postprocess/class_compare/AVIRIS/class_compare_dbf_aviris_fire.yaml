@@ -1,0 +1,17 @@
+dbf: True
+dbf_percentage_thresh: 0.51
+dbf_list:
+  [
+    [ "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190806_p00r09_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190806_p00r10_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190806_p00r11_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190806_p00r13_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190806_p00r16_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190806_p00r18_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190807_p00r11_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190807_p00r12_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190807_p00r14_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190821_p00r23_fire_OUTPUT_0.dbf",
+      "/home/stasya/DBF_files/AVIRIS_dbf/aviris_20190821_p00r27_fire_OUTPUT_0.dbf"
+    ]
+  ]
