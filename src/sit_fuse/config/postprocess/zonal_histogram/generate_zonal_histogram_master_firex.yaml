@@ -53,7 +53,7 @@ shp_files:
       '/Users/easley/Desktop/shapefiles/MASTER/20190808/shapes/background/fire_background/MASTERL1B_1981720_07_20190808_0055_0103_V01_georeferenced_fire_background.shp',
       '/Users/easley/Desktop/shapefiles/MASTER/20190808/shapes/background/smoke_background/MASTERL1B_1981720_07_20190808_0055_0103_V01_georeferenced_smoke_background.shp',
       '/Users/easley/Desktop/shapefiles/MASTER/20190808/shapes/labels/smoke/MASTERL1B_1981720_07_20190808_0055_0103_V01_georeferenced_smoke.shp',
-      #      '/Users/easley/Desktop/shapefiles/MASTER/20190808/shapes/labels/background/MASTERL1B_1981720_07_20190808_0055_0103_V01_georeferenced_background.shp',
+            '/Users/easley/Desktop/shapefiles/MASTER/20190808/shapes/labels/background/MASTERL1B_1981720_07_20190808_0055_0103_V01_georeferenced_background.shp',
       '/Users/easley/Desktop/shapefiles/MASTER/20190808/shapes/labels/fire/MASTERL1B_1981720_07_20190808_0055_0103_V01_georeferenced_fire.shp',
       #      '/Users/easley/Desktop/shapefiles/MASTER/20190808/shapes/labels/burnscar/MASTERL1B_1981720_07_20190808_0055_0103_V01_georeferenced_burnscar.shp'
     ],
@@ -63,7 +63,7 @@ shp_files:
       '/Users/easley/Desktop/shapefiles/MASTER/20190808/shapes/background/fire_background/MASTERL1B_1981720_09_20190808_0237_0238_V01_georeferenced_fire_background.shp',
       '/Users/easley/Desktop/shapefiles/MASTER/20190808/shapes/background/smoke_background/MASTERL1B_1981720_09_20190808_0237_0238_V01_georeferenced_smoke_background.shp',
       '/Users/easley/Desktop/shapefiles/MASTER/20190808/shapes/labels/smoke/MASTERL1B_1981720_09_20190808_0237_0238_V01_georeferenced_smoke.shp',
-      #      '/Users/easley/Desktop/shapefiles/MASTER/20190808/shapes/labels/background/MASTERL1B_1981720_09_20190808_0237_0238_V01_georeferenced_background.shp',
+            '/Users/easley/Desktop/shapefiles/MASTER/20190808/shapes/labels/background/MASTERL1B_1981720_09_20190808_0237_0238_V01_georeferenced_background.shp',
       '/Users/easley/Desktop/shapefiles/MASTER/20190808/shapes/labels/fire/MASTERL1B_1981720_09_20190808_0237_0238_V01_georeferenced_fire.shp',
       #      '/Users/easley/Desktop/shapefiles/MASTER/20190808/shapes/labels/burnscar/MASTERL1B_1981720_09_20190808_0237_0238_V01_georeferenced_burnscar.shp'
     ],
