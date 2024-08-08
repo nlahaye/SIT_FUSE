@@ -16,7 +16,7 @@ from sit_fuse.models.deep_cluster.ijepa_dc import IJEPA_DC
 from sit_fuse.models.deep_cluster.dbn_dc import DBN_DC
 from sit_fuse.models.deep_cluster.byol_dc import BYOL_DC
 from sit_fuse.models.encoders.byol_pl import BYOL_Learner
-from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes
+from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes, DeepConvMultiPrototypes
 from sit_fuse.datasets.sf_dataset_module import SFDataModule
 from sit_fuse.utils import read_yaml
  
@@ -58,7 +58,7 @@ def train_dc_no_pt(yml_conf, dataset, conv=False):
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
-    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="deep_cluster", every_n_epochs=1, save_on_train_epoch_end=False)
+    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="deep_cluster", enable_version_counter=False, every_n_train_steps = 100, save_on_train_epoch_end=False)
 
     os.makedirs(save_dir, exist_ok=True)
     if use_wandb_logger:
@@ -159,7 +159,7 @@ def dc_DBN(yml_conf, dataset, conv=False):
   
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
-    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="deep_cluster", every_n_epochs=1, save_on_train_epoch_end=False)
+    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="deep_cluster", enable_version_counter=False, every_n_train_steps = 100, save_on_train_epoch_end=False)
 
     os.makedirs(save_dir, exist_ok=True)
     if use_wandb_logger:
@@ -237,7 +237,8 @@ def dc_IJEPA(yml_conf, dataset):
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
- 
+    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="deep_cluster", enable_version_counter=False, every_n_train_steps = 100, save_on_train_epoch_end=False) 
+
     os.makedirs(save_dir, exist_ok=True)
     if use_wandb_logger:
 
@@ -250,7 +251,7 @@ def dc_IJEPA(yml_conf, dataset):
             strategy=DDPStrategy(find_unused_parameters=True),
             precision=precision,
             max_epochs=max_epochs,
-            callbacks=[lr_monitor, model_summary],
+            callbacks=[lr_monitor, model_summary, checkpoint_callback],
             gradient_clip_val=gradient_clip_val,
             logger=wandb_logger
         )
@@ -262,7 +263,7 @@ def dc_IJEPA(yml_conf, dataset):
             strategy=DDPStrategy(find_unused_parameters=True),
             precision=precision,
             max_epochs=max_epochs,
-            callbacks=[lr_monitor, model_summary],
+            callbacks=[lr_monitor, model_summary, checkpoint_callback],
             gradient_clip_val=gradient_clip_val
         )
 
@@ -315,9 +316,11 @@ def dc_BYOL(yml_conf, dataset):
         model_2 = torch.nn.Sequential(m1, m2)
     elif model_type == "DCE":
         m1 = DeepConvEncoder(in_chans)
+        m1.load_state_dict(torch.load(ckpt_path))
         m1 = m1.eval()
-        output_dim = in_chans*8*img_size*img_size
-        m2 =  MultiPrototypes(output_dim, num_classes, 1)
+        #output_dim = in_chans*8*img_size*img_size
+        m2 = DeepConvMultiPrototypes(in_chans*8, num_classes, 1)
+        #m2 =  MultiPrototypes(output_dim, num_classes, 1)
         model_2 = torch.nn.Sequential(m1, m2)
     if hasattr(model_2, "backbone"):
         for param in model_2.backbone.parameters():
@@ -333,7 +336,7 @@ def dc_BYOL(yml_conf, dataset):
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
-    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="deep_cluster", every_n_epochs=1, save_on_train_epoch_end=False)
+    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="deep_cluster", enable_version_counter=False, every_n_train_steps = 100, save_on_train_epoch_end=False)
 
 
 

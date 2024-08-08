@@ -1,8 +1,8 @@
 
 data:
  tile: True #True
- tile_size: [64,64,34]
- tile_step: [64,64,34]
+ tile_size: [4,4,34]
+ tile_step: [4,4,34]
  val_percent: 0.1
  num_loader_workers: 10
  scale_data: True
@@ -55,6 +55,10 @@ data:
 "/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_15_20190806_1931_1938_V03.tif",
 "/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_16_20190806_1941_1956_V03.tif",
 "/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_17_20190806_2000_2010_V03.tif",
+]
+
+
+ files_test: [
 "/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_18_20190806_2018_2031_V03.tif",
 "/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_19_20190806_2035_2048_V03.tif",
 "/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_20_20190806_2052_2106_V03.tif",
@@ -196,9 +200,6 @@ data:
 "/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19919_17_20190822_0036_0104_V03.tif",
 ]
 
-
- files_test: []
-
 scaler:
  name: "standard" 
 
@@ -213,21 +214,22 @@ logger:
  log_out_dir: "wandb_full"
  project: "SIT-FUSE"
 
+
 ijepa:
- patch_size: 8
- embed_dim: 1024
- encoder_heads: 4
- encoder_depth: 4
- decoder_depth: 4
- target_aspect_ratio: [0.75,1.5]
- target_scale: [0.15, .2]
+ patch_size: 1
+ embed_dim: 3072
+ encoder_heads: 2
+ encoder_depth: 3
+ decoder_depth: 3
+ target_aspect_ratio: [1,1] #0.75,1.5]
+ target_scale: [1,1] #0.15, .2]
  context_aspect_ratio: 1
  context_scale: [0.85,1.0]
- number_target_blocks: 2
+ number_target_blocks: 4
 
 encoder_type: "ijepa"
 encoder:
- subset_training: 5000 #-1 #2300000
+ subset_training: 2300000
  overwrite_model: False
  tune_scaler: False
  training:
@@ -235,10 +237,10 @@ encoder:
   momentum: 0.996
   momentum_start_end: [0.996, 1.0] 
   learning_rate: 0.001
-  batch_size: 1
+  batch_size: 10
   epochs: 100
   accelerator: "gpu"
-  devices: 3
+  devices: 5
   gradient_clip_val: 0.1
   precision: "16-mixed"
   save_dir: "wandb_ijepa_full"
@@ -248,11 +250,11 @@ encoder:
 cluster:
  gauss_noise_stdev:  [0.01]
  lambda: 1.0
- num_classes: 200
+ num_classes: 800
  training:
   finetune_encoder: False
   learning_rate: 0.0001
-  batch_size: 1
+  batch_size: 100
   epochs: 30 
   accelerator: "gpu"
   devices: 1
@@ -271,7 +273,7 @@ cluster:
    gradient_clip_val: 0.1
    precision: "32"
    save_dir: "wandb_ijepa_full"
-   batch_size: 1
+   batch_size: 1000
    min_samples: 1000
    epochs: 3
    lambda: 1.0

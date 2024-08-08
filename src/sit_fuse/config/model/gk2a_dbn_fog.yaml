@@ -1,6 +1,6 @@
 
 data:
- tile: True
+ tile: False
  tile_size: [224,224,16]
  tile_step: [224,224,16]
  val_percent: 0.1
@@ -22,19 +22,30 @@ data:
 
  files_train: [
 "/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131730.tif",
-"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131800.tif",
 "/data/nlahaye/remoteSensing/GK2A_FOG/LOW_CLD/gk2a_ami_le1b_ir087_ea020lc_202309151300.tif",
-"/data/nlahaye/remoteSensing/GK2A_FOG/LOW_CLD/gk2a_ami_le1b_ir087_ea020lc_202309151330.tif",
 "/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202109301900.tif",
-"/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202109301930.tif",
 "/data/nlahaye/remoteSensing/GK2A_FOG/TWILIGHT_FALSE/gk2a_ami_le1b_ir087_ea020lc_202405072100.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/LOW_CLD/gk2a_ami_le1b_ir087_ea020lc_202309151500.tif"]
+
+
+
+ files_test: [
+"/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131800.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/LOW_CLD/gk2a_ami_le1b_ir087_ea020lc_202309151330.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202109301930.tif",
 "/data/nlahaye/remoteSensing/GK2A_FOG/TWILIGHT_FALSE/gk2a_ami_le1b_ir087_ea020lc_202405072130.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/LOW_CLD/gk2a_ami_le1b_ir087_ea020lc_202309151530.tif",
 "/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131000.tif",
 "/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131030.tif",
 "/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131100.tif",
 "/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131130.tif",
 "/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131200.tif",
 "/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131230.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/LOW_CLD/gk2a_ami_le1b_ir087_ea020lc_202309151200.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/LOW_CLD/gk2a_ami_le1b_ir087_ea020lc_202309151230.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/LOW_CLD/gk2a_ami_le1b_ir087_ea020lc_202309151400.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/LOW_CLD/gk2a_ami_le1b_ir087_ea020lc_202309151430.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/LOW_CLD/gk2a_ami_le1b_ir087_ea020lc_202309151500.tif",
 "/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131300.tif",
 "/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131330.tif",
 "/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203131400.tif",
@@ -56,14 +67,6 @@ data:
 "/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203132300.tif",
 "/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203132330.tif",
 "/data/nlahaye/remoteSensing/GK2A_FOG/ADVE_FOG/gk2a_ami_le1b_ir087_ea020lc_202203140000.tif",
-"/data/nlahaye/remoteSensing/GK2A_FOG/LOW_CLD/gk2a_ami_le1b_ir087_ea020lc_202309151200.tif",
-"/data/nlahaye/remoteSensing/GK2A_FOG/LOW_CLD/gk2a_ami_le1b_ir087_ea020lc_202309151230.tif",
-"/data/nlahaye/remoteSensing/GK2A_FOG/LOW_CLD/gk2a_ami_le1b_ir087_ea020lc_202309151400.tif",
-"/data/nlahaye/remoteSensing/GK2A_FOG/LOW_CLD/gk2a_ami_le1b_ir087_ea020lc_202309151430.tif",
-"/data/nlahaye/remoteSensing/GK2A_FOG/LOW_CLD/gk2a_ami_le1b_ir087_ea020lc_202309151500.tif",
-"/data/nlahaye/remoteSensing/GK2A_FOG/LOW_CLD/gk2a_ami_le1b_ir087_ea020lc_202309151530.tif",
-"/data/nlahaye/remoteSensing/GK2A_FOG/LOW_CLD/gk2a_ami_le1b_ir087_ea020lc_202309151600.tif",
-"/data/nlahaye/remoteSensing/GK2A_FOG/LOW_CLD/gk2a_ami_le1b_ir087_ea020lc_202309151630.tif",
 "/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202109301700.tif",
 "/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202109301730.tif",
 "/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202109301800.tif",
@@ -126,7 +129,7 @@ encoder_type: "dbn"
 encoder:
  tiled: False
  tune_scaler: False
- subset_training: -1
+ subset_training: 2500000
  overwrite_model: False
  training:
   learning_rate: [0.00001, 0.00001]

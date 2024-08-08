@@ -1,8 +1,9 @@
 
+
 data:
  tile: True #True
- tile_size: [224,224,34]
- tile_step: [224,224,34]
+ tile_size: [4,4,34]
+ tile_step: [4,4,34]
  val_percent: 0.1
  num_loader_workers: 10
  scale_data: True
@@ -213,13 +214,12 @@ logger:
  log_out_dir: "wandb_full"
  project: "SIT-FUSE"
 
-
 mae:
- patch_size: 16
+ patch_size: 1
  embed_dim: 3072
- encoder_heads: 8
- encoder_depth: 6
- decoder_depth: 6
+ encoder_heads: 2
+ encoder_depth: 3
+ decoder_depth: 3
  decoder_dim: 2048
  masking_ratio: 0.5
 

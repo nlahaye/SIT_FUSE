@@ -1,8 +1,8 @@
 
 data:
  tile: True #True
- tile_size: [16,16,34]
- tile_step: [16,16,34]
+ tile_size: [4,4,34]
+ tile_step: [4,4,34]
  val_percent: 0.1
  num_loader_workers: 10
  scale_data: True
@@ -64,8 +64,8 @@ byol:
  model_type: "DCE"
  hidden_layer: -1 #"layer4"
  hidden_layer_instance: -1 #"layer4"
- projection_size: 256
- projection_hidden_size: 1024
+ projection_size: 1024
+ projection_hidden_size: 2048
  moving_average_decay: 0.99
  ppm_num_layers: 1
  ppm_gamma: 2
@@ -85,7 +85,7 @@ logger:
 
 encoder_type: "byol"
 encoder:
- subset_training: -1
+ subset_training: 140000
  overwrite_model: False
  tune_scaler: False
  training:
@@ -93,7 +93,7 @@ encoder:
   momentum: 0.996
   momentum_start_end: [0.996, 1.0]
   learning_rate: 0.001
-  batch_size: 1
+  batch_size: 3
   epochs: 50
   accelerator: "gpu"
   devices: 3
@@ -109,7 +109,7 @@ cluster:
  num_classes: 800
  training:
   learning_rate: 0.0001
-  batch_size: 5
+  batch_size: 1000
   epochs: 10
   accelerator: "gpu"
   devices: 1
@@ -128,7 +128,7 @@ cluster:
    gradient_clip_val: 0.0001
    precision: "16-mixed"
    save_dir: "wandb_byol"
-   batch_size: 1
+   batch_size: 1000
    min_samples: 1000
    epochs: 30
    lambda: 1.0

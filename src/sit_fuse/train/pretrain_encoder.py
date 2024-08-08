@@ -84,11 +84,11 @@ def pretrain_DBN(yml_conf, dataset, conv = False):
         dbn.models[i].normalize = normalize_learnergy[i]
         dbn.models[i].batch_normalize = batch_normalize[i]
 
-        model = DBN_PL(current_rbm, previous_layers, learning_rate[i], momentum[i], nesterov_accel[i], decay[i])
+        model = DBN_PL(current_rbm, save_dir, previous_layers, learning_rate[i], momentum[i], nesterov_accel[i], decay[i])
 
         lr_monitor = LearningRateMonitor(logging_interval="step")
         model_summary = ModelSummary(max_depth=2)
-        checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="encoder", every_n_epochs=1, save_on_train_epoch_end=False)
+        checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="encoder", enable_version_counter=False, every_n_train_steps = 100, save_on_train_epoch_end=False)
 
         os.makedirs(save_dir, exist_ok=True) 
         if use_wandb_logger:
@@ -166,7 +166,7 @@ def pretrain_MAE(yml_conf, dataset):
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
-    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="encoder", every_n_epochs=1, save_on_train_epoch_end=False)
+    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="encoder", enable_version_counter=False, every_n_train_steps = 100, save_on_train_epoch_end=False)
 
     os.makedirs(save_dir, exist_ok=True)
     if use_wandb_logger:
@@ -249,7 +249,7 @@ def pretrain_IJEPA(yml_conf, dataset):
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
-    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="encoder", every_n_epochs=1, save_on_train_epoch_end=False)
+    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="encoder", enable_version_counter=False, every_n_train_steps = 100, save_on_train_epoch_end=False)
 
     os.makedirs(save_dir, exist_ok=True) 
     if use_wandb_logger:
@@ -356,7 +356,7 @@ def pretrain_BYOL(yml_conf, dataset):
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
-    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="encoder", every_n_epochs=1, save_on_train_epoch_end=False)
+    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="encoder", enable_version_counter=False, every_n_train_steps = 100, save_on_train_epoch_end=False)
  
 
     os.makedirs(save_dir, exist_ok=True)

@@ -11,11 +11,13 @@ from segmentation.models.deeplabv3_plus_xception import DeepLab
 from segmentation.models.unet import UNetEncoder, UNetDecoder
 
 from sit_fuse.models.deep_cluster.dc import DeepCluster
+from sit_fuse.models.encoders.cnn_encoder import DeepConvEncoder
 from sit_fuse.models.deep_cluster.ijepa_dc import IJEPA_DC
 from sit_fuse.models.deep_cluster.dbn_dc import DBN_DC
 from sit_fuse.datasets.dataset_utils import get_prediction_dataset
 from sit_fuse.models.deep_cluster.heir_dc import Heir_DC
 from sit_fuse.utils import read_yaml
+from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes
 
 from tqdm import tqdm
 
@@ -44,7 +46,7 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tile
 
     ind = 0
     #output_batch_size = min(5000, max(int(dat.data_full.shape[0] / 5), dat.data_full.shape[0]))
-    output_batch_size = 1
+    output_batch_size = 100 #1
 
     output_sze = dat.data_full.shape[0]
     append_remainder = int(output_batch_size - (output_sze % output_batch_size))
@@ -77,9 +79,9 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tile
                 _, output = mdl.forward(dat_dev)
             else:
                 output = mdl.forward(dat_dev)
-                print("HERE", output.shape)
+                #print("HERE", output.shape)
                 output = torch.argmax(torch.nn.functional.softmax(output, dim=1), dim=1)
-                print("HERE", output.shape, torch.unique(output))
+                #print("HERE", output.shape, torch.unique(output))
         if isinstance(output, list) or isinstance(output, tuple):
             output = output[0] #TODO improve usage uf multi-headed output after single-headed approach validated
         #output = torch.unsqueeze(torch.argmax(output, axis = 1), axis=1)
@@ -91,19 +93,23 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tile
         lab_dev = lab_dev.detach().cpu()
 
 
-        output = torch.squeeze(output)
-        print("HERE OUTPUT_FULL", dat.data_full.ndim, dat.data_full.shape, torch.squeeze(output).shape)
+        #output = torch.squeeze(output)
+        print("HERE OUTPUT_FULL", dat.data_full.ndim, dat.data_full.shape, output.shape)
+        if output.ndim == 1:
+            output = torch.unsqueeze(output, dim=1)
         if output_full is None:
             if dat.data_full.ndim > 2:
                 output_full = torch.zeros((dat.data_full.shape[0], dat.data_full.shape[2], dat.data_full.shape[3]), dtype=torch.float32)
-                print("INIT DATA FULL", dat.init_data_shape, dat.init_data_shape[2:], output_full.shape)
+                #print("INIT DATA FULL", dat.init_data_shape, dat.init_data_shape[2:], output_full.shape)
             else:
                 output_full = torch.zeros(dat.data_full.shape[0], output.shape[1], dtype=torch.float32)
         ind1 = ind2
+        print("HERE", output.shape, output_full.shape)
         if dat_dev.ndim > 2:
             ind2 += dat_dev.shape[0]
             if ind2 > output_full.shape[0]:
                 ind2 = output_full.shape[0]
+            #print("HERE", output.shape)
             output_full[ind1:ind2,:output.shape[0], :output.shape[1]] = output
 
         else:
@@ -112,10 +118,12 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tile
                 ind2 = output_full.shape[0]
             output_full[ind1:ind2,:] = output
 
-        img = plt.imshow(output)
-        cmap = ListedColormap(CMAP_COLORS[0:int((500*200)- (-1) + 1)])
-        img.set_cmap(cmap)
-        plt.savefig(output_fle + "_tile" + str(count) + "_clusters.png", dpi=400, bbox_inches='tight') 
+        print(ind1, ind2)
+
+        #img = plt.imshow(output)
+        #cmap = ListedColormap(CMAP_COLORS[0:int((500*200)- (-1) + 1)])
+        #img.set_cmap(cmap)
+        #plt.savefig(output_fle + "_tile" + str(count) + "_clusters.png", dpi=400, bbox_inches='tight') 
 
         print("UNIQUE_TEST", torch.unique(output))
         ind = ind + 1
@@ -142,7 +150,7 @@ def plot_clusters(coord, output_data, output_basename, pixel_padding=1):
         labels = output_data.astype(np.int32)
         max_cluster = labels.max() #TODO this better!!!
 
-        print(np.unique(labels).shape, "UNIQUE LABELS", np.unique(labels), coord.shape, output_data.shape)
+        #print(np.unique(labels).shape, "UNIQUE LABELS", np.unique(labels), coord.shape, output_data.shape)
 
         n_clusters_local = max_cluster - min_cluster
 
@@ -157,9 +165,9 @@ def plot_clusters(coord, output_data, output_basename, pixel_padding=1):
         strt_dim1 = 0
         strt_dim2 = 0
 
-        print(labels.shape, max_dim1, max_dim2, labels.ndim)
+        #print(labels.shape, max_dim1, max_dim2, labels.ndim)
         #1 subtracted to separate No Data from areas that have cluster value 0.
-        if labels.ndim < 2:
+        if labels.ndim <= 2:
             data = np.zeros((((int)(max_dim1)+1+pixel_padding), ((int)(max_dim2)+pixel_padding+1))) - 1
             labels = np.array(labels)
             print("ASSIGNING LABELS", min_cluster, max_cluster)
@@ -171,9 +179,9 @@ def plot_clusters(coord, output_data, output_basename, pixel_padding=1):
         else:
             data = np.zeros((((int)(max_dim1)+1+pixel_padding), ((int)(max_dim2)+pixel_padding+1))) - 1
             labels = np.array(labels)
-            print("ASSIGNING LABELS", min_cluster, max_cluster)
-            print(data.shape, labels.shape, coord.shape)
-            print(data.shape, labels.shape, coord.shape)
+            #print("ASSIGNING LABELS", min_cluster, max_cluster)
+            #print(data.shape, labels.shape, coord.shape)
+            #print(data.shape, labels.shape, coord.shape)
             for i in range(labels.shape[0]):
                 print(coord[i,line_ind], coord[i,samp_ind], data.shape, labels.shape)
                 print(coord[i,line_ind], coord[i,samp_ind], coord[i], labels[i].shape, labels.shape)
@@ -187,16 +195,16 @@ def plot_clusters(coord, output_data, output_basename, pixel_padding=1):
         print("FINISHED WITH LABEL ASSIGNMENT")
         print("FINAL DATA TO DASK")
         data = data.astype(np.float32)
-        print(data)
+        #print(data)
         data = (data/1000.0).astype(np.float32)
-        print(data)
+        #print(data)
         data2 = da.from_array(data)
         #del data
 
-        print(data.shape, data2.shape, "HERE TEST")
+        #print(data.shape, data2.shape, "HERE TEST")
         da.to_zarr(data2,output_basename + "_" + str(n_clusters_local) + "clusters.zarr", overwrite=True)
         img = plt.imshow(data, vmin=-1, vmax=max_cluster)
-        print("HERE CLUSTERS MIN MAX MEAN STD", data.min(), data.max(), data.mean(), data.std(), data.shape)
+        #print("HERE CLUSTERS MIN MAX MEAN STD", data.min(), data.max(), data.mean(), data.std(), data.shape)
         cmap = ListedColormap(CMAP_COLORS[0:int(max_cluster - (-1) + 1)])
         img.set_cmap(cmap)
         plt.colorbar()
@@ -206,7 +214,7 @@ def plot_clusters(coord, output_data, output_basename, pixel_padding=1):
         file_ext = ".no_geo"
         fname = output_basename + "_" + str(n_clusters_local) + "clusters" + file_ext + ".tif"
 
-        print("HERE", data.min(), data.max(), data.mean(), data.std(), data.shape)
+        #print("HERE", data.min(), data.max(), data.mean(), data.std(), data.shape)
         out_ds = gdal.GetDriverByName("GTiff").Create(fname, data.shape[1], data.shape[0], 1, gdal.GDT_Float32)
         out_ds.GetRasterBand(1).WriteArray(data)
         out_ds.FlushCache()
@@ -317,6 +325,14 @@ def get_model(yml_conf, n_visible):
             m1.load_state_dict(torch.load(encoder_ckpt_path))
             m2 = UNetDecoder(num_classes, in_channels=in_chans)
             encoder = torch.nn.Sequential(m1, m2)
+        elif model_type == "DCE":
+            m1 = DeepConvEncoder(in_chans)
+            m1.load_state_dict(torch.load(encoder_ckpt_path))
+            m1 = m1.eval()
+            output_dim = in_chans*8*tile_size*tile_size
+            m2 =  MultiPrototypes(output_dim, num_classes, 1)
+            m2.eval()
+            encoder = m1 #torch.nn.Sequential(m1, m2)
  
 
         for param in encoder.parameters():
@@ -349,6 +365,8 @@ def main(yml_fpath):
     train_fnames = yml_conf["data"]["files_train"]
  
     data, _  = get_prediction_dataset(yml_conf, train_fnames[0])
+
+    print(data.data_full.shape)
 
     model = get_model(yml_conf, data.data_full.shape[1])
 
