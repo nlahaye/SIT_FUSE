@@ -2,11 +2,5 @@ dbf: True
 dbf_percentage_thresh: 0.51
 dbf_list:
   [
-    [
-      "/home/stasya/DBF_final/AVIRIS/Sheridan/20190821/FULL/shapes/labels/background/aviris_20190821_p00r23_background_OUTPUT_0.dbf",
-      "/home/stasya/DBF_final/AVIRIS/Sheridan/20190821/FULL/shapes/labels/background/aviris_20190821_p00r24_background_OUTPUT_0.dbf",
-      "/home/stasya/DBF_final/AVIRIS/Sheridan/20190821/FULL/shapes/labels/background/aviris_20190821_p00r25_background_OUTPUT_0.dbf",
-      "/home/stasya/DBF_final/AVIRIS/Sheridan/20190821/FULL/shapes/labels/background/aviris_20190821_p00r26_background_OUTPUT_0.dbf",
-      "/home/stasya/DBF_final/AVIRIS/Sheridan/20190821/FULL/shapes/labels/background/aviris_20190821_p00r27_background_OUTPUT_0.dbf"
-    ]
+
   ]
