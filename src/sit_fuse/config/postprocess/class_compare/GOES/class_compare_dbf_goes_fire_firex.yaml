@@ -1,5 +1,5 @@
 dbf: True
-dbf_percentage_thresh: 0.51
+dbf_percentage_thresh: 0.21
 dbf_list:
   [
     [ "/home/stasya/DBF_final/GOES/shapes/labels/fire/OR_ABI-L1b-RadC-M6C01_G17_s20192201821196_e20192201823569_c20192201824006_fire_OUTPUT_0.dbf",
