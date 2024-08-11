@@ -5,7 +5,7 @@ data:
   reader_kwargs:
     no_arg: "no_arg"
   subset_inds: [ [ ], [ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ] ]
-  create_separate: True
+  create_separate: False
   
   gtiff_data: [
     "/data/nlahaye/SIT_FUSE_Geo/GOES/OR_ABI-L1b-RadC-M6C01_G17_s20192201821196_e20192201823569_c20192201824006.tif.clust.data_79399clusters.zarr.full_geo.tif",

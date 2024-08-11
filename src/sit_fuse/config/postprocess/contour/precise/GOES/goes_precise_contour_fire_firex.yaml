@@ -1,0 +1,12 @@
+data:
+  filename: [
+
+  ]
+  reader_type: "gtiff"
+  reader_kwargs:
+    None:
+
+remove_singles: True
+remove_singles_2: True
+write_geotiff: True
+contour_min_size: -1
