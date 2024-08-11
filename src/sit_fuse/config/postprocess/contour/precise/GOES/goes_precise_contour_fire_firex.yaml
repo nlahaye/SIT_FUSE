@@ -1,6 +1,13 @@
 data:
   filename: [
-
+    "/data/nlahaye/SIT_FUSE_Geo/GOES/OR_ABI-L1b-RadC-M6C01_G17_s20192201821196_e20192201823569_c20192201824006.tif.clust.data_79399clusters.zarr.fire.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/GOES/OR_ABI-L1b-RadC-M6C01_G17_s20192201826196_e20192201828569_c20192201829005.tif.clust.data_79399clusters.zarr.fire.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/GOES/OR_ABI-L1b-RadC-M6C01_G17_s20192201831196_e20192201833569_c20192201834012.tif.clust.data_79399clusters.zarr.fire.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/GOES/OR_ABI-L1b-RadC-M6C01_G17_s20192201836196_e20192201838569_c20192201839012.tif.clust.data_79399clusters.zarr.fire.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/GOES/OR_ABI-L1b-RadC-M6C01_G17_s20192201841196_e20192201843569_c20192201844012.tif.clust.data_79399clusters.zarr.fire.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/GOES/OR_ABI-L1b-RadC-M6C01_G17_s20192201846196_e20192201848569_c20192201849023.tif.clust.data_79399clusters.zarr.fire.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/GOES/OR_ABI-L1b-RadC-M6C01_G17_s20192201851196_e20192201853569_c20192201854012.tif.clust.data_79399clusters.zarr.fire.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/GOES/OR_ABI-L1b-RadC-M6C01_G17_s20192201856196_e20192201858570_c20192201859007.tif.clust.data_79399clusters.zarr.fire.tif"
   ]
   reader_type: "gtiff"
   reader_kwargs:
