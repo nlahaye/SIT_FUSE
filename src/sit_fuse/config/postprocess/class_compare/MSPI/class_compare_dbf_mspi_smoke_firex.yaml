@@ -40,7 +40,7 @@ dbf_list: [
     "/home/stasya/DBF_final/MSPI/FIREX/20190808/shapes/smoke/AirMSPI_ER2_GRP_TERRAIN_20190808_181058Z_WA-GrandCoulee_SWPF_F01_V006.hdf_smoke_OUTPUT_0.dbf",
     "/home/stasya/DBF_final/MSPI/FIREX/20190808/shapes/smoke/AirMSPI_ER2_GRP_TERRAIN_20190808_181927Z_WA-Clayton_SWPF_F01_V006.hdf_smoke_OUTPUT_0.dbf",
     "/home/stasya/DBF_final/MSPI/FIREX/20190808/shapes/smoke/AirMSPI_ER2_GRP_TERRAIN_20190808_182400Z_ID-Rathdrum_SWPA_F01_V006.hdf_smoke_OUTPUT_0.dbf",
-    "/home/stasya/DBF_final/MSPI/FIREX/20190808/shapes/smoke/AirMSPI_ER2_GRP_TERRAIN_20190808_182451Z_ID-Athol_SWPF_F01_V006.hdf_smoke_OUTPUT_0.dbf" ]
+    "/home/stasya/DBF_final/MSPI/FIREX/20190808/shapes/smoke/AirMSPI_ER2_GRP_TERRAIN_20190808_182451Z_ID-Athol_SWPF_F01_V006.hdf_smoke_OUTPUT_0.dbf" ],
 
   [ "/home/stasya/DBF_final/MSPI/FIREX/20190806/shapes/background/AirMSPI_ER2_GRP_TERRAIN_20190806_181534Z_WA-Creston_SWPF_F01_V006.hdf_background_OUTPUT_0.dbf",
     "/home/stasya/DBF_final/MSPI/FIREX/20190806/shapes/background/AirMSPI_ER2_GRP_TERRAIN_20190806_181635Z_WA-Creston_SWPA_F01_V006.hdf_background_OUTPUT_0.dbf",
