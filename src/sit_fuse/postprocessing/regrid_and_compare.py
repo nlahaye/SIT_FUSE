@@ -1,6 +1,6 @@
 import salem
 from salem import get_demo_file, open_xr_dataset
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, confusion_matrix
 
 import argparse
  
@@ -21,6 +21,8 @@ def regrid_and_compare(config):
 
     sit_fuse_map_fnames = config["sit_fuse_maps"]
     truth_map_fnames = config["truth_maps"]
+    truth_full = None
+    sf_full = None
 
     for i in range(len(sit_fuse_map_fnames)):
  
@@ -30,11 +32,12 @@ def regrid_and_compare(config):
         print(sfmd, map_fle)
 
         sfm = open_xr_dataset(sfmd)
- 
+        sfm = sfm.clip(min=0, max=1)
+
         # prepare the figure and plot
         f, ((ax1, ax2, ax3)) = plt.subplots(3, 1, figsize=(11, 7))
         sm = sfm.salem.get_map()
-        #sm.set_lonlat_contours(interval=0)
+        sm.set_lonlat_contours(interval=0)
  
         # absolute values
         sm.set_data(sfm.to_array())
@@ -43,12 +46,14 @@ def regrid_and_compare(config):
         sm.visualize(ax=ax1, title='SIT_FUSE_Map')
 
         sm2 = copy.deepcopy(sfm.salem.get_map())
+        sm2.set_lonlat_contours(interval=0)
         sm2.set_cmap('Spectral')
         sm2.set_plot_params(vmin=-3, vmax=3)
         sm2.visualize(ax=ax1, title='Truth_Map')
 
         full_data = None
         sm3 = copy.deepcopy(sfm.salem.get_map())
+        sm3.set_lonlat_contours(interval=0)
         sm3.set_cmap('Spectral')
         sm3.set_plot_params(vmin=-3, vmax=3)
         sm3.visualize(ax=ax1, title='Difference_Map')
@@ -62,11 +67,18 @@ def regrid_and_compare(config):
         gm_on_sfm, lut = sfm.salem.lookup_transform(gm, return_lut=True)
         #gm_on_sfm = gm_on_sfm.fillna(-3)
         gm_on_sfm = np.array(gm_on_sfm.to_array())
-        gm_on_sfm[np.where(gm_on_sfm  > 2)] = 0
-        gm_on_sfm[np.where(gm_on_sfm  > 1)] = 1
+        #gm_on_sfm[np.where(gm_on_sfm  > 2)] = 0
+        #gm_on_sfm[np.where(gm_on_sfm  > 1)] = 1
+        #gm_on_sfm[np.where(gm_on_sfm  < 0)] = 0
+
+        gm_on_sfm[np.where(gm_on_sfm  > 0)] = 1
         gm_on_sfm[np.where(gm_on_sfm  < 0)] = 0
- 
-        dif = np.squeeze(np.array(sfm.to_array())) - np.squeeze(np.array(gm_on_sfm))
+
+        tmp = np.array(sfm.to_array()).astype(np.int32)
+        tmp2 = np.array(gm_on_sfm).astype(np.int32)
+        dif = np.squeeze(tmp - tmp2)
+        print(tmp.min(), tmp2.min(), tmp.max(), tmp2.max(), tmp.shape, tmp2.shape)
+        #dif = np.squeeze(np.array(sfm.to_array())) - np.squeeze(np.array(gm_on_sfm))
         print(np.nanmean(dif), np.nanmin(dif), np.nanmax(dif))
 
         print("Diff Mapping")
@@ -86,7 +98,9 @@ def regrid_and_compare(config):
         # make it nice
         plt.tight_layout()
         #plt.show()
-        plt.savefig("DIFFERENCE_" + os.path.basename(map_fle) + ".png")
+
+        fbase = os.path.join(os.path.dirname(sfmd), os.path.basename(map_fle) + "_vs_" + os.path.basename(sfmd))
+        plt.savefig(fbase + ".DIFFERENCE.png")
 
 
         out_dat = np.squeeze(full_data)
@@ -115,7 +129,7 @@ def regrid_and_compare(config):
 
         print(out_dat.shape, np.nanmean(out_dat), np.nanmin(out_dat), np.nanmax(out_dat), nx, ny, "HERE")
         print(geoTransform, gt2)
-        fname = "SIT_FUSE_vs_Global_Map_" + os.path.basename(sfmd) + ".tif"
+        fname = fbase + ".tif"
         print(fname)
         out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Int16)
         out_ds.SetGeoTransform(gt2)
@@ -127,12 +141,27 @@ def regrid_and_compare(config):
         out_ds.FlushCache()
         out_ds = None
 
-
-        trth = np.squeeze(np.array(gm_on_sfm))
-        finite_points = (np.isfinite(out_dat) & np.isfinite(trth)) 
-        report = classification_report(out_dat[finite_points], trth[finite_points], labels=[0,1])
+ 
+        #tmp2 is truth 
+        finite_points = (np.isfinite(tmp2) & np.isfinite(tmp)) 
+        report = classification_report(tmp2.ravel(), tmp.ravel())
+        cm = confusion_matrix(tmp2.ravel(), tmp.ravel())
+        #report = classification_report(tmp[finite_points], tmp2[finite_points], labels=[0,1])
+        #report =
+        if sf_full is None:
+            sf_full = tmp.ravel()
+            truth_full = tmp2.ravel()
+        else:
+            sf_full = np.concatenate((sf_full, tmp.ravel()))
+            truth_full = np.concatenate((truth_full, tmp2.ravel()))
+        print(sf_full.shape, truth_full.shape, "LENGTHS")
         print(report)
+        print(cm)
 
+    full_report = classification_report(truth_full, sf_full)
+    cm_full = confusion_matrix(truth_full, sf_full)
+    print(full_report)
+    print(cm_full)
 
 def main(yml_fpath):
 
