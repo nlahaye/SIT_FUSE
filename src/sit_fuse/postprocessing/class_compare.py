@@ -23,6 +23,7 @@ import os
 import datetime
 import copy
 import dbfread
+import pandas as pd
 from osgeo import gdal
 
 from sit_fuse.utils import numpy_to_torch, read_yaml, get_read_func
@@ -181,7 +182,16 @@ def read_label_counts_dbfs(dbf_list):
         for j in range(len(dbf_list[i])):
             if dbf_list[i][j] == "":
                 continue
-            for record in dbfread.DBF(dbf_list[i][j]):
+
+            itr = None
+            if ".dbf" in dbf_list[i][j]:
+                itr = dbfread.DBF(dbf_list[i][j])
+            else:
+                itr = pd.read_csv(dbf_list[i][j]).iterrows()
+
+            for record in itr:
+                if isinstance(record, tuple):
+                    record = record[1]
                 for key in record.keys():
                     try:
                         label = float(key)    
