@@ -10,7 +10,7 @@ required before exporting such information to foreign countries or providing acc
 from osgeo import gdal, ogr
 import os
 import argparse
-from utils import numpy_to_torch, read_yaml, get_read_func
+from sit_fuse.utils import numpy_to_torch, read_yaml, get_read_func
 
 def rasterize(nodata, vector_fn, pixel_size):
     print(vector_fn)
