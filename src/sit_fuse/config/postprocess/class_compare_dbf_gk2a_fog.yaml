@@ -1,0 +1,7 @@
+
+dbf: True
+dbf_list: [
+["/data/nlahaye/output/GK2A_Fog_DBFs/GK2A_No_Fog_20210930_Output.dbf"],
+["/data/nlahaye/output/GK2A_Fog_DBFs/GK2A_No_Fog_20240507_Output.dbf"]]
+
+dbf_percentage_thresh: 0.5 

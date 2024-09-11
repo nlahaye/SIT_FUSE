@@ -384,6 +384,10 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 
 def generate_separate_from_full(gtiff_data, apply_context, context_clusters, context_name, create_separate=True, generate_union=False, cluster_dependencies={}):
         outUnionFull = None
+        combine_classes = False
+        if not isinstance(context_name, list):
+            context_name = [context_name]
+            combine_classes = True
         for p in range(len(gtiff_data)):
                 outUnion = None
                 print(gtiff_data[p])
@@ -420,11 +424,12 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
                             tmp = []
                             tmp.append(context_clusters)
                             context_clusters = tmp
-                        if not isinstance(context_name, list):
-                            context_name = [context_name]
+                        outDatFull = None
+                        outDatFull2 = None
                         for j in range(len(context_clusters)):
-                            outDatFull = np.zeros((ny,nx), dtype=np.float32) - 1
-                            outDatFull2 = np.zeros((ny,nx), dtype=np.float32) - 1
+                            if not combine_classes or outDatFull is None:
+                                outDatFull = np.zeros((ny,nx), dtype=np.float32) - 1
+                                outDatFull2 = np.zeros((ny,nx), dtype=np.float32) - 1
  
                             for i in range(len(context_clusters[j])):
                                 clss = context_clusters[j][i]
@@ -436,11 +441,65 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
                                 outDatFull2[ind] = clss
                                 if generate_union > 0:
                                     outUnion[ind] = 1
+ 
+                            if not combine_classes:
+                                inds = np.where((outDatFull < 0) & (imgData >= 0))
+                                outDatFull[inds] = 0
+                                outDatFull2[inds] = 0
+                                file_ext = "." + context_name[j]
 
+                                fname = os.path.splitext(gtiff_data[p])[0] + file_ext + ".tif"
+                                out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
+                                out_ds.SetGeoTransform(geoTransform)
+                                out_ds.SetMetadata(metadata)
+                                out_ds.SetProjection(wkt)
+                                if gcpcount > 0:
+                                    out_ds.SetGCPs(gcp, gcpproj)
+                                out_ds.GetRasterBand(1).WriteArray(outDatFull)
+                                out_ds.FlushCache()
+                                out_ds = None
+                        
+                                fname = os.path.splitext(gtiff_data[p])[0] + file_ext + ".FullColor.tif"
+                                out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
+                                out_ds.SetGeoTransform(geoTransform)
+                                out_ds.SetMetadata(metadata)
+                                out_ds.SetProjection(wkt)
+                                if gcpcount > 0:
+                                    out_ds.SetGCPs(gcp, gcpproj)
+                                out_ds.GetRasterBand(1).WriteArray(outDatFull2)
+                                out_ds.FlushCache()
+                                out_ds = None
+
+ 
+                                if generate_union > 0:
+                                    fname = os.path.join(os.path.dirname(gtiff_data[p]), context_name[j] + ".Union.tif")
+                                    out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
+                                    out_ds.SetGeoTransform(geoTransform)
+                                    out_ds.SetMetadata(metadata)
+                                    out_ds.SetProjection(wkt)
+                                    if gcpcount > 0:
+                                        out_ds.SetGCPs(gcp, gcpproj)
+
+
+                                    if len(subset_inds[p]) > 0:
+                                            outUnionFull[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] = \
+                                            outUnionFull[subset_inds[p][0]:subset_inds[p][1],subset_inds[p][2]:subset_inds[p][3]] + outUnion
+                                    else:
+                                            outUnionFull = outUnion
+
+                                    inds = np.where(outUnionFull <= 0)
+                                    outUnionFull[inds] = 0
+                                    inds = np.where(outUnionFull > 0)
+                                    outUnionFull[inds] = 1
+                                    out_ds.GetRasterBand(1).WriteArray(outUnionFull)
+                                    out_ds.FlushCache()
+                                    out_ds = None
+                                    
+                        if combine_classes:
                             inds = np.where((outDatFull < 0) & (imgData >= 0))
                             outDatFull[inds] = 0
                             outDatFull2[inds] = 0
-                            file_ext = "." + context_name[j]
+                            file_ext = "." + context_name[0]
 
                             fname = os.path.splitext(gtiff_data[p])[0] + file_ext + ".tif"
                             out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
@@ -452,7 +511,7 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
                             out_ds.GetRasterBand(1).WriteArray(outDatFull)
                             out_ds.FlushCache()
                             out_ds = None
-                        
+
                             fname = os.path.splitext(gtiff_data[p])[0] + file_ext + ".FullColor.tif"
                             out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
                             out_ds.SetGeoTransform(geoTransform)
@@ -464,9 +523,9 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
                             out_ds.FlushCache()
                             out_ds = None
 
- 
+
                             if generate_union > 0:
-                                fname = os.path.join(os.path.dirname(gtiff_data[p]), context_name[j] + ".Union.tif")
+                                fname = os.path.join(os.path.dirname(gtiff_data[p]), context_name[0] + ".Union.tif")
                                 out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
                                 out_ds.SetGeoTransform(geoTransform)
                                 out_ds.SetMetadata(metadata)
@@ -488,6 +547,8 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
                                 out_ds.GetRasterBand(1).WriteArray(outUnionFull)
                                 out_ds.FlushCache()
                                 out_ds = None
+ 
+
 
 
                 if create_separate:
@@ -497,6 +558,7 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
                         ind = np.where(imgData == clss)
                         outDatFull[ind] = 1
                         file_ext = ".cluster_class" + str(clss)
+
 
                         fname = gtiff_data[p] + file_ext + ".tif"
                         out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)

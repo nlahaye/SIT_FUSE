@@ -1,0 +1,32 @@
+
+gen_from_geotiffs: False
+
+data:
+ clust_reader_type: "gtiff"
+ reader_kwargs:
+   no_arg: "no_arg" 
+ subset_inds: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
+ create_separate: False
+
+ 
+ gtiff_data: [
+"/data/nlahaye/remoteSensing/GK2A_FOG/RADI_FOG/gk2a_ami_le1b_ir087_ea020lc_202109302100.tif",
+"/data/nlahaye/remoteSensing/GK2A_FOG/TWILIGHT_FALSE/gk2a_ami_le1b_ir087_ea020lc_202405072130.tif",
+]
+
+ cluster_fnames: [
+"/data/nlahaye/output/Learnergy/GK2A_FOG_DBN/gk2a_ami_le1b_ir087_ea020lc_202109302100.tif.clust.data_69692clusters.zarr",
+"/data/nlahaye/output/Learnergy/GK2A_FOG_DBN/gk2a_ami_le1b_ir087_ea020lc_202405072130.tif.clust.data_69692clusters.zarr"
+]
+
+
+context: 
+ apply_context: True
+ clusters: [
+#[7.248],
+[60.168, 60.754, 60.776, 60.986, 60.137, 60.145, 60.701, 60.927, 60.992, 58.483]]
+#75.002, 7.257,7.273,
+ name: ["fog"] #i.e. smoke
+ compare_truth: False
+ generate_union: False
+

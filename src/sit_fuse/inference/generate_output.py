@@ -363,8 +363,12 @@ def main(yml_fpath):
 
     test_fnames = yml_conf["data"]["files_test"]
     train_fnames = yml_conf["data"]["files_train"]
- 
-    data, _  = get_prediction_dataset(yml_conf, train_fnames[0])
+  
+    data = None
+    cntr = 0
+    while data is None or data.data_full is None:
+        data, _  = get_prediction_dataset(yml_conf, train_fnames[cntr])
+        cntr = cntr + 1
 
     print(data.data_full.shape)
 

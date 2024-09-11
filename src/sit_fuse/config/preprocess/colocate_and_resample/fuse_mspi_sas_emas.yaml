@@ -1,0 +1,140 @@
+
+low_res:
+ data:
+  fill_value: -999999.0
+  valid_min: -900.0 #0.0000001
+  valid_max: 100000000
+  reader_type: "gtiff"
+  reader_kwargs:
+   no_arg: ''
+  geo_reader_type: "gtiff_geo"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: [
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190806_183632Z_WA-Keller_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190806_190054Z_WA-Keller_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190806_200308Z_WA-Keller_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190806_202139Z_WA-Creston_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190806_205617Z_WA-Wilbur_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190806_211454Z_WA-Wilbur_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190807_182404Z_WA-Inchelium_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190807_193214Z_WA-Inchelium_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190807_195226Z_WA-Inchelium_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190807_200717Z_WA-Lincoln_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190807_202502Z_WA-Inchelium_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190807_204231Z_WA-Inchelium_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190808_174846Z_WA-Connell_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190808_181151Z_WA-Inchelium_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190821_224247Z_AZ-Flagstaff_F01_V006.tif",
+]
+
+  geo_filenames: [
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190806_183632Z_WA-Keller_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190806_190054Z_WA-Keller_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190806_200308Z_WA-Keller_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190806_202139Z_WA-Creston_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190806_205617Z_WA-Wilbur_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190806_211454Z_WA-Wilbur_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190807_182404Z_WA-Inchelium_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190807_193214Z_WA-Inchelium_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190807_195226Z_WA-Inchelium_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190807_200717Z_WA-Lincoln_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190807_202502Z_WA-Inchelium_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190807_204231Z_WA-Inchelium_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190808_174846Z_WA-Connell_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190808_181151Z_WA-Inchelium_F01_V006.tif",
+"/data/nlahaye/remoteSensing/MSPI/step_and_stare/AirMSPI_ER2_GRP_TERRAIN_20190821_224247Z_AZ-Flagstaff_F01_V006.tif",
+]
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+high_res:
+ data:
+  valid_min: 0.0
+  valid_max: 100000000
+  reader_type: "gtiff"
+  reader_kwargs:
+   no_arg: "no_arg"
+  geo_reader_type: "gtiff_geo"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: [
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_08_20190806_1834_1846_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_10_20190806_1858_1910_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_17_20190806_2000_2010_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_18_20190806_2018_2031_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_20_20190806_2052_2106_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_21_20190806_2111_2125_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19911_05_20190807_1817_1833_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19911_08_20190807_1928_1942_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19911_09_20190807_1947_2002_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19911_10_20190807_2004_2016_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19911_11_20190807_2021_2035_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19911_12_20190807_2039_2051_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19912_06_20190808_1742_1804_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19912_07_20190808_1806_1821_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19919_10_20190821_2229_2251_V03.tif",
+]
+  geo_filenames: [
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_08_20190806_1834_1846_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_10_20190806_1858_1910_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_17_20190806_2000_2010_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_18_20190806_2018_2031_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_20_20190806_2052_2106_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_21_20190806_2111_2125_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19911_05_20190807_1817_1833_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19911_08_20190807_1928_1942_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19911_09_20190807_1947_2002_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19911_10_20190807_2004_2016_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19911_11_20190807_2021_2035_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19911_12_20190807_2039_2051_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19912_06_20190808_1742_1804_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19912_07_20190808_1806_1821_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19919_10_20190821_2229_2251_V03.tif"
+]
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+fusion:
+ projection_id: 4326
+ description: "Generating eMAS GeoTiffs"
+ area_id: "eMAS"
+ projection_proj4:
+  #proj: "utm"
+  #zone: 11
+  proj: "longlat"
+  datum: "WGS84" 
+ final_resolution: 0.00045 #0.00225 #0.000225
+ projection_units: "degrees"
+ resample_radius: 5000
+ resample_n_neighbors: 64
+ resample_n_procs: 10
+ resample_epsilon: 1.6
+ use_bilinear: True 
+       
+output_files: [
+"/data/nlahaye/remoteSensing/MSPI_SAS_eMAS_Fuse/MSPI_eMAS_20190806_183632Z.tif",
+"/data/nlahaye/remoteSensing/MSPI_SAS_eMAS_Fuse/MSPI_eMAS_20190806_190054Z.tif",
+"/data/nlahaye/remoteSensing/MSPI_SAS_eMAS_Fuse/MSPI_eMAS_20190806_200308Z.tif",
+"/data/nlahaye/remoteSensing/MSPI_SAS_eMAS_Fuse/MSPI_eMAS_20190806_202139Z.tif",
+"/data/nlahaye/remoteSensing/MSPI_SAS_eMAS_Fuse/MSPI_eMAS_20190806_205617Z.tif",
+"/data/nlahaye/remoteSensing/MSPI_SAS_eMAS_Fuse/MSPI_eMAS_20190806_211454Z.tif",
+"/data/nlahaye/remoteSensing/MSPI_SAS_eMAS_Fuse/MSPI_eMAS_20190807_182404Z.tif",
+"/data/nlahaye/remoteSensing/MSPI_SAS_eMAS_Fuse/MSPI_eMAS_20190807_193214Z.tif",
+"/data/nlahaye/remoteSensing/MSPI_SAS_eMAS_Fuse/MSPI_eMAS_20190807_195226Z.tif",
+"/data/nlahaye/remoteSensing/MSPI_SAS_eMAS_Fuse/MSPI_eMAS_20190807_200717Z.tif",
+"/data/nlahaye/remoteSensing/MSPI_SAS_eMAS_Fuse/MSPI_eMAS_20190807_202502Z.tif",
+"/data/nlahaye/remoteSensing/MSPI_SAS_eMAS_Fuse/MSPI_eMAS_20190807_204231Z.tif",
+"/data/nlahaye/remoteSensing/MSPI_SAS_eMAS_Fuse/MSPI_eMAS_20190808_174846Z.tif",
+"/data/nlahaye/remoteSensing/MSPI_SAS_eMAS_Fuse/MSPI_eMAS_20190808_181151Z.tif",
+"/data/nlahaye/remoteSensing/MSPI_SAS_eMAS_Fuse/MSPI_eMAS_20190821_224247Z.tif",
+]
+
+
+

@@ -1,0 +1,79 @@
+low_res:
+ data:
+  fill_value: -999999.0
+  valid_min: -900.0 #0.0000001
+  valid_max: 100000000
+  reader_type: "gtiff"
+  reader_kwargs:
+   no_arg: ''
+  geo_reader_type: "gtiff_geo"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: [
+"/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981719_02_20190806_1851_1900_V01.tif",
+"/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981719_05_20190806_2033_2039_V01.tif",
+"/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981725_02_20190817_0025_0026_V01.tif"
+] 
+
+  geo_filenames: [
+"/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981719_02_20190806_1851_1900_V01.tif",
+"/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981719_05_20190806_2033_2039_V01.tif",
+"/data/nlahaye/remoteSensing/MASTER/MASTERL1B_1981725_02_20190817_0025_0026_V01.tif"
+]
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+high_res:
+ data:
+  valid_min: 0.0
+  valid_max: 100000000
+  reader_type: "gtiff"
+  reader_kwargs:
+   no_arg: "no_arg"
+  geo_reader_type: "gtiff_geo"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: [
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_10_20190806_1858_1910_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_19_20190806_2035_2048_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19916_18_20190817_0023_0036_V03.tif"
+]
+  geo_filenames: [
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_10_20190806_1858_1910_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_19_20190806_2035_2048_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19916_18_20190817_0023_0036_V03.tif"
+]
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+fusion:
+ projection_id: 4326
+ description: "Generating eMAS GeoTiffs"
+ area_id: "eMAS"
+ projection_proj4:
+  #proj: "utm"
+  #zone: 11
+  proj: "longlat"
+  datum: "WGS84" 
+ final_resolution: 0.00045 #0.00225 #0.000225
+ projection_units: "degrees"
+ resample_radius: 5000
+ resample_n_neighbors: 64
+ resample_n_procs: 10
+ resample_epsilon: 1.6
+ use_bilinear: True 
+       
+output_files: [
+"/data/nlahaye/remoteSensing/MASTER_eMAS_Fuse/MASTER_eMAS_1981719_02_20190806_1851_1900_V01.tif",
+"/data/nlahaye/remoteSensing/MASTER_eMAS_Fuse/MASTER_eMAS_1981719_05_20190806_2033_2039_V01.tif",
+"/data/nlahaye/remoteSensing/MASTER_eMAS_Fuse/MASTER_eMAS_1981725_02_20190817_0025_0026_V01.tif"
+]
+
+
+

@@ -300,8 +300,11 @@ def read_s3_oc(filename, **kwargs):
 
 def read_viirs_oc(filename, **kwargs):
 
-    vrs = ["CHL.chlor_a", "KD.Kd_490", "PAR.par", "PIC.pic", "POC.poc", "RRS.aot_862", "RRS.angstrom"]
-    vrs2 = ["CHL.chlor_a", "KD.Kd_490", "PAR.par", "PIC.pic", "POC.poc", "RRS.aot_868", "RRS.angstrom"]
+    #vrs = ["CHL.chlor_a", "KD.Kd_490", "PAR.par", "PIC.pic", "POC.poc", "RRS.aot_862", "RRS.angstrom"]
+    #vrs2 = ["CHL.chlor_a", "KD.Kd_490", "PAR.par", "PIC.pic", "POC.poc", "RRS.aot_868", "RRS.angstrom"]
+
+    vrs = ["RRS.Rrs_410", "RRS.Rrs_443", "RRS.Rrs_486", "RRS.Rrs_551", "RRS.Rrs_671"]
+    vrs2 = ["RRS.Rrs_411", "RRS.Rrs_445", "RRS.Rrs_489", "RRS.Rrs_556", "RRS.Rrs_667"]
 
     #"RRS.aot_862", "RRS.Rrs_410", "RRS.Rrs_443", "RRS.Rrs_486", "RRS.Rrs_551", "RRS.Rrs_671"]
 
@@ -379,7 +382,7 @@ def read_oc_geo(filename, **kwargs):
 
     vrs = ["lat", "lon"]
 
-    f = Dataset(filename + "CHL.chlor_a.4km.nc")
+    f = Dataset(filename + "RRS.Rrs_443.4km.nc")
     f.set_auto_maskandscale(False)
     data1 = []
     for i in range(len(vrs)):
@@ -400,8 +403,8 @@ def read_oc_geo(filename, **kwargs):
 
 def read_modis_oc(filename, **kwargs):
 
-    vrs = ["CHL.chlor_a", "FLH.ipar", "FLH.nflh", "KD.Kd_490", "PAR.par", "PIC.pic", "POC.poc", "RRS.aot_869", "RRS.angstrom"]
-    #, "RRS.Rrs_412", "RRS.Rrs_443", "RRS.Rrs_469", "RRS.Rrs_488", "RRS.Rrs_531", "RRS.Rrs_547", "RRS.Rrs_555", "RRS.Rrs_645", "RRS.Rrs_667", "RRS.Rrs_678"]
+    #vrs = ["CHL.chlor_a", "FLH.ipar", "FLH.nflh", "KD.Kd_490", "PAR.par", "PIC.pic", "POC.poc", "RRS.aot_869", "RRS.angstrom"]
+    vrs = ["RRS.Rrs_412", "RRS.Rrs_443", "RRS.Rrs_469", "RRS.Rrs_488", "RRS.Rrs_531", "RRS.Rrs_547", "RRS.Rrs_555", "RRS.Rrs_645", "RRS.Rrs_667", "RRS.Rrs_678"]
 
     data1 = []
     for i in range(len(vrs)):
@@ -831,6 +834,7 @@ def read_gtiff_multifile_generic(files, **kwargs):
 #TODO config for AVIRIS - scale 0.0001 valid_min = 0 and Fill = -9999
 def read_gtiff_generic(flename, **kwargs): 
 	dat = gdal.Open(flename, gdal.GA_ReadOnly).ReadAsArray()
+	dat[np.where(dat.max() <= 0.0)] = -9999.0
 	if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
 		if len(dat.shape) == 3:
 			dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
@@ -841,7 +845,7 @@ def read_gtiff_generic(flename, **kwargs):
 
 
 #TODO generalize pieces for other tasks
-def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n_clusters, radius_degrees, ranges, global_max, input_file_type):
+def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n_clusters, radius_degrees, ranges, global_max, input_file_type, karenia):
  
     print(insitu_fname)
     insitu_df = None
@@ -849,13 +853,23 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         insitu_df = pd.read_excel(insitu_fname)
     elif 'csv' in insitu_fname:
         insitu_df = pd.read_csv(insitu_fname)
-    # Format Datetime Stamp
-    insitu_df['Datetime'] = pd.to_datetime(insitu_df['Sample Date'])
-    insitu_df.set_index('Datetime')
+ 
+    if karenia:
+        # Format Datetime Stamp
+        insitu_df['Datetime'] = pd.to_datetime(insitu_df['Sample Date'])
+        insitu_df.set_index('Datetime')
 
-    # Shorten Karenia Column Name
-    insitu_df.rename(columns={"Karenia brevis abundance (cells/L)":'Karenia'}, inplace=True)
+        # Shorten Karenia Column Name
+        insitu_df.rename(columns={"Karenia brevis abundance (cells/L)":'Total_Phytoplankton'}, inplace=True)
+    else:
+        # Format Datetime Stamp
+        insitu_df['Datetime'] = pd.to_datetime(insitu_df['time'])
+        insitu_df.set_index('Datetime')
+         
+        insitu_df.rename(columns={"latitude": "Latitude"}, inplace=True)
+        insitu_df.rename(columns={"longitude": "Longitude"}, inplace=True)
     
+
     insitu_df = insitu_df[(insitu_df['Datetime'] >= start_date) & (insitu_df['Datetime'] <= end_date)] 
 
     uniques = sorted(np.unique(insitu_df['Datetime'].values))
@@ -870,20 +884,20 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         date = uniques[dateind]
         #    find associated cluster
         if "sif" in input_file_type:
-            clust_fname = os.path.join(os.path.join(clusters_dir, "sif_finalday_" + str(ind) + ".clust.data_*clusters.tif"))
+            clust_fname = os.path.join(os.path.join(clusters_dir, "sif_finalday_" + str(ind) + ".tif"))
         else:
             if "S3B" in input_file_type:     
-                clust_fname = os.path.join(os.path.join(clusters_dir, "S3B_OLCI_ERRNT." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".clust.data_*clusters.tif"))
+                clust_fname = os.path.join(os.path.join(clusters_dir, "S3B_OLCI_ERRNT." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".tif"))
             elif "S3A" in input_file_type:
-                clust_fname = os.path.join(os.path.join(clusters_dir, "S3A_OLCI_ERRNT." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".clust.data_*clusters.tif"))
+                clust_fname = os.path.join(os.path.join(clusters_dir, "S3A_OLCI_ERRNT." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".tif"))
             elif "SNPP_VIIRS" in input_file_type:
-                clust_fname = os.path.join(os.path.join(clusters_dir, "SNPP_VIIRS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".clust.data_*clusters.tif"))
+                clust_fname = os.path.join(os.path.join(clusters_dir, "SNPP_VIIRS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".tif"))
             elif "JPSS1_VIIRS" in input_file_type:
-                clust_fname = os.path.join(os.path.join(clusters_dir, "JPSS1_VIIRS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".clust.data_*clusters.tif"))
+                clust_fname = os.path.join(os.path.join(clusters_dir, "JPSS1_VIIRS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".tif"))
             elif "AQUA_MODIS" in input_file_type:
-                clust_fname = os.path.join(os.path.join(clusters_dir, "AQUA_MODIS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".clust.data_*clusters.tif"))
+                clust_fname = os.path.join(os.path.join(clusters_dir, "AQUA_MODIS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".tif"))
             elif "TERRA_MODIS" in input_file_type:
-                clust_fname = os.path.join(os.path.join(clusters_dir, "TERRA_MODIS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".clust.data_*clusters.tif"))
+                clust_fname = os.path.join(os.path.join(clusters_dir, "TERRA_MODIS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".tif"))
 
         ind = ind + 1
 
@@ -904,23 +918,24 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
                 continue
   
         clust = gdal.Open(clust_fname)
-        lonLat = get_lat_lon(clust_fname)
+        latLon = get_lat_lon(clust_fname)
         clust = clust.ReadAsArray()
         clust = clust * 1000
         clust = clust.astype(np.int32)               
         print(np.unique(clust))
  
-        lat = lonLat[:,:,0].reshape(clust.shape[0]*clust.shape[1])
-        lon = lonLat[:,:,1].reshape(clust.shape[0]*clust.shape[1])
+        lat = latLon[:,:,0].reshape(clust.shape[0]*clust.shape[1])
+        lon = latLon[:,:,1].reshape(clust.shape[0]*clust.shape[1])
         clust = clust.reshape(clust.shape[0]*clust.shape[1])
         inds_clust = np.where(clust >= 0)
         lat = lat[inds_clust]
         lon = lon[inds_clust]
         clust = clust[inds_clust]
 
+
         gdf = gpd.GeoDataFrame(clust, geometry=gpd.GeoSeries.from_xy(lon, lat), crs=4326)
         subset = insitu_df[(insitu_df['Datetime'] == date)]
-        gdf_insitu = gpd.GeoDataFrame(subset["Karenia"], geometry=gpd.GeoSeries.from_xy(subset['Longitude'], subset['Latitude']), crs=4326)
+        gdf_insitu = gpd.GeoDataFrame(subset["Total_Phytoplankton"], geometry=gpd.GeoSeries.from_xy(subset['Longitude'], subset['Latitude']), crs=4326)
 
         #gdf_proj = gdf.to_crs({"init": "EPSG:3857"})
         #gdf_insitu_proj = gdf_insitu.to_crs({"init": "EPSG:3857"})     
@@ -942,7 +957,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
             #inds = gdf[~neighbours.is_empty]
             #print(index, poi)
             #print(inds, len(inds), len(clust))
-            print(len(neighbours))
+            print(len(neighbours), "HERE")
             if len(neighbours) < 1:
                 continue
             clusters = clust[neighbours]
@@ -954,18 +969,19 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
             hist_data.append(np.array(clusters_index))
             good_inds = np.where(np.isfinite(clusters_index))
             bad_inds = np.where(np.isnan(clusters_index))
-            print(good_inds)
+            print(good_inds, "HERE")
             #for j in range(len(clusters_index)):
-            hist_data[-1][good_inds] = poi["Karenia"]
+            hist_data[-1][good_inds] = poi["Total_Phytoplankton"]
             hist_data[-1][bad_inds] = -1
             #for j in good_inds[0]:
             #    if clusters_index[j]:
-            #        hist_data[-1][j] = poi["Karenia"]
+            #        hist_data[-1][j] = poi["Total_Phytoplankton"]
             #    else:
             #        hist_data[-1][j] = -1
 
         final_hist_data.extend(hist_data)
     fnl = np.array(final_hist_data, dtype=np.float32)
+    print(fnl.shape)
     fnl = np.swapaxes(fnl, 0,1)
     print(fnl.shape, fnl.max())
     ranges[-1] = max(ranges[-1], global_max)
@@ -1451,14 +1467,28 @@ def get_scaler(scaler_name, cuda=True):
 	else:
 		return None, True
 
+def read_gtiff_generic_geo(flename, **kwargs):
+    latLon = get_lat_lon(flename)    
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+            latLon = latLon[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+
+    return latLon
+
+
 def get_lat_lon(fname):
     # open the dataset and get the geo transform matrix
     ds = gdal.Open(fname)
     xoffset, px_w, rot1, yoffset, px_h, rot2 = ds.GetGeoTransform()
     dataArr = ds.ReadAsArray()
-    print(dataArr.shape)
-
-    lonLat = np.zeros((dataArr.shape[1], dataArr.shape[2], 2))
+    print(dataArr.shape, "LONLAT")
+ 
+    ind = 1
+    if dataArr.ndim == 3:
+        latLon = np.zeros((dataArr.shape[1], dataArr.shape[2], 2))
+        ind = 2
+    else:
+        latLon = np.zeros((dataArr.shape[0], dataArr.shape[1], 2))
 
     # get CRS from dataset 
     crs = osr.SpatialReference()
@@ -1468,25 +1498,25 @@ def get_lat_lon(fname):
     crsGeo = osr.SpatialReference()
     crsGeo.ImportFromEPSG(4326) # 4326 is the EPSG id of lat/long crs 
     t = osr.CoordinateTransformation(crs, crsGeo)
-    for j in range(dataArr.shape[2]):
-        for k in range(dataArr.shape[1]):
+    for j in range(dataArr.shape[ind]):
+        for k in range(dataArr.shape[ind-1]):
             posX = px_w * j + rot1 * k + (px_w * 0.5) + (rot1 * 0.5) + xoffset
             posY = px_h * j + rot2 * k + (px_h * 0.5) + (rot2 * 0.5) + yoffset
 
             (lon, lat, z) = t.TransformPoint(posX, posY)
-            lonLat[k,j,1] = lon
-            lonLat[k,j,0] = lat
-    return lonLat
+            latLon[k,j,1] = lon
+            latLon[k,j,0] = lat
+    return latLon
 
 def genLatLon(fnames):
 
     for i in range(len(fnames)):
         fname = fnames[i]
-        lonLat = get_lat_lon(fname)
+        latLon = get_lat_lon(fname)
 
         outFname = fname + ".lonlat.zarr"
         print(outFname)
-        zarr.save(outFname, lonLat)
+        zarr.save(outFname, latLon)
 
 
 def combine_modis_gtiffs_laads(file_list):
@@ -1939,6 +1969,8 @@ def get_read_func(data_reader):
         return read_gtiff_generic
     if data_reader == "aviris_gtiff":
         return read_gtiff_generic
+    if data_reader == "gtiff_geo":
+        return read_gtiff_generic_geo
     if data_reader == "numpy":
         return numpy_load
     if data_reader == "zarr_to_numpy":

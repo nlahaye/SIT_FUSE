@@ -216,6 +216,7 @@ class SFDataset(torch.utils.data.Dataset):
 					dat[np.where(dat > self.valid_max - 0.00000000005)] = -999999
 				if self.fill_value is not None:
 					dat[np.where(dat == self.fill_value)] = -999999
+				dat[~np.isfinite(dat)] = -999999
 				#Move specified channel dimension to 3rd position for uniformity
 				dat = np.moveaxis(dat, self.chan_dim+self.increment, 2+self.increment)
 				print("HERE", dat.shape, len(data_local))                                 
@@ -372,12 +373,12 @@ class SFDataset(torch.utils.data.Dataset):
 			self.data_full = torch.from_numpy(self.data_full)
 			self.targets_full = torch.from_numpy(self.targets_full)
 		if flatten:
-			kmeans = MiniBatchKMeans(n_clusters=20,
+			kmeans = MiniBatchKMeans(n_clusters=40,
                                 random_state=0,
                                 max_iter=50,
                                 n_init="auto").fit(torch.flatten(self.data_full, start_dim=1).numpy())
 		else:
-			kmeans = MiniBatchKMeans(n_clusters=20,
+			kmeans = MiniBatchKMeans(n_clusters=40,
 				random_state=0,
 				max_iter=50,
 				n_init="auto").fit(self.data_full)

@@ -27,9 +27,9 @@ class Up_Linear(nn.Module):
 
     def forward(self, x):
         x = self.insrm(x)
-        print(x.min(), x.max(), x.mean(), x.std())
+        #print(x.min(), x.max(), x.mean(), x.std())
         x = self.ln(x)
-        print(x.shape)
+        #print(x.shape)
         x = x.permute(0, 2, 1)
         x = torch.reshape(x, (x.shape[0], x.shape[1], self.size, self.size))
         x = self.shuffle(x)
@@ -96,17 +96,17 @@ class JEPA_Seg(nn.Module):
         #x = self.ups1(x)
         #x = self.ups0(x)
 
-        print(x.shape)
+        #print(x.shape)
         #x = torch.reshape(x, (x.shape[0], x.shape[1], 4, 4))
         #x = self.shuffle(x)
         #x = transforms.Resize((224, 224))(x)
         ##x = x.permute(0, 2, 1)
         x = self.out(x)
-        print(x.shape)
+        #print(x.shape)
         x = x.permute(0, 2, 1)
         x = torch.reshape(x, (x.shape[0], x.shape[1], 4, 4))
         x = self.out2(x)
-        print(x.shape, x.min(), x.max(), x.mean(), x.std())
+        #print(x.shape, x.min(), x.max(), x.mean(), x.std())
         x = self.smax(x)
         return x
 
@@ -158,7 +158,9 @@ class MultiPrototypes(nn.Module):
         for i in range(nmb_heads):
             self.n_layers = 0
             self.add_module("flatten" + str(i), nn.Flatten())
-            self.add_module("batch_norm" + str(i), nn.LayerNorm(output_dim))
+            self.add_module("batch_norm" + str(i), nn.LayerNorm(output_dim)) #nn.BatchNorm1d(output_dim)) 
+            #self.add_module("batch_norm" + str(i), nn.BatchNorm1d(output_dim)) 
+ 
             #for j in range(0,3):
             #if output_dim <= n_classes*2.5:
             self.n_layers =  self.n_layers + 1
