@@ -15,7 +15,7 @@ from segmentation.models.deeplabv3_plus_xception import DeepLab
 from sit_fuse.models.encoders.cnn_encoder import DeepConvEncoder
 
 
-from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes
+from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes, JEPA_Seg
 from sit_fuse.models.deep_cluster.heir_dc import Heir_DC, get_state_dict
 from sit_fuse.datasets.sf_heir_dataset_module import SFHeirDataModule
 from sit_fuse.datasets.sf_dataset import SFDataset
@@ -182,16 +182,20 @@ def heir_dc(yml_conf, dataset, ckpt_path):
         print("TRAINING MODEL ", str(count), " / ", str(len(model.lab_full.keys())))
 
         encoder_output_size = None
+        n_visible = 0
         if yml_conf["encoder_type"] == "ijepa":
-            encoder_output_size = get_output_shape(model.pretrained_model, (1, in_chans,model.pretrained_model.pretrained_model.img_size,model.pretrained_model.pretrained_model.img_size))
-            n_visible = encoder_output_size[1]
+            encoder_output_size = get_output_shape(model.pretrained_model.pretrained_model.model, (1, in_chans,model.pretrained_model.pretrained_model.img_size,model.pretrained_model.pretrained_model.img_size))
+            n_visible = encoder_output_size[1]*encoder_output_size[2]
         elif yml_conf["encoder_type"] == "dbn":
             encoder_output_size = (1, model.pretrained_model.pretrained_model.models[-1].n_hidden)
+            n_visible = encoder_output_size[1]
         elif yml_conf["encoder_type"] == "conv_dbn":
             encoder_output_size = get_output_shape(model.pretrained_model.pretrained_model, (1, yml_conf["data"]["tile_size"][2], yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
             n_visible = encoder_output_size[1]
         elif yml_conf["encoder_type"] == "byol":
             encoder_output_size = get_output_shape(encoder, (1, yml_conf["data"]["tile_size"][2], yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
+            n_visible = encoder_output_size[1]
+
 
         print("HERE ENCODER SHAPE", encoder_output_size)
 
@@ -200,9 +204,10 @@ def heir_dc(yml_conf, dataset, ckpt_path):
 
         #TODO num_channels from uppper modeli
 
-        n_visible = encoder_output_size[1]
-
-        model.clust_tree["1"][key] = MultiPrototypes(n_visible, model.num_classes, model.number_heads)
+        if yml_conf["encoder_type"] == "ijepa":
+            model.clust_tree["1"][key] = JEPA_Seg()
+        else:
+            model.clust_tree["1"][key] = MultiPrototypes(n_visible, model.num_classes, model.number_heads)
 
         model.clust_tree["1"][key].train() 
         for param in model.clust_tree["1"][key].parameters():

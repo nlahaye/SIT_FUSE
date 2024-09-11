@@ -145,6 +145,8 @@ def fuse_data(yml_conf):
             area_extent = (lo_geo[tuple(slc_lon_lo)].min(), lo_geo[tuple(slc_lat_lo)].min(),
                 lo_geo[tuple(slc_lon_lo)].max(), lo_geo[tuple(slc_lat_lo)].max())
 
+        print(slc_lon_lo, slc_lat_lo, lo_geo[tuple(slc_lon_lo)].max(), lo_geo[tuple(slc_lon_lo)].min(), lo_geo[tuple(slc_lat_lo)].max(), lo_geo[tuple(slc_lat_lo)].min())
+
         print(area_extent, lo_dat.min(), lo_dat.max())
 
         print(area_id, projection, area_extent, final_resolution, projection_units)

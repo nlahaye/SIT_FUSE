@@ -29,6 +29,7 @@ byol:
  projection_size: 256
  projection_hidden_size: 4096
  moving_average_decay: 0.99
+ model_type: "DCE"
 
 
 logger:

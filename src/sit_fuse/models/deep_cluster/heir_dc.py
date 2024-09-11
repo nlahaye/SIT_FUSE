@@ -13,7 +13,7 @@ from sit_fuse.models.deep_cluster.byol_dc import BYOL_DC
 from sit_fuse.models.deep_cluster.ijepa_dc import IJEPA_DC
 from sit_fuse.models.deep_cluster.dbn_dc import DBN_DC
 from sit_fuse.models.deep_cluster.dc import DeepCluster
-from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes, OutputProjection
+from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes, OutputProjection, JEPA_Seg
 from sit_fuse.utils import read_yaml, get_output_shape
 
 from tqdm import tqdm
@@ -116,7 +116,8 @@ class Heir_DC(pl.LightningModule):
             encoder_output_size = None
             if self.encoder_type == "ijepa":
                 encoder_output_size = get_output_shape(self.encoder, (1, yml_conf["data"]["tile_size"][2],self.pretrained_model.pretrained_model.img_size,self.pretrained_model.pretrained_model.img_size))
-                n_visible = encoder_output_size[1]
+                n_visible = encoder_output_size[1]*encoder_output_size[2]
+                print(encoder_output_size, yml_conf["data"]["tile_size"], self.pretrained_model.pretrained_model.img_size)
             elif self.encoder_type == "dbn":
                 encoder_output_size = (1, self.pretrained_model.pretrained_model.models[-1].n_hidden)
             elif self.encoder_type == "conv_dbn":
@@ -130,7 +131,7 @@ class Heir_DC(pl.LightningModule):
 
             state_dict = torch.load(clust_tree_ckpt)
             self.clust_tree, self.lab_full = \
-                load_model(self.clust_tree, n_visible, self, state_dict, self.pretrained_model.device) 
+                load_model(self.clust_tree, n_visible, self, state_dict, self.pretrained_model.device, (self.encoder_type == "ijepa")) 
                 #list(self.pretrained_model.mlp_head.children())[1].num_features, self, state_dict)        
  
         del data
@@ -200,19 +201,20 @@ class Heir_DC(pl.LightningModule):
                 if perturb:
                     x = x + torch.from_numpy(self.rng.normal(0.0, 0.01, \
                                         x.shape)).type(x.dtype).to(x.device)
-
+            print(x.shape)
             if self.encoder_type == "ijepa":
+                pass
                 #x = self.pretrained_model.mlp_head.ups3(x)
                 #x = self.pretrained_model.mlp_head.ups2(x)
                 #x = self.pretrained_model.mlp_head.ups1(x)
                 #x = self.pretrained_model.mlp_head.ups0(x)
 
-                x = self.pretrained_model.mlp_head.out(x)
-                print(x.shape)
-                x = x.permute(0, 2, 1)
-                x = torch.reshape(x, (x.shape[0], x.shape[1], 4, 4))
-                x = self.pretrained_model.mlp_head.out2(x)
-                print(x.shape, x.min(), x.max(), x.mean(), x.std())
+                ##x = self.pretrained_model.mlp_head.out(x)
+                #print(x.shape)
+                ##x = x.permute(0, 2, 1)
+                ##x = torch.reshape(x, (x.shape[0], x.shape[1], 4, 4))
+                ##x = self.pretrained_model.mlp_head.out2(x)
+                #print(x.shape, x.min(), x.max(), x.mean(), x.std())
                 #x = self.smax(x)
 
                 #x = x.permute(0, 2, 1)
@@ -288,9 +290,9 @@ class Heir_DC(pl.LightningModule):
                 tmp2_2 = tmp2.reshape(tmp2.shape[0], -1).transpose(1,0)
                 tmp4 = torch.flatten(tmp3, start_dim=1).permute(1,0)
                 inds2 = np.where(tmp2_2 == key)[0]            
-
-            #print(tmp.shape, tmp.ndim)
-            #print(tmp2.shape, tmp2_2.shape, tmp4.shape, tmp3.shape, tmp.ndim)
+ 
+            print(tmp.shape, tmp.ndim)
+            print(tmp2.shape, tmp2_2.shape, tmp4.shape, tmp3.shape, tmp.ndim, x.shape, y.shape, "HERE")
 
             if x.ndim == 2:
                 input_tmp = x.clone()
@@ -325,7 +327,7 @@ class Heir_DC(pl.LightningModule):
             else:
                 tmp_subset = torch.cat((tmp_subset, tmp), dim=0)
 
-            print(y.shape, tmp.shape, tmp_full.shape)
+            #print(y.shape, tmp.shape, tmp_full.shape)
 
             if y.ndim == 2:
                 tmp_full[inds[0],:] = tmp.type(tmp_full.dtype)
@@ -423,7 +425,7 @@ def get_state_dict(clust_tree, lab_full):
     state_dict["labels"] = lab_full
     return state_dict
 
-def load_model(clust_tree, n_visible, model, state_dict, device):
+def load_model(clust_tree, n_visible, model, state_dict, device, ijepa=False):
         lab_full = state_dict["labels"]
         for lab1 in clust_tree.keys():
             if lab1 == "0":
@@ -432,7 +434,11 @@ def load_model(clust_tree, n_visible, model, state_dict, device):
                 clust_tree[lab1][lab2] = None
                 if lab2 in state_dict[lab1].keys():
                     #clust_tree[lab1][lab2] = OutputProjection(224, model.pretrained_model.patch_size, model.pretrained_model.embed_dim, model.num_classes)
-                    clust_tree[lab1][lab2] = MultiPrototypes(n_visible, model.num_classes, model.number_heads).to(device)
+                    #print(lab1, lab2, n_visible, model.num_classes, model.number_heads)
+                    if ijepa:
+                        clust_tree[lab1][lab2] = JEPA_Seg()	
+                    else:
+                        clust_tree[lab1][lab2] = MultiPrototypes(n_visible, model.num_classes, model.number_heads).to(device)
                     clust_tree[lab1][lab2].load_state_dict(state_dict[lab1][lab2]["model"])
         return clust_tree, lab_full
 

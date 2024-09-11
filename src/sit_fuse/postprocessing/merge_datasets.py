@@ -8,7 +8,7 @@ required before exporting such information to foreign countries or providing acc
 """
 
 import numpy as np
-from utils import numpy_to_torch, read_yaml, insitu_hab_to_tif
+from sit_fuse.utils import numpy_to_torch, read_yaml, insitu_hab_to_tif
 from osgeo import gdal, osr
 import argparse
 import os

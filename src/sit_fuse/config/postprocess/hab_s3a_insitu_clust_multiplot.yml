@@ -4,7 +4,7 @@ start_date: "2018-06-01"
 end_date: "2019-12-31"
 clusters: 120000
  
-clusters_dir: '/data/nlahaye/output/Learnergy/DBN_S3A_OC_ONLY_GULF_OF_MEXICO/'
+clusters_dir: '/data/nlahaye/output/Learnergy/S3A_Only_Gulf_of_Mexico/'
 radius_degrees: 0.0225
 #0.045 degrees = 5km
 global_max: 10000000

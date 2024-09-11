@@ -16,6 +16,7 @@ from sit_fuse.models.deep_cluster.ijepa_dc import IJEPA_DC
 from sit_fuse.models.deep_cluster.dbn_dc import DBN_DC
 from sit_fuse.models.deep_cluster.byol_dc import BYOL_DC
 from sit_fuse.models.encoders.byol_pl import BYOL_Learner
+from sit_fuse.models.deep_cluster.clay_dc import Clay_DC
 from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes, DeepConvMultiPrototypes
 from sit_fuse.datasets.sf_dataset_module import SFDataModule
 from sit_fuse.utils import read_yaml
@@ -190,6 +191,90 @@ def dc_DBN(yml_conf, dataset, conv=False):
         )
 
     trainer.fit(model, dataset)
+
+
+def dc_Clay(yml_conf, dataset):
+
+    use_wandb_logger = yml_conf["logger"]["use_wandb"]
+    log_model = None
+    save_dir = yml_conf["output"]["out_dir"]
+    project = None
+    if use_wandb_logger:
+        log_model = yml_conf["logger"]["log_model"]
+        save_dir = os.path.join(yml_conf["output"]["out_dir"], yml_conf["logger"]["log_out_dir"])
+        project = yml_conf["logger"]["project"]
+
+    encoder_dir = os.path.join(save_dir, "encoder")
+    save_dir = os.path.join(save_dir, "full_model")
+
+    accelerator = yml_conf["cluster"]["training"]["accelerator"]
+    devices = yml_conf["cluster"]["training"]["devices"]
+    precision = yml_conf["cluster"]["training"]["precision"]
+    max_epochs = yml_conf["cluster"]["training"]["epochs"]
+    gradient_clip_val = yml_conf["cluster"]["training"]["gradient_clip_val"]
+    gauss_stdev = yml_conf["cluster"]["gauss_noise_stdev"] #TODO incorporate
+    lambda_iid = yml_conf["cluster"]["lambda"] #TODO incorporate
+
+    num_classes = yml_conf["cluster"]["num_classes"]
+
+    finetune_encoder = yml_conf["cluster"]["training"]["finetune_encoder"]
+
+    ckpt_path = os.path.join(encoder_dir, "clay-v1-base.ckpt")
+
+    gsd = yml_conf["cluster"]["gsd"]
+    waves = yml_conf["cluster"]["waves"] #TODO
+    feature_maps = [3,5,7,11]#["cluster"]["feature_maps"]
+    
+
+
+    model = Clay_DC(ckpt_path, num_classes, feature_maps, waves, gsd, lr = 1e-5, weight_decay=0.05)
+    for param in model.pretrained_model.parameters():
+        param.requires_grad = finetune_encoder
+    for param in model.mlp_head.parameters():
+        param.requires_grad = True
+
+    model.pretrained_model.train()
+    model.pretrained_model.model.train()
+
+    if not finetune_encoder:
+        model.pretrained_model.eval()
+        model.pretrained_model.model.eval()
+
+    lr_monitor = LearningRateMonitor(logging_interval="step")
+    model_summary = ModelSummary(max_depth=2)
+    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="deep_cluster", enable_version_counter=False, every_n_train_steps = 100, save_on_train_epoch_end=False)
+
+    os.makedirs(save_dir, exist_ok=True)
+    if use_wandb_logger:
+
+        wandb_logger = WandbLogger(project=project, log_model=log_model, save_dir = save_dir)
+
+        trainer = pl.Trainer(
+            default_root_dir=save_dir,
+            accelerator=accelerator,
+            devices=devices,
+            strategy=DDPStrategy(find_unused_parameters=True),
+            precision=precision,
+            max_epochs=max_epochs,
+            callbacks=[lr_monitor, model_summary, checkpoint_callback],
+            gradient_clip_val=gradient_clip_val,
+            logger=wandb_logger
+        )
+    else:
+        trainer = pl.Trainer(
+            default_root_dir=save_dir,
+            accelerator=accelerator,
+            devices=devices,
+            strategy=DDPStrategy(find_unused_parameters=True),
+            precision=precision,
+            max_epochs=max_epochs,
+            callbacks=[lr_monitor, model_summary, checkpoint_callback],
+            gradient_clip_val=gradient_clip_val
+        )
+
+
+    trainer.fit(model, dataset)
+
 
 
 def dc_IJEPA(yml_conf, dataset):
@@ -388,6 +473,8 @@ def main(yml_fpath):
             dc_IJEPA(yml_conf, dataset)
         elif yml_conf["encoder_type"] == "byol":
             dc_BYOL(yml_conf, dataset)
+        elif yml_conf["encoder_type"] == "clay":
+            dc_Clay(yml_conf, dataset)
     else:
         train_dc_no_pt(yml_conf, dataset)
 

@@ -4,10 +4,10 @@ start_date: "2018-06-01"
 end_date: "2019-12-31"
 clusters: 120000
  
-clusters_dir: '/data/nlahaye/output/Learnergy/DBN_S3B_OC_TROP_ONLY_AUTO_CLUST_PAD_GULF_OF_MEXICO/'
+clusters_dir: '/data/nlahaye/output/Learnergy/TROP_ONLY_Gulf_of_Mexico/'
 radius_degrees: 0.0225
 #0.045 degrees = 5km
 global_max: 10000000
 ranges: [0,1000,10000,100000,1000000,10000000]
-input_file_type: 'S3B'
+input_file_type: 'SNPP_VIIRS'
 

@@ -39,6 +39,9 @@ class DeepConvEncoder(nn.Module):
         self.add_module("prototypes" + str(i) + "_" + str(j), nn.Conv2d(od2, od3, kernel_size=3,stride=1,padding=1))
         self.add_module("prototypes_act" + str(i) + "_" + str(j), nn.LeakyReLU(0.1, inplace=True)) #n_classes, n_classes, bias=False))
 
+        print(od, od1, od2, od3)
+
+
         if self.flatten:
             self.add_module("flatten_layer", nn.Flatten())
 

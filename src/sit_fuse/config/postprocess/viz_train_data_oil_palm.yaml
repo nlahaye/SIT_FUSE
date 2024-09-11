@@ -1,0 +1,12 @@
+
+
+data:
+ train_inds_full: "/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_PL/train_data.indices.npy"
+ train_inds_subset: "/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_PL/train_indices.npy"
+
+
+ train_gtiffs: [
+"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h1v1.tif",
+"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h0v2.tif",
+"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h1v3.tif"]
+
