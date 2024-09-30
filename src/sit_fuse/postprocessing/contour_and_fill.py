@@ -57,7 +57,13 @@ def main(yml_fpath):
         
         if yml_conf["remove_singles"]:
             imgData = imgData - dip.GetSinglePixels(imgData > 0)
- 
+
+  
+        if yml_conf["dilations"] > 0:
+            imgData = cv2.dilate(imgData.copy(), None, iterations=yml_conf["dilations"])
+        if yml_conf["erosions"] > 0:
+            imgData = cv2.erode(imgData.copy(), None, iterations=yml_conf["erosions"])
+
         imgData2 = imgData.copy()
         imgData3 = imgData.copy()
 
