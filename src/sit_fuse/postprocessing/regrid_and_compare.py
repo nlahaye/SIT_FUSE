@@ -17,12 +17,23 @@ import copy
 
 from sit_fuse.utils import numpy_to_torch, read_yaml, get_read_func
 
+
+def calculate_iou(gt_mask, pred_mask):
+    overlap = pred_mask * gt_mask  # Logical AND
+    union = (pred_mask + gt_mask)>0  # Logical OR
+    iou = overlap.sum() / float(union.sum())
+    return iou
+ 
 def regrid_and_compare(config):
 
     sit_fuse_map_fnames = config["sit_fuse_maps"]
     truth_map_fnames = config["truth_maps"]
     truth_full = None
     sf_full = None
+    tp = 0.0
+    fp = 0.0
+    tn = 0.0
+    fn = 0.0
 
     for i in range(len(sit_fuse_map_fnames)):
  
@@ -32,8 +43,9 @@ def regrid_and_compare(config):
         print(sfmd, map_fle)
 
         sfm = open_xr_dataset(sfmd)
-        sfm = sfm.clip(min=0, max=1)
+        #sfm = sfm.clip(min=0, max=1)
 
+        """
         # prepare the figure and plot
         f, ((ax1, ax2, ax3)) = plt.subplots(3, 1, figsize=(11, 7))
         sm = sfm.salem.get_map()
@@ -57,12 +69,15 @@ def regrid_and_compare(config):
         sm3.set_cmap('Spectral')
         sm3.set_plot_params(vmin=-3, vmax=3)
         sm3.visualize(ax=ax1, title='Difference_Map')
- 
+
         full_data = np.zeros(np.squeeze(sfm.to_array()).shape)
+        """
 
         print("Opening", map_fle)
         gm = open_xr_dataset(map_fle)
- 
+        #gm = gm.clip(min=0, max=1)
+
+        print(gm.min(), gm.max())
         print("Regridding")
         gm_on_sfm, lut = sfm.salem.lookup_transform(gm, return_lut=True)
         #gm_on_sfm = gm_on_sfm.fillna(-3)
@@ -73,14 +88,27 @@ def regrid_and_compare(config):
 
         gm_on_sfm[np.where(gm_on_sfm  > 0)] = 1
         gm_on_sfm[np.where(gm_on_sfm  < 0)] = 0
+        #gm_on_sfm = gm_on_sfm.clip(min=0, max=1)
 
-        tmp = np.array(sfm.to_array()).astype(np.int32)
-        tmp2 = np.array(gm_on_sfm).astype(np.int32)
+        tmp = np.array(sfm.to_array()).astype(np.float32)
+
+        tmp[np.where(tmp  > 0)] = 1
+        tmp[np.where(tmp  < 0)] = 0
+ 
+        tmp2 = np.array(gm_on_sfm).astype(np.float32)
+        tmp2[np.where(np.isnan(tmp2))] = 0
+
         dif = np.squeeze(tmp - tmp2)
         print(tmp.min(), tmp2.min(), tmp.max(), tmp2.max(), tmp.shape, tmp2.shape)
         #dif = np.squeeze(np.array(sfm.to_array())) - np.squeeze(np.array(gm_on_sfm))
         print(np.nanmean(dif), np.nanmin(dif), np.nanmax(dif))
+        
+        del sfm
+        del gm_on_sfm
+        del gm
+        del dif
 
+        """
         print("Diff Mapping")
  
         sm2.set_data(gm_on_sfm, overplot=True)
@@ -105,6 +133,7 @@ def regrid_and_compare(config):
 
         out_dat = np.squeeze(full_data)
         print(np.nanmean(out_dat), np.nanmin(out_dat), np.nanmax(out_dat))
+        
         dat = gdal.Open(sfmd)
 
         dat_tmp = dat.ReadAsArray()
@@ -140,28 +169,47 @@ def regrid_and_compare(config):
         out_ds.GetRasterBand(1).WriteArray(out_dat)
         out_ds.FlushCache()
         out_ds = None
-
+        """
  
         #tmp2 is truth 
-        finite_points = (np.isfinite(tmp2) & np.isfinite(tmp)) 
+        #finite_points = (np.isfinite(tmp2) & np.isfinite(tmp)) 
         report = classification_report(tmp2.ravel(), tmp.ravel())
+        iou = calculate_iou(tmp2.ravel(), tmp.ravel()) 
         cm = confusion_matrix(tmp2.ravel(), tmp.ravel())
         #report = classification_report(tmp[finite_points], tmp2[finite_points], labels=[0,1])
-        #report =
         if sf_full is None:
             sf_full = tmp.ravel()
             truth_full = tmp2.ravel()
         else:
             sf_full = np.concatenate((sf_full, tmp.ravel()))
             truth_full = np.concatenate((truth_full, tmp2.ravel()))
-        print(sf_full.shape, truth_full.shape, "LENGTHS")
+        tp = tp + cm[1,1]
+        tn = tn + cm[0,0]
+        fp = fp + cm[1,0]
+        fn = fn + cm[0,1]
+        ##print(sf_full.shape, truth_full.shape, "LENGTHS")
         print(report)
         print(cm)
+        print("IOU:", iou)
+        del cm
+        del report
+
+    recall = float(tp) / (float(tp) + float(fn))
+    precision = float(tp) / (float(tp) + float(fp))
+    cm_full = np.zeros((2,2))
+    cm_full[0,0] = tn
+    cm_full[1,0] = fp
+    cm_full[0,1] = fn
+    cm_full[1,1] = tp
+    print("Precision:", precision, "Recall:", recall)
+    print(cm_full)
 
     full_report = classification_report(truth_full, sf_full)
     cm_full = confusion_matrix(truth_full, sf_full)
+    iou_full = calculate_iou(truth_full, sf_full)
     print(full_report)
     print(cm_full)
+    print("IOU:", iou_full)
 
 def main(yml_fpath):
 
