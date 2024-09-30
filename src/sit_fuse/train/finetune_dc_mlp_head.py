@@ -228,17 +228,17 @@ def dc_Clay(yml_conf, dataset):
 
 
     model = Clay_DC(ckpt_path, num_classes, feature_maps, waves, gsd, lr = 1e-5, weight_decay=0.05)
-    for param in model.pretrained_model.parameters():
-        param.requires_grad = finetune_encoder
-    for param in model.mlp_head.parameters():
-        param.requires_grad = True
+    #for param in model.pretrained_model.parameters():
+    #    param.requires_grad = finetune_encoder
+    #for param in model.mlp_head.parameters():
+    #    param.requires_grad = True
 
     model.pretrained_model.train()
-    model.pretrained_model.model.train()
+    model.pretrained_model.encoder.train()
 
-    if not finetune_encoder:
-        model.pretrained_model.eval()
-        model.pretrained_model.model.eval()
+    #if not finetune_encoder:
+    #    model.pretrained_model.eval()
+    #    model.pretrained_model.encoder.eval()
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
@@ -304,8 +304,9 @@ def dc_IJEPA(yml_conf, dataset):
     finetune_encoder = yml_conf["cluster"]["training"]["finetune_encoder"]
 
     ckpt_path = os.path.join(encoder_dir, "encoder.ckpt")
+    lr = yml_conf["cluster"]["training"]["learning_rate"]
 
-    model = IJEPA_DC(ckpt_path, num_classes)
+    model = IJEPA_DC(ckpt_path, num_classes, weight_decay=0.95, lr = lr)
     for param in model.pretrained_model.parameters():
         param.requires_grad = finetune_encoder
     for param in model.mlp_head.parameters():
