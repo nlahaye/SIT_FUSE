@@ -1,0 +1,206 @@
+import numpy as np
+import pytorch_lightning as pl
+import torch.nn as nn
+import torch
+
+import torch.nn.functional as F
+
+from sit_fuse.losses.iid import IID_loss
+from sit_fuse.models.deep_cluster.clay_segmentor import Segmentor
+
+import sys
+import numpy as np
+
+
+class Clay_DC(pl.LightningModule):
+    #take pretrained model path, number of classes, learning rate, weight decay, and drop path as input
+    def __init__(self, pretrained_model_path, num_classes, feature_maps, waves, gsd, lr=1e-3, weight_decay=0):
+
+        super().__init__()
+        self.save_hyperparameters()
+        self.num_classes = num_classes
+
+        self.gsd = gsd
+        self.waves = torch.FloatTensor(waves)
+
+        #set parameters
+        self.lr = lr
+        self.weight_decay = weight_decay
+
+        #define model layers
+        print(pretrained_model_path)
+        self.pretrained_model = Segmentor(num_classes, feature_maps, pretrained_model_path)
+        #self.pretrained_model.model.layer_dropout = 0.0
+        self.mlp_head = self.pretrained_model.seg_head 
+
+        #define loss
+        self.criterion = IID_loss #IIDLoss(1.0, sys.float_info.epsilon)  #IID_loss
+        self.rng = np.random.default_rng(None)
+ 
+    def forward(self, x):
+
+        waves = self.waves
+        gsd = self.gsd
+
+        print(x.shape, "HERE Clay")
+        dat_final = {
+            "pixels": x,
+            "latlon": torch.zeros((x.shape[0],4)),
+            "time": torch.zeros((x.shape[0],4)),
+            "gsd": self.gsd,
+            "waves": self.waves}
+            
+
+        y = self.pretrained_model.encoder(dat_final)
+        y2 = []
+        print(len(y), len(self.pretrained_model.upsamples), x.shape)
+        for i in range(len(y)):
+            print(y[i].shape)
+            y2.append(self.pretrained_model.upsamples[i](y[i]))
+
+        y2 = torch.cat(y2, dim=1)
+        y2 = self.pretrained_model.fusion(y2)
+         
+        y2 = F.interpolate(
+            y2,
+            size=(16, 16),
+            mode="bilinear",
+            align_corners=False,
+        )  # Resize to match labels size
+
+        y2 = F.softmax(self.pretrained_model.seg_head(y2), dim=1)
+
+        return y2
+    
+    def training_step(self, batch, batch_idx):
+        y = batch
+
+        print(y[0].shape, "HERE Clay")
+        dat_final = {
+            "pixels": y, #[0],
+            #"indices": y[1],
+            "latlon": torch.zeros((y.shape[0],4)),
+            "time": torch.zeros((y.shape[0],4)),
+            "gsd": self.gsd,
+            "waves": self.waves}
+        y = self.pretrained_model.encoder(dat_final)
+
+        y2 = []
+        for i in range(len(y)):
+
+            y2.append(y[i].clone())
+            y2[i] = y2[i] + torch.from_numpy(self.rng.normal(0.0, 0.01, \
+                                (y[i].shape))).type(y[i].dtype).to(y[i].device)
+ 
+            print("INITIAL SIZES", y[i].shape, y2[i].shape, i)
+            y[i] = self.pretrained_model.upsamples[i](y[i])
+            y2[i] = self.pretrained_model.upsamples[i](y2[i])
+            
+            print("UPSAMPLE SIZES", y[i].shape, y2[i].shape, i)
+
+
+        y = torch.cat(y, dim=1)
+        y2 = torch.cat(y2, dim=1)
+
+        y = self.pretrained_model.fusion(y)
+        y2 = self.pretrained_model.fusion(y2)
+
+        y = F.interpolate(
+            y,
+            size=(16, 16),
+            mode="bilinear",
+            align_corners=False,
+        )  # Resize to match labels size
+
+        y2 = F.interpolate(
+            y2,
+            size=(16, 16),
+            mode="bilinear",
+            align_corners=False,
+        )  # Resize to match labels size
+
+        y = F.softmax(self.pretrained_model.seg_head(y), dim=1)
+        y2 = F.softmax(self.pretrained_model.seg_head(y2), dim=1)
+
+        print(torch.unique(torch.argmax(y, dim=1)), "Y labels")
+        print(torch.unique(torch.argmax(y2, dim=1)), "Y2 labels")
+
+        loss = self.criterion(torch.flatten(y.permute(0,2,3,1), start_dim=0, end_dim=2),torch.flatten(y2.permute(0,2,3,1), start_dim=0, end_dim=2), lamb=2.0)[0] #calculate loss
+        self.log('train_loss', loss, sync_dist=True)
+        return loss       
+
+
+ 
+    def validation_step(self, batch, batch_idx):
+        y = batch
+
+        print(y[0].shape, "HERE Clay")
+        dat_final = {
+            "pixels": y, #[0],
+            #"indices": y[1],
+            "latlon": torch.zeros((y.shape[0],4)),
+            "time": torch.zeros((y.shape[0],4)),
+            "gsd": self.gsd,   
+            "waves": self.waves}
+
+        y = self.pretrained_model.encoder(dat_final)
+
+        y2 = [] 
+        for i in range(len(y)):
+
+            y2.append(y[i].clone())
+            y2[i] = y2[i] + torch.from_numpy(self.rng.normal(0.0, 0.01, \
+                                (y[i].shape))).type(y[i].dtype).to(y[i].device)
+            print("INITIAL SIZES", y[i].shape, i)
+            y[i] = self.pretrained_model.upsamples[i](y[i])
+            y2[i] = self.pretrained_model.upsamples[i](y2[i])
+            print("UPSAMPLE SIZES", y[i].shape, y2[i].shape, i)
+
+        y = torch.cat(y, dim=1)
+        y2 = torch.cat(y2, dim=1)
+
+        y = self.pretrained_model.fusion(y)
+        y2 = self.pretrained_model.fusion(y2)
+
+        print(y.shape, y2.shape, "POST FUSION")
+
+        y = F.interpolate(
+            y,
+            size=(16, 16),
+            mode="bilinear",
+            align_corners=False,
+        )  # Resize to match labels size
+
+        y2 = F.interpolate(
+            y2,
+            size=(16, 16),
+            mode="bilinear",
+            align_corners=False,
+        )  # Resize to match labels size
+
+        y = F.softmax(self.pretrained_model.seg_head(y), dim=1)
+        y2 = F.softmax(self.pretrained_model.seg_head(y2), dim=1) 
+
+
+        loss = self.criterion(torch.flatten(y.permute(0,2,3,1), start_dim=0, end_dim=2),torch.flatten(y2.permute(0,2,3,1), start_dim=0, end_dim=2), lamb=2.0)[0] #calculate loss
+        self.log('val_loss', loss, sync_dist=True)
+        return loss
+
+    def predict_step(self, batch, batch_idx, dataloader_idx):
+        return self(batch)
+    
+    def configure_optimizers(self):
+        optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
+        scheduler = torch.optim.lr_scheduler.OneCycleLR(
+            optimizer,
+            max_lr=self.lr,
+            total_steps=self.trainer.estimated_stepping_batches,
+        )
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "interval": "step",
+            },
+        }
+
