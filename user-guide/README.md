@@ -8,8 +8,8 @@ description: The SIT FUSE User Guide
 [installing-the-repo.md](installing-the-repo.md)
 {% endcontent-ref %}
 
-{% content-ref url="code-configuration/" %}
-[code-configuration](code-configuration/)
+{% content-ref url="code-configuration/code-configuration/" %}
+[code-configuration](code-configuration/code-configuration/)
 {% endcontent-ref %}
 
 {% content-ref url="dockerized-environment.md" %}
