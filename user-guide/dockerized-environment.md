@@ -31,7 +31,7 @@ docker build -t sit_fuse:latest .
 
 To run the container, you will need a few special arguments (namely  --runtime=nvidia -e NVIDIA\_VISIBLE\_DEVICES=nvidia.com/gpu=all). The proper values to use, for your specific case are detailed in the NVIDIA Container Toolkit link above.
 
-{% code fullWidth="true" %}
+{% code fullWidth="false" %}
 ```
 docker run -it -v /data/:/data/ \
 --runtime=nvidia -e NVIDIA_VISIBLE_DEVICES=nvidia.com/gpu=all sit_fuse
