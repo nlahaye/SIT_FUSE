@@ -1,11 +1,15 @@
 import numpy as np
 import pytorch_lightning as pl
 import torch.nn as nn
+import torch.nn.functional as F
 import torch
+
+import math
 
 from sit_fuse.models.encoders.ijepa_pl import IJEPA_PL
 from sit_fuse.losses.iid import IID_loss
 from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes, OutputProjection, JEPA_Seg
+from sit_fuse.models.deep_cluster.ijepa_segmentor import JEPASegmentor
 
 from torchmetrics.clustering import MutualInfoScore
 
@@ -30,16 +34,21 @@ class IJEPA_DC(pl.LightningModule):
         #define model layers
         self.pretrained_model = IJEPA_PL.load_from_checkpoint(pretrained_model_path)
         self.pretrained_model.model.layer_dropout = 0.0
- 
+  
+        feature_maps = [0,1,2]
+        self.segmentor = JEPASegmentor(num_classes, feature_maps, self.pretrained_model.model)
+        self.mlp_head = self.segmentor.seg_head
+  
         #self.average_pool = nn.AvgPool1d((self.pretrained_model.embed_dim), stride=1)
         #mlp head
        
         #self.mlp_head =  MultiPrototypes(self.pretrained_model.num_tokens, 800, 1)
         #self.mlp_head =  MultiPrototypes(self.pretrained_model.num_tokens*self.pretrained_model.embed_dim, self.num_classes, self.number_heads)
         #self.mlp_head = OutputProjection(self.pretrained_model.img_size, self.pretrained_model.patch_size, self.pretrained_model.embed_dim, self.num_classes)
-        self.mlp_head = MultiPrototypes(3072*16, 800, 1, single=True)  
-        self.mlp_head = JEPA_Seg()
-  
+        #self.mlp_head = MultiPrototypes(3072*16, 800, 1, single=True)  
+        #self.mlp_head = JEPA_Seg(num_classes)
+          
+
 
         #nn.Sequential(
         #    nn.LayerNorm(self.pretrained_model.num_tokens),
@@ -51,48 +60,140 @@ class IJEPA_DC(pl.LightningModule):
         self.rng = np.random.default_rng(None)
  
     def forward(self, x):
-        x = self.pretrained_model.model(x)
-        ###x = x.flatten(start_dim=1)
-        #x = self.average_pool(x) #conduct average pool like in paper
-        ###x = x.squeeze(-1)
-        x = self.mlp_head(x) #pass through mlp head
+        self.segmentor(x)
         return x
     
     def training_step(self, batch, batch_idx):
         y = batch
-        y = self.pretrained_model.model(y)
-        ###y = self.pretrained_model.model(x).flatten(start_dim=1)
-        ###y2 = y.clone() + torch.from_numpy(self.rng.normal(0.0, 0.01, \
-        ###                        y.shape[1]*y.shape[0]).reshape(y.shape[0],\
-        ###                        y.shape[1])).type(y.dtype).to(y.device)
-        y2 = y.clone() + torch.from_numpy(self.rng.normal(0.0, 0.01, \
-                                (y.shape))).type(y.dtype).to(y.device)
-        y = torch.flatten(torch.moveaxis(self.mlp_head(y),1,3), start_dim=0, end_dim=-2)
-        y2 = torch.flatten(torch.moveaxis(self.mlp_head(y2),1,3), start_dim=0, end_dim=-2)
-        #y = self.mlp_head(y)
-        #y2 = self.mlp_head(y2)
+
+        y = self.segmentor.encoder(y)
+
+        y2 = []
+        for i in range(len(y)):
+
+
+            y2.append(y[i].clone())
+            y2[i] = y2[i] + torch.from_numpy(self.rng.normal(0.0, 0.01, \
+                                (y[i].shape))).type(y[i].dtype).to(y[i].device)
+
+            print("INITIAL SIZES", y[i].shape, y2[i].shape, i)
+            y[i] = self.segmentor.upsamples[i](y[i])
+            y2[i] = self.segmentor.upsamples[i](y2[i])
+
+            print("UPSAMPLE SIZES", y[i].shape, y2[i].shape, i)
+
+
+        y = torch.cat(y, dim=1)
+        y2 = torch.cat(y2, dim=1)
+
+        print(y2.shape)
+
+        y = self.segmentor.fusion(y)
+        y2 = self.segmentor.fusion(y2)
+
+        print(y2.shape)
+
+        y = F.interpolate(
+            y,
+            size=(16, 16),
+            mode="bilinear",
+            align_corners=False,
+        )  # Resize to match labels size
+
+        y2 = F.interpolate(
+            y2,
+            size=(16, 16),
+            mode="bilinear",
+            align_corners=False,
+        )  # Resize to match labels size
+
+
+        print(y2.shape)
+
+        y = F.softmax(self.segmentor.seg_head(y), dim=1)
+        y2 = F.softmax(self.segmentor.seg_head(y2), dim=1)
+
+        print(y2.shape)
+
         print(torch.unique(torch.argmax(y, dim=1)), "Y labels")
         print(torch.unique(torch.argmax(y2, dim=1)), "Y2 labels")
-        loss = self.criterion(y,y2, lamb=2.0)[0] #calculate loss
+
+        y = torch.flatten(y.permute(0,2,3,1), start_dim=0, end_dim=2)
+        y2 = torch.flatten(y2.permute(0,2,3,1), start_dim=0, end_dim=2) 
+
+
+        print(y2.shape)
+
+        loss = 0
+        for i in range(0, y.shape[0], 100):
+            i2 = i + 100
+            if i2 > y.shape[0]:
+                i2 = y.shape[0]
+            loss = loss + self.criterion(y[i:i2],y2[i:i2], lamb=1.0)[0] #calculate loss
+        loss = loss / int(math.ceil(y.shape[0] / 100))
         self.log('train_loss', loss, sync_dist=True)
         return loss
 
+
     def validation_step(self, batch, batch_idx):
         y = batch
-        y = self.pretrained_model.model(y)
-        ###y = self.pretrained_model.model(x).flatten(start_dim=1)
-        ###y2 = y.clone() + torch.from_numpy(self.rng.normal(0.0, 0.01, \
-        ###                        y.shape[1]*y.shape[0]).reshape(y.shape[0],\
-        ###                        y.shape[1])).type(y.dtype).to(y.device)
-        y2 = y.clone() + torch.from_numpy(self.rng.normal(0.0, 0.01, \
-                                (y.shape))).type(y.dtype).to(y.device)
- 
-        #y = self.mlp_head(y) 
-        #y2 = self.mlp_head(y2)
-        y = torch.flatten(torch.moveaxis(self.mlp_head(y),1,3), start_dim=0, end_dim=-2)
-        y2 = torch.flatten(torch.moveaxis(self.mlp_head(y2),1,3), start_dim=0, end_dim=-2)
-        loss = self.criterion(y,y2, lamb=2.0)[0] #calculate loss
-        self.log('val_loss', loss, sync_dist=True)
+    
+        y = self.segmentor.encoder(y)
+
+        y2 = []
+        for i in range(len(y)):
+
+
+            y2.append(y[i].clone())
+            y2[i] = y2[i] + torch.from_numpy(self.rng.normal(0.0, 0.01, \
+                                (y[i].shape))).type(y[i].dtype).to(y[i].device)
+
+            print("INITIAL SIZES", y[i].shape, y2[i].shape, i)
+            y[i] = self.segmentor.upsamples[i](y[i])
+            y2[i] = self.segmentor.upsamples[i](y2[i])
+
+            print("UPSAMPLE SIZES", y[i].shape, y2[i].shape, i)
+
+
+        y = torch.cat(y, dim=1)
+        y2 = torch.cat(y2, dim=1)
+
+        y = self.segmentor.fusion(y)
+        y2 = self.segmentor.fusion(y2)
+
+        y = F.interpolate(
+            y,
+            size=(16, 16),
+            mode="bilinear",
+            align_corners=False,
+        )  # Resize to match labels size
+
+        y2 = F.interpolate(
+            y2,
+            size=(16, 16),
+            mode="bilinear",
+            align_corners=False,
+        )  # Resize to match labels size
+
+        y = F.softmax(self.segmentor.seg_head(y), dim=1)
+        y2 = F.softmax(self.segmentor.seg_head(y2), dim=1)
+
+        print(torch.unique(torch.argmax(y, dim=1)), "Y labels")
+        print(torch.unique(torch.argmax(y2, dim=1)), "Y2 labels")
+
+        y = torch.flatten(y.permute(0,2,3,1), start_dim=0, end_dim=2)
+        y2 = torch.flatten(y2.permute(0,2,3,1), start_dim=0, end_dim=2)
+
+        loss = 0
+        for i in range(0, y.shape[0], 100):
+            i2 = i + 100
+            if i2 > y.shape[0]:
+                i2 = y.shape[0]
+            loss = loss + self.criterion(y[i:i2],y2[i:i2], lamb=1.0)[0] #calculate loss
+        loss = loss / int(math.ceil(y.shape[0] / 100))
+        self.log('train_loss', loss, sync_dist=True)
+
+
         return loss
 
     def predict_step(self, batch, batch_idx, dataloader_idx):

@@ -224,12 +224,12 @@ def get_prediction_dataset(yml_conf, fname):
         data = SFDataset()
         data.read_and_preprocess_data([fname], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
             fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scaler=scaler, scale = scale_data, \
-            transform=transform)
+            transform=transform, do_shuffle=False)
     else:
         data = SFDatasetConv()
         data.read_and_preprocess_data([fname], read_func, data_reader_kwargs,  delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
             fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, transform = transform, \
-            tile=tiled, tile_size=tile_size, tile_step=tile_step)
+            tile=tiled, tile_size=tile_size, tile_step=tile_step, do_shuffle=False)
 
     return data, fname_begin
 

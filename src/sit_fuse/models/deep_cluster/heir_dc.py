@@ -9,10 +9,12 @@ import torch
 from sit_fuse.losses.iid import IID_loss
 
 
+from sit_fuse.models.deep_cluster.pca_dc import PCA_DC
 from sit_fuse.models.deep_cluster.byol_dc import BYOL_DC
 from sit_fuse.models.deep_cluster.ijepa_dc import IJEPA_DC
 from sit_fuse.models.deep_cluster.dbn_dc import DBN_DC
 from sit_fuse.models.deep_cluster.clay_dc import Clay_DC
+from sit_fuse.models.deep_cluster.mae_dc import MAE_DC
 from sit_fuse.models.deep_cluster.dc import DeepCluster
 from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes, OutputProjection, JEPA_Seg
 from sit_fuse.utils import read_yaml, get_output_shape
@@ -48,6 +50,14 @@ class Heir_DC(pl.LightningModule):
         self.pretrained_model = None
         if encoder_type is None:
             self.pretrained_model = DeepCluster.load_from_checkpoint(pretrained_model_path, img_size=yml_conf["data"]["tile_size"][0], in_chans=yml_conf["data"]["tile_size"][2]) #Why arent these being saved
+        elif "pca" in encoder_type:
+            self.pretrained_model = PCA_DC.load_from_checkpoint(pretrained_model_path, pretrained_model=encoder)
+            self.encoder = encoder
+            for param in self.pretrained_model.mlp_head.parameters():
+                param.requires_grad = False
+            for param in self.pretrained_model.parameters():
+                param.requires_grad = False
+
         elif "dbn" in encoder_type:
             self.pretrained_model = DBN_DC.load_from_checkpoint(pretrained_model_path, pretrained_model=encoder)
             self.encoder = encoder
@@ -93,6 +103,9 @@ class Heir_DC(pl.LightningModule):
         elif encoder_type == "clay":
             self.pretrained_model = Clay_DC.load_from_checkpoint(pretrained_model_path)
             self.encoder = self.pretrained_model.pretrained_model.encoder
+        elif encoder_type == "mae":
+            self.pretrained_model = MAE_DC.load_from_checkpoint(pretrained_model_path)
+            self.encoder = self.pretrained_model.segmentor.encoder
         else: 
             self.pretrained_model = DeepCluster.load_from_checkpoint(pretrained_model_path) #Why arent these being saved
 
@@ -116,15 +129,22 @@ class Heir_DC(pl.LightningModule):
         elif clust_tree_ckpt is not None:
             
             encoder_output_size = None
-            if self.encoder_type == "ijepa":
+            if self.encoder_type is None:
+                n_visible = yml_conf["data"]["tile_size"][0]*yml_conf["data"]["tile_size"][2]
+            elif self.encoder_type == "ijepa":
                 #TODO encoder_output_size = get_output_shape(self.encoder, (1, yml_conf["data"]["tile_size"][2],self.pretrained_model.pretrained_model.img_size,self.pretrained_model.pretrained_model.img_size))
                 #n_visible = encoder_output_size[2] #*encoder_output_size[2]
                 n_visible = 2048
                 #print(encoder_output_size, yml_conf["data"]["tile_size"], self.pretrained_model.pretrained_model.img_size)
             elif self.encoder_type == "clay":
                 n_visible = 768
+            elif self.encoder_type == "mae":
+                n_visible = 1024
             elif self.encoder_type == "dbn":
                 encoder_output_size = (1, self.pretrained_model.pretrained_model.models[-1].n_hidden)
+                n_visible = encoder_output_size[1]
+            elif self.encoder_type == "pca":
+                encoder_output_size = (1, self.pretrained_model.pretrained_model.pca.components_.shape[0])
                 n_visible = encoder_output_size[1]
             elif self.encoder_type == "conv_dbn":
                 encoder_output_size = get_output_shape(self.encoder, (1, yml_conf["data"]["tile_size"][2], yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
@@ -145,7 +165,7 @@ class Heir_DC(pl.LightningModule):
     def generate_label_set(self, data):
         count = 0
         self.lab_full = {}
-        batch_size = 5 #max(700, self.min_samples)
+        batch_size = max(700, self.min_samples)
 
         output_sze = data.data_full.shape[0]
 
@@ -156,8 +176,6 @@ class Heir_DC(pl.LightningModule):
 
         for data2 in tqdm(test_loader):
             dat_dev = data2[0].to(device=self.pretrained_model.device, non_blocking=True, dtype=torch.float32)
-
-            print(len(data2), dat_dev.shape)
 
             lab = self.pretrained_model.forward(dat_dev)
             if lab.ndim > 2: #or B,C,H,W
@@ -185,7 +203,7 @@ class Heir_DC(pl.LightningModule):
             del dat_dev
 
  
-    def forward(self, x, perturb = False, train=False):
+    def forward(self, x, perturb = False, train=False, return_embed=False):
         #TODO fix for multi-head
 
         dt = x.dtype
@@ -201,7 +219,22 @@ class Heir_DC(pl.LightningModule):
         if hasattr(self, 'encoder') and self.encoder is not None:
 
             if  self.encoder_type == "byol" and self.pretrained_model.model_type == "Unet":
-               x, x1, x2, x3, x4 = self.encoder[0].full_forward(x)   
+                x, x1, x2, x3, x4 = self.encoder[0].full_forward(x)   
+                x4 = F.interpolate(x4, size=x3.size()[2:], mode='bilinear', align_corners=True)
+                x3 = F.interpolate(self.pretrained_model.pretrained_model.br5(x3 + x4), size=x2.size()[2:], mode='bilinear', align_corners=True)
+                x2 = F.interpolate(self.pretrained_model.pretrained_model.br6(x2 + x3), size=x1.size()[2:], mode='bilinear', align_corners=True)
+                x1 = F.interpolate(self.pretrained_model.pretrained_model.br7(x1 + x2), size=conv1_sz, mode='bilinear', align_corners=True)
+
+                x = self.pretrained_model.pretrained_model.br9(F.interpolate(self.pretrained_model.pretrained_model.br8(x1), size=x.size()[2:], mode='bilinear', align_corners=True))
+                if perturb:
+                    x = x + torch.from_numpy(self.rng.normal(0.0, 0.01, \
+                                (x.shape))).type(x.dtype).to(x.device) 
+
+            elif self.encoder_type == "pca":
+                x = torch.from_numpy(self.pretrained_model.pretrained_model(x.cpu().numpy())).type(x.dtype).to(x.device)         
+                if perturb:
+                    x = x + torch.from_numpy(self.rng.normal(0.0, 0.01, \
+                                (x.shape))).type(x.dtype).to(x.device)
 
             elif self.encoder_type == "clay":
                 dat_final = {
@@ -223,7 +256,7 @@ class Heir_DC(pl.LightningModule):
 
                 x = F.interpolate(
                     x,
-                    size=(16, 16),
+                    size=(224, 224),
                     mode="bilinear",
                     align_corners=False,
                 )  # Resize to match labels size
@@ -245,6 +278,28 @@ class Heir_DC(pl.LightningModule):
                     mode="bilinear",
                     align_corners=False,
                 )  # Resize to match labels size
+
+            elif self.encoder_type == "mae":
+                x = self.encoder(x)     
+
+                for i in range(len(x)):
+                    if perturb:
+                        x[i] = x[i] + torch.from_numpy(self.rng.normal(0.0, 0.01, \
+                                (x[i].shape))).type(x[i].dtype).to(x[i].device)
+                    x[i] = self.pretrained_model.segmentor.upsamples[i](x[i])
+                x = torch.cat(x, dim=1)
+                x = self.pretrained_model.segmentor.fusion(x)
+
+                x = F.interpolate(
+                    x,
+                    size=(4, 4),
+                    mode="bilinear",
+                    align_corners=False,
+                )  # Resize to match labels size
+
+
+                #y = F.softmax(self.segmentor.seg_head(y), dim=1)
+                #y = torch.flatten(y.permute(0,2,3,1), start_dim=0, end_dim=2)
 
 
             else:
@@ -299,7 +354,7 @@ class Heir_DC(pl.LightningModule):
         tmp2 = np.vectorize(f)(tmp.detach().cpu())
         #BxCxHxW OR BxC 
         tmp3 = tmp.clone()
-        x.requires_grad = True
+        #x.requires_grad = True
         keys = np.unique(tmp2)
         print("HERE KEYS", keys)
         for key in keys:
@@ -384,6 +439,9 @@ class Heir_DC(pl.LightningModule):
 
         if tmp_subset is None or tmp_full is None:
             return None
+
+        if return_embed:
+            return tmp_subset, tmp_full, x
         return tmp_subset, tmp_full
 
     

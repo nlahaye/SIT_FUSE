@@ -201,8 +201,8 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 			outDat[0:dbnDat1.shape[0],0: dbnDat1.shape[1]] = dbnDat1
 
 
-		inds = np.where(imgData < 0)
-		outDat[inds] = -1
+		#inds = np.where(imgData < 0)
+		#outDat[inds] = -1
 		file_ext = ".full_geo"
 		fname = cluster_data[p] + file_ext + ".tif"
 		out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)

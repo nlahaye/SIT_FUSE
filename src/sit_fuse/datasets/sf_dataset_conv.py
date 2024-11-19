@@ -57,7 +57,7 @@ class SFDatasetConv(SFDataset):
 				self.targets_full = self.targets_full[:self.subset_training,:]
 
 
-	def read_and_preprocess_data(self, filenames, read_func, read_func_kwargs, delete_chans, valid_min, valid_max, fill_value = -999999, chan_dim = 0, transform_chans = [], transform_values = [], transform=None, tile = False, tile_size = None, tile_step = None, subset_training = -1, stratify_data = None, data_fraction = 1, data_fraction_index = 1, basic_preprocess = False):
+	def read_and_preprocess_data(self, filenames, read_func, read_func_kwargs, delete_chans, valid_min, valid_max, fill_value = -999999, chan_dim = 0, transform_chans = [], transform_values = [], transform=None, tile = False, tile_size = None, tile_step = None, subset_training = -1, stratify_data = None, data_fraction = 1, data_fraction_index = 1, basic_preprocess = False, do_shuffle = True):
 		#Scaler info isnt used here, but keeping same interface as SFDataset
 
                 #TODO Employ stratification
@@ -86,6 +86,8 @@ class SFDatasetConv(SFDataset):
 		self.data_fraction = data_fraction
 		self.data_fraction_index = data_fraction_index
 		self.basic_preprocess = basic_preprocess
+
+		self.do_shuffle = do_shuffle
 
 		self.__loaddata__()
 
@@ -184,7 +186,7 @@ class SFDatasetConv(SFDataset):
 			tgts[1,:,:] = tgts[1,:,:] + dat_begin[r][1]
 			#tgts = tgts[:,pixel_padding:tgts.shape[1] - pixel_padding,pixel_padding:tgts.shape[2] - pixel_padding]
 			#tgts = np.concatenate((np.full((1,tgts.shape[1], tgts.shape[2]),r, dtype=np.int16), tgts), axis=0)
-	
+			print(data_local[r].shape)	
 			if self.init_data_shape is None:
 				self.init_data_shape = data_local[r].shape        	
 			if self.tile:
@@ -232,13 +234,18 @@ class SFDatasetConv(SFDataset):
 				#sub_data_strat = np.squeeze(strat_local[r].flatten())
 				#self.stratify_training.append(sub_data_strat)
 			print("SKIPPED", count, "SAMPLES OUT OF", len(self.data), data_local[r].shape, dim1, dim2, self.chan_dim)
-		print("SHUFFLING", self.data.shape, self.targets.shape)
-		p = np.random.permutation(self.data.shape[0])
-		self.data_full = torch.from_numpy(self.data[p]) #np.array(self.data).astype(np.float32) #float32
-		self.targets_full = torch.from_numpy(self.targets[p])  #np.array(self.targets).astype(np.int16)
-		if len(self.stratify_training) > 0:
-			self.stratify_training = torch.from_numpy(self.stratify_training[p])
- 
+		if self.do_shuffle:
+			print("SHUFFLING", self.data.shape, self.targets.shape)
+			p = np.random.permutation(self.data.shape[0])
+			self.data_full = torch.from_numpy(self.data[p]) #np.array(self.data).astype(np.float32) #float32
+			self.targets_full = torch.from_numpy(self.targets[p])  #np.array(self.targets).astype(np.int16)
+			if len(self.stratify_training) > 0:
+				self.stratify_training = torch.from_numpy(self.stratify_training[p])
+		else:
+			self.data_full = torch.from_numpy(self.data)
+			self.targets_full = torch.from_numpy(self.targets)
+			if len(self.stratify_training) > 0:
+				self.stratify_training = torch.from_numpy(self.stratify_training)
 		del self.data
 		del self.targets
 		if self.basic_preprocess:

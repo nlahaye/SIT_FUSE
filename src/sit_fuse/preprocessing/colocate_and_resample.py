@@ -95,6 +95,8 @@ def fuse_data(yml_conf):
                 tmp[:hi_dat.shape[0], :hi_dat.shape[1],:] = hi_dat
                 hi_dat = tmp
 
+            print(hi_geo.shape, hi_geo.ndim)
+
             slc_lat_hi = [slice(None)] * hi_geo.ndim
             slc_lat_hi[hi_coord_dim] = slice(hi_lat_index, hi_lat_index+1)
             slc_lon_hi = [slice(None)] * hi_geo.ndim

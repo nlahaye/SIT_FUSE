@@ -1,0 +1,98 @@
+
+low_res:
+ data:
+  fill_value: -1.0e+30
+  valid_min: -1.0e+29 #0.0000001
+  valid_max: 9.0e+36
+  reader_type: "gtiff"
+  reader_kwargs:
+   no_arg: ''
+  geo_reader_type: "gtiff_geo"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: [
+#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T163759Z_S008G08.nc",
+#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T164436Z_S008G09.nc",
+#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T163122Z_S008G07.nc"
+#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T143122Z_S006G07.nc",
+#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T143759Z_S006G08.nc",
+#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T144436Z_S006G09.nc",
+#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_NO2_L3_V03_20240726T155132Z_S008.nc"
+"/data/nlahaye/remoteSensing/GOES_TEMPO_DATA/TEMPO_NO2_L3_V03_20240726T155132Z_S008.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO_DATA/TEMPO_NO2_L3_V03_20240726T155132Z_S008.tif"]
+#]
+
+  geo_filenames: [
+#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T163759Z_S008G08.nc",
+#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T164436Z_S008G09.nc",
+#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T163122Z_S008G07.nc"
+#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T143122Z_S006G07.nc",
+#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T143759Z_S006G08.nc",
+#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T144436Z_S006G09.nc",
+#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_NO2_L3_V03_20240726T155132Z_S008.nc"
+"/data/nlahaye/remoteSensing/GOES_TEMPO_DATA/TEMPO_NO2_L3_V03_20240726T155132Z_S008.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO_DATA/TEMPO_NO2_L3_V03_20240726T155132Z_S008.tif"]
+
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+high_res:
+ data:
+  valid_min: 0.0
+  valid_max: 1.0
+  reader_type: "gtiff"
+  reader_kwargs:
+   no_arg: "no_arg"
+  geo_reader_type: "gtiff_geo"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: [
+      "/data/nlahaye/remoteSensing/GOES_TEMPO_DATA/OR_ABI-L1b-RadC-M6C01_G18_s20242081451177_e20242081453550_c20242081453592.tif.clust.data_75199clusters.zarr.full_geo.tif.fire.tif.Contours.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO_DATA/OR_ABI-L1b-RadC-M6C01_G18_s20242081451177_e20242081453550_c20242081453592.tif.clust.data_75199clusters.zarr.full_geo.tif.smoke.tif.Contours.tif"
+  ]
+  geo_filenames: [
+    "/data/nlahaye/remoteSensing/GOES_TEMPO_DATA/OR_ABI-L1b-RadC-M6C01_G18_s20242081451177_e20242081453550_c20242081453592.tif.clust.data_75199clusters.zarr.full_geo.tif.fire.tif.Contours.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO_DATA/OR_ABI-L1b-RadC-M6C01_G18_s20242081451177_e20242081453550_c20242081453592.tif.clust.data_75199clusters.zarr.full_geo.tif.smoke.tif.Contours.tif"
+  ]
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+fusion:
+ projection_id: 4326
+ description: "Generating eMAS GeoTiffs"
+ area_id: "eMAS"
+ projection_proj4:
+  #proj: "utm"
+  #zone: 11
+  proj: "longlat"
+  datum: "WGS84" 
+ final_resolution: 0.09 #0.00225 #0.000225
+ projection_units: "degrees"
+ resample_radius: 50000
+ resample_n_neighbors: 128
+ resample_n_procs: 10
+ resample_epsilon: 1.6
+ use_bilinear: True 
+ lon_bounds: [-125.45, -109.75]
+ lat_bounds: [35.0, 44.95]
+
+       
+output_files: [
+#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T163759Z_S008G08.tif",
+#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T164436Z_S008G09.tif",
+#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T163122Z_S008G07.tif"
+#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T143122Z_S006G07.tif",
+#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T143759Z_S006G08.tif",
+#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T144436Z_S006G09.tif", 
+"/data/nlahaye/remoteSensing/GOES_TEMPO_DATA/TEMPO_NO2_L3_V03_20240726T155132Z_S008.fire.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO_DATA/TEMPO_NO2_L3_V03_20240726T155132Z_S008.smoke.tif",
+]
+
+
+

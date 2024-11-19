@@ -31,6 +31,7 @@ data:
 ]
 
  files_test: [
+"/data/nlahaye/remoteSensing/AVIRIS_GTIFF/aviris_20190806_p00r18.tif",
 "/data/nlahaye/remoteSensing/AVIRIS_GTIFF/aviris_20190821_p00r23.tif",
 "/data/nlahaye/remoteSensing/AVIRIS_GTIFF/aviris_20190806_p00r09.tif",
 "/data/nlahaye/remoteSensing/AVIRIS_GTIFF/aviris_20190806_p00r11.tif",

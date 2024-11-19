@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch
 
 from sit_fuse.losses.iid import IID_loss
-from sit_fuse.models.deep_cluster.multi_prototypes import DeepMultiPrototypes, DeepConvMultiPrototypes
+from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes, DeepConvMultiPrototypes
 import numpy as np
 
 class DeepCluster(pl.LightningModule):
@@ -28,7 +28,7 @@ class DeepCluster(pl.LightningModule):
             self.mlp_head =  DeepConvMultiPrototypes(in_chans, self.num_classes, self.number_heads)
 
         else:
-            self.mlp_head =  DeepMultiPrototypes(in_chans*img_size, self.num_classes, self.number_heads)
+            self.mlp_head =  MultiPrototypes(in_chans*img_size, self.num_classes, self.number_heads)
 
      
 

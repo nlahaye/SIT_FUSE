@@ -9,23 +9,23 @@ data:
  create_separate: False
 
  cluster_fnames: [
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/aqua_modis_vis01_20190806_205000_wgs84_fit.tif.clust.data_73898clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/aqua_modis_vis01_20190807_195500_wgs84_fit.tif.clust.data_68998clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/aqua_modis_vis01_20190808_203500_wgs84_fit.tif.clust.data_73899clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/aqua_modis_vis01_20190809_212000_wgs84_fit.tif.clust.data_73894clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/aqua_modis_vis01_20190810_202500_wgs84_fit.tif.clust.data_73898clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/aqua_modis_vis01_20190812_201000_wgs84_fit.tif.clust.data_73892clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/aqua_modis_vis01_20190812_215000_wgs84_fit.tif.clust.data_68932clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190807_181000_wgs84_fit.tif.clust.data_73838clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190807_194500_wgs84_fit.tif.clust.data_73838clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190808_185000_wgs84_fit.tif.clust.data_73899clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190809_175500_wgs84_fit.tif.clust.data_68996clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190809_193500_wgs84_fit.tif.clust.data_68997clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190810_184000_wgs84_fit.tif.clust.data_73897clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190811_192000_wgs84_fit.tif.clust.data_73897clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190811_192500_wgs84_fit.tif.clust.data_73897clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190812_182500_wgs84_fit.tif.clust.data_73897clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190812_200500_wgs84_fit.tif.clust.data_73845clusters.zarr"
+"/data/nlahaye/output/Learnergy/MODIS_FIREX/aqua_modis_vis01_20190806_205000_wgs84_fit.tif.clust.data_78699clusters.zarr",
+"/data/nlahaye/output/Learnergy/MODIS_FIREX/aqua_modis_vis01_20190807_195500_wgs84_fit.tif.clust.data_76497clusters.zarr",
+"/data/nlahaye/output/Learnergy/MODIS_FIREX/aqua_modis_vis01_20190808_203500_wgs84_fit.tif.clust.data_78699clusters.zarr",
+"/data/nlahaye/output/Learnergy/MODIS_FIREX/aqua_modis_vis01_20190809_212000_wgs84_fit.tif.clust.data_78693clusters.zarr",
+"/data/nlahaye/output/Learnergy/MODIS_FIREX/aqua_modis_vis01_20190810_202500_wgs84_fit.tif.clust.data_78693clusters.zarr",
+"/data/nlahaye/output/Learnergy/MODIS_FIREX/aqua_modis_vis01_20190812_201000_wgs84_fit.tif.clust.data_76478clusters.zarr",
+"/data/nlahaye/output/Learnergy/MODIS_FIREX/aqua_modis_vis01_20190812_215000_wgs84_fit.tif.clust.data_76461clusters.zarr",
+"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190807_181000_wgs84_fit.tif.clust.data_76499clusters.zarr",
+"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190807_194500_wgs84_fit.tif.clust.data_78668clusters.zarr",
+"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190808_185000_wgs84_fit.tif.clust.data_78699clusters.zarr",
+"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190809_175500_wgs84_fit.tif.clust.data_63795clusters.zarr",
+"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190809_193500_wgs84_fit.tif.clust.data_78693clusters.zarr",
+"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190810_184000_wgs84_fit.tif.clust.data_78698clusters.zarr",
+"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190811_192000_wgs84_fit.tif.clust.data_78655clusters.zarr",
+"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190811_192500_wgs84_fit.tif.clust.data_78668clusters.zarr",
+"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190812_182500_wgs84_fit.tif.clust.data_76499clusters.zarr",
+"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190812_200500_wgs84_fit.tif.clust.data_63795clusters.zarr",
 ]
 
  gtiff_data: [

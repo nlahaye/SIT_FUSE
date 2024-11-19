@@ -3,6 +3,8 @@ import pytorch_lightning as pl
 import torch.nn as nn
 import torch
 
+import math
+
 import torch.nn.functional as F
 
 from sit_fuse.losses.iid import IID_loss
@@ -63,7 +65,7 @@ class Clay_DC(pl.LightningModule):
          
         y2 = F.interpolate(
             y2,
-            size=(16, 16),
+            size=(224, 224),
             mode="bilinear",
             align_corners=False,
         )  # Resize to match labels size
@@ -107,14 +109,14 @@ class Clay_DC(pl.LightningModule):
 
         y = F.interpolate(
             y,
-            size=(16, 16),
+            size=(224, 224),
             mode="bilinear",
             align_corners=False,
         )  # Resize to match labels size
 
         y2 = F.interpolate(
             y2,
-            size=(16, 16),
+            size=(224, 224),
             mode="bilinear",
             align_corners=False,
         )  # Resize to match labels size
@@ -125,7 +127,16 @@ class Clay_DC(pl.LightningModule):
         print(torch.unique(torch.argmax(y, dim=1)), "Y labels")
         print(torch.unique(torch.argmax(y2, dim=1)), "Y2 labels")
 
-        loss = self.criterion(torch.flatten(y.permute(0,2,3,1), start_dim=0, end_dim=2),torch.flatten(y2.permute(0,2,3,1), start_dim=0, end_dim=2), lamb=2.0)[0] #calculate loss
+        y = torch.flatten(y.permute(0,2,3,1), start_dim=0, end_dim=2)
+        y2 = torch.flatten(y2.permute(0,2,3,1), start_dim=0, end_dim=2)
+
+        loss = 0
+        for i in range(0, y.shape[0], 100):
+            i2 = i + 100
+            if i2 > y.shape[0]:
+                i2 = y.shape[0]
+            loss = loss + self.criterion(y[i:i2],y2[i:i2], lamb=1.0)[0] #calculate loss
+        loss = loss / int(math.ceil(y.shape[0] / 100))
         self.log('train_loss', loss, sync_dist=True)
         return loss       
 
@@ -166,14 +177,14 @@ class Clay_DC(pl.LightningModule):
 
         y = F.interpolate(
             y,
-            size=(16, 16),
+            size=(224, 224),
             mode="bilinear",
             align_corners=False,
         )  # Resize to match labels size
 
         y2 = F.interpolate(
             y2,
-            size=(16, 16),
+            size=(224, 224),
             mode="bilinear",
             align_corners=False,
         )  # Resize to match labels size
@@ -181,8 +192,16 @@ class Clay_DC(pl.LightningModule):
         y = F.softmax(self.pretrained_model.seg_head(y), dim=1)
         y2 = F.softmax(self.pretrained_model.seg_head(y2), dim=1) 
 
+        y = torch.flatten(y.permute(0,2,3,1), start_dim=0, end_dim=2)
+        y2 = torch.flatten(y2.permute(0,2,3,1), start_dim=0, end_dim=2)
 
-        loss = self.criterion(torch.flatten(y.permute(0,2,3,1), start_dim=0, end_dim=2),torch.flatten(y2.permute(0,2,3,1), start_dim=0, end_dim=2), lamb=2.0)[0] #calculate loss
+        loss = 0
+        for i in range(0, y.shape[0], 100):
+            i2 = i + 100
+            if i2 > y.shape[0]:
+                i2 = y.shape[0]
+            loss = loss + self.criterion(y[i:i2],y2[i:i2], lamb=1.0)[0] #calculate loss
+        loss = loss / int(math.ceil(y.shape[0] / 100))
         self.log('val_loss', loss, sync_dist=True)
         return loss
 

@@ -18,6 +18,7 @@ data:
 "/data/nlahaye/remoteSensing/AVIRIS_GTIFF/aviris_20190806_p00r15.tif",
 "/data/nlahaye/remoteSensing/AVIRIS_GTIFF/aviris_20190806_p00r16.tif",
 "/data/nlahaye/remoteSensing/AVIRIS_GTIFF/aviris_20190806_p00r17.tif",
+"/data/nlahaye/remoteSensing/AVIRIS_GTIFF/aviris_20190806_p00r18.tif",
 "/data/nlahaye/remoteSensing/AVIRIS_GTIFF/aviris_20190807_p00r11.tif",
 "/data/nlahaye/remoteSensing/AVIRIS_GTIFF/aviris_20190807_p00r12.tif",
 "/data/nlahaye/remoteSensing/AVIRIS_GTIFF/aviris_20190807_p00r13.tif",
@@ -29,6 +30,7 @@ data:
 "/data/nlahaye/remoteSensing/AVIRIS_GTIFF/aviris_20190821_p00r27.tif"
 ]
 
+
  cluster_fnames: [
 "/data/nlahaye/output/Learnergy/AVIRIS_FIREX/aviris_20190806_p00r09.tif.clust.data_191199clusters.zarr",
 "/data/nlahaye/output/Learnergy/AVIRIS_FIREX/aviris_20190806_p00r10.tif.clust.data_191198clusters.zarr",
@@ -38,6 +40,7 @@ data:
 "/data/nlahaye/output/Learnergy/AVIRIS_FIREX/aviris_20190806_p00r15.tif.clust.data_191199clusters.zarr",
 "/data/nlahaye/output/Learnergy/AVIRIS_FIREX/aviris_20190806_p00r16.tif.clust.data_191199clusters.zarr",
 "/data/nlahaye/output/Learnergy/AVIRIS_FIREX/aviris_20190806_p00r17.tif.clust.data_191199clusters.zarr",
+"/data/nlahaye/output/Learnergy/AVIRIS_FIREX/aviris_20190806_p00r18.tif.clust.data_191199clusters.zarr",
 "/data/nlahaye/output/Learnergy/AVIRIS_FIREX/aviris_20190807_p00r11.tif.clust.data_191199clusters.zarr",
 "/data/nlahaye/output/Learnergy/AVIRIS_FIREX/aviris_20190807_p00r12.tif.clust.data_191199clusters.zarr",
 "/data/nlahaye/output/Learnergy/AVIRIS_FIREX/aviris_20190807_p00r13.tif.clust.data_191199clusters.zarr",

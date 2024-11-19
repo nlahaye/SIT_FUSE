@@ -94,7 +94,7 @@ class JEPASegmentEncoder(nn.Module):
         for idx in range(len(_cube)):
             if idx in self.feature_maps:
                 tmp_cube = rearrange(
-                    _cube[idx], "B (H W) D -> B D H W", H=H // 3, W=W // 3
+                    _cube[idx], "B (H W) D -> B D H W", H=H // 1, W=W // 1
                 )
                 features.append(tmp_cube)
         # Apply FPN layers

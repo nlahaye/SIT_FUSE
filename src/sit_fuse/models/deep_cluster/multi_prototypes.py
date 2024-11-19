@@ -38,9 +38,10 @@ class Up_Linear(nn.Module):
         return x
 
 class JEPA_Seg(nn.Module):
-    def __init__(self):
+    def __init__(self, n_classes = 800):
         super(JEPA_Seg, self).__init__()
- 
+        self.n_classes = n_classes 
+
         #self.insrm = nn.LayerNorm(3072)
         #self.ups3 = Up_Linear(3072, 4, 1)
         #self.ups2 = Up_Linear(512, 28, 1)
@@ -62,18 +63,18 @@ class JEPA_Seg(nn.Module):
             #nn.SELU(inplace=True),
             #nn.Flatten(start_dim=1),
             #nn.LayerNorm(3072*16),
-            nn.Linear(3072, 1536),
-            nn.SELU(inplace=True),
-            nn.Linear(1536, 768),
-            nn.SELU(inplace=True),
-            nn.Linear(768, 384),
+            #nn.Linear(2048, 3072),
+            #nn.SELU(inplace=True),
+            #nn.Linear(3072, 2000),
+            #nn.SELU(inplace=True),
+            nn.Linear(2048, 1000),
             nn.SELU(inplace=True),
         )
 
         self.out2 = nn.Sequential(
-            nn.Conv2d(384, 200, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(1000, 1000, kernel_size=3, stride=1, padding=1),
             nn.SELU(inplace=True),
-            nn.Conv2d(200, 800, kernel_size=1, stride=1),
+            nn.Conv2d(1000, self.n_classes, kernel_size=1, stride=1),
         )
 
         
@@ -101,10 +102,14 @@ class JEPA_Seg(nn.Module):
         #x = self.shuffle(x)
         #x = transforms.Resize((224, 224))(x)
         ##x = x.permute(0, 2, 1)
+        print(x.shape)
         x = self.out(x)
-        #print(x.shape)
+        print(x.shape)
         x = x.permute(0, 2, 1)
-        x = torch.reshape(x, (x.shape[0], x.shape[1], 4, 4))
+        x = torch.reshape(x, (x.shape[0], x.shape[1], 9, 9))
+        print(x.shape)
+        x = F.interpolate(x, size=(45,45), mode='bicubic', align_corners=False)
+        print(x.shape)
         x = self.out2(x)
         #print(x.shape, x.min(), x.max(), x.mean(), x.std())
         x = self.smax(x)

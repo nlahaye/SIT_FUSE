@@ -1,0 +1,134 @@
+
+analysis:
+ knn_graphs: 
+  no_encoding: "/data/nlahaye/output/Learnergy//NO_ENC_eMAS_FULL_STRAT_MULTI_LAYER_PL_5/no_encoding.zarr"
+  pca: "/data/nlahaye/output/Learnergy/PCA_eMAS_FULL_STRAT_MULTI_LAYER_PL_5/pca.zarr"
+  #dbn_2_layer_1000:  "/data/nlahaye/output/Learnergy/DBN_eMAS_FULL_STRAT_MULTI_LAYER_PL_4/dbn_2_layer_2000.zarr"
+ tsne:
+  perplexity: 2200
+  niter: 5000
+  njobs: 50
+  exaggeration: 4
+  metric: "euclidean"
+  patience: 1000
+  lr: 200
+ embedding_functions: ["no_encoding", "pca"] #, "dbn_2_layer_1000"]
+ build_knn_graphs: True
+
+data:
+ tile: False
+ tile_size: [9,9,25]
+ val_percent: 0.1
+ num_loader_workers: 10
+ scale_data: True
+ pixel_padding: 1
+ number_channels: 26
+ fill_value: -9999.0
+ valid_min:  -900.0
+ valid_max: 100000000
+ reader_type: "gtiff"
+ reader_kwargs:
+  no_arg: "no_arg"
+ chan_dim: 0
+ delete_chans: [25,26,27,28,29,30,31,32,33,34,35,36,37]
+ transform_default:
+  chans: []
+  transform: []
+
+
+ files_train: [
+'/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_10_20190806_1858_1910_V03.tif',
+'/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19911_10_20190807_2004_2016_V03.tif',
+'/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19911_09_20190807_1947_2002_V03.tif',
+'/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19912_07_20190808_1806_1821_V03.tif',
+"/data//nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_06_20190806_1815_1824_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_20_20190806_2052_2106_V03.tif"
+]
+
+ final_labels: [
+"/data/nlahaye/output/Learnergy/DBN_eMAS_FULL_STRAT_MULTI_LAYER_PL_4/eMASL1B_19910_20_20190806_2052_2106_V03.tif.clust.data_78999clusters.zarr.full_geo.tif.fire_smoke.tif.Contours.tif"
+]
+
+ files_test: [
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_20_20190806_2052_2106_V03.tif"
+]
+
+scaler:
+ name: "standard"
+
+output:
+ out_dir: "/data/nlahaye/output/Learnergy/NO_ENC_eMAS_FULL_STRAT_MULTI_LAYER_PL_5/"
+ generate_intermediate_output: False #True
+
+dbn:
+ model_type: ["gaussian_selu", "gaussian_selu", "gaussian_selu"]
+ dbn_arch: [4000, 3000, 2000] #[250, 500, 2000] #, 2000]
+ gibbs_steps: [1,1,1] #, 7, 7] #, 10] #, 25]
+ temp: [1.0, 1.0,1.0] #, 1.0, 1.0] ##[0.9, 0.75, 0.5] #, 1.0] #, 0.5] #, 0.5] 
+ normalize_learnergy: [False, True, True]
+ batch_normalize: [False, False, False]
+
+conv: False
+
+encoder:
+ tiled: False
+ tile_size: [9,9,25]
+ tune_scaler: False
+ subset_training: 10000000
+ overwrite_model: False
+ training:
+  learning_rate: [0.00001, 0.00001, 0.00001]
+  momentum: [0.95,0.95,0.95]
+  weight_decay: [0.0001, 0.0001, 0.0001]
+  nesterov_accel: [True, True, True]
+  batch_size: 128
+  epochs: 30
+  accelerator: "gpu"
+  devices: 1
+  gradient_clip_val: 0.1
+  precision: "16-mixed"
+  save_dir: "wandb_encoder"
+  stratify_data:
+   kmeans: True
+
+
+
+logger:
+ use_wandb: True
+ log_model: True
+ log_out_dir: "wandb_dbn"
+ project: "SIT-FUSE"
+
+cluster:
+ gauss_noise_stdev:  [0.01]
+ lambda: 1.0
+ num_classes: 800
+ training:
+  learning_rate: 0.0001
+  batch_size: 1000
+  epochs: 30
+  accelerator: "gpu"
+  devices: 1
+  gradient_clip_val: 0.1
+  precision: "16-mixed"
+  save_dir: "wandb_full_model"
+
+ heir:
+  tiers: 1
+  gauss_noise_stdev:  [0.01]
+  lambda: 1.0
+  num_classes: 100
+  training:
+   accelerator: "gpu"
+   devices: 1
+   gradient_clip_val: 0.1
+   precision: "16-mixed"
+   save_dir: "wandb_dbn_full_model_heir"
+   batch_size: 100
+   min_samples: 1000
+   learning_rate: 0.0001
+   batch_size: 1000
+   epochs: 30
+
+
+

@@ -1,3 +1,5 @@
+
+from resource import *
 import pytorch_lightning as pl
 import torch
 from pytorch_lightning.callbacks import (
@@ -14,6 +16,7 @@ from sit_fuse.models.encoders.ijepa_pl import IJEPA_PL
 from sit_fuse.models.encoders.mae_pl import MAE_PL
 from sit_fuse.models.encoders.dbn_pl import DBN_PL
 from sit_fuse.models.encoders.byol_pl import BYOL_Learner
+from sit_fuse.models.encoders.pca_encoder import PCAEncoder
 from sit_fuse.models.encoders.cnn_encoder import DeepConvEncoder
 from sit_fuse.datasets.sf_dataset_module import SFDataModule
 from sit_fuse.utils import read_yaml
@@ -27,6 +30,8 @@ import wandb
 import argparse
 import os
 
+
+import joblib
 
 def pretrain_DBN(yml_conf, dataset, conv = False):
 
@@ -42,11 +47,13 @@ def pretrain_DBN(yml_conf, dataset, conv = False):
     momentum = tuple(yml_conf["encoder"]["training"]["momentum"])
     decay = tuple(yml_conf["encoder"]["training"]["weight_decay"])
     nesterov_accel = tuple(yml_conf["encoder"]["training"]["nesterov_accel"])
- 
+
+    accelerator = yml_conf["encoder"]["training"]["accelerator"]
+    use_gpu = bool((accelerator == "gpu")) 
     if not conv:
         model_type = tuple(yml_conf["dbn"]["model_type"])
         dbn = DBN(model=model_type, n_visible=dataset.n_visible, n_hidden=dbn_arch, steps=gibbs_steps,
-             learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=True)
+             learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=use_gpu)
     else:
         model_type = yml_conf["dbn"]["model_type"]
         visible_shape = yml_conf["data"]["tile_size"]
@@ -55,7 +62,7 @@ def pretrain_DBN(yml_conf, dataset, conv = False):
         #padding = yml_conf["dbn"]["padding"]
         dbn = ConvDBN(model=model_type, visible_shape=visible_shape, filter_shape = dbn_arch[1], n_filters = dbn_arch[0], \
             n_channels=number_channel, steps=gibbs_steps, learning_rate=learning_rate, momentum=momentum, \
-            decay=decay, use_gpu=True) #, maxpooling=mp)
+            decay=decay, use_gpu=use_gpu) #, maxpooling=mp)
 
  
     use_wandb_logger = yml_conf["logger"]["use_wandb"]
@@ -69,7 +76,6 @@ def pretrain_DBN(yml_conf, dataset, conv = False):
 
     save_dir = os.path.join(save_dir, "encoder")
 
-    accelerator = yml_conf["encoder"]["training"]["accelerator"]
     devices = yml_conf["encoder"]["training"]["devices"]
     precision = yml_conf["encoder"]["training"]["precision"]
     max_epochs = yml_conf["encoder"]["training"]["epochs"]
@@ -127,6 +133,30 @@ def pretrain_DBN(yml_conf, dataset, conv = False):
 
     torch.save(dbn.state_dict(), os.path.join(save_dir, "dbn.ckpt"))
 
+def pretrain_PCA(yml_conf, dataset):
+
+    dataset.setup()
+
+    pca = PCAEncoder()
+    pca.pca.fit(dataset.train_dataset.data)
+
+
+    save_dir = yml_conf["output"]["out_dir"]
+
+    use_wandb_logger = yml_conf["logger"]["use_wandb"]
+    log_model = None
+    save_dir = yml_conf["output"]["out_dir"]
+    project = None
+    if use_wandb_logger:
+        log_model = yml_conf["logger"]["log_model"]
+        save_dir = os.path.join(yml_conf["output"]["out_dir"], yml_conf["logger"]["log_out_dir"])
+        project = yml_conf["logger"]["project"]
+
+    save_dir = os.path.join(save_dir, "encoder")
+
+    save_dir = os.path.join(save_dir, "encoder")
+    os.makedirs(save_dir, exist_ok=True)
+    joblib.dump(pca.pca, os.path.join(save_dir, "pca.pkl"))
 def pretrain_MAE(yml_conf, dataset):
 
     patch_size = int(yml_conf["mae"]["patch_size"])
@@ -160,8 +190,9 @@ def pretrain_MAE(yml_conf, dataset):
     max_epochs = yml_conf["encoder"]["training"]["epochs"]
     gradient_clip_val = yml_conf["encoder"]["training"]["gradient_clip_val"]
 
+    in_chans = yml_conf["data"]["tile_size"][2]
 
-    model = MAE_PL(img_size=img_size, patch_size=patch_size, dim = embed_dim, enc_heads = enc_heads, enc_depth = enc_depth, \
+    model = MAE_PL(img_size=img_size, in_chans=in_chans, patch_size=patch_size, dim = embed_dim, enc_heads = enc_heads, enc_depth = enc_depth, \
         lr = lr, weight_decay = weight_decay, masking_ratio = masking_ratio, decoder_dim = decoder_dim, decoder_depth = decoder_depth)
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
@@ -410,6 +441,8 @@ def main(yml_fpath):
             pretrain_MAE(yml_conf, dataset)
         elif yml_conf["encoder_type"] == "byol":
             pretrain_BYOL(yml_conf, dataset)
+        elif yml_conf["encoder_type"] == "pca":
+            pretrain_PCA(yml_conf, dataset)
         #TODO Pixel CL?
 
 if __name__ == '__main__':
@@ -418,5 +451,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
     main(args.yaml)
 
-
+    print(getrusage(RUSAGE_SELF))
 

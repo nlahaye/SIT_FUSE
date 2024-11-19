@@ -35,10 +35,7 @@ data:
 "/data/nlahaye/remoteSensing/GOES/cropped_2/OR_ABI-L1b-RadC-M6C01_G17_s20192200056197_e20192200058569_c20192200059025.tif",
 "/data/nlahaye/remoteSensing/GOES/cropped_2/OR_ABI-L1b-RadC-M6C01_G17_s20192200236197_e20192200238569_c20192200239018.tif",
 "/data/nlahaye/remoteSensing/GOES/cropped_2/OR_ABI-L1b-RadC-M6C01_G17_s20192210116197_e20192210118570_c20192210119008.tif",
-"/data/nlahaye/remoteSensing/GOES/cropped_2/OR_ABI-L1b-RadC-M6C01_G17_s20192210121197_e20192210123570_c20192210124011.tif"
-]
-
- files_test: [
+"/data/nlahaye/remoteSensing/GOES/cropped_2/OR_ABI-L1b-RadC-M6C01_G17_s20192210121197_e20192210123570_c20192210124011.tif",
 "/data/nlahaye/remoteSensing/GOES/cropped_2/OR_ABI-L1b-RadC-M6C01_G17_s20192201851196_e20192201853569_c20192201854012.tif",
 "/data/nlahaye/remoteSensing/GOES/cropped_2/OR_ABI-L1b-RadC-M6C01_G17_s20192181801196_e20192181803569_c20192181804011.tif",
 "/data/nlahaye/remoteSensing/GOES/cropped_2/OR_ABI-L1b-RadC-M6C01_G17_s20192181806196_e20192181808569_c20192181809011.tif",
@@ -49,6 +46,9 @@ data:
 "/data/nlahaye/remoteSensing/GOES/cropped_2/OR_ABI-L1b-RadC-M6C01_G17_s20192181831196_e20192181833569_c20192181834010.tif",
 "/data/nlahaye/remoteSensing/GOES/cropped_2/OR_ABI-L1b-RadC-M6C01_G17_s20192181836196_e20192181838569_c20192181839011.tif",
 "/data/nlahaye/remoteSensing/GOES/cropped_2/OR_ABI-L1b-RadC-M6C01_G17_s20192181846196_e20192181848569_c20192181849017.tif",
+]
+
+ files_test: [
 "/data/nlahaye/remoteSensing/GOES/cropped_2/OR_ABI-L1b-RadC-M6C01_G17_s20192181851196_e20192181853569_c20192181854018.tif",
 "/data/nlahaye/remoteSensing/GOES/cropped_2/OR_ABI-L1b-RadC-M6C01_G17_s20192181856196_e20192181858569_c20192181859008.tif",
 "/data/nlahaye/remoteSensing/GOES/cropped_2/OR_ABI-L1b-RadC-M6C01_G17_s20192181901196_e20192181903569_c20192181904012.tif",
@@ -126,7 +126,7 @@ encoder:
   weight_decay: [0.0001, 0.0001]
   nesterov_accel: [True, True]
   batch_size: 128
-  epochs: 30
+  epochs: 5
   accelerator: "gpu"
   devices: 1
   gradient_clip_val: 0.1
@@ -148,7 +148,7 @@ cluster:
  training:
   learning_rate: 0.0001
   batch_size: 1000
-  epochs: 30
+  epochs: 5
   accelerator: "gpu"
   devices: 1
   gradient_clip_val: 0.1
@@ -170,7 +170,7 @@ cluster:
    min_samples: 1000
    learning_rate: 0.0001
    batch_size: 1000
-   epochs: 30
+   epochs: 5
 
 
 

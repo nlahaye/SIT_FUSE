@@ -1,0 +1,116 @@
+
+
+low_res:
+ data:
+  valid_min: -100.0
+  valid_max: 100000000
+  reader_type: "goes_netcdf"
+  reader_kwargs:
+   fire_mask: True
+   bool_fire: True
+  geo_reader_type: "goes_netcdf_geo"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: [
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192181816196_e20192181818569_c20192181819111.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192181926196_e20192181928569_c20192181929117.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192182036196_e20192182038569_c20192182039106.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192182151196_e20192182153569_c20192182154117.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192191821196_e20192191823569_c20192191824120.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192191931196_e20192191933569_c20192191934133.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192191956196_e20192191958569_c20192191959111.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192192006196_e20192192008569_c20192192009118.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192192026196_e20192192028569_c20192192029115.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192192041196_e20192192043569_c20192192044115.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192200056197_e20192200058570_c20192200059114.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192200236197_e20192200238569_c20192200239114.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192201851196_e20192201853569_c20192201854128.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192201931196_e20192201933569_c20192201934124.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192210116197_e20192210118570_c20192210119119.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192210121197_e20192210123570_c20192210124125.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192210221197_e20192210223570_c20192210224139.nc"],
+]
+
+  geo_filenames: [
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192181816196_e20192181818569_c20192181819111.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192181926196_e20192181928569_c20192181929117.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192182036196_e20192182038569_c20192182039106.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192182151196_e20192182153569_c20192182154117.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192191821196_e20192191823569_c20192191824120.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192191931196_e20192191933569_c20192191934133.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192191956196_e20192191958569_c20192191959111.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192192006196_e20192192008569_c20192192009118.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192192026196_e20192192028569_c20192192029115.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192192041196_e20192192043569_c20192192044115.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192200056197_e20192200058570_c20192200059114.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192200236197_e20192200238569_c20192200239114.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192201851196_e20192201853569_c20192201854128.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192201931196_e20192201933569_c20192201934124.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192210116197_e20192210118570_c20192210119119.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192210121197_e20192210123570_c20192210124125.nc"],
+["/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192210221197_e20192210223570_c20192210224139.nc"],
+]
+
+  chan_dim: 0
+  geo_coord_dim: 0
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+high_res:
+ data:
+  valid_min: 0.0
+  valid_max: 100000000
+  reader_type: "numpy"
+  reader_kwargs:
+   no_arg: "no_arg"
+  geo_reader_type: "numpy"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: []
+  geo_filenames: []
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+fusion:
+ projection_id: 4326
+ description: "Generating GOES GeoTiffs"
+ area_id: "GOES"
+ projection_proj4:
+  proj: "longlat"
+  datum: "WGS84" 
+ final_resolution: 0.018
+ projection_units: "degrees"
+ resample_radius: 5000
+ resample_n_neighbors: 64
+ resample_n_procs: 10
+ resample_epsilon: 1.6
+ use_bilinear: True 
+ lon_bounds: [-120.5, -118.0]
+ lat_bounds: [47.5, 50.0]
+ 
+
+      
+output_files: [
+"/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192181816196_e20192181818569_c20192181819111.nc",
+"/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192181926196_e20192181928569_c20192181929117.nc",
+"/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192182036196_e20192182038569_c20192182039106.nc",
+"/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192182151196_e20192182153569_c20192182154117.nc",
+"/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192191821196_e20192191823569_c20192191824120.nc",
+"/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192191931196_e20192191933569_c20192191934133.nc",
+"/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192191956196_e20192191958569_c20192191959111.nc",
+"/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192192006196_e20192192008569_c20192192009118.nc",
+"/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192192026196_e20192192028569_c20192192029115.nc",
+"/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192192041196_e20192192043569_c20192192044115.nc",
+"/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192200056197_e20192200058570_c20192200059114.nc",
+"/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192200236197_e20192200238569_c20192200239114.nc",
+"/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192201851196_e20192201853569_c20192201854128.nc",
+"/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192201931196_e20192201933569_c20192201934124.nc",
+"/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192210116197_e20192210118570_c20192210119119.nc",
+"/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192210121197_e20192210123570_c20192210124125.nc",
+"/data/nlahaye/remoteSensing/GOES_FIRE/OR_ABI-L2-FDCC-M6_G17_s20192210221197_e20192210223570_c20192210224139.nc",
+]
+
