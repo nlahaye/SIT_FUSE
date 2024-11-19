@@ -1,0 +1,8 @@
+2024-11-15 00:06:24,782 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: GaussianRBM -> GaussianSeluRBM.
+2024-11-15 00:06:24,783 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: RBM -> GaussianRBM.
+2024-11-15 00:06:25,110 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2024-11-15 00:06:25,110 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2024-11-15 00:06:25,110 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: GaussianRBM -> GaussianSeluRBM.
+2024-11-15 00:06:25,110 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: RBM -> GaussianRBM.
+2024-11-15 00:06:25,152 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2024-11-15 00:06:25,153 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
