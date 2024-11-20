@@ -1,0 +1,22 @@
+
+
+data:
+ filename: [
+"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA/TEMPO_RAD_L1_V03_20240726T143122Z_S006G07.tif.clust.data_180934clusters.zarr.full_geo.tif.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA/TEMPO_RAD_L1_V03_20240726T143759Z_S006G08.tif.clust.data_180934clusters.zarr.full_geo.tif.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA/TEMPO_RAD_L1_V03_20240726T144436Z_S006G09.tif.clust.data_180934clusters.zarr.full_geo.tif.smoke.tif"
+]
+ reader_type: "gtiff"
+ reader_kwargs:
+  None:
+
+remove_singles: True
+remove_singles_2: True
+write_geotiff: True
+contour_min_size: -1
+
+
+dilations: 1
+erosions: 1
+
+

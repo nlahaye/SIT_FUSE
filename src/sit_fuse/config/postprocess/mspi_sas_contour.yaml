@@ -1,0 +1,35 @@
+
+
+data:
+ filename: [
+"/data/nlahaye/SIT_FUSE_Geo/MSPI_REDO/SAS/SAS/AirMSPI_ER2_GRP_TERRAIN_20190806_183632Z_WA-Keller_F01_V006.tif.clust.data_74499clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MSPI_REDO/SAS/SAS/AirMSPI_ER2_GRP_TERRAIN_20190806_190054Z_WA-Keller_F01_V006.tif.clust.data_67981clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MSPI_REDO/SAS/SAS/AirMSPI_ER2_GRP_TERRAIN_20190806_194520Z_WA-Keller_F01_V006.tif.clust.data_74499clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MSPI_REDO/SAS/SAS/AirMSPI_ER2_GRP_TERRAIN_20190806_200308Z_WA-Keller_F01_V006.tif.clust.data_74495clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MSPI_REDO/SAS/SAS/AirMSPI_ER2_GRP_TERRAIN_20190806_202139Z_WA-Creston_F01_V006.tif.clust.data_74495clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MSPI_REDO/SAS/SAS/AirMSPI_ER2_GRP_TERRAIN_20190806_203821Z_WA-Keller_F01_V006.tif.clust.data_74499clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MSPI_REDO/SAS/SAS/AirMSPI_ER2_GRP_TERRAIN_20190806_205617Z_WA-Wilbur_F01_V006.tif.clust.data_74498clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MSPI_REDO/SAS/SAS/AirMSPI_ER2_GRP_TERRAIN_20190806_211454Z_WA-Wilbur_F01_V006.tif.clust.data_74499clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MSPI_REDO/SAS/SAS/AirMSPI_ER2_GRP_TERRAIN_20190807_182404Z_WA-Inchelium_F01_V006.tif.clust.data_75899clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MSPI_REDO/SAS/SAS/AirMSPI_ER2_GRP_TERRAIN_20190807_193214Z_WA-Inchelium_F01_V006.tif.clust.data_75899clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MSPI_REDO/SAS/SAS/AirMSPI_ER2_GRP_TERRAIN_20190807_195226Z_WA-Inchelium_F01_V006.tif.clust.data_75899clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MSPI_REDO/SAS/SAS/AirMSPI_ER2_GRP_TERRAIN_20190807_200717Z_WA-Lincoln_F01_V006.tif.clust.data_74495clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MSPI_REDO/SAS/SAS/AirMSPI_ER2_GRP_TERRAIN_20190807_202502Z_WA-Inchelium_F01_V006.tif.clust.data_75899clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MSPI_REDO/SAS/SAS/AirMSPI_ER2_GRP_TERRAIN_20190807_204231Z_WA-Inchelium_F01_V006.tif.clust.data_75899clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MSPI_REDO/SAS/SAS/AirMSPI_ER2_GRP_TERRAIN_20190808_174846Z_WA-Connell_F01_V006.tif.clust.data_75886clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MSPI_REDO/SAS/SAS/AirMSPI_ER2_GRP_TERRAIN_20190808_181151Z_WA-Inchelium_F01_V006.tif.clust.data_75899clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MSPI_REDO/SAS/SAS/AirMSPI_ER2_GRP_TERRAIN_20190821_224247Z_AZ-Flagstaff_F01_V006.tif.clust.data_49908clusters.zarr.full_geo.smoke.tif",
+]
+ reader_type: "gtiff"
+ reader_kwargs:
+  None:
+
+remove_singles: True
+remove_singles_2: True
+write_geotiff: True
+contour_min_size: 30
+
+
+
+dilations: 0
+erosions: 0

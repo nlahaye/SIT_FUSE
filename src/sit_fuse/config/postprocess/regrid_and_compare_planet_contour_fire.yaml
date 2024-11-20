@@ -1,0 +1,29 @@
+
+truth_maps: [
+"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190807_181428_0e26_3B_AnalyticMS_clip_fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190807_181429_0e26_3B_AnalyticMS_clip_fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190807_183159_0f22_3B_AnalyticMS_clip_fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190807_183200_0f22_3B_AnalyticMS_clip_fire.tif",
+#"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190808_182954_1001_3B_AnalyticMS_clip_fire.tif",
+#"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190808_182955_1001_3B_AnalyticMS_clip_fire.tif",
+#"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190808_182956_1001_3B_AnalyticMS_clip_fire.tif",
+#"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190808_183352_07_1067_3B_AnalyticMS_clip_fire.tif",
+#"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190808_183354_13_1067_3B_AnalyticMS_clip_fire.tif",
+#"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190808_183356_19_1067_3B_AnalyticMS_clip_fire.tif",
+]
+ 
+sit_fuse_maps: [
+"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190807_181428_0e26_3B_AnalyticMS_clip.tif.clust.data_55999clusters.zarr.full_geo.fire.tif.Contours.tif",
+"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190807_181429_0e26_3B_AnalyticMS_clip.tif.clust.data_55999clusters.zarr.full_geo.fire.tif.Contours.tif",
+"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190807_183159_0f22_3B_AnalyticMS_clip.tif.clust.data_55999clusters.zarr.full_geo.fire.tif.Contours.tif",
+"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190807_183200_0f22_3B_AnalyticMS_clip.tif.clust.data_55999clusters.zarr.full_geo.fire.tif.Contours.tif",
+
+#"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190808_182954_1001_3B_AnalyticMS_clip.tif.clust.data_55999clusters.zarr.full_geo.fire.tif.Contours.tif",
+#"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190808_182955_1001_3B_AnalyticMS_clip.tif.clust.data_55999clusters.zarr.full_geo.fire.tif.Contours.tif",
+#"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190808_182956_1001_3B_AnalyticMS_clip.tif.clust.data_55999clusters.zarr.full_geo.fire.tif.Contours.tif",
+
+#"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190808_183352_07_1067_3B_AnalyticMS_clip.tif.clust.data_55999clusters.zarr.full_geo.fire.tif.Contours.tif",
+#"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190808_183354_13_1067_3B_AnalyticMS_clip.tif.clust.data_55999clusters.zarr.full_geo.fire.tif.Contours.tif",
+#"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190808_183356_19_1067_3B_AnalyticMS_clip.tif.clust.data_55999clusters.zarr.full_geo.fire.tif.Contours.tif",
+
+]

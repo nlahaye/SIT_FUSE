@@ -1,0 +1,15 @@
+
+dbf: True
+dbf_percentage_thresh: 0.8
+dbf_list: [[
+"/data/nlahaye/SIT_FUSE_Geo/GOES_TEMPO_DATA/GOES_FIRE_OUTPUT.csv",
+],
+[
+"/data/nlahaye/SIT_FUSE_Geo/GOES_TEMPO_DATA/GOES_TEMPO_SMOKE_OUTPUT.csv",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_TEMPO_DATA/GOES_TEMPO_BACKGROUND_OUTPUT.csv",
+]]
+
+
+
+
+

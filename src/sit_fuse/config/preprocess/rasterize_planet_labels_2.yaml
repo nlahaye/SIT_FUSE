@@ -1,0 +1,19 @@
+
+
+pixel_size: 0.00002700027
+vector_fn: [
+"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190807_181428_0e26_3B_AnalyticMS_clip_fire.shp",
+"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190807_181429_0e26_3B_AnalyticMS_clip_fire.shp",
+"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190807_183159_0f22_3B_AnalyticMS_clip_fire.shp",
+"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190807_183200_0f22_3B_AnalyticMS_clip_fire.shp",
+"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190808_182954_1001_3B_AnalyticMS_clip_fire.shp",
+"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190808_182955_1001_3B_AnalyticMS_clip_fire.shp",
+"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190808_182956_1001_3B_AnalyticMS_clip_fire.shp",
+"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190808_183352_07_1067_3B_AnalyticMS_clip_fire.shp",
+"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190808_183354_13_1067_3B_AnalyticMS_clip_fire.shp",
+"/data/nlahaye/SIT_FUSE_Geo/Planet_REDO/20190808_183356_19_1067_3B_AnalyticMS_clip_fire.shp",
+]
+
+
+nodata: -9999
+

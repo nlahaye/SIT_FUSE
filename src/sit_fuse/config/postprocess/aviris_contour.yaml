@@ -1,0 +1,34 @@
+
+
+data:
+ filename: [
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190806_p00r09.tif.clust.data_191199clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190806_p00r10.tif.clust.data_191198clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190806_p00r11.tif.clust.data_191199clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190806_p00r13.tif.clust.data_191198clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190806_p00r14.tif.clust.data_191199clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190806_p00r15.tif.clust.data_191199clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190806_p00r16.tif.clust.data_191199clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190806_p00r17.tif.clust.data_191199clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190806_p00r18.tif.clust.data_191199clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190807_p00r11.tif.clust.data_191199clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190807_p00r12.tif.clust.data_191199clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190807_p00r13.tif.clust.data_191199clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190807_p00r14.tif.clust.data_191199clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190821_p00r23.tif.clust.data_191191clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190821_p00r24.tif.clust.data_191190clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190821_p00r25.tif.clust.data_191181clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190821_p00r26.tif.clust.data_181920clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190821_p00r27.tif.clust.data_191186clusters.zarr.full_geo.smoke.tif",
+]
+ reader_type: "gtiff"
+ reader_kwargs:
+  None:
+
+remove_singles: True
+remove_singles_2: True
+write_geotiff: True
+contour_min_size: 300
+
+dilations: 0
+erosions: 0

@@ -1,0 +1,20 @@
+
+
+data:
+ filename: [
+"/data/nlahaye/SIT_FUSE_Geo/GOES_TEMPO_DATA/OR_ABI-L1b-RadC-M6C01_G18_s20242081451177_e20242081453550_c20242081453592.tif.clust.data_75199clusters.zarr.full_geo.tif.smoke.tif"
+]
+ reader_type: "gtiff"
+ reader_kwargs:
+  None:
+
+remove_singles: True
+remove_singles_2: True
+write_geotiff: True
+contour_min_size: -1
+
+
+dilations: 1
+erosions: 1
+
+

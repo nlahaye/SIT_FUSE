@@ -1,0 +1,272 @@
+<<<<<<< HEAD
+gen_from_geotiffs: False
+
+data:
+  clust_reader_type: "zarr_to_numpy"
+  reader_kwargs:
+    no_arg: "no_arg"
+  subset_inds: [ [ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ] ]
+  create_separate: false
+
+
+
+  gtiff_data: [
+    #    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190806_182856_0f34_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190806_182857_0f34_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190806_182858_0f34_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190806_182859_0f34_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    #      "/data/nlahaye/SIT_FUSE_Geo/Planet/20190806_182900_0f34_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190806_184209_19_105e_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190806_184211_23_105e_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr.full_geo.tif",
+
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190807_165439_1054_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    #      "/data/nlahaye/SIT_FUSE_Geo/Planet/20190807_165441_1054_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    #      "/data/nlahaye/SIT_FUSE_Geo/Planet/20190807_165442_1054_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190807_181427_0e26_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190807_181428_0e26_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190807_181429_0e26_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190807_181430_0e26_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190807_181431_0e26_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    #      "/data/nlahaye/SIT_FUSE_Geo/Planet/20190807_182616_1035_3B_AnalyticMS_clip.tif.clust.data_74535clusters.zarr.full_geo.tif",
+    #      "/data/nlahaye/SIT_FUSE_Geo/Planet/20190807_182618_1035_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190807_182619_1035_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190807_182620_1035_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190807_182621_1035_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190807_182622_1035_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190807_183158_0f22_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190807_183159_0f22_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190807_183200_0f22_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    #      "/data/nlahaye/SIT_FUSE_Geo/Planet/20190807_183201_0f22_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    #      "/data/nlahaye/SIT_FUSE_Geo/Planet/20190807_183202_0f22_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190807_183228_25_1065_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190807_183230_33_1065_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190807_183232_41_1065_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+
+    #      "/data/nlahaye/SIT_FUSE_Geo/Planet/20190808_182604_101f_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190808_182605_101f_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190808_182606_101f_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190808_182607_101f_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190808_182608_101f_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr.full_geo.tif",
+    #      "/data/nlahaye/SIT_FUSE_Geo/Planet/20190808_182953_1001_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190808_182954_1001_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190808_182955_1001_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190808_182956_1001_3B_AnalyticMS_clip.tif.clust.data_74575clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190808_182957_1001_3B_AnalyticMS_clip.tif.clust.data_69173clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190808_183352_07_1067_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190808_183354_13_1067_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190808_183356_19_1067_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+
+    #      "/data/nlahaye/SIT_FUSE_Geo/Planet/20190810_165416_0f4d_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    #      "/data/nlahaye/SIT_FUSE_Geo/Planet/20190810_165416_1_0f4d_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    #      "/data/nlahaye/SIT_FUSE_Geo/Planet/20190810_165417_0f4d_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    #      "/data/nlahaye/SIT_FUSE_Geo/Planet/20190810_165418_0f4d_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    #      "/data/nlahaye/SIT_FUSE_Geo/Planet/20190810_165419_0f4d_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    #      "/data/nlahaye/SIT_FUSE_Geo/Planet/20190810_165420_0f4d_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    #      "/data/nlahaye/SIT_FUSE_Geo/Planet/20190810_165807_104e_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    #      "/data/nlahaye/SIT_FUSE_Geo/Planet/20190810_165807_1_104e_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    #      "/data/nlahaye/SIT_FUSE_Geo/Planet/20190810_181730_0e3a_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    #      "/data/nlahaye/SIT_FUSE_Geo/Planet/20190810_183046_0f34_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190810_183047_0f34_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190810_183048_0f34_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190810_183049_0f34_3B_AnalyticMS_clip.tif.clust.data_74575clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190810_183051_0f34_3B_AnalyticMS_clip.tif.clust.data_74575clusters.zarr.full_geo.tif",
+    #      "/data/nlahaye/SIT_FUSE_Geo/Planet/20190810_183052_0f34_3B_AnalyticMS_clip.tif.clust.data_74575clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190810_184309_15_1066_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr.full_geo.tif",
+    "/data/nlahaye/SIT_FUSE_Geo/Planet/20190810_184311_16_1066_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr.full_geo.tif"
+
+  ]
+
+
+  cluster_fnames: [
+    #    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190806_182856_0f34_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+=======
+
+gen_from_geotiffs: True
+
+data:
+ clust_reader_type: "zarr_to_numpy"
+ reader_kwargs:
+   no_arg: "no_arg"
+ subset_inds: [ [ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ],[ ] ]
+ create_separate: false
+
+
+
+ gtiff_data: [
+    "/data/nlahaye/remoteSensing/PSScene/20190806_182856_0f34_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190806_182857_0f34_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190806_182858_0f34_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190806_182859_0f34_3B_AnalyticMS_clip.tif",
+    #    "/data/nlahaye/remoteSensing/PSScene/20190806_182900_0f34_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190806_184209_19_105e_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190806_184211_23_105e_3B_AnalyticMS_clip.tif",
+
+    "/data/nlahaye/remoteSensing/PSScene/20190807_165439_1054_3B_AnalyticMS_clip.tif",
+    #    "/data/nlahaye/remoteSensing/PSScene/20190807_165440_1054_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190807_165441_1054_3B_AnalyticMS_clip.tif",
+    #    "/data/nlahaye/remoteSensing/PSScene/20190807_165442_1054_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190807_181427_0e26_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190807_181428_0e26_3B_AnalyticMS_clip.tif",
+    #    "/data/nlahaye/remoteSensing/PSScene/20190807_181429_0e26_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190807_181430_0e26_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190807_181431_0e26_3B_AnalyticMS_clip.tif",
+    #    "/data/nlahaye/remoteSensing/PSScene/20190807_182616_1035_3B_AnalyticMS_clip.tif",
+    #    "/data/nlahaye/remoteSensing/PSScene/20190807_182618_1035_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190807_182619_1035_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190807_182620_1035_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190807_182621_1035_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190807_182622_1035_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190807_183158_0f22_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190807_183159_0f22_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190807_183200_0f22_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190807_183201_0f22_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190807_183202_0f22_3B_AnalyticMS_clip.tif",
+    #    "/data/nlahaye/remoteSensing/PSScene/20190807_183228_25_1065_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190807_183230_33_1065_3B_AnalyticMS_clip.tif",
+    #    "/data/nlahaye/remoteSensing/PSScene/20190807_183232_41_1065_3B_AnalyticMS_clip.tif",
+
+    "/data/nlahaye/remoteSensing/PSScene/20190808_182604_101f_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190808_182605_101f_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190808_182606_101f_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190808_182607_101f_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190808_182608_101f_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190808_182953_1001_3B_AnalyticMS_clip.tif",
+    #    "/data/nlahaye/remoteSensing/PSScene/20190808_182954_1001_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190808_182955_1001_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190808_182956_1001_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190808_182957_1001_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190808_183352_07_1067_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190808_183354_13_1067_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190808_183356_19_1067_3B_AnalyticMS_clip.tif",
+
+    #    "/data/nlahaye/remoteSensing/PSScene/20190810_165416_0f4d_3B_AnalyticMS_clip.tif",
+    #    "/data/nlahaye/remoteSensing/PSScene/20190810_165416_1_0f4d_3B_AnalyticMS_clip.tif",
+    #    "/data/nlahaye/remoteSensing/PSScene/20190810_165417_0f4d_3B_AnalyticMS_clip.tif",
+    #    "/data/nlahaye/remoteSensing/PSScene/20190810_165418_0f4d_3B_AnalyticMS_clip.tif",
+    #    "/data/nlahaye/remoteSensing/PSScene/20190810_165419_0f4d_3B_AnalyticMS_clip.tif",
+    #    "/data/nlahaye/remoteSensing/PSScene/20190810_165420_0f4d_3B_AnalyticMS_clip.tif",
+    #    "/data/nlahaye/remoteSensing/PSScene/20190810_165807_104e_3B_AnalyticMS_clip.tif",
+    #    "/data/nlahaye/remoteSensing/PSScene/20190810_165807_1_104e_3B_AnalyticMS_clip.tif",
+    #    "/data/nlahaye/remoteSensing/PSScene/20190810_181729_0e3a_3B_AnalyticMS_clip.tif",
+    #    "/data/nlahaye/remoteSensing/PSScene/20190810_181730_0e3a_3B_AnalyticMS_clip.tif",
+    #    "/data/nlahaye/remoteSensing/PSScene/20190810_183046_0f34_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190810_183047_0f34_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190810_183048_0f34_3B_AnalyticMS_clip.tif",
+    #    "/data/nlahaye/remoteSensing/PSScene/20190810_183049_0f34_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190810_183051_0f34_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190810_183052_0f34_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190810_184309_15_1066_3B_AnalyticMS_clip.tif",
+    "/data/nlahaye/remoteSensing/PSScene/20190810_184311_16_1066_3B_AnalyticMS_clip.tif"
+  ]
+
+
+ cluster_fnames: [
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190806_182856_0f34_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+>>>>>>> main
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190806_182857_0f34_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190806_182858_0f34_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190806_182859_0f34_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    #      "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190806_182900_0f34_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190806_184209_19_105e_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190806_184211_23_105e_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr",
+
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_165439_1054_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+<<<<<<< HEAD
+    #    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_165441_1054_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    #      "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_165442_1054_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_181427_0e26_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_181428_0e26_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_181429_0e26_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+=======
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_165441_1054_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    #      "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_165442_1054_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_181427_0e26_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_181428_0e26_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    #      "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_181429_0e26_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+>>>>>>> main
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_181430_0e26_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_181431_0e26_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    #      "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_182616_1035_3B_AnalyticMS_clip.tif.clust.data_74535clusters.zarr",
+    #      "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_182618_1035_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_182619_1035_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_182620_1035_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_182621_1035_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_182622_1035_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_183158_0f22_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_183159_0f22_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_183200_0f22_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+<<<<<<< HEAD
+    #    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_183201_0f22_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    #    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_183202_0f22_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_183228_25_1065_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_183230_33_1065_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_183232_41_1065_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+
+    #    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_182604_101f_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+=======
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_183201_0f22_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_183202_0f22_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    #      "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_183228_25_1065_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_183230_33_1065_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr",
+    #      "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190807_183232_41_1065_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_182604_101f_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+>>>>>>> main
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_182605_101f_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_182606_101f_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_182607_101f_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_182608_101f_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr",
+<<<<<<< HEAD
+    #    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_182953_1001_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_182954_1001_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+=======
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_182953_1001_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    #      "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_182954_1001_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+>>>>>>> main
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_182955_1001_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_182956_1001_3B_AnalyticMS_clip.tif.clust.data_74575clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_182957_1001_3B_AnalyticMS_clip.tif.clust.data_69173clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_183352_07_1067_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_183354_13_1067_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190808_183356_19_1067_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+
+    #      "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_165416_0f4d_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    #      "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_165416_1_0f4d_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    #      "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_165417_0f4d_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    #      "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_165418_0f4d_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    #      "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_165419_0f4d_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    #      "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_165420_0f4d_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    #      "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_165807_104e_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    #      "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_165807_1_104e_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    #      "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_181730_0e3a_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    #      "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_183046_0f34_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_183047_0f34_3B_AnalyticMS_clip.tif.clust.data_74590clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_183048_0f34_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr",
+<<<<<<< HEAD
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_183049_0f34_3B_AnalyticMS_clip.tif.clust.data_74575clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_183051_0f34_3B_AnalyticMS_clip.tif.clust.data_74575clusters.zarr",
+    #    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_183052_0f34_3B_AnalyticMS_clip.tif.clust.data_74575clusters.zarr",
+=======
+    #      "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_183049_0f34_3B_AnalyticMS_clip.tif.clust.data_74575clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_183051_0f34_3B_AnalyticMS_clip.tif.clust.data_74575clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_183052_0f34_3B_AnalyticMS_clip.tif.clust.data_74575clusters.zarr",
+>>>>>>> main
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_184309_15_1066_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr",
+    "/data/nlahaye/SIT_FUSE_Geo/zarrs/Planet_zarrs/20190810_184311_16_1066_3B_AnalyticMS_clip.tif.clust.data_74580clusters.zarr"
+  ]
+
+context:
+<<<<<<< HEAD
+  apply_context: True
+  clusters: [ [0.213, 0.214, 0.228, 0.234, 0.24, 0.245, 0.251, 0.256, 0.274, 0.29, 0.295, 0.601, 0.606, 0.614, 0.618, 0.631, 0.634, 0.641, 0.643, 0.676, 0.68, 0.692, 0.902, 0.903, 0.923, 0.928, 0.941, 0.95, 0.981, 3.714, 3.724, 3.726, 3.745, 3.755, 3.761, 3.77, 3.78, 8.5, 8.508, 8.512, 8.514, 8.515, 8.516, 8.53, 8.533, 8.542, 8.543, 8.544, 8.547, 8.549, 8.562, 8.567, 8.578, 8.58, 8.583, 8.587, 8.588, 8.589, 8.592, 8.598, 8.599, 11.501, 11.519, 11.522, 11.524, 11.527, 11.534, 11.536, 11.54, 11.542, 11.548, 11.558, 11.56, 11.561, 11.562, 11.563, 11.567, 11.568, 11.571, 11.572, 11.576, 11.582, 11.585, 11.587, 11.588, 11.592, 11.593, 13.6, 13.601, 13.609, 13.616, 13.628, 13.632, 13.634, 13.635, 13.643, 13.647, 13.651, 13.653, 13.656, 13.661, 13.67, 13.672, 13.673, 13.674, 13.676, 13.677, 13.682, 13.686, 13.69, 13.693, 13.695, 14.106, 14.112, 14.117, 14.118, 14.121, 14.133, 14.135, 14.136, 14.141, 14.162, 14.166, 14.168, 14.175, 14.177, 14.195, 18.783, 18.798, 23.2, 23.201, 23.21, 23.215, 23.219, 23.221, 23.223, 23.224, 23.227, 23.229, 23.23, 23.232, 23.236, 23.239, 23.24, 23.243, 23.245, 23.247, 23.252, 23.255, 23.259, 23.262, 23.265, 23.266, 23.268, 23.272, 23.277, 23.278, 23.28, 23.284, 23.288, 23.29, 23.296, 23.297, 23.305, 23.325, 23.329, 23.334, 23.345, 23.354, 23.369, 23.378, 23.385, 23.389, 25.6, 25.602, 25.603, 25.605, 25.62, 25.624, 25.626, 25.628, 25.634, 25.635, 25.639, 25.641, 25.653, 25.658, 25.663, 25.667, 25.669, 25.671, 25.673, 25.677, 25.679, 25.686, 25.69, 25.691, 25.692, 27.3, 27.305, 27.309, 27.31, 27.317, 27.326, 27.33, 27.349, 27.35, 27.363, 27.365, 27.372, 27.373, 27.374, 27.378, 27.379, 27.382, 27.385, 27.39, 27.392, 29.325, 29.326, 29.338, 29.34, 29.345, 29.37, 29.377, 29.385, 32.109, 32.11, 32.121, 32.138, 32.145, 32.147, 32.149, 32.161, 32.168, 32.171, 32.174, 32.179, 32.193, 32.197, 38.501, 38.508, 38.512, 38.514, 38.516, 38.519, 38.522, 38.529, 38.53, 38.535, 38.537, 38.543, 38.545, 38.546, 38.554, 38.557, 38.559, 38.563, 38.564, 38.565, 38.575, 38.581, 38.584, 38.589, 38.592, 38.594, 38.599, 41.0, 41.003, 41.004, 41.006, 41.008, 41.022, 41.027, 41.029, 41.033, 41.049, 41.052, 41.057, 41.062, 41.066, 41.067, 41.069, 41.071, 41.074, 41.075, 41.081, 41.087, 41.09, 41.094, 41.096, 41.097, 41.098, 41.606, 41.611, 41.618, 41.621, 41.623, 41.63, 41.632, 41.637, 41.639, 41.641, 41.649, 41.65, 41.658, 41.662, 41.671, 41.672, 41.68, 41.681, 41.684, 41.69, 41.693, 41.698, 43.001, 43.014, 43.016, 43.017, 43.02, 43.022, 43.023, 43.024, 43.027, 43.031, 43.033, 43.034, 43.037, 43.04, 43.041, 43.043, 43.044, 43.045, 43.047, 43.049, 43.052, 43.055, 43.059, 43.061, 43.064, 43.066, 43.068, 43.076, 43.077, 43.079, 43.087, 43.09, 43.095, 43.405, 43.406, 43.407, 43.412, 43.415, 43.417, 43.419, 43.42, 43.422, 43.425, 43.428, 43.433, 43.434, 43.445, 43.447, 43.448, 43.452, 43.453, 43.456, 43.46, 43.464, 43.465, 43.466, 43.469, 43.479, 43.485, 43.494, 43.496, 46.4, 46.426, 46.428, 46.44, 46.444, 46.446, 46.448, 46.455, 46.459, 46.494, 46.495, 53.71, 53.713, 53.731, 53.745, 53.747, 53.751, 53.752, 53.761, 53.773, 53.777, 53.778, 53.78, 53.791, 60.203, 60.216, 60.249, 60.263, 60.279, 60.285, 60.286, 60.287, 60.295, 69.105, 69.112, 69.114, 69.117, 69.139, 69.141, 69.142, 69.15, 69.152, 69.154, 69.156, 69.158, 69.172, 69.173, 69.18, 69.182, 69.189, 69.194, 74.501, 74.505, 74.507, 74.508, 74.514, 74.515, 74.517, 74.519, 74.521, 74.523, 74.527, 74.53, 74.531, 74.535, 74.538, 74.542, 74.552, 74.553, 74.554, 74.556, 74.558, 74.565, 74.567, 74.569, 74.574, 74.575, 74.578, 74.58, 74.585, 74.589, 74.59, 0.966, 23.386, 0.616, 0.625, 0.644, 0.649, 0.661, 0.664, 0.665, 0.668, 0.686, 0.914, 0.918, 0.925, 0.932, 0.943, 0.944, 0.952, 0.953, 0.958, 0.973, 0.992, 3.703, 3.722, 3.73, 3.731, 3.739, 3.765, 3.773, 3.779, 3.783, 3.79, 7.207, 7.212, 7.254, 7.266, 7.282, 7.289, 8.511, 8.538, 8.574, 8.594, 14.126, 14.129, 14.13, 14.15, 14.154, 14.157, 14.169, 14.17, 14.186, 23.302, 23.306, 23.309, 23.326, 23.335, 23.338, 23.344, 23.347, 23.349, 23.36, 23.376, 25.612, 25.67, 25.68, 25.685, 27.377, 29.303, 29.323, 29.324, 29.342, 29.348, 29.36, 29.373, 29.379, 29.384, 53.704, 53.728, 53.732, 53.758, 53.759, 60.221, 60.243, 60.278, 60.299, 69.103, 69.116, 69.128, 69.146, 69.157, 69.159, 69.161, 69.164, 69.166, 69.168, 69.183, 69.186, 69.188, 69.192, 69.196, 69.199, 0.206, 0.21, 0.212, 0.219, 0.225, 0.232, 0.233, 0.249, 0.252, 0.258, 0.279, 0.282, 0.288, 0.289, 0.291, 0.296, 0.954, 0.995, 3.702, 3.708, 3.723, 3.74, 3.786, 3.796, 3.799, 7.201, 7.218, 7.221, 7.23, 7.249, 7.256, 23.314, 23.342, 23.352, 23.367, 23.372, 23.384, 23.393, 23.397, 23.398, 32.107, 32.117, 32.133, 32.135, 32.141, 32.153, 32.162, 32.182, 32.194, 46.405, 46.411, 46.417, 46.42, 46.423, 46.429, 46.431, 46.437, 46.441, 46.451, 46.453, 46.46, 46.464, 46.475, 46.479, 46.496, 53.771, 60.215, 60.228, 60.236, 60.275, 0.623, 0.627, 7.219, 8.525, 8.535, 18.701, 18.702, 18.708, 18.714, 18.718, 18.732, 18.741, 18.747, 18.748, 18.756, 18.776, 18.777, 18.787, 23.313, 25.655, 25.681, 29.354, 29.366, 29.396, 60.202, 60.208, 60.254, 60.267, 60.271, 60.284, 60.298, 0.217, 0.226, 0.253, 0.255, 0.261, 46.452, 46.477, 46.486, 0.695, 0.922, 7.211, 23.323, 23.328, 23.382, 23.391, 18.722, 18.778, 18.779, 18.788, 3.769, 8.502, 8.537, 18.71, 18.717, 18.719, 18.721, 18.734, 18.735, 18.743, 18.757, 18.766, 18.775, 18.78, 18.785, 18.784, 18.797], [ 0.902, 0.928, 0.941, 0.966, 3.724, 8.512, 8.516, 8.533, 8.542, 8.588, 8.592, 11.501, 11.519, 11.522, 11.524, 11.527, 11.534, 11.536, 11.54, 11.542, 11.56, 11.561, 11.562, 11.563, 11.567, 11.568, 11.571, 11.572, 11.576, 11.582, 11.585, 11.587, 11.592, 11.593, 13.6, 13.609, 13.616, 13.628, 13.632, 13.634, 13.635, 13.643, 13.647, 13.651, 13.653, 13.656, 13.661, 13.67, 13.672, 13.673, 13.674, 13.677, 13.686, 13.69, 13.693, 13.695, 14.117, 18.798, 23.2, 23.21, 23.215, 23.221, 23.223, 23.224, 23.232, 23.239, 23.24, 23.255, 23.262, 23.265, 23.266, 23.277, 23.297, 23.334, 23.345, 23.369, 23.385, 23.386, 23.389, 25.605, 25.62, 25.628, 25.634, 25.635, 25.639, 25.641, 25.658, 25.663, 25.669, 25.671, 25.673, 25.677, 25.69, 25.691, 25.692, 27.3, 27.31, 27.317, 27.326, 27.33, 27.349, 27.35, 27.363, 27.365, 27.372, 27.373, 27.378, 27.379, 27.382, 32.109, 32.11, 32.121, 32.138, 32.145, 32.149, 32.161, 32.168, 32.179, 38.501, 38.508, 38.519, 38.522, 38.535, 38.537, 38.557, 38.563, 41.0, 41.003, 41.004, 41.006, 41.008, 41.022, 41.027, 41.029, 41.033, 41.049, 41.052, 41.057, 41.062, 41.066, 41.067, 41.069, 41.071, 41.074, 41.075, 41.081, 41.087, 41.09, 41.094, 41.096, 41.097, 41.098, 41.606, 41.611, 41.618, 41.621, 41.623, 41.63, 41.632, 41.637, 41.639, 41.641, 41.649, 41.65, 41.658, 41.662, 41.671, 41.672, 41.68, 41.681, 41.684, 41.69, 41.693, 41.698, 43.001, 43.014, 43.016, 43.017, 43.02, 43.022, 43.024, 43.027, 43.031, 43.033, 43.034, 43.037, 43.04, 43.041, 43.043, 43.044, 43.045, 43.047, 43.049, 43.052, 43.055, 43.059, 43.061, 43.064, 43.066, 43.068, 43.076, 43.077, 43.087, 43.09, 43.095, 43.405, 43.406, 43.407, 43.412, 43.415, 43.417, 43.419, 43.42, 43.422, 43.425, 43.428, 43.433, 43.434, 43.445, 43.447, 43.448, 43.452, 43.453, 43.456, 43.46, 43.464, 43.465, 43.466, 43.469, 43.479, 43.485, 43.494, 43.496, 60.249, 60.263, 60.285, 60.287, 60.295, 74.501, 74.505, 74.507, 74.508, 74.514, 74.515, 74.517, 74.519, 74.521, 74.523, 74.527, 74.53, 74.531, 74.535, 74.538, 74.542, 74.552, 74.553, 74.554, 74.556, 74.558, 74.565, 74.567, 74.569, 74.574, 74.575, 74.578, 74.58, 74.585, 74.589, 74.59, 0.601, 0.606, 0.614, 0.618, 0.634, 0.641, 0.643, 0.676, 0.922, 0.944, 0.953, 0.954, 3.714, 3.726, 3.73, 3.731, 3.739, 3.745, 3.761, 3.765, 3.77, 3.773, 3.78, 8.5, 8.502, 8.508, 8.511, 8.514, 8.515, 8.525, 8.53, 8.535, 8.537, 8.538, 8.543, 8.547, 8.562, 8.567, 8.574, 8.58, 8.587, 8.589, 8.598, 8.599, 14.106, 14.112, 14.118, 14.121, 14.126, 14.129, 14.13, 14.133, 14.135, 14.136, 14.141, 14.15, 14.154, 14.157, 14.162, 14.166, 14.168, 14.169, 14.17, 14.175, 14.177, 14.186, 14.195, 18.734, 23.201, 23.219, 23.227, 23.229, 23.23, 23.236, 23.243, 23.245, 23.247, 23.252, 23.259, 23.272, 23.278, 23.28, 23.284, 23.288, 23.29, 23.296, 23.302, 23.309, 23.314, 23.338, 23.342, 23.352, 23.354, 23.378, 23.393, 23.397, 27.309, 27.374, 27.377, 29.323, 29.325, 29.326, 29.338, 29.34, 29.36, 29.37, 29.373, 29.377, 29.385, 38.512, 38.514, 38.516, 38.529, 38.53, 38.543, 38.545, 38.546, 38.554, 38.559, 38.564, 38.565, 38.575, 38.581, 38.584, 38.589, 38.592, 38.594, 38.599, 43.079, 53.713, 53.731, 53.745, 53.747, 53.751, 53.752, 53.761, 53.773, 53.778, 53.78, 60.243, 69.103, 69.105, 69.112, 69.114, 69.116, 69.117, 69.128, 69.139, 69.141, 69.142, 69.146, 69.15, 69.152, 69.154, 69.156, 69.157, 69.158, 69.159, 69.161, 69.164, 69.166, 69.168, 69.172, 69.173, 69.18, 69.182, 69.183, 69.186, 69.188, 69.189, 69.192, 69.194, 69.196, 69.199, 0.228, 0.245, 0.29, 0.295, 0.631, 0.644, 0.661, 0.668, 0.68, 0.692, 0.903, 0.923, 0.95, 0.981, 8.544, 8.549, 8.583, 11.548, 11.558, 11.588, 13.676, 13.682, 18.708, 18.718, 23.305, 23.329, 23.335, 23.347, 29.345, 29.379, 29.384, 32.171, 43.023, 46.459, 46.495, 53.704, 53.71, 53.732, 53.759, 0.627, 0.665, 0.914, 0.932, 3.702, 3.703, 3.708, 3.783, 3.796, 23.306, 23.326, 23.349, 23.367, 23.372, 23.384, 23.398, 29.348, 46.4, 53.777, 53.791, 60.236, 60.275, 60.299, 3.74, 3.769, 3.779, 3.799, 7.282, 18.741, 18.743, 18.748, 18.757, 18.776, 18.777, 23.382, 29.396, 60.221, 60.267, 60.278, 60.298, 0.206, 0.21, 0.212, 0.213, 0.214, 0.217, 0.219, 0.225, 0.226, 0.232, 0.233, 0.234, 0.24, 0.249, 0.251, 0.252, 0.253, 0.255, 0.256, 0.258, 0.261, 0.274, 0.279, 0.282, 0.288, 0.289, 0.291, 0.296, 0.918, 0.925, 0.943, 0.952, 0.995, 32.107, 32.117, 32.133, 32.135, 32.141, 32.147, 32.153, 32.162, 32.174, 32.182, 32.193, 32.194, 32.197, 46.405, 46.411, 46.417, 46.42, 46.423, 46.426, 46.428, 46.429, 46.431, 46.437, 46.44, 46.441, 46.444, 46.446, 46.448, 46.451, 46.452, 46.453, 46.455, 46.46, 46.464, 46.475, 46.477, 46.479, 46.486, 46.494, 46.496, 0.958, 0.973, 0.992, 3.755, 13.601, 18.783, 23.268, 23.313, 23.323, 23.325, 23.328, 23.344, 23.36, 23.376, 23.391, 25.624, 25.653, 25.679, 25.686, 27.305, 27.385, 27.39, 27.392, 60.216, 60.279, 60.286, 29.324, 29.342, 29.354, 0.664, 0.686, 29.303, 29.366, 18.701, 18.702, 18.714, 18.732, 18.747, 18.756, 53.758, 60.202, 60.208, 60.215, 60.228, 60.254, 60.271, 60.284, 25.6, 25.626, 60.203, 3.722, 3.723, 3.786, 3.79, 7.254, 25.602, 53.728, 0.623, 0.616, 53.771, 0.625, 7.221, 7.289, 0.649, 0.695, 7.207, 7.211, 7.212, 7.219, 7.225, 7.229, 7.24, 7.248, 7.266, 7.267, 7.287, 7.297 ] ]
+  #    [ 0.214, 0.228, 0.245, 0.274, 0.29, 0.295, 0.902, 0.903, 0.923, 0.928, 0.932, 0.941, 0.943, 0.95, 0.954, 0.966, 0.981, 8.512, 8.583, 8.589, 11.501, 11.519, 11.522, 11.524, 11.527, 11.534, 11.536, 11.54, 11.542, 11.548, 11.558, 11.56, 11.561, 11.562, 11.563, 11.567, 11.568, 11.571, 11.572, 11.576, 11.582, 11.585, 11.587, 11.588, 11.592, 11.593, 13.6, 13.601, 13.609, 13.628, 13.634, 13.635, 13.643, 13.647, 13.653, 13.656, 13.661, 13.672, 13.673, 13.674, 13.676, 13.677, 13.682, 13.686, 13.69, 13.693, 14.117, 23.2, 23.201, 23.21, 23.215, 23.221, 23.223, 23.224, 23.227, 23.229, 23.23, 23.232, 23.239, 23.24, 23.245, 23.252, 23.255, 23.262, 23.277, 23.284, 23.288, 23.297, 23.334, 23.345, 23.369, 23.389, 25.635, 25.658, 25.663, 25.669, 25.686, 25.69, 25.691, 27.3, 27.305, 27.309, 27.31, 27.317, 27.326, 27.33, 27.349, 27.35, 27.363, 27.365, 27.372, 27.373, 27.374, 27.378, 27.379, 27.382, 27.385, 27.39, 27.392, 32.109, 32.11, 32.121, 32.138, 32.145, 32.149, 32.161, 32.168, 32.171, 32.179, 32.197, 38.501, 38.508, 38.522, 38.557, 38.563, 38.584, 41.0, 41.066, 41.067, 41.071, 41.074, 41.087, 41.606, 41.618, 41.621, 41.637, 41.641, 41.65, 41.662, 41.671, 41.68, 41.681, 41.69, 41.693, 41.698, 43.001, 43.014, 43.017, 43.02, 43.022, 43.023, 43.027, 43.031, 43.033, 43.034, 43.037, 43.04, 43.043, 43.045, 43.047, 43.049, 43.052, 43.055, 43.059, 43.061, 43.064, 43.066, 43.068, 43.079, 43.087, 43.095, 43.405, 43.406, 43.42, 43.422, 43.425, 43.428, 43.433, 43.434, 43.445, 43.447, 43.448, 43.452, 43.453, 43.456, 43.464, 43.466, 43.469, 43.479, 43.485, 43.496, 46.444, 46.446, 46.448, 46.459, 46.495, 60.263, 60.285, 60.295, 69.112, 69.141, 69.146, 69.152, 69.154, 69.156, 69.182, 69.188, 69.189, 69.192, 74.501, 74.505, 74.507, 74.508, 74.519, 74.523, 74.527, 74.53, 74.531, 74.535, 74.538, 74.542, 74.552, 74.556, 74.569, 74.578, 74.585, 74.589, 74.59, 0.601, 0.634, 0.641, 3.702, 3.714, 3.722, 3.723, 3.724, 3.73, 3.755, 3.769, 3.77, 3.779, 3.786, 3.79, 3.796, 3.799, 7.254, 7.282, 8.511, 8.53, 8.533, 8.542, 8.543, 8.549, 8.567, 8.588, 8.592, 14.195, 18.702, 18.714, 18.777, 18.783, 18.798, 23.326, 23.349, 23.367, 23.397, 23.398, 25.605, 25.62, 25.624, 25.628, 25.639, 25.641, 25.653, 25.671, 25.673, 25.677, 25.679, 25.692, 29.385, 38.519, 38.529, 38.545, 38.554, 38.575, 38.581, 53.713, 53.745, 53.761, 60.202, 60.203, 60.215, 60.216, 60.221, 60.236, 60.243, 60.254, 60.267, 60.275, 60.278, 60.279, 60.284, 60.286, 60.298, 60.299, 69.172, 0.24, 0.251, 0.256, 0.914, 0.918, 0.925, 0.952, 0.953, 0.958, 0.973, 0.992, 7.212, 7.218, 7.221, 8.5, 8.502, 8.508, 8.514, 8.515, 8.516, 8.525, 8.535, 8.537, 8.538, 8.544, 8.547, 8.562, 8.574, 8.578, 8.58, 8.587, 8.594, 8.598, 8.599, 14.106, 14.112, 14.118, 14.121, 14.126, 14.129, 14.13, 14.135, 14.136, 14.15, 14.154, 14.157, 14.162, 14.168, 14.169, 14.17, 14.175, 14.177, 14.186, 18.701, 18.708, 18.71, 18.717, 18.718, 18.719, 18.721, 18.722, 18.732, 18.734, 18.735, 18.741, 18.743, 18.747, 18.748, 18.756, 18.757, 18.766, 18.775, 18.776, 18.778, 18.779, 18.78, 18.784, 18.785, 18.787, 18.788, 18.797, 23.219, 23.268, 23.305, 23.313, 23.314, 23.323, 23.325, 23.328, 23.329, 23.335, 23.338, 23.342, 23.344, 23.36, 23.376, 23.378, 23.382, 23.391, 25.6, 25.602, 25.603, 25.612, 25.626, 25.634, 25.655, 25.667, 25.67, 25.68, 25.681, 25.685, 27.377, 38.514, 38.516, 38.53, 38.543, 38.546, 38.559, 38.564, 38.565, 38.589, 38.592, 38.594, 43.041, 46.4, 46.428, 46.494, 60.208, 60.228, 60.271, 69.103, 69.105, 69.114, 69.116, 69.128, 69.139, 69.142, 69.157, 69.159, 69.161, 69.164, 69.166, 69.168, 69.18, 69.183, 69.186, 69.194, 69.196, 69.199, 0.206, 0.21, 0.213, 0.219, 0.234, 0.249, 0.252, 0.258, 0.279, 0.282, 0.288, 32.107, 32.117, 32.133, 32.147, 32.153, 32.162, 32.174, 32.193, 46.423, 46.426, 46.44, 46.451, 46.453, 46.455, 46.46, 0.212, 0.217, 0.225, 0.232, 0.233, 0.253, 0.289, 0.291, 0.296, 0.995, 32.135, 32.141, 32.182, 32.194, 46.405, 46.411, 46.417, 46.42, 46.429, 46.431, 46.437, 46.441, 46.464, 46.475, 46.479, 46.496, 3.74, 7.201, 7.23, 7.249, 7.256, 0.255, 0.261, 46.452, 46.477, 46.486, 0.226 ], [ 13.616, 13.632, 13.651, 13.67, 13.695, 23.259, 23.265, 23.266, 23.296, 23.354, 23.385, 38.535, 38.537, 41.003, 41.004, 41.006, 41.008, 41.022, 41.027, 41.029, 41.033, 41.049, 41.052, 41.057, 41.062, 41.069, 41.075, 41.081, 41.09, 41.094, 41.096, 41.097, 41.098, 41.611, 41.623, 41.63, 41.632, 41.639, 41.649, 41.658, 41.672, 41.684, 43.016, 43.024, 43.044, 43.076, 43.077, 43.09, 43.407, 43.412, 43.415, 43.417, 43.419, 43.46, 43.465, 60.287, 74.514, 74.515, 74.517, 74.521, 74.553, 74.554, 74.558, 74.565, 74.574, 74.575, 74.58, 0.606, 0.614, 0.618, 0.643, 0.644, 0.665, 0.676, 0.68, 0.692, 3.703, 3.708, 3.726, 3.731, 3.739, 3.745, 3.761, 3.765, 3.773, 3.78, 3.783, 14.133, 14.141, 14.166, 23.236, 23.247, 23.272, 23.278, 23.28, 23.29, 23.302, 23.306, 23.309, 23.347, 23.352, 23.386, 23.393, 29.323, 29.325, 29.326, 29.338, 29.34, 29.345, 29.36, 29.37, 29.373, 29.377, 38.512, 38.599, 53.71, 53.731, 53.747, 53.751, 53.752, 53.758, 53.771, 53.773, 53.778, 53.78, 53.791, 69.117, 69.15, 69.158, 69.173, 0.616, 0.623, 0.625, 0.627, 0.631, 0.649, 0.661, 0.664, 0.668, 0.686, 0.695, 0.922, 0.944, 7.207, 7.219, 23.243, 23.372, 23.384, 29.303, 29.324, 29.342, 29.348, 29.379, 29.384, 53.704, 53.728, 53.732, 53.759, 29.396, 7.211, 7.289, 7.266, 29.354, 29.366, 7.225, 7.229, 7.24, 7.248, 7.267, 7.287, 7.297 ] ]
+  name: [ "background", "smoke" ] #i.e. smoke
+  compare_truth: false
+  generate_union: false
+=======
+ apply_context: True
+ clusters: [ [ 0.214, 0.228, 0.245, 0.274, 0.29, 0.295, 0.902, 0.903, 0.923, 0.928, 0.932, 0.941, 0.943, 0.95, 0.954, 0.966, 0.981, 8.512, 8.583, 8.589, 11.501, 11.519, 11.522, 11.524, 11.527, 11.534, 11.536, 11.54, 11.542, 11.548, 11.558, 11.56, 11.561, 11.562, 11.563, 11.567, 11.568, 11.571, 11.572, 11.576, 11.582, 11.585, 11.587, 11.588, 11.592, 11.593, 13.6, 13.601, 13.609, 13.628, 13.634, 13.635, 13.643, 13.647, 13.653, 13.656, 13.661, 13.672, 13.673, 13.674, 13.676, 13.677, 13.682, 13.686, 13.69, 13.693, 14.117, 23.2, 23.201, 23.21, 23.215, 23.221, 23.223, 23.224, 23.227, 23.229, 23.23, 23.232, 23.239, 23.24, 23.245, 23.252, 23.255, 23.262, 23.277, 23.284, 23.288, 23.297, 23.334, 23.345, 23.369, 23.389, 25.635, 25.658, 25.663, 25.669, 25.686, 25.69, 25.691, 27.3, 27.305, 27.309, 27.31, 27.317, 27.326, 27.33, 27.349, 27.35, 27.363, 27.365, 27.372, 27.373, 27.374, 27.378, 27.379, 27.382, 27.385, 27.39, 27.392, 32.109, 32.11, 32.121, 32.138, 32.145, 32.149, 32.161, 32.168, 32.171, 32.179, 32.197, 38.501, 38.508, 38.522, 38.557, 38.563, 38.584, 41.0, 41.066, 41.067, 41.071, 41.074, 41.087, 41.606, 41.618, 41.621, 41.637, 41.641, 41.65, 41.662, 41.671, 41.68, 41.681, 41.69, 41.693, 41.698, 43.001, 43.014, 43.017, 43.02, 43.022, 43.023, 43.027, 43.031, 43.033, 43.034, 43.037, 43.04, 43.043, 43.045, 43.047, 43.049, 43.052, 43.055, 43.059, 43.061, 43.064, 43.066, 43.068, 43.079, 43.087, 43.095, 43.405, 43.406, 43.42, 43.422, 43.425, 43.428, 43.433, 43.434, 43.445, 43.447, 43.448, 43.452, 43.453, 43.456, 43.464, 43.466, 43.469, 43.479, 43.485, 43.496, 46.444, 46.446, 46.448, 46.459, 46.495, 60.263, 60.285, 60.295, 69.112, 69.141, 69.146, 69.152, 69.154, 69.156, 69.182, 69.188, 69.189, 69.192, 74.501, 74.505, 74.507, 74.508, 74.519, 74.523, 74.527, 74.53, 74.531, 74.535, 74.538, 74.542, 74.552, 74.556, 74.569, 74.578, 74.585, 74.589, 74.59, 0.601, 0.634, 0.641, 3.702, 3.714, 3.722, 3.723, 3.724, 3.73, 3.755, 3.769, 3.77, 3.779, 3.786, 3.79, 3.796, 3.799, 7.254, 7.282, 8.511, 8.53, 8.533, 8.542, 8.543, 8.549, 8.567, 8.588, 8.592, 14.195, 18.702, 18.714, 18.777, 18.783, 18.798, 23.326, 23.349, 23.367, 23.397, 23.398, 25.605, 25.62, 25.624, 25.628, 25.639, 25.641, 25.653, 25.671, 25.673, 25.677, 25.679, 25.692, 29.385, 38.519, 38.529, 38.545, 38.554, 38.575, 38.581, 53.713, 53.745, 53.761, 60.202, 60.203, 60.215, 60.216, 60.221, 60.236, 60.243, 60.254, 60.267, 60.275, 60.278, 60.279, 60.284, 60.286, 60.298, 60.299, 69.172, 0.24, 0.251, 0.256, 0.914, 0.918, 0.925, 0.952, 0.953, 0.958, 0.973, 0.992, 7.212, 7.218, 7.221, 8.5, 8.502, 8.508, 8.514, 8.515, 8.516, 8.525, 8.535, 8.537, 8.538, 8.544, 8.547, 8.562, 8.574, 8.578, 8.58, 8.587, 8.594, 8.598, 8.599, 14.106, 14.112, 14.118, 14.121, 14.126, 14.129, 14.13, 14.135, 14.136, 14.15, 14.154, 14.157, 14.162, 14.168, 14.169, 14.17, 14.175, 14.177, 14.186, 18.701, 18.708, 18.71, 18.717, 18.718, 18.719, 18.721, 18.722, 18.732, 18.734, 18.735, 18.741, 18.743, 18.747, 18.748, 18.756, 18.757, 18.766, 18.775, 18.776, 18.778, 18.779, 18.78, 18.784, 18.785, 18.787, 18.788, 18.797, 23.219, 23.268, 23.305, 23.313, 23.314, 23.323, 23.325, 23.328, 23.329, 23.335, 23.338, 23.342, 23.344, 23.36, 23.376, 23.378, 23.382, 23.391, 25.6, 25.602, 25.603, 25.612, 25.626, 25.634, 25.655, 25.667, 25.67, 25.68, 25.681, 25.685, 27.377, 38.514, 38.516, 38.53, 38.543, 38.546, 38.559, 38.564, 38.565, 38.589, 38.592, 38.594, 43.041, 46.4, 46.428, 46.494, 60.208, 60.228, 60.271, 69.103, 69.105, 69.114, 69.116, 69.128, 69.139, 69.142, 69.157, 69.159, 69.161, 69.164, 69.166, 69.168, 69.18, 69.183, 69.186, 69.194, 69.196, 69.199, 0.206, 0.21, 0.213, 0.219, 0.234, 0.249, 0.252, 0.258, 0.279, 0.282, 0.288, 32.107, 32.117, 32.133, 32.147, 32.153, 32.162, 32.174, 32.193, 46.423, 46.426, 46.44, 46.451, 46.453, 46.455, 46.46, 0.212, 0.217, 0.225, 0.232, 0.233, 0.253, 0.289, 0.291, 0.296, 0.995, 32.135, 32.141, 32.182, 32.194, 46.405, 46.411, 46.417, 46.42, 46.429, 46.431, 46.437, 46.441, 46.464, 46.475, 46.479, 46.496, 3.74, 7.201, 7.23, 7.249, 7.256, 0.255, 0.261, 46.452, 46.477, 46.486, 0.226 ], [ 13.616, 13.632, 13.651, 13.67, 13.695, 23.259, 23.265, 23.266, 23.296, 23.354, 23.385, 38.535, 38.537, 41.003, 41.004, 41.006, 41.008, 41.022, 41.027, 41.029, 41.033, 41.049, 41.052, 41.057, 41.062, 41.069, 41.075, 41.081, 41.09, 41.094, 41.096, 41.097, 41.098, 41.611, 41.623, 41.63, 41.632, 41.639, 41.649, 41.658, 41.672, 41.684, 43.016, 43.024, 43.044, 43.076, 43.077, 43.09, 43.407, 43.412, 43.415, 43.417, 43.419, 43.46, 43.465, 60.287, 74.514, 74.515, 74.517, 74.521, 74.553, 74.554, 74.558, 74.565, 74.574, 74.575, 74.58, 0.606, 0.614, 0.618, 0.643, 0.644, 0.665, 0.676, 0.68, 0.692, 3.703, 3.708, 3.726, 3.731, 3.739, 3.745, 3.761, 3.765, 3.773, 3.78, 3.783, 14.133, 14.141, 14.166, 23.236, 23.247, 23.272, 23.278, 23.28, 23.29, 23.302, 23.306, 23.309, 23.347, 23.352, 23.386, 23.393, 29.323, 29.325, 29.326, 29.338, 29.34, 29.345, 29.36, 29.37, 29.373, 29.377, 38.512, 38.599, 53.71, 53.731, 53.747, 53.751, 53.752, 53.758, 53.771, 53.773, 53.778, 53.78, 53.791, 69.117, 69.15, 69.158, 69.173, 0.616, 0.623, 0.625, 0.627, 0.631, 0.649, 0.661, 0.664, 0.668, 0.686, 0.695, 0.922, 0.944, 7.207, 7.219, 23.243, 23.372, 23.384, 29.303, 29.324, 29.342, 29.348, 29.379, 29.384, 53.704, 53.728, 53.732, 53.759, 29.396, 7.211, 7.289, 7.266, 29.354, 29.366, 7.225, 7.229, 7.24, 7.248, 7.267, 7.287, 7.297 ] ]
+ name: [ "background", "smoke" ] #i.e. smoke
+ compare_truth: false
+ generate_union: false
+>>>>>>> main

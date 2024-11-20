@@ -1,0 +1,21 @@
+
+
+data:
+ filename: [
+"/data/nlahaye/SIT_FUSE_Geo/MASTER_eMAS/MASTER_eMAS_1981719_05_20190806_2033_2039_V01.tif.clust.data_75699clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MASTER_eMAS/MASTER_eMAS_1981725_02_20190817_0025_0026_V01.tif.clust.data_73312clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MASTER_eMAS/MASTER_eMAS_1981719_02_20190806_1851_1900_V01.tif.clust.data_75699clusters.zarr.full_geo.fire.tif",
+]
+ reader_type: "gtiff"
+ reader_kwargs:
+  None:
+
+remove_singles: True
+remove_singles_2: True
+write_geotiff: True
+contour_min_size: -1
+
+
+dilations: 0
+erosions: 0
+

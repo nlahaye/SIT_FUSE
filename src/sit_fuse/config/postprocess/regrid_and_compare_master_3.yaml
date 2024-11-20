@@ -1,0 +1,27 @@
+
+truth_maps: [
+        #"/data/nlahaye/MASTER_Detects_2/MASTERL1B_1981719_02_20190806_1851_1900_V01_georeferenced_mir_350.tif",
+        #"/data/nlahaye/MASTER_Detects_2/MASTERL1B_1981719_05_20190806_2033_2039_V01_georeferenced_mir_350.tif",
+        #"/data/nlahaye/MASTER_Detects_2/MASTERL1B_1981719_06_20190806_2153_2156_V01_georeferenced_mir_350.tif",
+"/data/nlahaye/MASTER_Detects_2/MASTERL1B_1981719_07_20190806_2226_2231_V01_georeferenced_mir_350.tif",
+#"/data/nlahaye/MASTER_Detects_2/MASTERL1B_1981719_08_20190806_2249_2259_V01_georeferenced_mir_350.tif",
+#"/data/nlahaye/MASTER_Detects_2/MASTERL1B_1981720_07_20190808_0055_0103_V01_georeferenced_mir_350.tif",
+#"/data/nlahaye/MASTER_Detects_2/MASTERL1B_1981720_09_20190808_0237_0238_V01_georeferenced_mir_350.tif",
+#"/data/nlahaye/MASTER_Detects_2/MASTERL1B_1981721_02_20190809_0120_0121_V01_georeferenced_mir_350.tif",
+#"/data/nlahaye/MASTER_Detects_2/MASTERL1B_1981721_05_20190809_0219_0226_V01_georeferenced_mir_350.tif"
+]
+
+
+sit_fuse_maps: [
+        #"/data/nlahaye/MASTER_SIT_FUSE_Reproj/MASTERL1B_1981719_02_20190806_1851_1900_V01_georeferenced.tif.clust.data_79199clusters.zarr.fire.tif.Contours.tif",
+        #"/data/nlahaye/MASTER_SIT_FUSE_Reproj/MASTERL1B_1981719_05_20190806_2033_2039_V01_georeferenced.tif.clust.data_79199clusters.zarr.fire.tif.Contours.tif",
+        #"/data/nlahaye/MASTER_SIT_FUSE_Reproj/MASTERL1B_1981719_06_20190806_2153_2156_V01_georeferenced.tif.clust.data_79093clusters.zarr.fire.tif.Contours.tif",
+"/data/nlahaye/MASTER_SIT_FUSE_Reproj/MASTERL1B_1981719_07_20190806_2226_2231_V01_georeferenced.tif.clust.data_79199clusters.zarr.fire.tif.Contours.tif",
+#"/data/nlahaye/MASTER_SIT_FUSE_Reproj/MASTERL1B_1981719_08_20190806_2249_2259_V01_georeferenced.tif.clust.data_79199clusters.zarr.fire.tif.Contours.tif",
+#"/data/nlahaye/MASTER_SIT_FUSE_Reproj/MASTERL1B_1981720_07_20190808_0055_0103_V01_georeferenced.tif.clust.data_79199clusters.zarr.fire.tif.Contours.tif",
+#"/data/nlahaye/MASTER_SIT_FUSE_Reproj/MASTERL1B_1981720_09_20190808_0237_0238_V01_georeferenced.tif.clust.data_78290clusters.zarr.fire.tif.Contours.tif",
+#"/data/nlahaye/MASTER_SIT_FUSE_Reproj/MASTERL1B_1981721_02_20190809_0120_0121_V01_georeferenced.tif.clust.data_79199clusters.zarr.fire.tif.Contours.tif",
+#"/data/nlahaye/MASTER_SIT_FUSE_Reproj/MASTERL1B_1981721_05_20190809_0219_0226_V01_georeferenced.tif.clust.data_79175clusters.zarr.fire.tif.Contours.tif"
+]
+
+

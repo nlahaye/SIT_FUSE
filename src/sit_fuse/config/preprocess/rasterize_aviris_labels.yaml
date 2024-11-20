@@ -1,0 +1,31 @@
+
+ 
+pixel_size: 0.0000900009 #0.0001800018
+vector_fn: [
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190806_p00r09_fire.shp",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190806_p00r10_fire.shp",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190806_p00r11_fire.shp",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190806_p00r12_fire.shp",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190806_p00r13_fire.shp",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190806_p00r14_fire.shp",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190806_p00r15_fire.shp",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190806_p00r16_fire.shp",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190806_p00r17_fire.shp",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190806_p00r18_fire.shp",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190807_p00r11_fire.shp",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190807_p00r12_fire.shp",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190807_p00r13_fire.shp",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190807_p00r14_fire.shp",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190807_p00r15_fire.shp",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190821_p00r23_fire.shp",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190821_p00r24_fire.shp",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190821_p00r25_fire.shp",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190821_p00r26_fire.shp",
+"/data/nlahaye/SIT_FUSE_Geo/AVIRIS_REDO/aviris_20190821_p00r27_fire.shp"
+]
+
+
+epsg: [4326, 4326,4326, 4326,4326, 4326,4326, 4326,4326, 4326,4326, 4326,4326, 4326,4326, 4326, 4326,4326, 4326,4326] 
+
+nodata: -9999
+

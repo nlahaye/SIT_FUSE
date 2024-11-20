@@ -1,0 +1,42 @@
+
+
+pixel_size: 0.01800018
+vector_fn: [
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/burnscar/OR_ABI-L1b-RadC-M6C01_G17_s20192201821196_e20192201823569_c20192201824006_burnscar.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/burnscar/OR_ABI-L1b-RadC-M6C01_G17_s20192201826196_e20192201828569_c20192201829005_burnscar.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/burnscar/OR_ABI-L1b-RadC-M6C01_G17_s20192201831196_e20192201833569_c20192201834012_burnscar.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/burnscar/OR_ABI-L1b-RadC-M6C01_G17_s20192201836196_e20192201838569_c20192201839012_burnscar.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/burnscar/OR_ABI-L1b-RadC-M6C01_G17_s20192201841196_e20192201843569_c20192201844012_burnscar.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/burnscar/OR_ABI-L1b-RadC-M6C01_G17_s20192201846196_e20192201848569_c20192201849023_burnscar.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/burnscar/OR_ABI-L1b-RadC-M6C01_G17_s20192201851196_e20192201853569_c20192201854012_burnscar.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/burnscar/OR_ABI-L1b-RadC-M6C01_G17_s20192201856196_e20192201858570_c20192201859007_burnscar.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/burnscar/OR_ABI-L1b-RadC-M6C01_G17_s20192210116197_e20192210118570_c20192210119008_burnscar.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/burnscar/OR_ABI-L1b-RadC-M6C01_G17_s20192210121197_e20192210123570_c20192210124011_burnscar.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/burnscar/OR_ABI-L1b-RadC-M6C01_G17_s20192210221197_e20192210223570_c20192210224025_burnscar.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/fire/OR_ABI-L1b-RadC-M6C01_G17_s20192201821196_e20192201823569_c20192201824006_fire.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/fire/OR_ABI-L1b-RadC-M6C01_G17_s20192201826196_e20192201828569_c20192201829005_fire.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/fire/OR_ABI-L1b-RadC-M6C01_G17_s20192201831196_e20192201833569_c20192201834012_fire.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/fire/OR_ABI-L1b-RadC-M6C01_G17_s20192201836196_e20192201838569_c20192201839012_fire.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/fire/OR_ABI-L1b-RadC-M6C01_G17_s20192201841196_e20192201843569_c20192201844012_fire.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/fire/OR_ABI-L1b-RadC-M6C01_G17_s20192201846196_e20192201848569_c20192201849023_fire.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/fire/OR_ABI-L1b-RadC-M6C01_G17_s20192201851196_e20192201853569_c20192201854012_fire.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/fire/OR_ABI-L1b-RadC-M6C01_G17_s20192201856196_e20192201858570_c20192201859007_fire.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/fire/OR_ABI-L1b-RadC-M6C01_G17_s20192210116197_e20192210118570_c20192210119008_fire.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/fire/OR_ABI-L1b-RadC-M6C01_G17_s20192210121197_e20192210123570_c20192210124011_fire.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/fire/OR_ABI-L1b-RadC-M6C01_G17_s20192210221197_e20192210223570_c20192210224025_fire.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/smoke/OR_ABI-L1b-RadC-M6C01_G17_s20192201821196_e20192201823569_c20192201824006_smoke.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/smoke/OR_ABI-L1b-RadC-M6C01_G17_s20192201826196_e20192201828569_c20192201829005_smoke.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/smoke/OR_ABI-L1b-RadC-M6C01_G17_s20192201831196_e20192201833569_c20192201834012_smoke.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/smoke/OR_ABI-L1b-RadC-M6C01_G17_s20192201836196_e20192201838569_c20192201839012_smoke.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/smoke/OR_ABI-L1b-RadC-M6C01_G17_s20192201841196_e20192201843569_c20192201844012_smoke.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/smoke/OR_ABI-L1b-RadC-M6C01_G17_s20192201846196_e20192201848569_c20192201849023_smoke.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/smoke/OR_ABI-L1b-RadC-M6C01_G17_s20192201851196_e20192201853569_c20192201854012_smoke.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/smoke/OR_ABI-L1b-RadC-M6C01_G17_s20192201856196_e20192201858570_c20192201859007_smoke.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/smoke/OR_ABI-L1b-RadC-M6C01_G17_s20192210116197_e20192210118570_c20192210119008_smoke.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/smoke/OR_ABI-L1b-RadC-M6C01_G17_s20192210121197_e20192210123570_c20192210124011_smoke.shp",
+"/data/nlahaye/updatedShapefiles/GOES/shapes/labels/smoke/OR_ABI-L1b-RadC-M6C01_G17_s20192210221197_e20192210223570_c20192210224025_smoke.shp"
+]
+
+
+nodata: -9999
+

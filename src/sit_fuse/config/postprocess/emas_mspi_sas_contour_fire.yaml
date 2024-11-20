@@ -1,0 +1,33 @@
+
+
+data:
+ filename: [
+"/data/nlahaye/SIT_FUSE_Geo/eMAS_MSPI/MSPI_eMAS_20190806_183632Z.tif.clust.data_79188clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/eMAS_MSPI/MSPI_eMAS_20190806_190054Z.tif.clust.data_79180clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/eMAS_MSPI/MSPI_eMAS_20190806_200308Z.tif.clust.data_79199clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/eMAS_MSPI/MSPI_eMAS_20190806_202139Z.tif.clust.data_79180clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/eMAS_MSPI/MSPI_eMAS_20190806_205617Z.tif.clust.data_79180clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/eMAS_MSPI/MSPI_eMAS_20190806_211454Z.tif.clust.data_71999clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/eMAS_MSPI/MSPI_eMAS_20190807_182404Z.tif.clust.data_79156clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/eMAS_MSPI/MSPI_eMAS_20190807_193214Z.tif.clust.data_79199clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/eMAS_MSPI/MSPI_eMAS_20190807_195226Z.tif.clust.data_79199clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/eMAS_MSPI/MSPI_eMAS_20190807_200717Z.tif.clust.data_79197clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/eMAS_MSPI/MSPI_eMAS_20190807_202502Z.tif.clust.data_79199clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/eMAS_MSPI/MSPI_eMAS_20190807_204231Z.tif.clust.data_79199clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/eMAS_MSPI/MSPI_eMAS_20190808_174846Z.tif.clust.data_59499clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/eMAS_MSPI/MSPI_eMAS_20190808_181151Z.tif.clust.data_59470clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/eMAS_MSPI/MSPI_eMAS_20190821_224247Z.tif.clust.data_79189clusters.zarr.full_geo.fire.tif",
+]
+ reader_type: "gtiff"
+ reader_kwargs:
+  None:
+
+remove_singles: True
+remove_singles_2: True
+write_geotiff: True
+contour_min_size: -1
+
+
+dilations: 2
+erosions: 1
+

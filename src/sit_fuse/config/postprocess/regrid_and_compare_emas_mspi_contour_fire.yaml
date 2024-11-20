@@ -1,0 +1,35 @@
+
+truth_maps: [
+##"/data/nlahaye/SIT_FUSE_Geo/eMAS_REDO/eMASL1B_19910_08_20190806_1834_1846_V03_fire.tif",
+##"/data/nlahaye/SIT_FUSE_Geo/eMAS_REDO/eMASL1B_19910_10_20190806_1858_1910_V03_fire.tif",
+##"/data/nlahaye/SIT_FUSE_Geo/eMAS_REDO/eMASL1B_19910_14_20190806_1926_1929_V03_fire.tif",
+##"/data/nlahaye/SIT_FUSE_Geo/eMAS_REDO/eMASL1B_19910_16_20190806_1941_1956_V03_fire.tif",
+##"/data/nlahaye/SIT_FUSE_Geo/eMAS_REDO/eMASL1B_19910_17_20190806_2000_2010_V03_fire.tif",
+##"/data/nlahaye/SIT_FUSE_Geo/eMAS_REDO/eMASL1B_19910_18_20190806_2018_2031_V03_fire.tif",
+##"/data/nlahaye/SIT_FUSE_Geo/eMAS_REDO/eMASL1B_19910_19_20190806_2035_2048_V03_fire.tif",
+##"/data/nlahaye/SIT_FUSE_Geo/eMAS_REDO/eMASL1B_19910_20_20190806_2052_2106_V03_fire.tif",
+##"/data/nlahaye/SIT_FUSE_Geo/eMAS_REDO/eMASL1B_19910_21_20190806_2111_2125_V03_fire.tif",
+##"/data/nlahaye/SIT_FUSE_Geo/eMAS_REDO/eMASL1B_19911_05_20190807_1817_1833_V03_fire.tif",
+##"/data/nlahaye/SIT_FUSE_Geo/eMAS_REDO/eMASL1B_19911_08_20190807_1928_1942_V03_fire.tif",
+##"/data/nlahaye/SIT_FUSE_Geo/eMAS_REDO/eMASL1B_19911_09_20190807_1947_2002_V03_fire.tif",
+##"/data/nlahaye/SIT_FUSE_Geo/eMAS_REDO/eMASL1B_19911_10_20190807_2004_2016_V03_fire.tif", 
+##"/data/nlahaye/SIT_FUSE_Geo/eMAS_REDO/eMASL1B_19911_11_20190807_2021_2035_V03_fire.tif",
+##"/data/nlahaye/SIT_FUSE_Geo/eMAS_REDO/eMASL1B_19911_12_20190807_2039_2051_V03_fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/eMAS_REDO/eMASL1B_19912_07_20190808_1806_1821_V03_fire.tif",
+]
+
+sit_fuse_maps: [
+##"/data/nlahaye/SIT_FUSE_Geo/eMAS_MSPI/MSPI_eMAS_20190806_183632Z.tif.clust.data_79188clusters.zarr.full_geo.fire.tif.Contours.tif",
+##"/data/nlahaye/SIT_FUSE_Geo/eMAS_MSPI/MSPI_eMAS_20190806_190054Z.tif.clust.data_79180clusters.zarr.full_geo.fire.tif.Contours.tif",
+##"/data/nlahaye/SIT_FUSE_Geo/eMAS_MSPI/MSPI_eMAS_20190806_200308Z.tif.clust.data_79199clusters.zarr.full_geo.fire.tif.Contours.tif",
+##"/data/nlahaye/SIT_FUSE_Geo/eMAS_MSPI/MSPI_eMAS_20190806_202139Z.tif.clust.data_79180clusters.zarr.full_geo.fire.tif.Contours.tif",
+##"/data/nlahaye/SIT_FUSE_Geo/eMAS_MSPI/MSPI_eMAS_20190806_205617Z.tif.clust.data_79180clusters.zarr.full_geo.fire.tif.Contours.tif",
+##"/data/nlahaye/SIT_FUSE_Geo/eMAS_MSPI/MSPI_eMAS_20190806_211454Z.tif.clust.data_71999clusters.zarr.full_geo.fire.tif.Contours.tif",
+##"/data/nlahaye/SIT_FUSE_Geo/eMAS_MSPI/MSPI_eMAS_20190807_182404Z.tif.clust.data_79156clusters.zarr.full_geo.fire.tif.Contours.tif",
+##"/data/nlahaye/SIT_FUSE_Geo/eMAS_MSPI/MSPI_eMAS_20190807_193214Z.tif.clust.data_79199clusters.zarr.full_geo.fire.tif.Contours.tif",
+##"/data/nlahaye/SIT_FUSE_Geo/eMAS_MSPI/MSPI_eMAS_20190807_195226Z.tif.clust.data_79199clusters.zarr.full_geo.fire.tif.Contours.tif",
+##"/data/nlahaye/SIT_FUSE_Geo/eMAS_MSPI/MSPI_eMAS_20190807_200717Z.tif.clust.data_79197clusters.zarr.full_geo.fire.tif.Contours.tif",
+##"/data/nlahaye/SIT_FUSE_Geo/eMAS_MSPI/MSPI_eMAS_20190807_202502Z.tif.clust.data_79199clusters.zarr.full_geo.fire.tif.Contours.tif",
+##"/data/nlahaye/SIT_FUSE_Geo/eMAS_MSPI/MSPI_eMAS_20190807_204231Z.tif.clust.data_79199clusters.zarr.full_geo.fire.tif.Contours.tif",
+"/data/nlahaye/SIT_FUSE_Geo/eMAS_MSPI/MSPI_eMAS_20190808_181151Z.tif.clust.data_59470clusters.zarr.full_geo.fire.tif.Contours.tif",
+]

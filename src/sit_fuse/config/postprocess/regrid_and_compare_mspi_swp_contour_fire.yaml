@@ -1,0 +1,25 @@
+
+truth_maps: [
+"/data/nlahaye/SIT_FUSE_Geo/eMAS_REDO/eMASL1B_19910_06_20190806_1815_1824_V03_fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/eMAS_REDO/eMASL1B_19910_06_20190806_1815_1824_V03_fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/eMAS_REDO/eMASL1B_19910_06_20190806_1815_1824_V03_fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/eMAS_REDO/eMASL1B_19910_16_20190806_1941_1956_V03_fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/eMAS_REDO/eMASL1B_19910_16_20190806_1941_1956_V03_fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/eMAS_REDO/eMASL1B_19910_16_20190806_1941_1956_V03_fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/eMAS_REDO/eMASL1B_19910_19_20190806_2035_2048_V03_fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/eMAS_REDO/eMASL1B_19910_21_20190806_2111_2125_V03_fire.tif",
+]
+
+sit_fuse_maps: [
+"/data/nlahaye/SIT_FUSE_Geo/MSPI_REDO/SWP/AirMSPI_ER2_GRP_TERRAIN_20190806_181534Z_WA-Creston_SWPF_F01_V006.hdf.tif.clust.data_79298clusters.zarr.full_geo.tif.fire.tif.Contours.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MSPI_REDO/SWP/AirMSPI_ER2_GRP_TERRAIN_20190806_181635Z_WA-Creston_SWPA_F01_V006.hdf.tif.clust.data_79298clusters.zarr.full_geo.tif.fire.tif.Contours.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MSPI_REDO/SWP/AirMSPI_ER2_GRP_TERRAIN_20190806_181736Z_WA-Wilbur_SWPF_F01_V006.hdf.tif.clust.data_79298clusters.zarr.full_geo.tif.fire.tif.Contours.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MSPI_REDO/SWP/AirMSPI_ER2_GRP_TERRAIN_20190806_192637Z_WA-Reardan_SWPF_F01_V006.hdf.tif.clust.data_79298clusters.zarr.full_geo.tif.fire.tif.Contours.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MSPI_REDO/SWP/AirMSPI_ER2_GRP_TERRAIN_20190806_192738Z_WA-Davenport_SWPA_F01_V006.hdf.tif.clust.data_79298clusters.zarr.full_geo.tif.fire.tif.Contours.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MSPI_REDO/SWP/AirMSPI_ER2_GRP_TERRAIN_20190806_192839Z_WA-Fruitland_SWPF_F01_V006.hdf.tif.clust.data_79298clusters.zarr.full_geo.tif.fire.tif.Contours.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MSPI_REDO/SWP/AirMSPI_ER2_GRP_TERRAIN_20190806_203638Z_WA-Valley_SWPA_F01_V006.hdf.tif.clust.data_79298clusters.zarr.full_geo.tif.fire.tif.Contours.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MSPI_REDO/SWP/AirMSPI_ER2_GRP_TERRAIN_20190806_211311Z_WA-Chewelah_SWPA_F01_V006.hdf.tif.clust.data_79298clusters.zarr.full_geo.tif.fire.tif.Contours.tif",
+]
+
+
+
