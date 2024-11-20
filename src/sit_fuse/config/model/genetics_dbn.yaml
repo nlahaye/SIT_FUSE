@@ -12,8 +12,10 @@ data:
  fill_value: -9999.0
  valid_min: -10000.0
  valid_max: 1000000
- reader_type: "gtiff"
+ reader_type: "bps_benchmark"
  reader_kwargs:
+  DAPI: True
+  RIF: True
   grayscale: True
  chan_dim: 0
  delete_chans: []
@@ -146,9 +148,9 @@ data:
 
 
 output:
- out_dir: "/data/nlahaye/output/Learnergy/GENETICS_POC/"
+ out_dir: "/data/nlahaye/output/Learnergy/GENETICS_POC_COMBINED/"
  generate_train_output: True
- generate_intermediate_output: True
+ generate_intermediate_output: False
 
 
 dbn:
