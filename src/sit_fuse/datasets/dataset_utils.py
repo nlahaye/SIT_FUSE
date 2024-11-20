@@ -53,6 +53,14 @@ def get_train_dataset_sf(yml_conf):
 
 
     tiled = yml_conf["data"]["tile"]
+    print("TILED", tiled)
+
+    tiled = yml_conf["data"]["tile"]
+    tile_size = None
+    tile_step = None
+    if tiled:
+        tile_size = yml_conf["data"]["tile_size"]
+        tile_step = yml_conf["data"]["tile_step"]
 
     tune_scaler = False
     subset_training = -1
@@ -113,7 +121,7 @@ def get_train_dataset_sf(yml_conf):
             data = SFDatasetConv()
             data.read_and_preprocess_data(data_train, read_func, data_reader_kwargs, delete_chans=delete_chans, \
                  valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
-                 transform_values=transform_values, transform=None, tile=tile, tile_size=tile_size, tile_step=tile_step,
+                 transform_values=transform_values, transform=None, tile=tiled, tile_size=tile_size, tile_step=tile_step,
                  subset_training = subset_training)
         else:
            transform = None
@@ -216,12 +224,12 @@ def get_prediction_dataset(yml_conf, fname):
         data = SFDataset()
         data.read_and_preprocess_data([fname], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
             fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scaler=scaler, scale = scale_data, \
-            transform=transform)
+            transform=transform, do_shuffle=False)
     else:
         data = SFDatasetConv()
         data.read_and_preprocess_data([fname], read_func, data_reader_kwargs,  delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
             fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, transform = transform, \
-            tile=tiled, tile_size=tile_size, tile_step=tile_step)
+            tile=tiled, tile_size=tile_size, tile_step=tile_step, do_shuffle=False)
 
     return data, fname_begin
 

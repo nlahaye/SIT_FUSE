@@ -1,8 +1,8 @@
 
 data:
  tile: True #True
- tile_size: [224,224,25]
- tile_step: [224,224,25]
+ tile_size: [16,16,25]
+ tile_step: [16,16,25]
  val_percent: 0.1
  num_loader_workers: 10
  scale_data: True
@@ -216,31 +216,31 @@ logger:
 
 
 ijepa:
- patch_size: 16
- embed_dim: 3072
- encoder_heads: 2
- encoder_depth: 3
- decoder_depth: 3
+ patch_size: 1
+ embed_dim: 1024 
+ encoder_heads: 3
+ encoder_depth: 6
+ decoder_depth: 5
  target_aspect_ratio: [0.75,1.5] #1,1
  target_scale: [0.15, .2] #1,1
  context_aspect_ratio: 1
  context_scale: [0.85,1.0]
- number_target_blocks: 4
+ number_target_blocks: 6
 
 encoder_type: "ijepa"
 encoder:
- subset_training: 2300000
+ subset_training: 10000 #2300000
  overwrite_model: False
  tune_scaler: False
  training:
   weight_decay: 0.05
   momentum: 0.996
   momentum_start_end: [0.996, 1.0] 
-  learning_rate: 0.001
-  batch_size: 10
-  epochs: 100
+  learning_rate: 0.0001
+  batch_size: 100
+  epochs: 5
   accelerator: "gpu"
-  devices: 2
+  devices: 1
   gradient_clip_val: 0.1
   precision: "16-mixed"
   save_dir: "wandb_ijepa_full"
@@ -253,12 +253,12 @@ cluster:
  num_classes: 800
  training:
   finetune_encoder: False
-  learning_rate: 0.0001
-  batch_size: 100
-  epochs: 30 
+  learning_rate: 0.00001
+  batch_size: 10
+  epochs: 5
   accelerator: "gpu"
   devices: 1
-  gradient_clip_val: 0.01
+  gradient_clip_val: 0.1
   precision: "16-mixed"
   save_dir: "wandb_ijepa_full"
 
@@ -273,8 +273,8 @@ cluster:
    gradient_clip_val: 0.1
    precision: "32"
    save_dir: "wandb_ijepa_full"
-   batch_size: 1000
+   batch_size: 100
    min_samples: 1000
-   epochs: 3
+   epochs: 10
    lambda: 1.0
  

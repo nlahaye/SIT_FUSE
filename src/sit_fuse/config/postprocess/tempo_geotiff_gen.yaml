@@ -16,7 +16,6 @@ data:
 "/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA/TEMPO_RAD_L1_V03_20240726T143122Z_S006G07.tif.clust.data_180934clusters.zarr.full_geo.tif",
 "/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA/TEMPO_RAD_L1_V03_20240726T143759Z_S006G08.tif.clust.data_180934clusters.zarr.full_geo.tif",
 "/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA/TEMPO_RAD_L1_V03_20240726T144436Z_S006G09.tif.clust.data_180934clusters.zarr.full_geo.tif"
-]
 
  
  cluster_fnames: [

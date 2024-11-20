@@ -220,6 +220,76 @@ def read_zarr_geo(filename, **kwargs):
     return dat
     
 
+def read_pace_oc(filename, **kwargs):
+
+    vrs = ["RRS.V2_0.Rrs"]
+
+    data = None
+    flename = filename + vrs[0] + ".4km.NRT.nc"
+    start_ind = 9
+    print(flename, vrs[0][start_ind:])
+    f = Dataset(flename)
+    f.set_auto_maskandscale(False)
+    ref = f.variables[vrs[0][start_ind:]]
+    data = ref[:].astype(np.float32)
+    try:
+        valid_data_ind = np.where((data >= ref.valid_min) & (data <= ref.valid_max))
+        invalid_data_ind = np.where((data < ref.valid_min) | (data > ref.valid_max))
+        try:
+            data[valid_data_ind] = data[valid_data_ind] * ref.scale_factor
+        except AttributeError:
+            pass
+        try:
+             data[valid_data_ind] = data[valid_data_ind] + ref.add_offset
+        except AttributeError:
+            pass
+        data[invalid_data_ind] = -999999.0
+    except AttributeError:
+        pass
+    print(data.shape)
+    data = np.moveaxis(data, 2,0)
+    print(data.shape)
+    dat = data.astype(np.float32)
+
+    if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs:
+        loc = read_oc_geo(filename)
+        lat = loc[0]
+        lon = loc[1]
+        print(lat.shape, lon.shape, dat.shape)
+        inds1 = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]))
+        inds2 = np.where((lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
+        lat = lat[inds1]
+        lon = lon[inds2]
+
+        nind2, nind1 = np.meshgrid(inds2, inds1)
+        dat = dat[:, nind1,nind2]
+
+    #TODO Mask via shapefile
+
+    tmp1 = None
+    tmp2 = None
+    if "mask_oceans" in kwargs:
+        land_temp = ocean_basins_50.mask(lon, lat)
+        land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
+        tmp1 = land_temp.isnull().to_numpy().astype(np.bool_)
+
+    final_mask = None
+    if tmp1 is not None and tmp2 is not None:
+        final_mask = xr.apply_ufunc(np.logical_and, tmp1, tmp2, vectorize=True, dask="parallelized",\
+            input_core_dims=[[],[]], output_core_dims=[[],[]])
+    elif tmp1 is not None:
+        final_mask = tmp1
+    elif tmp2 is not None:
+        final_mask = tmp2
+
+    if final_mask is not None:
+        print(final_mask)
+        dat[:,final_mask] = -999999
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+        dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+    return dat
+
 
 def read_s3_oc(filename, **kwargs):
 
@@ -382,7 +452,10 @@ def read_oc_geo(filename, **kwargs):
 
     vrs = ["lat", "lon"]
 
-    f = Dataset(filename + "RRS.Rrs_443.4km.nc")
+    if "PACE" not in filename:
+        f = Dataset(filename + "RRS.Rrs_443.4km.nc")
+    else:
+        f = Dataset(filename + "RRS.V2_0.Rrs.4km.NRT.nc")
     f.set_auto_maskandscale(False)
     data1 = []
     for i in range(len(vrs)):
@@ -528,13 +601,88 @@ def read_misr_sim(filename, **kwargs):
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
                 dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
     return dat    
+
+
+def read_tempo_no2_netcdf(filename, **kwargs):
+
+    f = Dataset(filename)
+    f.set_always_mask(True)
+    f.set_auto_mask(True)
  
+    dat = f.groups["product"]["vertical_column_troposphere"][:]
+    mask = f.groups["support_data"]["amf_cloud_fraction"][:]
+
+    inds = np.where(mask > 0.75)
+    dat[inds] = np.nan
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+        dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+
+    return dat
  
+
+def read_tempo_no2_netcdf_geo(filename, **kwargs):
+
+    f = Dataset(filename)
+    f.set_always_mask(True)
+    f.set_auto_mask(True)
+
+    lat = f.variables["latitude"][:]
+    lon = f.variables["longitude"][:]
+
+    longr, latgr = np.meshgrid(lon, lat)
+
+    dat = np.array([latgr, longr])
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+            dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+    return dat
+
+def read_tempo_netcdf(filename, **kwargs):
+
+    f = Dataset(filename)
+    f.set_always_mask(True)    
+    f.set_auto_mask(True)
+
+    dat = f.groups['band_290_490_nm']['radiance'][:]
+    dat2 = f.groups['band_540_740_nm']['radiance'][:]
+
+    dat = np.ma.concatenate((dat, dat2), axis=2) 
+
+    for j in range(dat.shape[2]):
+        print(dat[:,:,j].min(), dat[:,:,j].max(), dat[:,:,j].mean(), dat[:,:,j].std())
+
+    print(dat.shape, dat.min(), dat.max())
+
+    f = None
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+        dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+    print(dat.shape)
+    return dat
+
+
+def read_tempo_netcdf_geo(filename, **kwargs):
+
+    f = Dataset(filename)
+    f.set_always_mask(True)
+    f.set_auto_mask(True)
+
+    lat = f.groups['band_290_490_nm']['latitude'][:] 
+    lon = f.groups['band_290_490_nm']['longitude'][:]
+
+    dat = np.array([lat, lon])
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+            dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+    return dat
+
 def read_goes_netcdf(filenames, **kwargs):
     data1 = []
     for j in range(0, len(filenames)):
         f = Dataset(filenames[j])
         
+        print(filenames[j], kwargs.keys())
         fire = False
         bool_fire = False
         if "fire_mask" in kwargs:
@@ -570,7 +718,8 @@ def read_goes_netcdf(filenames, **kwargs):
  
 
 def read_goes_netcdf_geo(filenames, **kwargs):
-    f = Dataset(filenames[3])
+    find = min(len(filenames)-1, 3)
+    f = Dataset(filenames[find])
     lat, lon = calculate_degrees(f)
 
     dat = np.array([lat, lon])
@@ -834,6 +983,7 @@ def read_gtiff_multifile_generic(files, **kwargs):
 #TODO config for AVIRIS - scale 0.0001 valid_min = 0 and Fill = -9999
 def read_gtiff_generic(flename, **kwargs): 
 	dat = gdal.Open(flename, gdal.GA_ReadOnly).ReadAsArray()
+	print(dat.shape)
 	dat[np.where(dat.max() <= 0.0)] = -9999.0
 	if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
 		if len(dat.shape) == 3:
@@ -1446,7 +1596,7 @@ def read_geo_nc_ungridded(fname, **kwargs):
     dat = Dataset(fname)
     lat = dat.variables['lat'][:]
     lon = dat.variables['lon'][:]
-    longr, latgr = np.meshgrid(lat, lon)
+    longr, latgr = np.meshgrid(lon, lat)
     geo = np.array([latgr, longr])
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
         geo = geo[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
@@ -1469,6 +1619,8 @@ def get_scaler(scaler_name, cuda=True):
 
 def read_gtiff_generic_geo(flename, **kwargs):
     latLon = get_lat_lon(flename)    
+
+    print("HERE IN UTILS", latLon.shape)
 
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
             latLon = latLon[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
@@ -2017,6 +2169,10 @@ def get_read_func(data_reader):
         return read_oc_geo
     if data_reader == "s3_oc_geo":
         return read_oc_geo
+    if data_reader == "pace_oc":
+        return read_pace_oc
+    if data_reader == "pace_oc_geo":
+        return read_oc_geo
     if data_reader == "oc_and_trop":
         return read_oc_and_trop
     if data_reader == "mspi":
@@ -2031,6 +2187,14 @@ def get_read_func(data_reader):
         return read_emas_master_hdf
     if data_reader == "emas_master_hdf_geo":
         return read_emas_master_hdf_geo
+    if data_reader == "tempo_netcdf":
+        return read_tempo_netcdf
+    if data_reader == "tempo_netcdf_geo":
+         return read_tempo_netcdf_geo
+    if data_reader == "tempo_no2_netcdf":
+        return read_tempo_no2_netcdf
+    if data_reader == "tempo_no2_netcdf_geo":
+         return read_tempo_no2_netcdf_geo
 
     #TODO return BCDP reader
     return None

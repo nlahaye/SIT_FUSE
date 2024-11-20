@@ -20,12 +20,15 @@ data:
   chans: []
   transform: []
  files_train: [
-"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_182903_1003_3B_AnalyticMS_clip.tif",
-"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_165440_1054_3B_AnalyticMS_clip.tif",
-"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190810_181729_0e3a_3B_AnalyticMS_clip.tif"]
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190810_181729_0e3a_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_183159_0f22_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_182900_1003_3B_AnalyticMS_clip.tif",
+]
 
 
  files_test: [
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_182903_1003_3B_AnalyticMS_clip.tif",
+"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_165440_1054_3B_AnalyticMS_clip.tif",
 "/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_182621_1035_3B_AnalyticMS_clip.tif",
 "/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_165922_0f44_3B_AnalyticMS_clip.tif",
 "/data/nlahaye/remoteSensing/CSDSA/PSScene/20190810_165807_104e_3B_AnalyticMS_clip.tif",
@@ -90,7 +93,6 @@ data:
 "/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_181431_0e26_3B_AnalyticMS_clip.tif",
 "/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_165923_0f44_3B_AnalyticMS_clip.tif",
 "/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_182901_1003_3B_AnalyticMS_clip.tif",
-"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_183159_0f22_3B_AnalyticMS_clip.tif",
 "/data/nlahaye/remoteSensing/CSDSA/PSScene/20190808_182605_101f_3B_AnalyticMS_clip.tif",
 "/data/nlahaye/remoteSensing/CSDSA/PSScene/20190810_184309_15_1066_3B_AnalyticMS_clip.tif",
 "/data/nlahaye/remoteSensing/CSDSA/PSScene/20190808_183354_13_1067_3B_AnalyticMS_clip.tif",
@@ -103,7 +105,6 @@ data:
 "/data/nlahaye/remoteSensing/CSDSA/PSScene/20190806_184211_23_105e_3B_AnalyticMS_clip.tif",
 "/data/nlahaye/remoteSensing/CSDSA/PSScene/20190806_184209_19_105e_3B_AnalyticMS_clip.tif",
 "/data/nlahaye/remoteSensing/CSDSA/PSScene/20190810_165416_1_0f4d_3B_AnalyticMS_clip.tif",
-"/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_182900_1003_3B_AnalyticMS_clip.tif",
 "/data/nlahaye/remoteSensing/CSDSA/PSScene/20190812_183152_48_106b_3B_AnalyticMS_clip.tif",
 "/data/nlahaye/remoteSensing/CSDSA/PSScene/20190807_165442_1054_3B_AnalyticMS_clip.tif"]
 
@@ -137,9 +138,9 @@ encoder:
   weight_decay: [0.0001, 0.0001]
   nesterov_accel: [True, True]
   batch_size: 128
-  epochs: 30
+  epochs: 5
   accelerator: "gpu"
-  devices: 3
+  devices: 1
   gradient_clip_val: 0.1
   precision: "16-mixed"
   save_dir: "wandb_encoder"
@@ -160,7 +161,7 @@ cluster:
  training:
   learning_rate: 0.0001
   batch_size: 1000
-  epochs: 30
+  epochs: 5
   accelerator: "gpu"
   devices: 1
   gradient_clip_val: 0.1
@@ -182,7 +183,7 @@ cluster:
    min_samples: 1000
    learning_rate: 0.0001
    batch_size: 1000
-   epochs: 30
+   epochs: 5
 
 
 

@@ -1,6 +1,9 @@
+from resource import *
 import pytorch_lightning as pl
 import torch
 from torch.utils.data import DataLoader, TensorDataset
+
+import joblib
 
 import pickle
 
@@ -12,8 +15,10 @@ from segmentation.models.unet import UNetEncoder, UNetDecoder
 
 from sit_fuse.models.deep_cluster.dc import DeepCluster
 from sit_fuse.models.encoders.cnn_encoder import DeepConvEncoder
+from sit_fuse.models.encoders.pca_encoder import PCAEncoder
 from sit_fuse.models.deep_cluster.ijepa_dc import IJEPA_DC
 from sit_fuse.models.deep_cluster.dbn_dc import DBN_DC
+from sit_fuse.models.deep_cluster.pca_dc import PCA_DC
 from sit_fuse.datasets.dataset_utils import get_prediction_dataset
 from sit_fuse.models.deep_cluster.heir_dc import Heir_DC
 from sit_fuse.utils import read_yaml
@@ -40,13 +45,18 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from sit_fuse.viz.CMAP import CMAP, CMAP_COLORS
 
-def generate_output(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled = False):
+
+
+def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled = False, return_embed = False):
     output_full = None
+    embed_full = None
     count = 0
 
     ind = 0
     #output_batch_size = min(5000, max(int(dat.data_full.shape[0] / 5), dat.data_full.shape[0]))
-    output_batch_size = 100 #1
+    output_batch_size = 10000 #10 #0 #1
+    if tiled:
+        output_batch_size = 5
 
     output_sze = dat.data_full.shape[0]
     append_remainder = int(output_batch_size - (output_sze % output_batch_size))
@@ -68,6 +78,7 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tile
     ind2 = 0
     cntr = 0
     for data in tqdm(test_loader):
+        embed = None
         cntr = cntr + 1
         if use_gpu:
             dat_dev, lab_dev = data[0].cuda(), data[1].cuda()
@@ -76,9 +87,15 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tile
 
         with torch.no_grad():
             if hasattr(mdl, 'clust_tree'):
-                _, output = mdl.forward(dat_dev)
+                if return_embed:
+                    _, output, embed = mdl.forward(dat_dev, return_embed=return_embed)
+                else:
+                    _, output = mdl.forward(dat_dev, return_embed=return_embed)
             else:
-                output = mdl.forward(dat_dev)
+                if return_embed:
+                    output, embed  = mdl.forward(dat_dev, return_embed=return_embed)
+                else:
+                    output = mdl.forward(dat_dev, return_embed=return_embed)
                 #print("HERE", output.shape)
                 output = torch.argmax(torch.nn.functional.softmax(output, dim=1), dim=1)
                 #print("HERE", output.shape, torch.unique(output))
@@ -95,6 +112,7 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tile
 
         #output = torch.squeeze(output)
         print("HERE OUTPUT_FULL", dat.data_full.ndim, dat.data_full.shape, output.shape)
+
         if output.ndim == 1:
             output = torch.unsqueeze(output, dim=1)
         if output_full is None:
@@ -110,13 +128,30 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tile
             if ind2 > output_full.shape[0]:
                 ind2 = output_full.shape[0]
             #print("HERE", output.shape)
-            output_full[ind1:ind2,:output.shape[0], :output.shape[1]] = output
+            output_full[ind1:ind2,:,:] = torch.squeeze(output)
 
         else:
             ind2 += dat_dev.shape[0]
             if ind2 > output_full.shape[0]:
                 ind2 = output_full.shape[0]
             output_full[ind1:ind2,:] = output
+
+        if embed is not None:
+  
+            if embed.ndim == 1:
+                embed = torch.unsqueeze(embed, dim=1)
+            if embed_full is None:
+                if dat.data_full.ndim > 2:
+                    embed_full = torch.zeros((dat.data_full.shape[0], embed.shape[1], dat.data_full.shape[2], dat.data_full.shape[3]), dtype=torch.float32)
+                    #pri    nt("INIT DATA FULL", dat.init_data_shape, dat.init_data_shape[2:], output_full.shape)
+                else:
+                    embed_full = torch.zeros(dat.data_full.shape[0], embed.shape[1], dtype=torch.float32)
+            print("HERE", embed.shape, embed_full.shape)
+            if dat_dev.ndim > 2:
+                embed_full[ind1:ind2,:,:,:] = torch.squeeze(embed)
+            else:
+                embed_full[ind1:ind2,:] = embed
+
 
         print(ind1, ind2)
 
@@ -132,11 +167,18 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tile
         del lab_dev
         count = count + 1
 
-    print("SAVING", os.path.join(out_dir, output_fle), dat.targets_full.shape, output_full.shape)
-    #torch.save(output_full, os.path.join(out_dir, output_fle), pickle_protocol=pickle.HIGHEST_PROTOCOL)
-    #torch.save(dat.targets_full, os.path.join(out_dir, output_fle + ".indices"), pickle_protocol=pickle.HIGHEST_PROTOCOL)
 
+    return output_full, embed_full
+
+
+
+def generate_output(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled = False, return_embed = False):
+
+    output_full, embed_full = run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem, tiled, return_embed)
+
+    print("SAVING", os.path.join(out_dir, output_fle), dat.targets_full.shape, output_full.shape)
     plot_clusters(dat.targets_full, output_full.numpy(), os.path.join(out_dir, output_fle)) 
+
 
 def plot_clusters(coord, output_data, output_basename, pixel_padding=1):
 
@@ -339,6 +381,15 @@ def get_model(yml_conf, n_visible):
             param.requires_grad = False
         encoder.eval()
 
+    elif encoder_type is not None and encoder_type == "pca":
+        encoder = PCAEncoder()
+ 
+        use_wandb_logger = yml_conf["logger"]["use_wandb"]
+        if use_wandb_logger:
+            encoder_dir = os.path.join(yml_conf["output"]["out_dir"], yml_conf["logger"]["log_out_dir"])
+        encoder_dir = os.path.join(encoder_dir, "encoder")
+
+        encoder.pca = joblib.load(os.path.join(encoder_dir, "pca.pkl"))
 
 
     generate_labels = False
@@ -375,9 +426,11 @@ def main(yml_fpath):
     model = get_model(yml_conf, data.data_full.shape[1])
 
     model = model.cuda()
+
     model.pretrained_model = model.pretrained_model.cuda()
-    #model.pretrained_model.mlp_head = model.pretrained_model.mlp_head.cuda()
-    model.pretrained_model.pretrained_model = model.pretrained_model.pretrained_model.cuda()
+    if hasattr(model.pretrained_model, "pretrained_model"):
+        #model.pretrained_model.mlp_head = model.pretrained_model.mlp_head.cuda()
+        model.pretrained_model.pretrained_model = model.pretrained_model.pretrained_model.cuda()
     
     for lab1 in model.clust_tree.keys():
         if lab1 == "0":
@@ -428,6 +481,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     main(args.yaml)
 
-
+    print(getrusage(RUSAGE_SELF))
 
 

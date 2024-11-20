@@ -14,7 +14,7 @@ from segmentation.models.gcn import GCN
 from segmentation.models.deeplabv3_plus_xception import DeepLab
 from sit_fuse.models.encoders.cnn_encoder import DeepConvEncoder
 
-
+from sit_fuse.models.encoders.pca_encoder import PCAEncoder
 from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes, JEPA_Seg
 from sit_fuse.models.deep_cluster.heir_dc import Heir_DC, get_state_dict
 from sit_fuse.datasets.sf_heir_dataset_module import SFHeirDataModule
@@ -24,6 +24,8 @@ from sit_fuse.datasets.dataset_utils import get_train_dataset_sf
 from sit_fuse.utils import read_yaml, get_output_shape
 
 import wandb
+
+import joblib
 
 import uuid
 import argparse
@@ -42,6 +44,7 @@ def heir_dc(yml_conf, dataset, ckpt_path):
 
     full_model_dir = os.path.join(save_dir, "full_model")
     save_dir = os.path.join(save_dir, "full_model_heir")
+    encoder_dir = os.path.join(save_dir, "encoder")
 
     accelerator = yml_conf["cluster"]["heir"]["training"]["accelerator"]
     devices = yml_conf["cluster"]["heir"]["training"]["devices"]
@@ -67,6 +70,15 @@ def heir_dc(yml_conf, dataset, ckpt_path):
     in_chans = None
     tile_size = None
     encoder = None
+    if encoder_type is not None and  "pca" in encoder_type:
+        encoder = PCAEncoder()
+
+        use_wandb_logger = yml_conf["logger"]["use_wandb"]
+        if use_wandb_logger:
+            encoder_dir = os.path.join(yml_conf["output"]["out_dir"], yml_conf["logger"]["log_out_dir"])
+        encoder_dir = os.path.join(encoder_dir, "encoder")
+
+        encoder.pca = joblib.load(os.path.join(encoder_dir, "pca.pkl"))
     if encoder_type is not None and  "dbn" in encoder_type:
         model_type = tuple(yml_conf["dbn"]["model_type"])
         dbn_arch = tuple(yml_conf["dbn"]["dbn_arch"])
@@ -146,18 +158,20 @@ def heir_dc(yml_conf, dataset, ckpt_path):
             param.requires_grad = False
         encoder.eval()
 
-    elif encoder_type is not None and encoder_type == "ijepa":
+    elif encoder_type is not None and encoder_type == "ijepa" or encoder_type == "clay" or encoder_type == "mae":
         in_chans = yml_conf["data"]["tile_size"][2]
         tile_size = yml_conf["data"]["tile_size"][0]
 
+ 
+    lr = yml_conf["cluster"]["training"]["learning_rate"]
 
     heir_ckpt_path = os.path.join(save_dir, "heir_fc.ckpt")
     if os.path.exists(heir_ckpt_path): #TODO make optional
         model = Heir_DC(None, pretrained_model_path=ckpt_path, num_classes=num_classes_heir, yml_conf=yml_conf, \
-            encoder_type=encoder_type, encoder=encoder, clust_tree_ckpt = heir_ckpt_path)
+            encoder_type=encoder_type, encoder=encoder, clust_tree_ckpt = heir_ckpt_path, lr = lr)
     else: 
         model = Heir_DC(dataset, pretrained_model_path=ckpt_path, num_classes=num_classes_heir, yml_conf=yml_conf, \
-            encoder_type=encoder_type, encoder=encoder)
+            encoder_type=encoder_type, encoder=encoder, lr = lr)
 
     for param in model.pretrained_model.parameters():
         param.requires_grad = False
@@ -183,9 +197,12 @@ def heir_dc(yml_conf, dataset, ckpt_path):
 
         encoder_output_size = None
         n_visible = 0
-        if yml_conf["encoder_type"] == "ijepa":
-            encoder_output_size = get_output_shape(model.pretrained_model.pretrained_model.model, (1, in_chans,model.pretrained_model.pretrained_model.img_size,model.pretrained_model.pretrained_model.img_size))
-            n_visible = encoder_output_size[1]*encoder_output_size[2]
+        if "encoder_type" not in yml_conf.keys():
+            n_visible = yml_conf["data"]["tile_size"][2] * yml_conf["data"]["tile_size"][0]
+        elif yml_conf["encoder_type"] == "ijepa":
+            #TODO encoder_output_size = get_output_shape(model.pretrained_model.pretrained_model.model, (2, in_chans,model.pretrained_model.pretrained_model.img_size,model.pretrained_model.pretrained_model.img_size))
+            #n_visible = encoder_output_size[2] #[1]*encoder_output_size[2]
+             n_visible = 2048
         elif yml_conf["encoder_type"] == "dbn":
             encoder_output_size = (1, model.pretrained_model.pretrained_model.models[-1].n_hidden)
             n_visible = encoder_output_size[1]
@@ -195,8 +212,17 @@ def heir_dc(yml_conf, dataset, ckpt_path):
         elif yml_conf["encoder_type"] == "byol":
             encoder_output_size = get_output_shape(encoder, (1, yml_conf["data"]["tile_size"][2], yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
             n_visible = encoder_output_size[1]
-
-
+        elif yml_conf["encoder_type"] == "clay":
+            #TODO print((2, in_chans, yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
+            #encoder_output_size = get_output_shape(model.pretrained_model.pretrained_model.encoder, (2, in_chans, yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
+            n_visible = 768 #encoder_output_size[2]
+        elif yml_conf["encoder_type"] == "mae":
+            #TODO print((2, in_chans, yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
+            #encoder_output_size = get_output_shape(model.pretrained_model.pretrained_model.encoder, (2, in_chans, yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
+            n_visible = 1024 #encoder_output_size[2]
+        elif yml_conf["encoder_type"] == "pca":
+            encoder_output_size = (1, model.pretrained_model.pretrained_model.pca.components_.shape[0])
+            n_visible = encoder_output_size[1]
         print("HERE ENCODER SHAPE", encoder_output_size)
 
         if key in model.clust_tree["1"] and model.clust_tree["1"][key] is not None:
@@ -204,10 +230,10 @@ def heir_dc(yml_conf, dataset, ckpt_path):
 
         #TODO num_channels from uppper modeli
 
-        if yml_conf["encoder_type"] == "ijepa":
-            model.clust_tree["1"][key] = JEPA_Seg()
-        else:
-            model.clust_tree["1"][key] = MultiPrototypes(n_visible, model.num_classes, model.number_heads)
+        #if yml_conf["encoder_type"] == "ijepa":
+        #    model.clust_tree["1"][key] = JEPA_Seg(num_classes_heir)
+        #else:
+        model.clust_tree["1"][key] = MultiPrototypes(n_visible, model.num_classes, model.number_heads)
 
         model.clust_tree["1"][key].train() 
         for param in model.clust_tree["1"][key].parameters():

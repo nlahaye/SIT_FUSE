@@ -2,8 +2,8 @@
 
 data:
  tile: True #True
- tile_size: [4,4,34]
- tile_step: [4,4,34]
+ tile_size: [224,224,25]
+ tile_step: [128,128,25]
  val_percent: 0.1
  num_loader_workers: 10
  scale_data: True
@@ -22,7 +22,7 @@ data:
   #start_sample: 300
   #end_sample: 789
  chan_dim: 0
- delete_chans: [25,26,36,37]
+ delete_chans: [25,26,27,28,29,30,31,32,33,34,35,36,37]
  transform_default:
   chans: []
   transform: []
@@ -215,12 +215,12 @@ logger:
  project: "SIT-FUSE"
 
 mae:
- patch_size: 1
- embed_dim: 3072
- encoder_heads: 2
- encoder_depth: 3
- decoder_depth: 3
- decoder_dim: 2048
+ patch_size: 16
+ embed_dim: 1024
+ encoder_heads: 4
+ encoder_depth: 8
+ decoder_depth: 8
+ decoder_dim: 512
  masking_ratio: 0.5
 
 encoder_type: "mae"
@@ -232,11 +232,11 @@ encoder:
   weight_decay: 0.05
   momentum: 0.996
   momentum_start_end: [0.996, 1.0] 
-  learning_rate: 0.001
-  batch_size: 1
+  learning_rate: 0.000001
+  batch_size: 10
   epochs: 100
   accelerator: "gpu"
-  devices: 3
+  devices: 1
   gradient_clip_val: 0.1
   precision: "16-mixed"
   save_dir: "wandb_ijepa_full"
@@ -250,7 +250,7 @@ cluster:
  training:
   finetune_encoder: False
   learning_rate: 0.0001
-  batch_size: 1
+  batch_size: 2
   epochs: 30 
   accelerator: "gpu"
   devices: 1
@@ -269,7 +269,7 @@ cluster:
    gradient_clip_val: 0.1
    precision: "32"
    save_dir: "wandb_ijepa_full"
-   batch_size: 1
+   batch_size: 2
    min_samples: 1000
    epochs: 3
    lambda: 1.0

@@ -6,6 +6,7 @@ This software may be subject to U.S. export control laws. By accepting this soft
 applicable U.S. export laws and regulations. User has the responsibility to obtain export licenses, or other export authority as may be 
 required before exporting such information to foreign countries or providing access to foreign persons.
 """
+from resource import *
 from timeit import default_timer as timer
 from osgeo import osr, gdal
 import os
@@ -114,7 +115,7 @@ class SFDataset(torch.utils.data.Dataset):
 				self.targets_full = self.targets_full[:self.subset_training,:]
 
 
-	def read_and_preprocess_data(self, filenames, read_func, read_func_kwargs, pixel_padding, delete_chans, valid_min, valid_max, fill_value = -999999, chan_dim = 0, transform_chans = [], transform_values = [], scaler = None, scale=False, transform=None, train_scaler = False, subset_training = -1, stratify_data = None):
+	def read_and_preprocess_data(self, filenames, read_func, read_func_kwargs, pixel_padding, delete_chans, valid_min, valid_max, fill_value = -999999, chan_dim = 0, transform_chans = [], transform_values = [], scaler = None, scale=False, transform=None, train_scaler = False, subset_training = -1, stratify_data = None, no_window = False, do_shuffle = True):
 		"""
 		High level initialization function for data ingestion, preprocessesing, and Dataset initialization. Data gets read in in file x channel x line x sample dimensionality and gets preprocessed/changed into n_samples x n_features dimensionality. 
 	
@@ -159,6 +160,8 @@ class SFDataset(torch.utils.data.Dataset):
 		self.subset_training = subset_training
 		self.stratify_data = stratify_data
 
+		self.no_window = no_window
+		self.do_shuffle = do_shuffle
 
 		#load and preprocess data
 		self.__loaddata__()
@@ -253,7 +256,7 @@ class SFDataset(torch.utils.data.Dataset):
 				subd = data_local[r]
 				shape = copy.deepcopy(subd.shape)
 				subd = subd.reshape(-1, shape[self.chan_dim-self.increment])
-				inds = np.where(subd <= -999998)
+				inds = np.where(subd == -999999)
 				subd = self.scaler.transform(subd)
 				subd[inds] = -999999
 				subd = subd.reshape(shape)
@@ -286,12 +289,16 @@ class SFDataset(torch.utils.data.Dataset):
 			tgts = tgts[:,self.pixel_padding:tgts.shape[1] - self.pixel_padding,self.pixel_padding:tgts.shape[2] - self.pixel_padding]
 			tgts = np.concatenate((np.full((1,tgts.shape[1], tgts.shape[2]),r, dtype=np.int16), tgts), axis=0)
 			tgts = tgts.reshape((3,tgts.shape[1]*tgts.shape[2])).astype(np.int16)
-			sub_data_total = view_as_windows(data_local[r], [size_wind, size_wind, data_local[r].shape[2]], step=1)
+
+			if self.no_window:
+				sub_data_total = data_local[r]
+			else:
+				sub_data_total = view_as_windows(data_local[r], [size_wind, size_wind, data_local[r].shape[2]], step=1)
 			sub_data_total = sub_data_total.reshape((sub_data_total.shape[0]*sub_data_total.shape[1], -1))		
 
 			print(sub_data_total.shape, sub_data_total.min(), sub_data_total.max(), sub_data_total.mean())
 			#No sample is used that contains a fill value
-			del_inds = np.where(sub_data_total <= -999998)[0]
+			del_inds = np.where(sub_data_total == -999999)[0]
 			sub_data_total = np.delete(sub_data_total, del_inds, 0)
 			tgts = np.delete(tgts, del_inds, 1)
 
@@ -323,16 +330,22 @@ class SFDataset(torch.utils.data.Dataset):
 		self.targets[0] = np.swapaxes(self.targets[0], 0, 1)
 		print(self.data[0].shape, self.targets[0].shape)
 		#Shuffle samples, indices, and (if applicable) stratification data together
-		if len(self.stratify_training) > 0:
-			c = list(zip(self.data[0], self.targets[0], self.stratify_training[0]))
-		else:
-			c = list(zip(self.data[0], self.targets[0]))
-		random.shuffle(c)
+		if self.do_shuffle:
+			if len(self.stratify_training) > 0:
+				c = list(zip(self.data[0], self.targets[0], self.stratify_training[0]))
+			else:
+				c = list(zip(self.data[0], self.targets[0]))
+			random.shuffle(c)
 		
-		if len(self.stratify_training) > 0:
-			self.data, self.targets, self.stratify_training = zip(*c)
+			if len(self.stratify_training) > 0:
+				self.data, self.targets, self.stratify_training = zip(*c)
+			else:
+				self.data, self.targets = zip(*c)
 		else:
-			self.data, self.targets = zip(*c)
+			self.data = self.data[0]
+			self.targets = self.targets[0]
+			if len(self.stratify_training) > 0:
+				self.stratify_training = self.stratify_training[0]
 
 		#Set to float32 type
 		self.data_full = np.array(self.data).astype(np.float32)
@@ -521,6 +534,11 @@ def main(yml_fpath):
 	scaler_fname = os.path.join(out_dir, "encoder_scaler.pkl")
 	scaler_type = yml_conf["scaler"]["name"]
 
+	no_window = False
+	if "no_window" in yml_conf["data"].keys():
+		no_window =  yml_conf["data"]["no_window"]
+
+
 
 	if os.path.exists(scaler_fname):
 		scaler = load(scaler_fname)
@@ -546,7 +564,7 @@ def main(yml_fpath):
 	x2.read_and_preprocess_data(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
 			valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
 			transform_values=transform_values, scaler = scaler, train_scaler = scaler_train, scale = scale_data, \
-			transform=None, subset_training = subset_training, stratify_data=stratify_data)
+			transform=None, subset_training = subset_training, stratify_data=stratify_data, no_window = no_window)
  
 	if x2.train_indices is not None:
 		np.save(os.path.join(out_dir, "train_indices"), x2.train_indices)
@@ -571,7 +589,7 @@ if __name__ == '__main__':
 	end = timer()
 	print(end - start) # Time in seconds, e.g. 5.38091952400282
 
-
+	print(getrusage(RUSAGE_SELF))
 
 
 

@@ -36,6 +36,11 @@ def run_cmd(cmd):
     print(out.decode(), end=" ")
 
 
+def clip_geotiff(gtiff_fname, bbox, out_dir):
+
+    new_file = os.path.join(out_dir, os.path.basename(gtiff_fname))
+    print(new_file, gtiff_fname)
+    gdal.Translate(new_file, gtiff_fname, projWin = bbox)
 
 
 def goes_to_geotiff(data_file):
@@ -215,7 +220,7 @@ def gen_polar_2_grid_cmds(exe_location, data_files, location_files, instruments,
     cmd = "rm *dat; rm *tif; "
     for i in range(len(data_files)):
         os.makedirs(out_dirs[i], exist_ok = True)
-        cmd_str = exe_location + " -r " + instruments[i] + " -w geotiff -f " + data_files[i] + " " + location_files[i]
+        cmd_str = exe_location + " -r " + instruments[i] + " -w geotiff --dtype float32 --no-enhance -f " + data_files[i] + " " + location_files[i]
         cmd_str += f"; mv *tif {out_dirs[i]}"
         cmds.append(cmd_str)
     return cmds

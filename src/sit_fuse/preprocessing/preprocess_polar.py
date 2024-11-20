@@ -8,8 +8,8 @@ required before exporting such information to foreign countries or providing acc
 """
 import os
 import argparse
-from preprocessing.misc_utils import combine_modis_gtiffs, combine_viirs_gtiffs, gen_polar_2_grid_cmds, run_cmd
-from utils import read_trop_mod_xr, read_yaml
+from sit_fuse.preprocessing.misc_utils import combine_modis_gtiffs, combine_viirs_gtiffs, gen_polar_2_grid_cmds, run_cmd
+from sit_fuse.utils import read_trop_mod_xr, read_yaml
 
 def main(yml_fpath):
 
