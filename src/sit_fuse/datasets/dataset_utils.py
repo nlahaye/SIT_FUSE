@@ -134,8 +134,8 @@ def get_train_dataset_sf(yml_conf):
            data.read_data_preprocessed(data_fname, targets_fname, transform=transform, subset_training = subset_training, stratify_data=stratify_data)
 
     print(data.data_full.shape)
-    if data.train_indices is not None:
-        np.save(os.path.join(out_dir, "train_indices"), data.train_indices)
+    #if data.train_indices is not None:
+    #    np.save(os.path.join(out_dir, "train_indices"), data.train_indices)
 
 
     #Save scaler

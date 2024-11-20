@@ -566,8 +566,8 @@ def main(yml_fpath):
 			transform_values=transform_values, scaler = scaler, train_scaler = scaler_train, scale = scale_data, \
 			transform=None, subset_training = subset_training, stratify_data=stratify_data, no_window = no_window)
  
-	if x2.train_indices is not None:
-		np.save(os.path.join(out_dir, "train_indices"), x2.train_indices)
+	#if x2.train_indices is not None:
+	#	np.save(os.path.join(out_dir, "train_indices"), x2.train_indices)
 		
 
 	np.save(os.path.join(out_dir, "train_data.indices"), x2.targets)
