@@ -2,22 +2,30 @@
 
 data:
  filename: [
-"/data/nlahaye/output/Learnergy/DBN_MASTER_PAD_MULTI_LAYER/MASTERL1B_1981719_02_20190806_1851_1900_V01_georeferenced.tif.npy.heir_clust1output.data_78291clusters.zarr.fire.tif",
-"/data/nlahaye/output/Learnergy/DBN_MASTER_PAD_MULTI_LAYER/MASTERL1B_1981719_05_20190806_2033_2039_V01_georeferenced.tif.npy.heir_clust1output.data_78291clusters.zarr.fire.tif",
-"/data/nlahaye/output/Learnergy/DBN_MASTER_PAD_MULTI_LAYER/MASTERL1B_1981719_06_20190806_2153_2156_V01_georeferenced.tif.npy.heir_clust1output_test.data_78220clusters.zarr.fire.tif",
-"/data/nlahaye/output/Learnergy/DBN_MASTER_PAD_MULTI_LAYER/MASTERL1B_1981719_07_20190806_2226_2231_V01_georeferenced.tif.npy.heir_clust1output_test.data_78291clusters.zarr.fire.tif",
-"/data/nlahaye/output/Learnergy/DBN_MASTER_PAD_MULTI_LAYER/MASTERL1B_1981719_08_20190806_2249_2259_V01_georeferenced.tif.npy.heir_clust1output.data_78291clusters.zarr.fire.tif",
-"/data/nlahaye/output/Learnergy/DBN_MASTER_PAD_MULTI_LAYER/MASTERL1B_1981719_10_20190807_0042_0050_V01_georeferenced.tif.npy.heir_clust1output_test.data_78291clusters.zarr.fire.tif",
-"/data/nlahaye/output/Learnergy/DBN_MASTER_PAD_MULTI_LAYER/MASTERL1B_1981720_07_20190808_0055_0103_V01_georeferenced.tif.npy.heir_clust1output_test.data_78291clusters.zarr.fire.tif",
-"/data/nlahaye/output/Learnergy/DBN_MASTER_PAD_MULTI_LAYER/MASTERL1B_1981720_09_20190808_0237_0238_V01_georeferenced.tif.npy.heir_clust1output_test.data_78254clusters.zarr.fire.tif",
-"/data/nlahaye/output/Learnergy/DBN_MASTER_PAD_MULTI_LAYER/MASTERL1B_1981721_02_20190809_0120_0121_V01_georeferenced.tif.npy.heir_clust1output_test.data_78291clusters.zarr.fire.tif",
-"/data/nlahaye/output/Learnergy/DBN_MASTER_PAD_MULTI_LAYER/MASTERL1B_1981721_05_20190809_0219_0226_V01_georeferenced.tif.npy.heir_clust1output_test.data_78291clusters.zarr.fire.tif"
+"/data/nlahaye/SIT_FUSE_Geo/MASTER_REDO/tiffs/MASTERL1B_1981719_02_20190806_1851_1900_V01.tif.clust.data_79199clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MASTER_REDO/tiffs/MASTERL1B_1981719_05_20190806_2033_2039_V01.tif.clust.data_79199clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MASTER_REDO/tiffs/MASTERL1B_1981719_06_20190806_2153_2156_V01.tif.clust.data_79093clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MASTER_REDO/tiffs/MASTERL1B_1981719_07_20190806_2226_2231_V01.tif.clust.data_79199clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MASTER_REDO/tiffs/MASTERL1B_1981719_08_20190806_2249_2259_V01.tif.clust.data_79199clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MASTER_REDO/tiffs/MASTERL1B_1981720_07_20190808_0055_0103_V01.tif.clust.data_79199clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MASTER_REDO/tiffs/MASTERL1B_1981720_09_20190808_0237_0238_V01.tif.clust.data_78290clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MASTER_REDO/tiffs/MASTERL1B_1981721_02_20190809_0120_0121_V01.tif.clust.data_79175clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MASTER_REDO/tiffs/MASTERL1B_1981721_05_20190809_0219_0226_V01.tif.clust.data_79175clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MASTER_REDO/tiffs/MASTERL1B_1981724_02_20190816_0033_0033_V01.tif.clust.data_79092clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MASTER_REDO/tiffs/MASTERL1B_1981724_04_20190816_0106_0107_V01.tif.clust.data_79046clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MASTER_REDO/tiffs/MASTERL1B_1981724_05_20190816_0124_0125_V01.tif.clust.data_78299clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MASTER_REDO/tiffs/MASTERL1B_1981724_06_20190816_0139_0140_V01.tif.clust.data_78299clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MASTER_REDO/tiffs/MASTERL1B_1981724_08_20190816_0215_0216_V01.tif.clust.data_78289clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MASTER_REDO/tiffs/MASTERL1B_1981725_01_20190817_0004_0007_V01.tif.clust.data_79093clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MASTER_REDO/tiffs/MASTERL1B_1981725_02_20190817_0025_0026_V01.tif.clust.data_79046clusters.zarr.full_geo.fire.tif",
 ]
  reader_type: "gtiff"
  reader_kwargs:
   None:
 
-remove_singles: True
-remove_singles_2: True
+remove_singles: False
+remove_singles_2: False
 write_geotiff: True
 contour_min_size: -1
+dilations: 0
+erosions: 0 #1
