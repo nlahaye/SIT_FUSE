@@ -979,7 +979,60 @@ def read_gtiff_multifile_generic(files, **kwargs):
     print(dat.shape)
     return dat
 
+
+def read_bps_benchmark(flename, **kwargs):
+    dat = None
+    dat2 = None
  
+    if kwargs["RIF"]:
+        dat = gdal.Open(flename, gdal.GA_ReadOnly).ReadAsArray()
+ 
+    if kwargs["DAPI"]:
+        fname2 = flename.replace("proj", "DAPI")
+        dat2 = gdal.Open(fname2, gdal.GA_ReadOnly).ReadAsArray()
+
+    if dat is not None:
+        if dat2 is not None:
+            dat = np.array([dat, dat2])
+        else:
+            dat = np.array(dat)
+    else:
+        dat = np.array(dat2)
+
+    np.clip(dat, 400, 4000)
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+                if len(dat.shape) == 3:
+                        dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+                else:
+                        dat = dat[kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+    return dat
+
+
+
+def read_burn_severity_stacks(flename, **kwargs):
+    init_dat = gdal.Open(flename, gdal.GA_ReadOnly).ReadAsArray()
+
+    dat = init_dat[0:7]
+    fire_mask = init_dat[7]
+    urban_mask = init_dat[8]
+
+
+    print(dat.shape, fire_mask.shape, urban_mask.shape)
+    inds = np.where((~np.isfinite(dat)) | (np.isnan(dat)))
+    dat[inds] = -99999.0
+    inds2 = np.where(urban_mask > 0.0)
+    dat[:,inds[0],inds[1]] = -99999.0
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+                if len(dat.shape) == 3:
+                        dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+                else:
+                        dat = dat[kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+    return dat
+
+
+
 #TODO config for AVIRIS - scale 0.0001 valid_min = 0 and Fill = -9999
 def read_gtiff_generic(flename, **kwargs): 
 	dat = gdal.Open(flename, gdal.GA_ReadOnly).ReadAsArray()
@@ -2195,6 +2248,9 @@ def get_read_func(data_reader):
         return read_tempo_no2_netcdf
     if data_reader == "tempo_no2_netcdf_geo":
          return read_tempo_no2_netcdf_geo
-
+    if data_reader == "bps_benchmark":
+         return read_bps_benchmark
+    if data_reader == "burn_severity":
+         return read_burn_severity_stacks
     #TODO return BCDP reader
     return None
