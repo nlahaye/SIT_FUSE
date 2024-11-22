@@ -128,6 +128,41 @@ def numpy_from_zarr(filename, **kwargs):
     return dat
 
 
+
+def read_viirs_aerosol_type(filename, **kwargs):
+
+    ds = Dataset(filename)
+    aero_mask = ds.groups["geophysical_data"].variables["Optical_Depth_Land_And_Ocean"][:]
+
+    if "bool_aero" in kwargs and kwargs["bool_aero"]:
+        dat = np.zeros(aero_mask.shape)
+        inds = np.where(aero_mask >= 0.2)
+        dat[inds] = 1 
+    else:
+        dat = aero_mask
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+        dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+
+
+    return dat 
+
+
+def read_viirs_aerosol_type_geo(filename, **kwargs):
+
+    ds = Dataset(filename)
+    lon = ds.groups["geolocation_data"].variables["longitude"][:]
+    lat = ds.groups["geolocation_data"].variables["latitude"][:]
+
+    dat = np.array([lat,lon])            
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+        dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+
+    print(dat.shape)
+
+    return dat
+
 def read_emit(filename, **kwargs):
 
     ds = Dataset(filename)
@@ -556,6 +591,45 @@ def read_modis_oc(filename, **kwargs):
     return dat
 
 
+def read_modis_aero_mask(filename, **kwargs):
+
+    f = SD.SD(filename)
+    sds_obj = f.select('Optical_Depth_Land_And_Ocean')
+    aero_mask = sds_obj.get()
+    f.end()
+
+    if "bool_aero" in kwargs and kwargs["bool_aero"]:
+        dat = np.zeros(aero_mask.shape)
+        inds = np.where(aero_mask >= 0.2)
+        dat[inds] = 1
+    else:
+        dat = aero_mask
+
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+        dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+
+
+    return dat
+
+
+def read_modis_aero_mask_geo(filename, **kwargs):
+
+    f = SD.SD(filename)
+    sds_obj = f.select('Latitude')
+    lat = sds_obj.get()
+    sds_obj = f.select('Longitude')
+    lon = sds_obj.get()
+
+    dat = np.array([lat, lon])
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+            dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+    return dat
+
+
+
+    
 
 
 def read_modis_sr(filename, **kwargs):
@@ -2252,5 +2326,14 @@ def get_read_func(data_reader):
          return read_bps_benchmark
     if data_reader == "burn_severity":
          return read_burn_severity_stacks
-    #TODO return BCDP reader
+    if data_reader == "viirs_aero_mask":
+        return read_viirs_aerosol_type
+    if data_reader == "viirs_aero_mask_geo":
+        return read_viirs_aerosol_type_geo
+    if data_reader == "modis_aero_mask":
+        return read_modis_aero_mask
+    if data_reader == "modis_aero_mask_geo":
+        return read_modis_aero_mask_geo
+
+
     return None

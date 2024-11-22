@@ -609,9 +609,9 @@ def run_compare(init_input, new_input, class_order, log_fname, out_ext, clust_ex
                         print(out_ext[dbn1] + " TOTAL ACCURACY: " + str(accuracy_score(truth, lbls)) +  \
                             " BALANCED ACC: ", str(balanced_accuracy_score(truth, lbls)), "\n")
                         cm = confusion_matrix(truth, lbls, labels=labels["total_mask"])
-                        cm2 = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+                        #cm2 = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
                         pprint(cm)
-                        pprint(cm2)
+                        #pprint(cm2)
                         print("N =", np.count_nonzero(np.array(lbls) > -1))
 
 

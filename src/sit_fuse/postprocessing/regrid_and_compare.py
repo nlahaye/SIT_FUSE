@@ -180,6 +180,9 @@ def regrid_and_compare(config):
         print(sfmd, map_fle)
 
         sfm = gdal.Open(sfmd).ReadAsArray()
+        if sfm.max() < 0.0:
+            continue
+
 
         print("Opening", map_fle)
         gm = gdal.Open(map_fle).ReadAsArray()
