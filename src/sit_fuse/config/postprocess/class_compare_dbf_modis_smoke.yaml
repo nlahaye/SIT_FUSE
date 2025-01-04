@@ -1,0 +1,25 @@
+ 
+dbf_percentage_thresh: 0.51
+dbf: True
+dbf_list: [
+[
+#"/data/nlahaye/SIT_FUSE_Geo/MODIS/eMAS_20190806_fire_OUTPUT_0.csv",
+"/data/nlahaye/SIT_FUSE_Geo/MODIS/eMAS_20190807_fire_OUTPUT_1.csv",
+"/data/nlahaye/SIT_FUSE_Geo/MODIS/eMAS_20190807_fire_OUTPUT_2.csv",
+"/data/nlahaye/SIT_FUSE_Geo/MODIS/eMAS_20190807_fire_OUTPUT_3.csv",
+#"/data/nlahaye/SIT_FUSE_Geo/MODIS/eMAS_20190808_fire_OUTPUT_4.csv",
+#"/data/nlahaye/SIT_FUSE_Geo/MODIS/eMAS_20190808_fire_OUTPUT_5.csv",
+],
+[
+#"/data/nlahaye/SIT_FUSE_Geo/MODIS/20190806_Background_1_OUTPUT_0.csv",
+"/data/nlahaye/SIT_FUSE_Geo/MODIS/20190807_Background_GOES_OUTPUT_1.csv",
+"/data/nlahaye/SIT_FUSE_Geo/MODIS/20190807_Background_GOES_OUTPUT_2.csv",
+"/data/nlahaye/SIT_FUSE_Geo/MODIS/20190807_Background_GOES_OUTPUT_3.csv",
+#"/data/nlahaye/SIT_FUSE_Geo/MODIS/20190808_Background_GOES_OUTPUT_4.csv",
+#"/data/nlahaye/SIT_FUSE_Geo/MODIS/20190808_Background_GOES_OUTPUT_5.csv",
+]
+] 
+
+
+
+

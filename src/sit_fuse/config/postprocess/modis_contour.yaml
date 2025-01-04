@@ -1,0 +1,34 @@
+
+
+data:
+ filename: [
+"/data/nlahaye/SIT_FUSE_Geo/MODIS/aqua_modis_vis01_20190806_205000_wgs84_fit.tif.clust.data_78699clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MODIS/aqua_modis_vis01_20190807_195500_wgs84_fit.tif.clust.data_76497clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MODIS/aqua_modis_vis01_20190808_203500_wgs84_fit.tif.clust.data_78699clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MODIS/aqua_modis_vis01_20190809_212000_wgs84_fit.tif.clust.data_78693clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MODIS/aqua_modis_vis01_20190810_202500_wgs84_fit.tif.clust.data_78693clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MODIS/aqua_modis_vis01_20190812_201000_wgs84_fit.tif.clust.data_76478clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MODIS/aqua_modis_vis01_20190812_215000_wgs84_fit.tif.clust.data_76461clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MODIS/terra_modis_vis01_20190807_181000_wgs84_fit.tif.clust.data_76499clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MODIS/terra_modis_vis01_20190807_194500_wgs84_fit.tif.clust.data_78668clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MODIS/terra_modis_vis01_20190808_185000_wgs84_fit.tif.clust.data_78699clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MODIS/terra_modis_vis01_20190809_175500_wgs84_fit.tif.clust.data_63795clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MODIS/terra_modis_vis01_20190809_193500_wgs84_fit.tif.clust.data_78693clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MODIS/terra_modis_vis01_20190810_184000_wgs84_fit.tif.clust.data_78698clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MODIS/terra_modis_vis01_20190811_192000_wgs84_fit.tif.clust.data_78655clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MODIS/terra_modis_vis01_20190811_192500_wgs84_fit.tif.clust.data_78668clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MODIS/terra_modis_vis01_20190812_182500_wgs84_fit.tif.clust.data_76499clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MODIS/terra_modis_vis01_20190812_200500_wgs84_fit.tif.clust.data_63795clusters.zarr.full_geo.smoke.tif",
+]
+ reader_type: "gtiff"
+ reader_kwargs:
+  None:
+
+remove_singles: True
+remove_singles_2: True
+write_geotiff: True
+contour_min_size: 10
+
+dilations: 0
+erosions: 0
+

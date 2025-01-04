@@ -205,6 +205,7 @@ def fuse_data(yml_conf):
 
         else:
             result2 = kd_tree.resample_nearest(source_def_lo, lo_dat, area_def, radius_of_influence=resample_radius, epsilon=resample_epsilon, nprocs=resample_n_procs, fill_value = -9999)
+        print("AFTER RESAMPLING2", lo_dat.shape, result2.shape, result2.min(), result2.max(), result2.mean(), result2.std())
         result2 = np.ma.masked_where((result2 < (min(valid_min_lo, valid_min_hi)-100.0)), result2)
         np.ma.set_fill_value(result2, -9999.0)
 
@@ -230,7 +231,7 @@ def fuse_data(yml_conf):
         del result2
         datFinal = np.array(datFinal)
 
-        print(datFinal.shape)
+        print(datFinal.shape, datFinal.min(), datFinal.max(), datFinal.mean())
         if "tif" in os.path.splitext(output_files[i])[1]:
             toGeotiff(datFinal, area_def, output_files[i], proj_id)
         else:
