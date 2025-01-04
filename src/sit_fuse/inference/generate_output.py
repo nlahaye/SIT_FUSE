@@ -56,12 +56,11 @@ def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled 
     #output_batch_size = min(5000, max(int(dat.data_full.shape[0] / 5), dat.data_full.shape[0]))
     output_batch_size = 10000 #10 #0 #1
     if tiled:
-        output_batch_size = 5
+        output_batch_size = 50
 
     output_sze = dat.data_full.shape[0]
     append_remainder = int(output_batch_size - (output_sze % output_batch_size))
 
-    print("HERE INIT", dat.data_full.shape, dat.targets_full.shape)
 
     if isinstance(dat.data_full,torch.Tensor):
         dat.data_full = torch.cat((dat.data_full,dat.data_full[0:append_remainder]))
@@ -70,7 +69,6 @@ def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled 
         dat.data_full = np.concatenate((dat.data_full,dat.data_full[0:append_remainder]))
         dat.targets_full = np.concatenate((dat.targets_full,dat.targets_full[0:append_remainder]))
 
-    print("HERE INIT", dat.data_full.shape, dat.targets_full.shape)
 
     test_loader = DataLoader(dat, batch_size=output_batch_size, shuffle=False, \
     num_workers = 0, drop_last = False, pin_memory = pin_mem)
@@ -95,8 +93,7 @@ def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled 
                 if return_embed:
                     output, embed  = mdl.forward(dat_dev, return_embed=return_embed)
                 else:
-                    output = mdl.forward(dat_dev, return_embed=return_embed)
-                #print("HERE", output.shape)
+                    output = mdl.forward(dat_dev)
                 output = torch.argmax(torch.nn.functional.softmax(output, dim=1), dim=1)
                 #print("HERE", output.shape, torch.unique(output))
         if isinstance(output, list) or isinstance(output, tuple):
@@ -117,12 +114,17 @@ def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled 
             output = torch.unsqueeze(output, dim=1)
         if output_full is None:
             if dat.data_full.ndim > 2:
-                output_full = torch.zeros((dat.data_full.shape[0], dat.data_full.shape[2], dat.data_full.shape[3]), dtype=torch.float32)
+                out_d1 = 1
+                out_d2 = 2
+                if output.ndim > 3:
+                    out_d1 = 2
+                    out_d2 = 3
+                output_full = torch.zeros((dat.data_full.shape[0], output.shape[out_d1], output.shape[out_d2]), dtype=torch.float32)
                 #print("INIT DATA FULL", dat.init_data_shape, dat.init_data_shape[2:], output_full.shape)
             else:
                 output_full = torch.zeros(dat.data_full.shape[0], output.shape[1], dtype=torch.float32)
         ind1 = ind2
-        print("HERE", output.shape, output_full.shape)
+        print("HERE", output.shape, output_full.shape, dat.data_full.shape, "HERE")
         if dat_dev.ndim > 2:
             ind2 += dat_dev.shape[0]
             if ind2 > output_full.shape[0]:
@@ -142,7 +144,7 @@ def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled 
                 embed = torch.unsqueeze(embed, dim=1)
             if embed_full is None:
                 if dat.data_full.ndim > 2:
-                    embed_full = torch.zeros((dat.data_full.shape[0], embed.shape[1], dat.data_full.shape[2], dat.data_full.shape[3]), dtype=torch.float32)
+                    embed_full = torch.zeros((dat.data_full.shape[0], embed.shape[1], embed.shape[2], embed.shape[3]), dtype=torch.float32)
                     #pri    nt("INIT DATA FULL", dat.init_data_shape, dat.init_data_shape[2:], output_full.shape)
                 else:
                     embed_full = torch.zeros(dat.data_full.shape[0], embed.shape[1], dtype=torch.float32)
@@ -153,14 +155,12 @@ def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled 
                 embed_full[ind1:ind2,:] = embed
 
 
-        print(ind1, ind2)
 
         #img = plt.imshow(output)
         #cmap = ListedColormap(CMAP_COLORS[0:int((500*200)- (-1) + 1)])
         #img.set_cmap(cmap)
         #plt.savefig(output_fle + "_tile" + str(count) + "_clusters.png", dpi=400, bbox_inches='tight') 
 
-        print("UNIQUE_TEST", torch.unique(output))
         ind = ind + 1
         del output
         del dat_dev
@@ -334,7 +334,7 @@ def get_model(yml_conf, n_visible):
             #padding = yml_conf["dbn"]["padding"]
             encoder = ConvDBN(model=model_type, visible_shape=visible_shape, filter_shape = dbn_arch[1], n_filters = dbn_arch[0], \
                 n_channels=number_channel, steps=gibbs_steps, learning_rate=learning_rate, momentum=momentum, \
-                decay=decay, use_gpu=True) #, maxpooling=mp)
+                decay=decay, use_gpu=True, maxpooling=[False]*len(gibbs_steps)) #, maxpooling=mp)
 
 
         encoder.load_state_dict(torch.load(enc_ckpt_path))

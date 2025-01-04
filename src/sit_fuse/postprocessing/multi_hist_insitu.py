@@ -19,15 +19,15 @@ import pytz
 from pandas import DataFrame as df
 from skimage.util import view_as_windows
 from copy import deepcopy
-from datetime import datetime
+import datetime
 
 def main(yml_fpath):
 
     #Translate config to dictionary 
     yml_conf = read_yaml(yml_fpath)
     #Run 
-    start_date = datetime.strptime( yml_conf['start_date'], '%Y-%m-%d')
-    end_date = datetime.strptime( yml_conf['end_date'], '%Y-%m-%d')
+    start_date = datetime.datetime.strptime( yml_conf['start_date'], '%Y-%m-%d') #.replace(tzinfo=datetime.timezone.utc)#.tz_localize(None)
+    end_date = datetime.datetime.strptime( yml_conf['end_date'], '%Y-%m-%d') #.replace(tzinfo=datetime.timezone.utc) #.tz_localize(None)
 
     #start_date = pytz.utc.localize(start_date)
     #end_date = pytz.utc.localize(end_date)

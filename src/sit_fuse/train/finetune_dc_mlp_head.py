@@ -18,6 +18,7 @@ from sit_fuse.models.deep_cluster.mae_dc import MAE_DC
 from sit_fuse.models.deep_cluster.dbn_dc import DBN_DC
 from sit_fuse.models.deep_cluster.byol_dc import BYOL_DC
 from sit_fuse.models.encoders.byol_pl import BYOL_Learner
+from sit_fuse.models.deep_cluster.cdbn_dc import CDBN_DC
 from sit_fuse.models.deep_cluster.clay_dc import Clay_DC
 from sit_fuse.models.deep_cluster.pca_dc import PCA_DC
 from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes, DeepConvMultiPrototypes
@@ -224,7 +225,7 @@ def dc_DBN(yml_conf, dataset, conv=False):
         #padding = yml_conf["dbn"]["padding"]
         dbn = ConvDBN(model=model_type, visible_shape=visible_shape, filter_shape = dbn_arch[1], n_filters = dbn_arch[0], \
             n_channels=number_channel, steps=gibbs_steps, learning_rate=learning_rate, momentum=momentum, \
-            decay=decay, use_gpu=True) #, maxpooling=mp)
+            decay=decay, use_gpu=True, maxpooling=[False]*len(gibbs_steps)) #, maxpooling=mp)
 
     dbn.load_state_dict(torch.load(ckpt_path))
 
@@ -236,8 +237,12 @@ def dc_DBN(yml_conf, dataset, conv=False):
     dbn.eval() 
     dbn.models.eval()
 
-    model = DBN_DC(dbn, num_classes=num_classes, conv=conv)
-  
+    if not conv:
+        model = DBN_DC(dbn, num_classes=num_classes, conv=conv)
+    else:
+        lr = yml_conf["cluster"]["training"]["learning_rate"]
+        model = CDBN_DC(dbn, num_classes=num_classes, weight_decay=0.95, lr = lr)
+
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
     checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="deep_cluster", enable_version_counter=False, every_n_train_steps = 100, save_on_train_epoch_end=False)

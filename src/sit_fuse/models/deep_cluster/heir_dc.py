@@ -13,10 +13,13 @@ from sit_fuse.models.deep_cluster.pca_dc import PCA_DC
 from sit_fuse.models.deep_cluster.byol_dc import BYOL_DC
 from sit_fuse.models.deep_cluster.ijepa_dc import IJEPA_DC
 from sit_fuse.models.deep_cluster.dbn_dc import DBN_DC
+from sit_fuse.models.deep_cluster.cdbn_dc import CDBN_DC
 from sit_fuse.models.deep_cluster.clay_dc import Clay_DC
 from sit_fuse.models.deep_cluster.mae_dc import MAE_DC
 from sit_fuse.models.deep_cluster.dc import DeepCluster
 from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes, OutputProjection, JEPA_Seg
+from sit_fuse.datasets.sf_dataset import SFDataset
+from sit_fuse.datasets.sf_dataset_conv import SFDatasetConv
 from sit_fuse.utils import read_yaml, get_output_shape
 
 from tqdm import tqdm
@@ -59,11 +62,18 @@ class Heir_DC(pl.LightningModule):
                 param.requires_grad = False
 
         elif "dbn" in encoder_type:
-            self.pretrained_model = DBN_DC.load_from_checkpoint(pretrained_model_path, pretrained_model=encoder)
-            self.encoder = encoder
-            self.pretrained_model.eval()
-            self.pretrained_model.pretrained_model.eval()
-            self.pretrained_model.mlp_head.eval()
+            if encoder_type == "conv_dbn":
+                self.pretrained_model = CDBN_DC.load_from_checkpoint(pretrained_model_path, pretrained_model=encoder)
+                self.encoder = self.pretrained_model.segmentor.encoder
+                self.pretrained_model.eval()
+                self.pretrained_model.pretrained_model.eval()
+                self.pretrained_model.mlp_head.eval()
+            else:
+                self.pretrained_model = DBN_DC.load_from_checkpoint(pretrained_model_path, pretrained_model=encoder)
+                self.encoder = encoder
+                self.pretrained_model.eval()
+                self.pretrained_model.pretrained_model.eval()
+                self.pretrained_model.mlp_head.eval()
 
             for param in self.pretrained_model.pretrained_model.parameters():
                 param.requires_grad = False
@@ -134,7 +144,7 @@ class Heir_DC(pl.LightningModule):
             elif self.encoder_type == "ijepa":
                 #TODO encoder_output_size = get_output_shape(self.encoder, (1, yml_conf["data"]["tile_size"][2],self.pretrained_model.pretrained_model.img_size,self.pretrained_model.pretrained_model.img_size))
                 #n_visible = encoder_output_size[2] #*encoder_output_size[2]
-                n_visible = 2048
+                n_visible = 1024 # 2048
                 #print(encoder_output_size, yml_conf["data"]["tile_size"], self.pretrained_model.pretrained_model.img_size)
             elif self.encoder_type == "clay":
                 n_visible = 768
@@ -147,8 +157,8 @@ class Heir_DC(pl.LightningModule):
                 encoder_output_size = (1, self.pretrained_model.pretrained_model.pca.components_.shape[0])
                 n_visible = encoder_output_size[1]
             elif self.encoder_type == "conv_dbn":
-                encoder_output_size = get_output_shape(self.encoder, (1, yml_conf["data"]["tile_size"][2], yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
-                n_visible = encoder_output_size[1]
+                #encoder_output_size = get_output_shape(self.encoder, (1, yml_conf["data"]["tile_size"][2], yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
+                n_visible = 900 #encoder_output_size[1]
             elif self.encoder_type == "byol":
                 encoder_output_size = get_output_shape(self.encoder, (1, yml_conf["data"]["tile_size"][2], yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
                 n_visible = encoder_output_size[1]
@@ -165,7 +175,10 @@ class Heir_DC(pl.LightningModule):
     def generate_label_set(self, data):
         count = 0
         self.lab_full = {}
-        batch_size = max(700, self.min_samples)
+        if isinstance(data, SFDatasetConv):
+            batch_size = min(10, self.min_samples)
+        else:
+            batch_size = min(700, self.min_samples)
 
         output_sze = data.data_full.shape[0]
 
@@ -235,7 +248,24 @@ class Heir_DC(pl.LightningModule):
                 if perturb:
                     x = x + torch.from_numpy(self.rng.normal(0.0, 0.01, \
                                 (x.shape))).type(x.dtype).to(x.device)
+            elif self.encoder_type == "conv_dbn":
+                x = self.encoder(x)
+                for i in range(len(x)):
 
+                    if perturb:
+                        x[i] = x[i] + torch.from_numpy(self.rng.normal(0.0, 0.01, \
+                                (x[i].shape))).type(x[i].dtype).to(x[i].device)
+                    x[i] = self.pretrained_model.segmentor.upsamples[i](x[i])
+
+                x = torch.cat(x, dim=1)
+                x = self.pretrained_model.segmentor.fusion(x)
+
+                x = F.interpolate(
+                    x,
+                    size=(15, 15),
+                    mode="bilinear",
+                    align_corners=False,
+                )  # Resize to match labels size
             elif self.encoder_type == "clay":
                 dat_final = {
                         "pixels": x, #[0],
@@ -256,7 +286,7 @@ class Heir_DC(pl.LightningModule):
 
                 x = F.interpolate(
                     x,
-                    size=(224, 224),
+                    size=(16, 16),
                     mode="bilinear",
                     align_corners=False,
                 )  # Resize to match labels size
@@ -322,7 +352,7 @@ class Heir_DC(pl.LightningModule):
         tmp_subset = None
         tmp = y.clone()
 
-        print(y.shape, y.ndim, y.shape[1], (y.ndim == 4 and y.shape[1] > 1), torch.argmax(y, dim=1).shape, "CLAY")
+        #print(y.shape, y.ndim, y.shape[1], (y.ndim == 4 and y.shape[1] > 1), torch.argmax(y, dim=1).shape, "CLAY")
         if (y.ndim == 2 and y.shape[1] > 1) or (y.ndim == 4 and y.shape[1] > 1):
             tmp = torch.argmax(y, dim=1)
         elif (y.ndim == 3 and y.shape[0] > 1):
@@ -356,7 +386,7 @@ class Heir_DC(pl.LightningModule):
         tmp3 = tmp.clone()
         #x.requires_grad = True
         keys = np.unique(tmp2)
-        print("HERE KEYS", keys)
+        #print("HERE KEYS", keys)
         for key in keys:
             #BxCxHxW OR BxC 
             tmp = y.clone()
@@ -386,8 +416,8 @@ class Heir_DC(pl.LightningModule):
                 inds2 = np.where(tmp2_2 == key)[0]            
 
  
-            print(tmp.shape, tmp.ndim)
-            print(tmp2.shape, tmp2_2.shape, tmp4.shape, tmp3.shape, tmp.ndim, x.shape, y.shape, "HERE")
+            #print(tmp.shape, tmp.ndim)
+            #print(tmp2.shape, tmp2_2.shape, tmp4.shape, tmp3.shape, tmp.ndim, x.shape, y.shape, "HERE")
             if x.ndim == 2:
                 input_tmp = x.clone()
             elif x.ndim == 3:
@@ -397,8 +427,8 @@ class Heir_DC(pl.LightningModule):
                 input_tmp = torch.flatten(x.permute(1,0,2,3), start_dim=1).permute(1,0)
                 #input_tmp = torch_flatten(input_tmp, start_dim=0, end_dim=1)
               
-            print(input_tmp.shape, x.shape, tmp2_2.shape, tmp2.shape)
-            print(inds2)
+            #print(input_tmp.shape, x.shape, tmp2_2.shape, tmp2.shape)
+            #print(inds2)
             input_tmp = input_tmp[inds2,:] 
 
 
@@ -426,7 +456,7 @@ class Heir_DC(pl.LightningModule):
             else:
                 tmp_subset = torch.cat((tmp_subset, tmp), dim=0)
 
-            print(y.shape, tmp.shape, tmp_full.shape, y.shape)
+            #print(y.shape, tmp.shape, tmp_full.shape, y.shape)
 
 
             if y.ndim == 2:

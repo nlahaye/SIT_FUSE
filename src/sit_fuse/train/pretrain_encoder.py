@@ -62,7 +62,7 @@ def pretrain_DBN(yml_conf, dataset, conv = False):
         #padding = yml_conf["dbn"]["padding"]
         dbn = ConvDBN(model=model_type, visible_shape=visible_shape, filter_shape = dbn_arch[1], n_filters = dbn_arch[0], \
             n_channels=number_channel, steps=gibbs_steps, learning_rate=learning_rate, momentum=momentum, \
-            decay=decay, use_gpu=use_gpu) #, maxpooling=mp)
+            decay=decay, use_gpu=use_gpu, maxpooling=[False]*len(gibbs_steps)) #, maxpooling=mp)
 
  
     use_wandb_logger = yml_conf["logger"]["use_wandb"]

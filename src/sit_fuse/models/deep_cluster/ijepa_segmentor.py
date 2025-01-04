@@ -39,14 +39,14 @@ class JEPASegmentEncoder(nn.Module):
 
         # Define Feature Pyramid Network (FPN) layers
         self.fpn1 = nn.Sequential(
-            nn.ConvTranspose2d(self.vit_encoder.student_encoder.dim, self.vit_encoder.student_encoder.dim, kernel_size=2, stride=2),
-            nn.BatchNorm2d(self.vit_encoder.student_encoder.dim),
+            nn.ConvTranspose2d(self.vit_encoder.student_encoder.dim, self.vit_encoder.student_encoder.dim*8, kernel_size=2, stride=2),
+            nn.BatchNorm2d(self.vit_encoder.student_encoder.dim*8),
             nn.GELU(),
-            nn.ConvTranspose2d(self.vit_encoder.student_encoder.dim, self.vit_encoder.student_encoder.dim, kernel_size=2, stride=2),
+            nn.ConvTranspose2d(self.vit_encoder.student_encoder.dim*8, self.vit_encoder.student_encoder.dim*4, kernel_size=2, stride=2),
         )
 
         self.fpn2 = nn.Sequential(
-            nn.ConvTranspose2d(self.vit_encoder.student_encoder.dim, self.vit_encoder.student_encoder.dim, kernel_size=2, stride=2),
+            nn.ConvTranspose2d(self.vit_encoder.student_encoder.dim, self.vit_encoder.student_encoder.dim*4, kernel_size=2, stride=2),
         )
 
         self.fpn3 = nn.Identity()
@@ -126,7 +126,7 @@ class JEPASegmentor(nn.Module):
             #nn.Upsample(scale_factor=4),
         #]
 
-        chan_mult = len(feature_maps) # + 1
+        chan_mult = len(feature_maps)  + 6
 
         self.fusion = nn.Conv2d(self.encoder.vit_encoder.student_encoder.dim *chan_mult, self.encoder.vit_encoder.student_encoder.dim, kernel_size=1)
         self.seg_head = nn.Conv2d(self.encoder.vit_encoder.student_encoder.dim, num_classes, kernel_size=1)

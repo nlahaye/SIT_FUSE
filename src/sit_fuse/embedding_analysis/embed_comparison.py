@@ -141,6 +141,7 @@ def run_nomic_analysis(embedding_functions, knn_graphs, out_dir):
     ax.legend(loc='upper left')
 
     plt.show()
+    print("Plotting Scatter Embed")
     plt.savefig(os.path.join(out_dir, "Embed_Scatter.png"))
     plt.clf()
 
@@ -170,9 +171,10 @@ def run_nomic_analysis(embedding_functions, knn_graphs, out_dir):
             #- and adding color intensity to represent p-value
             fig, ax = plt.subplots(1,1)
             for d in range(omni_embds.shape[1]):
-                ax.scatter(omni_embds[i, d, 0], omni_embds[i, d, 1], label=embed_function, color=colors[i], alpha=1-p_values[j])
+                ax.scatter(omni_embds[i, d, 0], omni_embds[i, d, 1], label=embed_function, color=colors[i], alpha=1-p_values[d])
             plt.show()
-            plt.savefig(os.path.join(out_dir, "Embed_Scatter_Null_Hyp_" + embed_function[i] + "_" + embed_function[j] + ".png"))
+            print("Plotting Null Hyp Scatter")
+            plt.savefig(os.path.join(out_dir, "Embed_Scatter_Null_Hyp_" + embed_function + "_" + embed_function + ".png"))
             plt.clf()
  
             #- Notice that the ranking of the p-values is related to but does not equal ranking of || omni[0][i] - omni[1][i] ||
@@ -190,7 +192,8 @@ def run_nomic_analysis(embedding_functions, knn_graphs, out_dir):
             ax.plot(linspace, linspace, label='null / uniform (y=x)')
             ax.legend()
             plt.show()
-            plt.savefig(os.path.join(out_dir, "P_Value_Dist.png"))
+            print("Plotting P-Value")
+            plt.savefig(os.path.join(out_dir, "P_Value_Dist_" + embed_function + "_" + embed_function2 + ".png"))
 
     fig, ax = plt.subplots(1,1)
 
@@ -198,6 +201,7 @@ def run_nomic_analysis(embedding_functions, knn_graphs, out_dir):
     #- "Families" of embedding models are close to each other in this space.
     dist_matrix = build_dist_mtx(embedding_functions, knn_graphs)
  
+    print(dist_matrix.shape)
 
     cmds_embds = ClassicalMDS().fit_transform(dist_matrix)
     for i, cmds in enumerate(cmds_embds):

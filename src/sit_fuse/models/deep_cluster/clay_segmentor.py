@@ -54,14 +54,14 @@ class SegmentEncoder(Encoder):
 
         # Define Feature Pyramid Network (FPN) layers
         self.fpn1 = nn.Sequential(
-            nn.ConvTranspose2d(dim, dim, kernel_size=2, stride=2),
-            nn.BatchNorm2d(dim),
+            nn.ConvTranspose2d(dim, dim*8, kernel_size=2, stride=2),
+            nn.BatchNorm2d(dim*8),
             nn.GELU(),
-            nn.ConvTranspose2d(dim, dim, kernel_size=2, stride=2),
+            nn.ConvTranspose2d(dim*8, dim*4, kernel_size=2, stride=2),
         )
 
         self.fpn2 = nn.Sequential(
-            nn.ConvTranspose2d(dim, dim, kernel_size=2, stride=2),
+            nn.ConvTranspose2d(dim, dim*4, kernel_size=2, stride=2),
         )
 
         self.fpn3 = nn.Identity()
@@ -125,7 +125,7 @@ class SegmentEncoder(Encoder):
         Returns:
             list: A list of feature maps extracted from the datacube.
         """
-        print(datacube["pixels"].shape, datacube["time"], datacube["latlon"], datacube["gsd"], datacube["waves"])
+        #print(datacube["pixels"].shape, datacube["time"], datacube["latlon"], datacube["gsd"], datacube["waves"])
 
         cube, time, latlon, gsd, waves = (
             datacube["pixels"],  # [B C H W]
@@ -163,7 +163,7 @@ class SegmentEncoder(Encoder):
         ops = [self.fpn1, self.fpn2, self.fpn3, self.fpn4, self.fpn5]
         for i in range(len(features)):
             features[i] = ops[i](features[i])
-
+            #print("CLAY SEGMENT ENCODER", features[i].shape)
         return features
 
 
@@ -197,7 +197,7 @@ class Segmentor(nn.Module):
             nn.Upsample(scale_factor=4),
         ]
 
-        chan_mult = len(feature_maps) + 1
+        chan_mult = len(feature_maps) + 7
 
         self.fusion = nn.Conv2d(self.encoder.dim *chan_mult, self.encoder.dim, kernel_size=1)
         self.seg_head = nn.Conv2d(self.encoder.dim, num_classes, kernel_size=1)
@@ -216,6 +216,7 @@ class Segmentor(nn.Module):
         features = self.encoder(datacube)
         for i in range(len(features)):
             features[i] = self.upsamples[i](features[i])
+            #print(features[i].shape, "CLAY UPSAMPLES")
 
         fused = torch.cat(features, dim=1)
         fused = self.fusion(fused)

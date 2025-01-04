@@ -203,6 +203,18 @@ class SFDatasetConv(SFDataset):
 				#tgts = np.swapaxes(tgts, 0, 1)     
 				print("TESTING INDS", tmp.shape, tgts2.shape)                               
 
+				delete_inds = []
+				for tle in range(tmp.shape[0]):
+					if np.max(tmp[tle]) <= -9999:
+						delete_inds.append(tle)
+						count = count + 1
+					elif abs(np.std(tmp[tle])) < 0.0000001:
+						delete_inds.append(tle)
+						count = count + 1
+
+				if len(delete_inds) > 0:
+					np.delete(tmp, delete_inds, axis=0)	
+					np.delete(tgts2, delete_inds, axis=0) 
 
 				if isinstance(self.data, list):
 					self.data = tmp
@@ -246,6 +258,7 @@ class SFDatasetConv(SFDataset):
 			self.targets_full = torch.from_numpy(self.targets)
 			if len(self.stratify_training) > 0:
 				self.stratify_training = torch.from_numpy(self.stratify_training)
+		print(self.data_full.min(), self.data_full.mean(), self.data_full.max(), self.data_full.std(), "STATS")
 		del self.data
 		del self.targets
 		if self.basic_preprocess:
@@ -262,7 +275,7 @@ class SFDatasetConv(SFDataset):
 				self.__stratify_k_means__(flatten=True)
 			else:
 				self.data_full = self.data_full[:self.subset_training,:,:,:]
-				self.targets_full = self.targets_full[:self.subset_training,:,:]
+				self.targets_full = self.targets_full[:self.subset_training,:]
 
 		self.chan_dim = 1
 		self.mean_per_channel = []
@@ -295,7 +308,7 @@ class SFDatasetConv(SFDataset):
 		self.data = self.data_full
 		self.targets = self.targets_full
 
-
+		print(self.data_full.min(), self.data_full.mean(), self.data_full.max(), self.data_full.std(), "STATS_2")
 	def __len__(self):
 		"""
 		Overriding of Dataset internal function __len__.
@@ -376,10 +389,10 @@ def main(yml_fpath):
     x2.read_and_preprocess_data(data_train, read_func, data_reader_kwargs, delete_chans=delete_chans, \
             valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
             transform_values=transform_values, transform=None, tile=tile, tile_size=tile_size, tile_step=tile_step,
-            subset_training = subset_training, stratify_data=stratify_data, basic_preprocess=True)
+            subset_training = subset_training, stratify_data=stratify_data, basic_preprocess=False)
 
-    if x2.train_indices is not None:
-        np.save(os.path.join(out_dir, "train_indices"), x2.train_indices)
+    #if x2.train_indices is not None:
+    #    np.save(os.path.join(out_dir, "train_indices"), x2.train_indices)
 
 
     np.save(os.path.join(out_dir, "train_data.indices"), x2.targets_full)

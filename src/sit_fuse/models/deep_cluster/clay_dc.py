@@ -44,7 +44,7 @@ class Clay_DC(pl.LightningModule):
         waves = self.waves
         gsd = self.gsd
 
-        print(x.shape, "HERE Clay")
+        #print(x.shape, "HERE Clay")
         dat_final = {
             "pixels": x,
             "latlon": torch.zeros((x.shape[0],4)),
@@ -55,9 +55,9 @@ class Clay_DC(pl.LightningModule):
 
         y = self.pretrained_model.encoder(dat_final)
         y2 = []
-        print(len(y), len(self.pretrained_model.upsamples), x.shape)
+        #print(len(y), len(self.pretrained_model.upsamples), x.shape)
         for i in range(len(y)):
-            print(y[i].shape)
+            #print(y[i].shape)
             y2.append(self.pretrained_model.upsamples[i](y[i]))
 
         y2 = torch.cat(y2, dim=1)
@@ -65,7 +65,7 @@ class Clay_DC(pl.LightningModule):
          
         y2 = F.interpolate(
             y2,
-            size=(224, 224),
+            size=(16, 16),
             mode="bilinear",
             align_corners=False,
         )  # Resize to match labels size
@@ -77,7 +77,7 @@ class Clay_DC(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         y = batch
 
-        print(y[0].shape, "HERE Clay")
+        #print(y[0].shape, "HERE Clay")
         dat_final = {
             "pixels": y, #[0],
             #"indices": y[1],
@@ -109,14 +109,14 @@ class Clay_DC(pl.LightningModule):
 
         y = F.interpolate(
             y,
-            size=(224, 224),
+            size=(16, 16),
             mode="bilinear",
             align_corners=False,
         )  # Resize to match labels size
 
         y2 = F.interpolate(
             y2,
-            size=(224, 224),
+            size=(16, 16),
             mode="bilinear",
             align_corners=False,
         )  # Resize to match labels size
@@ -170,6 +170,8 @@ class Clay_DC(pl.LightningModule):
         y = torch.cat(y, dim=1)
         y2 = torch.cat(y2, dim=1)
 
+
+        print(y.shape, y2.shape, "PRE FUSION")
         y = self.pretrained_model.fusion(y)
         y2 = self.pretrained_model.fusion(y2)
 
@@ -177,14 +179,14 @@ class Clay_DC(pl.LightningModule):
 
         y = F.interpolate(
             y,
-            size=(224, 224),
+            size=(16, 16),
             mode="bilinear",
             align_corners=False,
         )  # Resize to match labels size
 
         y2 = F.interpolate(
             y2,
-            size=(224, 224),
+            size=(16, 16),
             mode="bilinear",
             align_corners=False,
         )  # Resize to match labels size

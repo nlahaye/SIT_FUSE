@@ -470,6 +470,22 @@ def read_oc_geo(filename, **kwargs):
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
         data1[0] = data1[0][kwargs["start_line"]:kwargs["end_line"]]
         data1[1] = data1[1][kwargs["start_sample"]:kwargs["end_sample"]]
+
+    if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs:
+        inds1 = np.where((data1[0] >= kwargs["start_lat"]) & (data1[0] <= kwargs["end_lat"]))
+        inds2 = np.where((data1[1] >= kwargs["start_lon"]) & (data1[1] <= kwargs["end_lon"]))
+        lat = data1[0]
+        lon = data1[1]
+
+
+        nind2, nind1 = np.meshgrid(inds2, inds1)
+        lon1, lat1 = np.meshgrid(lon, lat)    
+    
+        data1 = np.array([lat1,lon1]) 
+
+        data1 = data1[:, nind1,nind2]
+
+
         #dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
     return data1
 
@@ -1021,8 +1037,12 @@ def read_burn_severity_stacks(flename, **kwargs):
     print(dat.shape, fire_mask.shape, urban_mask.shape)
     inds = np.where((~np.isfinite(dat)) | (np.isnan(dat)))
     dat[inds] = -99999.0
-    inds2 = np.where(urban_mask > 0.0)
-    dat[:,inds[0],inds[1]] = -99999.0
+    inds2 = np.where(np.squeeze(urban_mask) > 0.0)
+    dat[:,inds2[0],inds2[1]] = -99999.0
+
+    inds2 = np.where(np.squeeze(fire_mask) < 0.5)
+    dat[:,inds2[0],inds2[1]] = -99999.0
+
 
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
                 if len(dat.shape) == 3:
@@ -1101,7 +1121,8 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
                 clust_fname = os.path.join(os.path.join(clusters_dir, "AQUA_MODIS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".tif"))
             elif "TERRA_MODIS" in input_file_type:
                 clust_fname = os.path.join(os.path.join(clusters_dir, "TERRA_MODIS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".tif"))
-
+            elif "PACE_OCI" in input_file_type:
+                clust_fname = os.path.join(os.path.join(clusters_dir, "PACE_OCI." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".tif"))
         ind = ind + 1
 
         print(clust_fname)
@@ -1138,6 +1159,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
 
         gdf = gpd.GeoDataFrame(clust, geometry=gpd.GeoSeries.from_xy(lon, lat), crs=4326)
         subset = insitu_df[(insitu_df['Datetime'] == date)]
+        print(len(subset), date)
         gdf_insitu = gpd.GeoDataFrame(subset["Total_Phytoplankton"], geometry=gpd.GeoSeries.from_xy(subset['Longitude'], subset['Latitude']), crs=4326)
 
         #gdf_proj = gdf.to_crs({"init": "EPSG:3857"})
@@ -1146,10 +1168,12 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         dists = []
         count = -1
         hist_data = []
+        print("PRE-ITER", len(gdf_insitu))
         for index, poi in gdf_insitu.iterrows():
             count = count + 1
             neighbours = []
             for index2, poi2 in gdf.iterrows():
+                print(abs(poi2.geometry.distance(poi.geometry)) < radius_degrees, "DISTANCE")
                 if abs(poi2.geometry.distance(poi.geometry)) < radius_degrees:
                     print(poi.geometry, poi2.geometry, poi2.geometry.distance(poi.geometry))
                     neighbours.append(index2)

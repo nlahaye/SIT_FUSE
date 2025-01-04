@@ -115,7 +115,7 @@ def heir_dc(yml_conf, dataset, ckpt_path):
             #padding = yml_conf["dbn"]["padding"]
             encoder = ConvDBN(model=model_type, visible_shape=visible_shape, filter_shape = dbn_arch[1], n_filters = dbn_arch[0], \
                 n_channels=number_channel, steps=gibbs_steps, learning_rate=learning_rate, momentum=momentum, \
-                decay=decay, use_gpu=True) #, maxpooling=mp)
+                decay=decay, use_gpu=True, maxpooling=[False]*len(gibbs_steps)) #, maxpooling=mp)
 
         encoder.load_state_dict(torch.load(enc_ckpt_path))
  
@@ -202,13 +202,13 @@ def heir_dc(yml_conf, dataset, ckpt_path):
         elif yml_conf["encoder_type"] == "ijepa":
             #TODO encoder_output_size = get_output_shape(model.pretrained_model.pretrained_model.model, (2, in_chans,model.pretrained_model.pretrained_model.img_size,model.pretrained_model.pretrained_model.img_size))
             #n_visible = encoder_output_size[2] #[1]*encoder_output_size[2]
-             n_visible = 2048
+             n_visible = 1024
         elif yml_conf["encoder_type"] == "dbn":
             encoder_output_size = (1, model.pretrained_model.pretrained_model.models[-1].n_hidden)
             n_visible = encoder_output_size[1]
         elif yml_conf["encoder_type"] == "conv_dbn":
-            encoder_output_size = get_output_shape(model.pretrained_model.pretrained_model, (1, yml_conf["data"]["tile_size"][2], yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
-            n_visible = encoder_output_size[1]
+            encoder_output_size = get_output_shape(encoder, (1, yml_conf["data"]["tile_size"][2], yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
+            n_visible = 900 #TODO encoder_output_size[1]
         elif yml_conf["encoder_type"] == "byol":
             encoder_output_size = get_output_shape(encoder, (1, yml_conf["data"]["tile_size"][2], yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
             n_visible = encoder_output_size[1]
@@ -258,7 +258,7 @@ def heir_dc(yml_conf, dataset, ckpt_path):
             wandb_logger = WandbLogger(project=project, log_model=log_model, save_dir = save_dir)
 
             trainer = pl.Trainer(
-                limit_train_batches=1000,
+                limit_train_batches=100,
                 default_root_dir=save_dir,
                 accelerator=accelerator,
                 devices=devices,
@@ -271,7 +271,7 @@ def heir_dc(yml_conf, dataset, ckpt_path):
             )
         else:
             trainer = pl.Trainer(
-                limit_train_batches=1000,
+                limit_train_batches=100,
                 default_root_dir=save_dir,
                 accelerator=accelerator,
                 devices=devices,
