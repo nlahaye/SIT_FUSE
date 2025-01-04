@@ -1,34 +1,34 @@
  
-dbf_percentage_thresh: 0.51
+dbf_percentage_thresh: 0.6
 dbf: True
 dbf_list: [
 [
-"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190808_Smoke_GOES_OUTPUT_6.dbf",
-"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190808_Smoke_GOES_2_OUTPUT_7.dbf",
-"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190806_Smoke_1_OUTPUT_3.dbf",
-"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190808_Smoke_GOES_OUTPUT_9.dbf",
-"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190806_Smoke_1_OUTPUT_1.dbf",
-"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190806_Smoke_1_OUTPUT_2.dbf",
-"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190808_Smoke_GOES_OUTPUT_8.dbf",
-"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190808_Smoke_GOES_2_OUTPUT_6.dbf",
-"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190808_Smoke_GOES_OUTPUT_7.dbf",
-"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190806_Smoke_1_OUTPUT_0.dbf",
-"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190808_Smoke_GOES_2_OUTPUT_9.dbf",
-"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190807_Smoke_GOES_OUTPUT_5.dbf",
-"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190807_Smoke_GOES_OUTPUT_4.dbf",
-"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190808_Smoke_GOES_2_OUTPUT_8.dbf",
+"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190806_Smoke_1_OUTPUT_0.csv",
+"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190806_Smoke_1_OUTPUT_1.csv",
+"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190806_Smoke_1_OUTPUT_2.csv",
+"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190806_Smoke_1_OUTPUT_3.csv",
+"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190807_Smoke_GOES_OUTPUT_4.csv",
+"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190808_Smoke_GOES_2_OUTPUT_5.csv",
+"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190808_Smoke_GOES_2_OUTPUT_6.csv",
+"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190808_Smoke_GOES_2_OUTPUT_7.csv",
+"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190808_Smoke_GOES_2_OUTPUT_8.csv",
+"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190808_Smoke_GOES_OUTPUT_5.csv",
+"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190808_Smoke_GOES_OUTPUT_6.csv",
+"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190808_Smoke_GOES_OUTPUT_7.csv",
+"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190808_Smoke_GOES_OUTPUT_8.csv",
+        
 ],
 [
-#"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190807_Background_GOES_OUTPUT_5.dbf",
-#"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190808_Background_GOES_OUTPUT_9.dbf",
-#"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190808_Background_GOES_OUTPUT_7.dbf",
-#"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190806_Background_1_OUTPUT_0.dbf",
-#"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190808_Background_GOES_OUTPUT_8.dbf",
-#"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190806_Background_1_OUTPUT_3.dbf",
-#"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190806_Background_1_OUTPUT_1.dbf",
-#"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190808_Background_GOES_OUTPUT_6.dbf",
-"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190806_Background_1_OUTPUT_2.dbf",
-"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190807_Background_GOES_OUTPUT_4.dbf",
+#"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190807_Background_GOES_OUTPUT_5.csv",
+#"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190808_Background_GOES_OUTPUT_9.csv",
+#"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190808_Background_GOES_OUTPUT_7.csv",
+#"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190806_Background_1_OUTPUT_0.csv",
+#"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190808_Background_GOES_OUTPUT_8.csv",
+#"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190806_Background_1_OUTPUT_3.csv",
+#"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190806_Background_1_OUTPUT_1.csv",
+#"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190808_Background_GOES_OUTPUT_6.csv",
+"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190806_Background_1_OUTPUT_2.csv",
+"/data/nlahaye/SIT_FUSE_Geo/VIIRS/20190807_Background_GOES_OUTPUT_4.csv",
 ]
 ] 
 

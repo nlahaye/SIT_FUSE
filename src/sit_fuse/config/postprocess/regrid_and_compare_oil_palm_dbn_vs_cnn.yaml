@@ -1,0 +1,32 @@
+
+
+sit_fuse_maps: [
+  #"/Users/nlahaye/Downloads/Palm_Oil_Maps/ucayali_stacks_2020_h0v1.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_new.tif.Contours.tif",
+  #"/Users/nlahaye/Downloads/Palm_Oil_Maps/ucayali_stacks_2020_h0v2.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_new.tif.Contours.tif",
+  #"/Users/nlahaye/Downloads/Palm_Oil_Maps/ucayali_stacks_2020_h1v0.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_new.tif.Contours.tif",
+  #"/Users/nlahaye/Downloads/Palm_Oil_Maps/ucayali_stacks_2020_h0v1.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_new.tif.Contours.tif",
+  #"/Users/nlahaye/Downloads/Palm_Oil_Maps/ucayali_stacks_2020_h0v2.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_new.tif.Contours.tif",
+  #"/Users/nlahaye/Downloads/Palm_Oil_Maps/ucayali_stacks_2020_h1v0.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_new.tif.Contours.tif",
+  #"/Users/nlahaye/Downloads/Palm_Oil_Maps/ucayali_stacks_2020_h1v1.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_new.tif.Contours.tif",
+  #"/Users/nlahaye/Downloads/Palm_Oil_Maps/ucayali_stacks_2020_h1v2.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_new.tif.Contours.tif",
+  #"/Users/nlahaye/Downloads/Palm_Oil_Maps/ucayali_stacks_2020_h1v3.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_new.tif.Contours.tif",
+  #"/Users/nlahaye/Downloads/Palm_Oil_Maps/ucayali_stacks_2020_h2v0.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_new.tif.Contours.tif",
+  #"/Users/nlahaye/Downloads/Palm_Oil_Maps/ucayali_stacks_2020_h2v1.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_new.tif.Contours.tif",
+  #"/Users/nlahaye/Downloads/Palm_Oil_Maps/ucayali_stacks_2020_h2v2.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_new.tif.Contours.tif"
+  #"/Users/nlahaye/Downloads/Palm_Oil_Maps/ucayali_stacks_2020_h1v2.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_new.tif.Contours.tif",
+  #"/Users/nlahaye/Downloads/Palm_Oil_Maps/ucayali_stacks_2020_h1v3.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_new.tif.Contours.tif",
+  #"/Users/nlahaye/Downloads/Palm_Oil_Maps/ucayali_stacks_2020_h2v0.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_new.tif.Contours.tif",
+  #"/Users/nlahaye/Downloads/Palm_Oil_Maps/ucayali_stacks_2020_h2v1.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_new.tif.Contours.tif",
+  #"/Users/nlahaye/Downloads/Palm_Oil_Maps/ucayali_stacks_2020_h2v2.tif.heir_clust1output_test.data_77995clusters.zarr.palm_oil_new.tif.Contours.tif",
+]
+ 
+truth_maps: [
+  #"/data/nlahaye/oil_palm_map/L2_2019b_0221.tif",
+  #"/data/nlahaye/oil_palm_map/Ucayali_Subset/L2_2019b_0223.tif",
+  #"/data/nlahaye/oil_palm_map/Ucayali_Subset/L2_2019b_0280.tif",
+  #"/data/nlahaye/oil_palm_map/Ucayali_Subset/L2_2019b_0279.tif",
+  #"/data/nlahaye/oil_palm_map/Ucayali_Subset/L2_2019b_0278.tif",
+  #"/data/nlahaye/oil_palm_map/Ucayali_Subset/L2_2019b_0249.tif",
+  #"/data/nlahaye/oil_palm_map/Ucayali_Subset/L2_2019b_0248.tif",
+]
+

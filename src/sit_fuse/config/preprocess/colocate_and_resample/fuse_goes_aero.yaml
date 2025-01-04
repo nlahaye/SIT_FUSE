@@ -1,0 +1,94 @@
+
+
+low_res:
+ data:
+  valid_min: 0.0
+  valid_max: 100
+  reader_type: "viirs_aero_mask"
+  reader_kwargs:
+   bool_aero: True
+  geo_reader_type: "viirs_aero_mask_geo"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: [
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019218.1820.001.2023253075554.nc",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019218.1930.001.2023253075614.nc",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019218.2040.001.2023253075629.nc",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019219.1820.001.2023253080539.nc",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019219.1930.001.2023253080604.nc",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019219.2000.001.2023253080603.nc",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019220.0100.001.2023253081657.nc",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019220.0240.001.2023253082544.nc",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019221.0120.001.2023253082559.nc",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019221.0220.001.2023253082730.nc",
+]
+
+  geo_filenames: [
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019218.1820.001.2023253075554.nc",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019218.1930.001.2023253075614.nc",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019218.2040.001.2023253075629.nc",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019219.1820.001.2023253080539.nc",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019219.1930.001.2023253080604.nc",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019219.2000.001.2023253080603.nc",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019220.0100.001.2023253081657.nc",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019220.0240.001.2023253082544.nc",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019221.0120.001.2023253082559.nc",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019221.0220.001.2023253082730.nc",
+]
+
+  chan_dim: 0
+  geo_coord_dim: 0
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+high_res:
+ data:
+  valid_min: 0.0
+  valid_max: 100000000
+  reader_type: "numpy"
+  reader_kwargs:
+   no_arg: "no_arg"
+  geo_reader_type: "numpy"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: []
+  geo_filenames: []
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+fusion:
+ projection_id: 4326
+ description: "Generating GOES GeoTiffs"
+ area_id: "GOES"
+ projection_proj4:
+  proj: "longlat"
+  datum: "WGS84" 
+ final_resolution: 0.018
+ projection_units: "degrees"
+ resample_radius: 20000
+ resample_n_neighbors: 64
+ resample_n_procs: 10
+ resample_epsilon: 1.6
+ use_bilinear: False
+ lon_bounds: [-120.5, -118.0]
+ lat_bounds: [47.5, 50.0]
+ 
+
+      
+output_files: [
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019218.1820.001.2023253075554.nc.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019218.1930.001.2023253075614.nc.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019218.2040.001.2023253075629.nc.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019219.1820.001.2023253080539.nc.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019219.1930.001.2023253080604.nc.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019219.2000.001.2023253080603.nc.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019220.0100.001.2023253081657.nc.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019220.0240.001.2023253082544.nc.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019221.0120.001.2023253082559.nc.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_FIRE/XAERDT_L2_ABI_G17.A2019221.0220.001.2023253082730.nc.tif",
+]
+

@@ -1,0 +1,125 @@
+
+
+low_res:
+ data:
+  valid_min: 0.0
+  valid_max: 100
+  reader_type: "modis_aero_mask"
+  reader_kwargs:
+   bool_aero: True
+  geo_reader_type: "modis_aero_mask_geo"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: [
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019218.1905.061.2019219071759.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019219.1810.061.2019220072018.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019219.1945.061.2019220071959.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019220.1850.061.2019221072027.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019221.1755.061.2019222012209.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019221.1935.061.2019222072123.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019222.1840.061.2019223072035.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019223.1920.061.2019224071957.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019223.1925.061.2019224072018.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019224.1825.061.2019225071500.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019224.2005.061.2019225071506.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MYD04_3K.A2019218.2050.061.2019219154008.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MYD04_3K.A2019219.1955.061.2019220153147.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MYD04_3K.A2019219.2130.061.2019220153247.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MYD04_3K.A2019220.2035.061.2019221152339.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MYD04_3K.A2019221.2120.061.2019222153249.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MYD04_3K.A2019222.2025.061.2019223152136.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MYD04_3K.A2019223.2105.061.2019224153003.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MYD04_3K.A2019224.2010.061.2019225152611.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MYD04_3K.A2019224.2150.061.2019225152240.hdf",
+]
+
+  geo_filenames: [
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019218.1905.061.2019219071759.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019219.1810.061.2019220072018.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019219.1945.061.2019220071959.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019220.1850.061.2019221072027.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019221.1755.061.2019222012209.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019221.1935.061.2019222072123.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019222.1840.061.2019223072035.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019223.1920.061.2019224071957.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019223.1925.061.2019224072018.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019224.1825.061.2019225071500.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019224.2005.061.2019225071506.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MYD04_3K.A2019218.2050.061.2019219154008.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MYD04_3K.A2019219.1955.061.2019220153147.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MYD04_3K.A2019219.2130.061.2019220153247.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MYD04_3K.A2019220.2035.061.2019221152339.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MYD04_3K.A2019221.2120.061.2019222153249.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MYD04_3K.A2019222.2025.061.2019223152136.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MYD04_3K.A2019223.2105.061.2019224153003.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MYD04_3K.A2019224.2010.061.2019225152611.hdf",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MYD04_3K.A2019224.2150.061.2019225152240.hdf",
+]
+
+  chan_dim: 0
+  geo_coord_dim: 0
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+high_res:
+ data:
+  valid_min: 0.0
+  valid_max: 100000000
+  reader_type: "numpy"
+  reader_kwargs:
+   no_arg: "no_arg"
+  geo_reader_type: "numpy"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: []
+  geo_filenames: []
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+fusion:
+ projection_id: 4326
+ description: "Generating GOES GeoTiffs"
+ area_id: "GOES"
+ projection_proj4:
+  proj: "longlat"
+  datum: "WGS84" 
+ final_resolution: 0.09
+ projection_units: "degrees"
+ resample_radius: 50000
+ resample_n_neighbors: 64
+ resample_n_procs: 10
+ resample_epsilon: 1.6
+ use_bilinear: False
+ lon_bounds: [-120.45, -117.5]
+ lat_bounds: [47.2, 50.068]
+ 
+
+      
+output_files: [
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019218.1905.061.2019219071759.hdf.tif",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019219.1810.061.2019220072018.hdf.tif",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019219.1945.061.2019220071959.hdf.tif",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019220.1850.061.2019221072027.hdf.tif",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019221.1755.061.2019222012209.hdf.tif",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019221.1935.061.2019222072123.hdf.tif",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019222.1840.061.2019223072035.hdf.tif",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019223.1920.061.2019224071957.hdf.tif",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019223.1925.061.2019224072018.hdf.tif",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019224.1825.061.2019225071500.hdf.tif",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MOD04_3K.A2019224.2005.061.2019225071506.hdf.tif",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MYD04_3K.A2019218.2050.061.2019219154008.hdf.tif",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MYD04_3K.A2019219.1955.061.2019220153147.hdf.tif",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MYD04_3K.A2019219.2130.061.2019220153247.hdf.tif",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MYD04_3K.A2019220.2035.061.2019221152339.hdf.tif",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MYD04_3K.A2019221.2120.061.2019222153249.hdf.tif",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MYD04_3K.A2019222.2025.061.2019223152136.hdf.tif",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MYD04_3K.A2019223.2105.061.2019224153003.hdf.tif",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MYD04_3K.A2019224.2010.061.2019225152611.hdf.tif",
+"/data/nlahaye/remoteSensing/MODIS_FIRE/MYD04_3K.A2019224.2150.061.2019225152240.hdf.tif",
+]
+
+

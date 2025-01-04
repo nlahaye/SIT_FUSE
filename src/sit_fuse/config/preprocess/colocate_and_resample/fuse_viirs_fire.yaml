@@ -1,0 +1,196 @@
+
+
+low_res:
+ data:
+  valid_min: 0.0
+  valid_max: 100
+  reader_type: "viirs_fire_mask"
+  reader_kwargs:
+   bool_fire: True
+  geo_reader_type: "viirs_fire_mask_geo"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: [
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019220.0854.002.2024030202835.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019220.1036.002.2024030202901.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019220.2018.002.2024030202844.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019220.2200.002.2024030202837.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019221.0836.002.2024030211308.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019221.1012.002.2024030211308.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019221.2000.002.2024030211304.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019221.2142.002.2024030211305.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019222.0954.002.2024030214823.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019222.1942.002.2024030214805.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019222.2124.002.2024030214813.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019223.0936.002.2024030222348.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019223.1118.002.2024030222351.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019223.1924.002.2024030222345.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019223.2106.002.2024030222350.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019224.0918.002.2024030225507.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019224.1100.002.2024030225521.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019224.2042.002.2024030225507.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019218.0842.002.2024094221202.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019218.1024.002.2024094221204.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019218.2006.002.2024094221204.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019218.2148.002.2024094221206.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019219.1000.002.2024094224207.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019219.1006.002.2024094224206.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019219.1948.002.2024094224207.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019219.2130.002.2024094224205.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019220.0942.002.2024094230337.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019220.1124.002.2024094230335.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019220.1930.002.2024094230338.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019220.2112.002.2024094230336.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019221.0924.002.2024094235612.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019221.1106.002.2024094235611.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019221.1912.002.2024094235611.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019221.2054.002.2024094235612.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019222.0906.002.2024095002603.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019222.1048.002.2024095002606.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019222.2036.002.2024095002633.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019223.0848.002.2024095004850.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019223.1030.002.2024095004843.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019223.2012.002.2024095004842.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019223.2154.002.2024095004842.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019224.1012.002.2024095012041.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019224.1954.002.2024095012041.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019224.2136.002.2024095012043.nc",
+]
+
+  geo_filenames: [
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019220.0854.002.2024030202835.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019220.1036.002.2024030202901.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019220.2018.002.2024030202844.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019220.2200.002.2024030202837.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019221.0836.002.2024030211308.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019221.1012.002.2024030211308.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019221.2000.002.2024030211304.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019221.2142.002.2024030211305.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019222.0954.002.2024030214823.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019222.1942.002.2024030214805.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019222.2124.002.2024030214813.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019223.0936.002.2024030222348.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019223.1118.002.2024030222351.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019223.1924.002.2024030222345.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019223.2106.002.2024030222350.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019224.0918.002.2024030225507.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019224.1100.002.2024030225521.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019224.2042.002.2024030225507.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019218.0842.002.2024094221202.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019218.1024.002.2024094221204.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019218.2006.002.2024094221204.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019218.2148.002.2024094221206.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019219.1000.002.2024094224207.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019219.1006.002.2024094224206.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019219.1948.002.2024094224207.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019219.2130.002.2024094224205.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019220.0942.002.2024094230337.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019220.1124.002.2024094230335.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019220.1930.002.2024094230338.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019220.2112.002.2024094230336.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019221.0924.002.2024094235612.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019221.1106.002.2024094235611.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019221.1912.002.2024094235611.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019221.2054.002.2024094235612.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019222.0906.002.2024095002603.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019222.1048.002.2024095002606.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019222.2036.002.2024095002633.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019223.0848.002.2024095004850.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019223.1030.002.2024095004843.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019223.2012.002.2024095004842.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019223.2154.002.2024095004842.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019224.1012.002.2024095012041.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019224.1954.002.2024095012041.nc",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019224.2136.002.2024095012043.nc",
+]
+
+  chan_dim: 0
+  geo_coord_dim: 0
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+high_res:
+ data:
+  valid_min: 0.0
+  valid_max: 100000000
+  reader_type: "numpy"
+  reader_kwargs:
+   no_arg: "no_arg"
+  geo_reader_type: "numpy"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: []
+  geo_filenames: []
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+fusion:
+ projection_id: 4326
+ description: "Generating GOES GeoTiffs"
+ area_id: "GOES"
+ projection_proj4:
+  proj: "longlat"
+  datum: "WGS84" 
+ final_resolution: 0.054
+ projection_units: "degrees"
+ resample_radius: 20000
+ resample_n_neighbors: 64
+ resample_n_procs: 10
+ resample_epsilon: 1.6
+ use_bilinear: False
+ lon_bounds: [-120.5, -118.0]
+ lat_bounds: [47.5, 50.0]
+ 
+
+      
+output_files: [
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019220.0854.002.2024030202835.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019220.1036.002.2024030202901.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019220.2018.002.2024030202844.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019220.2200.002.2024030202837.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019221.0836.002.2024030211308.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019221.1012.002.2024030211308.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019221.2000.002.2024030211304.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019221.2142.002.2024030211305.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019222.0954.002.2024030214823.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019222.1942.002.2024030214805.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019222.2124.002.2024030214813.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019223.0936.002.2024030222348.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019223.1118.002.2024030222351.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019223.1924.002.2024030222345.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019223.2106.002.2024030222350.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019224.0918.002.2024030225507.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019224.1100.002.2024030225521.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VJ114IMG.A2019224.2042.002.2024030225507.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019218.0842.002.2024094221202.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019218.1024.002.2024094221204.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019218.2006.002.2024094221204.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019218.2148.002.2024094221206.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019219.1000.002.2024094224207.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019219.1006.002.2024094224206.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019219.1948.002.2024094224207.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019219.2130.002.2024094224205.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019220.0942.002.2024094230337.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019220.1124.002.2024094230335.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019220.1930.002.2024094230338.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019220.2112.002.2024094230336.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019221.0924.002.2024094235612.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019221.1106.002.2024094235611.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019221.1912.002.2024094235611.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019221.2054.002.2024094235612.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019222.0906.002.2024095002603.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019222.1048.002.2024095002606.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019222.2036.002.2024095002633.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019223.0848.002.2024095004850.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019223.1030.002.2024095004843.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019223.2012.002.2024095004842.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019223.2154.002.2024095004842.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019224.1012.002.2024095012041.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019224.1954.002.2024095012041.nc.tif",
+"/data/nlahaye/remoteSensing/VIIRS_FIRE/VNP14IMG.A2019224.2136.002.2024095012043.nc.tif",
+]
+

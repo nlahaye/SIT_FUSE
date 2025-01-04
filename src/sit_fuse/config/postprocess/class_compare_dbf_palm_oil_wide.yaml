@@ -1,0 +1,33 @@
+dbf: True
+
+dbf_percentage_thresh: 0.5001
+ 
+dbf_list: [
+[
+"/data/nlahaye/Palm_Oil_Final/Palm_Oil_DBN_Wide/Dataset_Ucayali_Palm_V2_OUTPUT_0.csv",
+"/data/nlahaye/Palm_Oil_Final/Palm_Oil_DBN_Wide/Dataset_Ucayali_Palm_V2_OUTPUT_1.csv",
+"/data/nlahaye/Palm_Oil_Final/Palm_Oil_DBN_Wide/Dataset_Ucayali_Palm_V2_OUTPUT_10.csv",
+"/data/nlahaye/Palm_Oil_Final/Palm_Oil_DBN_Wide/Dataset_Ucayali_Palm_V2_OUTPUT_2.csv",
+"/data/nlahaye/Palm_Oil_Final/Palm_Oil_DBN_Wide/Dataset_Ucayali_Palm_V2_OUTPUT_3.csv",
+"/data/nlahaye/Palm_Oil_Final/Palm_Oil_DBN_Wide/Dataset_Ucayali_Palm_V2_OUTPUT_4.csv",
+"/data/nlahaye/Palm_Oil_Final/Palm_Oil_DBN_Wide/Dataset_Ucayali_Palm_V2_OUTPUT_5.csv",
+"/data/nlahaye/Palm_Oil_Final/Palm_Oil_DBN_Wide/Dataset_Ucayali_Palm_V2_OUTPUT_6.csv",
+"/data/nlahaye/Palm_Oil_Final/Palm_Oil_DBN_Wide/Dataset_Ucayali_Palm_V2_OUTPUT_7.csv",
+"/data/nlahaye/Palm_Oil_Final/Palm_Oil_DBN_Wide/Dataset_Ucayali_Palm_V2_OUTPUT_8.csv",
+"/data/nlahaye/Palm_Oil_Final/Palm_Oil_DBN_Wide/Dataset_Ucayali_Palm_V2_OUTPUT_9.csv",
+],
+[
+"/data/nlahaye/Palm_Oil_Final/Palm_Oil_DBN_Wide/Palm_Oil_BG_OUTPUT_0.csv",
+"/data/nlahaye/Palm_Oil_Final/Palm_Oil_DBN_Wide/Palm_Oil_BG_OUTPUT_1.csv",
+"/data/nlahaye/Palm_Oil_Final/Palm_Oil_DBN_Wide/Palm_Oil_BG_OUTPUT_10.csv",
+"/data/nlahaye/Palm_Oil_Final/Palm_Oil_DBN_Wide/Palm_Oil_BG_OUTPUT_2.csv",
+"/data/nlahaye/Palm_Oil_Final/Palm_Oil_DBN_Wide/Palm_Oil_BG_OUTPUT_3.csv",
+"/data/nlahaye/Palm_Oil_Final/Palm_Oil_DBN_Wide/Palm_Oil_BG_OUTPUT_4.csv",
+"/data/nlahaye/Palm_Oil_Final/Palm_Oil_DBN_Wide/Palm_Oil_BG_OUTPUT_5.csv",
+"/data/nlahaye/Palm_Oil_Final/Palm_Oil_DBN_Wide/Palm_Oil_BG_OUTPUT_6.csv",
+"/data/nlahaye/Palm_Oil_Final/Palm_Oil_DBN_Wide/Palm_Oil_BG_OUTPUT_7.csv",
+"/data/nlahaye/Palm_Oil_Final/Palm_Oil_DBN_Wide/Palm_Oil_BG_OUTPUT_8.csv",
+"/data/nlahaye/Palm_Oil_Final/Palm_Oil_DBN_Wide/Palm_Oil_BG_OUTPUT_9.csv",
+]
+]
+

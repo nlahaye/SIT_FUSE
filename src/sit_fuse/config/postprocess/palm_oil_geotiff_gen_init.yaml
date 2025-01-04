@@ -1,0 +1,50 @@
+
+gen_from_geotiffs: False
+
+data:
+ clust_reader_type: "zarr_to_numpy"
+ reader_kwargs:
+   no_arg: "no_arg" 
+ subset_inds: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
+ create_separate: False
+  
+ gtiff_data: [
+"/data/nlahaye/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h0v1.tif.heir_clust1output_test.data_77995clusters.zarr.full_geo.tif",
+"/data/nlahaye/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h0v2.tif.heir_clust1output_test.data_77995clusters.zarr.full_geo.tif",
+"/data/nlahaye/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h1v0.tif.heir_clust1output_test.data_77995clusters.zarr.full_geo.tif",
+"/data/nlahaye/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h1v1.tif.heir_clust1output_test.data_77995clusters.zarr.full_geo.tif",
+"/data/nlahaye/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h1v2.tif.heir_clust1output_test.data_77995clusters.zarr.full_geo.tif",
+"/data/nlahaye/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h1v3.tif.heir_clust1output_test.data_77995clusters.zarr.full_geo.tif",
+"/data/nlahaye/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h2v0.tif.heir_clust1output_test.data_77995clusters.zarr.full_geo.tif",
+"/data/nlahaye/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h2v1.tif.heir_clust1output_test.data_77995clusters.zarr.full_geo.tif",
+"/data/nlahaye/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h2v2.tif.heir_clust1output_test.data_77995clusters.zarr.full_geo.tif",
+"/data/nlahaye/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h2v3.tif.heir_clust1output_test.data_77995clusters.zarr.full_geo.tif",
+"/data/nlahaye/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h4v2.tif.heir_clust1output_test.data_77995clusters.zarr.full_geo.tif",
+"/data/nlahaye/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h4v3.tif.heir_clust1output_test.data_77995clusters.zarr.full_geo.tif",
+]
+ cluster_fnames: [
+"/data/nlahaye/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h0v1.tif.heir_clust1output_test.data_77995clusters.zarr",
+"/data/nlahaye/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h0v2.tif.heir_clust1output_test.data_77995clusters.zarr",
+"/data/nlahaye/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h1v0.tif.heir_clust1output_test.data_77995clusters.zarr",
+"/data/nlahaye/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h1v1.tif.heir_clust1output_test.data_77995clusters.zarr",
+"/data/nlahaye/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h1v2.tif.heir_clust1output_test.data_77995clusters.zarr",
+"/data/nlahaye/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h1v3.tif.heir_clust1output_test.data_77995clusters.zarr",
+"/data/nlahaye/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h2v0.tif.heir_clust1output_test.data_77995clusters.zarr",
+"/data/nlahaye/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h2v1.tif.heir_clust1output_test.data_77995clusters.zarr",
+"/data/nlahaye/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h2v2.tif.heir_clust1output_test.data_77995clusters.zarr",
+"/data/nlahaye/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h2v3.tif.heir_clust1output_test.data_77995clusters.zarr",
+"/data/nlahaye/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h4v2.tif.heir_clust1output_test.data_77995clusters.zarr",
+"/data/nlahaye/DBN_PALM_OIL_AUTO_CLUST_NEW_PAD_FULL_3_LAYER_2/ucayali_stacks_2020_h4v3.tif.heir_clust1output_test.data_77995clusters.zarr",
+]
+ 
+context: 
+ apply_context: False
+ clusters: [6.296, 8.615, 8.639, 20.575, 35.182, 39.31, 39.311, 39.357, 39.38, 43.781, 56.632, 65.408, 65.412, 65.763, 71.008, 71.032]
+
+
+ name: "palm_oil_test" #i.e. smoke
+ compare_truth: false
+ generate_union: false
+ cluster_dependencies:
+
+
