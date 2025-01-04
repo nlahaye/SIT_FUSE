@@ -1,0 +1,197 @@
+
+data:
+ tile: False
+ val_percent: 0.1
+ num_loader_workers: 10
+ scale_data: True
+ pixel_padding: 1
+ number_channels: 16
+ fill_value: -9999.0
+ valid_min: -100.0
+ valid_max: 100000000
+ subset_count: 1
+ output_subset_count: 10
+ reader_type: "gtiff"
+ reader_kwargs:
+  no_arg: ''
+  #start_sample: 2800
+  #end_sample: 3800
+  #start_line: 100 
+  #end_line: 1200
+ chan_dim: 0
+ delete_chans: [] #[3,7,8,9,10,11,12,15]
+ transform_default:
+  chans: []
+  transform: []
+
+ 
+ files_train: [
+"/data/nlahaye/remoteSensing/GOES_TEMPO/OR_ABI-L1b-RadC-M6C01_G18_s20242081331177_e20242081333550_c20242081333595.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/OR_ABI-L1b-RadC-M6C01_G18_s20242081336177_e20242081338550_c20242081338594.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/OR_ABI-L1b-RadC-M6C01_G18_s20242081341177_e20242081343550_c20242081343593.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/OR_ABI-L1b-RadC-M6C01_G18_s20242081346177_e20242081348550_c20242081348586.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/OR_ABI-L1b-RadC-M6C01_G18_s20242081351177_e20242081353550_c20242081353593.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/OR_ABI-L1b-RadC-M6C01_G18_s20242081356177_e20242081358550_c20242081358589.tif",
+]
+
+
+ files_test: [
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242401401181_e20242401403554_c20242401403595.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242401406181_e20242401408554_c20242401408591.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242401411181_e20242401413554_c20242401413589.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242401416181_e20242401418554_c20242401418596.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242401421181_e20242401423554_c20242401423595.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242401426181_e20242401428554_c20242401428592.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242401431181_e20242401433554_c20242401433591.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242401436181_e20242401438554_c20242401438598.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242401441181_e20242401443554_c20242401444002.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242401446181_e20242401448554_c20242401449001.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242401451181_e20242401453554_c20242401453591.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242401456181_e20242401458554_c20242401458591.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242401601181_e20242401603554_c20242401603595.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242401606181_e20242401608554_c20242401608594.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242401611181_e20242401613554_c20242401613592.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242401616181_e20242401618555_c20242401619004.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242401621181_e20242401623554_c20242401623599.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242401626181_e20242401628554_c20242401629001.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242401631181_e20242401633554_c20242401634004.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242401636181_e20242401638554_c20242401638596.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242401641181_e20242401643554_c20242401643596.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242401646181_e20242401648554_c20242401648595.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242401651181_e20242401653554_c20242401654008.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242401656181_e20242401658554_c20242401658595.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242411401182_e20242411403555_c20242411404008.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242411406182_e20242411408556_c20242411408590.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242411411182_e20242411413556_c20242411413598.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242411416182_e20242411418555_c20242411419001.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242411421182_e20242411423555_c20242411423594.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242411426182_e20242411428556_c20242411428597.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242411431182_e20242411433555_c20242411434001.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242411436182_e20242411438556_c20242411439000.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242411441182_e20242411443556_c20242411443591.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242411446182_e20242411448555_c20242411449049.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242411451183_e20242411453556_c20242411453593.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242411456183_e20242411458556_c20242411458590.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242411601183_e20242411603556_c20242411604000.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242411606183_e20242411608556_c20242411609005.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242411611183_e20242411613556_c20242411614001.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242411616183_e20242411618556_c20242411618594.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242411621183_e20242411623556_c20242411623597.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242411626183_e20242411628556_c20242411628594.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242411631183_e20242411633556_c20242411633593.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242411636183_e20242411638556_c20242411638590.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242411641183_e20242411643556_c20242411643598.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242411646183_e20242411648556_c20242411649011.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242411651183_e20242411653556_c20242411654007.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242411656183_e20242411658556_c20242411659003.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242431401185_e20242431403558_c20242431404006.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242431406185_e20242431408558_c20242431409000.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242431411185_e20242431413558_c20242431413590.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242431416185_e20242431418558_c20242431418594.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242431421185_e20242431423558_c20242431424007.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242431426185_e20242431428558_c20242431428599.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242431431185_e20242431433558_c20242431434000.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242431436185_e20242431438558_c20242431439008.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242431441185_e20242431443558_c20242431444007.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242431446185_e20242431448558_c20242431449003.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242431451185_e20242431453558_c20242431454002.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242431456185_e20242431458558_c20242431459016.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242431601185_e20242431603558_c20242431604012.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242431606185_e20242431608559_c20242431609000.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242431611185_e20242431613558_c20242431614003.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242431616185_e20242431618559_c20242431618590.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242431621185_e20242431623558_c20242431624000.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242431626185_e20242431628558_c20242431628599.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242431631186_e20242431633559_c20242431633599.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242431636186_e20242431638559_c20242431638599.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242431641186_e20242431643558_c20242431644000.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242431646186_e20242431648559_c20242431648598.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242431651186_e20242431653559_c20242431653599.tif",
+"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242431656186_e20242431658559_c20242431658598.tif"
+]
+
+scaler:
+ name: "standard" 
+
+output:
+ out_dir: "/data/nlahaye/output/Learnergy/GOES_TEMPO/"
+ generate_train_output: False # True
+ generate_intermediate_output: True
+ 
+
+
+dbn:
+ conv: False
+ subset_training: 2000000
+ heir_tiers: 1
+ overwrite_model: False
+ tune_clust: False
+ tune_dbn: False
+ tune_scaler: False
+ model_type: ["gaussian_selu", "gaussian_selu"]
+ dbn_arch: [2000, 1000] #[250, 500, 2000] #, 2000]
+ gibbs_steps: [1,1] #, 7, 7] #, 10] #, 25]
+ temp: [1.0, 1.0] #, 1.0, 1.0] ##[0.9, 0.75, 0.5] #, 1.0] #, 0.5] #, 0.5] 
+ normalize_learnergy: [False, True]
+ batch_normalize: [False, False]
+
+encoder_type: "dbn"
+encoder:
+ tiled: False
+ tune_scaler: False
+ subset_training: 2000000
+ overwrite_model: False
+ training:
+  learning_rate: [0.00001, 0.00001]
+  momentum: [0.95,0.95]
+  weight_decay: [0.0001, 0.0001]
+  nesterov_accel: [True, True]
+  batch_size: 128
+  epochs: 30
+  accelerator: "gpu"
+  devices: 1
+  gradient_clip_val: 0.1
+  precision: "16-mixed"
+  stratify_data:
+   kmeans: False
+
+
+logger:
+ use_wandb: True
+ log_model: True
+ log_out_dir: "wandb_dbn"
+ project: "SIT-FUSE"
+
+cluster:
+ gauss_noise_stdev:  [0.01]
+ lambda: 1.0
+ num_classes: 800
+ training:
+  learning_rate: 0.0001
+  batch_size: 1000
+  epochs: 30
+  accelerator: "gpu"
+  devices: 1
+  gradient_clip_val: 0.1
+  precision: "16-mixed"
+  save_dir: "wandb_dbn"
+
+ heir:
+  tiers: 1
+  gauss_noise_stdev:  [0.01]
+  lambda: 1.0
+  num_classes: 100
+  training:
+   accelerator: "gpu"
+   devices: 1
+   gradient_clip_val: 0.1
+   precision: "16-mixed"
+   save_dir: "wandb_dbn"
+   batch_size: 100
+   min_samples: 100
+   learning_rate: 0.0001
+   batch_size: 1000
+   epochs: 30
+
+
+

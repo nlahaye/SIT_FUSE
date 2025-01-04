@@ -1,0 +1,134 @@
+
+low_res:
+ data:
+  valid_min: -100.0
+  valid_max: 99999999999
+  reader_type: "pace_oc"
+  reader_kwargs:
+   start_lon: -97.8985
+   end_lon: -80.5301
+   start_lat: 18.1599
+   end_lat: 30.4159
+   mask_oceans: True
+  geo_reader_type: "pace_oc_geo"
+  geo_reader_kwargs:
+   start_lon: -97.8985
+   end_lon: -80.5301
+   start_lat: 18.1599
+   end_lat: 30.4159
+   mask_oceans: True
+  filenames: [
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241011.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241012.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241013.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241014.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241015.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241016.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241018.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241019.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241020.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241021.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241022.L3m.DAY.",
+"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241023.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241024.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241025.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241026.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241027.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241028.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241029.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241030.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241031.L3m.DAY.",
+]
+
+
+  geo_filenames: [
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241011.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241012.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241013.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241014.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241015.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241016.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241018.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241019.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241020.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241021.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241022.L3m.DAY.",
+"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241023.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241024.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241025.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241026.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241027.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241028.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241029.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241030.L3m.DAY.",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241031.L3m.DAY.",
+]
+
+  chan_dim: 0
+  geo_coord_dim: 0
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+high_res:
+ data:
+  valid_min: 0.0
+  valid_max: 99999999999
+  reader_type: "zarr_to_numpy"
+  reader_kwargs:
+   no_arg: "no_arg"
+  geo_reader_type: "zarr_to_numpy"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: []
+  geo_filenames: []
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+fusion:
+ projection_id: 4326
+ description: "Generating S3 GeoTiffs"
+ area_id: "GERD Dam"
+ projection_proj4:
+  proj: "longlat"
+  datum: "WGS84"
+ final_resolution: 0.03600360036
+ projection_units: "degrees"
+ projection_units: "degrees"
+ resample_radius: 50000
+ resample_n_neighbors: 128
+ resample_n_procs: 10
+ resample_epsilon: 1.6 
+ use_bilinear: True
+
+
+
+
+output_files: [
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241011.L3m.DAY.RRS.V2_0.Rrs.4km.NRT.tif",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241012.L3m.DAY.RRS.V2_0.Rrs.4km.NRT.tif",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241013.L3m.DAY.RRS.V2_0.Rrs.4km.NRT.tif",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241014.L3m.DAY.RRS.V2_0.Rrs.4km.NRT.tif",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241015.L3m.DAY.RRS.V2_0.Rrs.4km.NRT.tif",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241016.L3m.DAY.RRS.V2_0.Rrs.4km.NRT.tif",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241018.L3m.DAY.RRS.V2_0.Rrs.4km.NRT.tif",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241019.L3m.DAY.RRS.V2_0.Rrs.4km.NRT.tif",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241020.L3m.DAY.RRS.V2_0.Rrs.4km.NRT.tif",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241021.L3m.DAY.RRS.V2_0.Rrs.4km.NRT.tif",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241022.L3m.DAY.RRS.V2_0.Rrs.4km.NRT.tif",
+"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241023.L3m.DAY.RRS.V2_0.Rrs.4km.NRT.tif",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241024.L3m.DAY.RRS.V2_0.Rrs.4km.NRT.tif",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241025.L3m.DAY.RRS.V2_0.Rrs.4km.NRT.tif",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241026.L3m.DAY.RRS.V2_0.Rrs.4km.NRT.tif",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241027.L3m.DAY.RRS.V2_0.Rrs.4km.NRT.tif",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241028.L3m.DAY.RRS.V2_0.Rrs.4km.NRT.tif",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241029.L3m.DAY.RRS.V2_0.Rrs.4km.NRT.tif",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241030.L3m.DAY.RRS.V2_0.Rrs.4km.NRT.tif",
+#"/data/nlahaye/remoteSensing/PACE/PACE_OCI.20241031.L3m.DAY.RRS.V2_0.Rrs.4km.NRT.tif",
+]
+
+
+ 

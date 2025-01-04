@@ -147,30 +147,30 @@ data:
 output:
  out_dir: "/data/nlahaye/output/Learnergy/VIIRS_FIREX_3/"
  generate_train_output: True
- generate_intermediate_output: True
+ generate_intermediate_output: False
 
 
 dbn:
  model_type: ["gaussian_selu", "gaussian_selu"]
- dbn_arch: [2000, 1000] #[250, 500, 2000] #, 2000]
- gibbs_steps: [1,1] #, 7, 7] #, 10] #, 25]
- temp: [1.0, 1.0] #, 1.0, 1.0] ##[0.9, 0.75, 0.5] #, 1.0] #, 0.5] #, 0.5] 
- normalize_learnergy: [False, True]
- batch_normalize: [False, False]
+ dbn_arch: [2000, 1500, 1000] #[250, 500, 2000] #, 2000]
+ gibbs_steps: [1,1,1] #, 7, 7] #, 10] #, 25]
+ temp: [1.0, 1.0,1.0] #, 1.0, 1.0] ##[0.9, 0.75, 0.5] #, 1.0] #, 0.5] #, 0.5] 
+ normalize_learnergy: [False, True,True]
+ batch_normalize: [False, False,False]
 
 encoder_type: "dbn"
 encoder:
  tiled: False
  tune_scaler: False
- subset_training: 2500000
+ subset_training: 5500000
  overwrite_model: False
  training:
-  learning_rate: [0.00001, 0.00001]
-  momentum: [0.95,0.95]
-  weight_decay: [0.0001, 0.0001]
-  nesterov_accel: [True, True]
+  learning_rate: [0.00001, 0.00001, 0.00001]
+  momentum: [0.95,0.95,0.95]
+  weight_decay: [0.0001, 0.0001,0.0001]
+  nesterov_accel: [True, True, True]
   batch_size: 128
-  epochs: 30
+  epochs: 70
   accelerator: "gpu"
   devices: 1
   gradient_clip_val: 0.1
@@ -193,7 +193,7 @@ cluster:
  training:
   learning_rate: 0.0001
   batch_size: 1000
-  epochs: 30
+  epochs: 70
   accelerator: "gpu"
   devices: 1
   gradient_clip_val: 0.1
@@ -215,7 +215,7 @@ cluster:
    min_samples: 1000
    learning_rate: 0.0001
    batch_size: 1000
-   epochs: 30
+   epochs: 70
 
 
 

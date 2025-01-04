@@ -1,0 +1,160 @@
+
+analysis:
+ tsne:
+  perplexity: 2200
+  niter: 5000
+  njobs: 50
+  exaggeration: 4
+  metric: "euclidean"
+  patience: 1000
+  lr: 200
+ embed_func: "clay_init"
+ build_knn_graphs: True
+
+data:
+ tile: True #True
+ tile_size: [16,16,25]
+ tile_step: [16,16,25]
+ val_percent: 0.1
+ num_loader_workers: 10
+ scale_data: True
+ pixel_padding: 1
+ number_channels: 25
+ fill_value: -9999.0
+ valid_min:  -900.0
+ valid_max: 100000000
+ subset_count: 1
+ output_subset_count: 1
+ reader_type: "gtiff"
+ reader_kwargs:
+  none: "none"
+  #start_line: 1000
+  #end_line: 1500
+  #start_sample: 300
+  #end_sample: 789
+ chan_dim: 0
+ delete_chans: [25,26,27,28,29,30,31,32,33,34,35,36,37]
+ transform_default:
+  chans: []
+  transform: []
+
+
+ final_labels: [
+"/data/nlahaye/output/Learnergy/DBN_eMAS_FULL_STRAT_MULTI_LAYER_PL_4/eMASL1B_19910_20_20190806_2052_2106_V03.tif.clust.data_78999clusters.zarr.full_geo.tif.fire_smoke.tif.Contours.tif"
+]
+
+ files_test: [
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_20_20190806_2052_2106_V03.tif"
+]
+
+
+ files_train: [
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19909_01_20190802_1929_1943_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19909_02_20190802_1944_1959_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19909_03_20190802_2004_2018_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19909_04_20190802_2019_2028_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19909_05_20190802_2029_2043_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19909_06_20190802_2056_2108_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19909_07_20190802_2116_2128_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19909_08_20190802_2129_2151_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19909_09_20190802_2152_2205_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19909_10_20190802_2210_2223_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_01_20190806_1633_1707_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_02_20190806_1708_1734_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_03_20190806_1734_1801_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_04_20190806_1801_1811_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_05_20190806_1811_1815_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_06_20190806_1815_1824_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_07_20190806_1826_1831_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_08_20190806_1834_1846_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_09_20190806_1849_1855_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_10_20190806_1858_1910_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_11_20190806_1912_1918_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_12_20190806_1920_1922_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_13_20190806_1923_1925_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_14_20190806_1926_1929_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_15_20190806_1931_1938_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_16_20190806_1941_1956_V03.tif",
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_17_20190806_2000_2010_V03.tif",
+]
+
+
+
+scaler:
+ name: "standard" 
+
+output:
+ out_dir: "/data/nlahaye/output/Learnergy/IJEPA_TEST_FULL/"
+ generate_train_output: True
+ generate_intermediate_output: True
+
+logger:
+ use_wandb: True
+ log_model: True
+ log_out_dir: "wandb_full"
+ project: "SIT-FUSE"
+
+
+ijepa:
+ patch_size: 1
+ embed_dim: 1024 
+ encoder_heads: 3
+ encoder_depth: 6
+ decoder_depth: 5
+ target_aspect_ratio: [0.75,1.5] #1,1
+ target_scale: [0.15, .2] #1,1
+ context_aspect_ratio: 1
+ context_scale: [0.85,1.0]
+ number_target_blocks: 6
+
+encoder_type: "ijepa"
+encoder:
+ subset_training: 10000 #2300000
+ overwrite_model: False
+ tune_scaler: False
+ training:
+  weight_decay: 0.05
+  momentum: 0.996
+  momentum_start_end: [0.996, 1.0] 
+  learning_rate: 0.0001
+  batch_size: 100
+  epochs: 5
+  accelerator: "gpu"
+  devices: 1
+  gradient_clip_val: 0.1
+  precision: "16-mixed"
+  save_dir: "wandb_ijepa_full"
+  stratify_data:
+   kmeans: True
+
+cluster:
+ gauss_noise_stdev:  [0.01]
+ lambda: 1.0
+ num_classes: 800
+ training:
+  finetune_encoder: False
+  learning_rate: 0.00001
+  batch_size: 10
+  epochs: 5
+  accelerator: "gpu"
+  devices: 1
+  gradient_clip_val: 0.1
+  precision: "16-mixed"
+  save_dir: "wandb_ijepa_full"
+
+ heir:
+  tiers: 1
+  gauss_noise_stdev:  [0.01]
+  lambda: 1.0
+  num_classes: 100
+  training:
+   accelerator: "gpu"
+   devices: 1
+   gradient_clip_val: 0.1
+   precision: "32"
+   save_dir: "wandb_ijepa_full"
+   batch_size: 10
+   min_samples: 1000
+   epochs: 10
+   lambda: 1.0
+ 

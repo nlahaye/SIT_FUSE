@@ -11,21 +11,55 @@ low_res:
   geo_reader_kwargs:
    no_arg: "no_arg"
   filenames: [
-#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T163759Z_S008G08.nc",
-#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T164436Z_S008G09.nc",
-#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T163122Z_S008G07.nc"
+#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_NO2_L3_V03_20240726T155132Z_S008.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240725T163105Z_S008G07.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240725T163742Z_S008G08.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240725T164419Z_S008G09.nc",
 "/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T143122Z_S006G07.nc",
 "/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T143759Z_S006G08.nc",
 "/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T144436Z_S006G09.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T163122Z_S008G07.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T163759Z_S008G08.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T164436Z_S008G09.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T143137Z_S006G07.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T143814Z_S006G08.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T144451Z_S006G09.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T163154Z_S008G07.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T163831Z_S008G08.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T164508Z_S008G09.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240730T163226Z_S008G07.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240730T163903Z_S008G08.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240730T164540Z_S008G09.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240731T144556Z_S006G09.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240731T163242Z_S008G07.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240731T163919Z_S008G08.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240731T164556Z_S008G09.nc",
 ]
 
   geo_filenames: [
-#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T163759Z_S008G08.nc",
-#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T164436Z_S008G09.nc",
-#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T163122Z_S008G07.nc"
+#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_NO2_L3_V03_20240726T155132Z_S008.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240725T163105Z_S008G07.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240725T163742Z_S008G08.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240725T164419Z_S008G09.nc",
 "/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T143122Z_S006G07.nc",
 "/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T143759Z_S006G08.nc",
 "/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T144436Z_S006G09.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T163122Z_S008G07.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T163759Z_S008G08.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T164436Z_S008G09.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T143137Z_S006G07.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T143814Z_S006G08.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T144451Z_S006G09.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T163154Z_S008G07.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T163831Z_S008G08.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T164508Z_S008G09.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240730T163226Z_S008G07.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240730T163903Z_S008G08.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240730T164540Z_S008G09.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240731T144556Z_S006G09.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240731T163242Z_S008G07.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240731T163919Z_S008G08.nc",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240731T164556Z_S008G09.nc",
 ]
 
   chan_dim: 2
@@ -73,12 +107,28 @@ fusion:
 
        
 output_files: [
-#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T163759Z_S008G08.tif",
-#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T164436Z_S008G09.tif",
-#"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T163122Z_S008G07.tif"
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240725T163105Z_S008G07.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240725T163742Z_S008G08.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240725T164419Z_S008G09.tif",
 "/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T143122Z_S006G07.tif",
 "/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T143759Z_S006G08.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T144436Z_S006G09.tif", 
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T144436Z_S006G09.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T163122Z_S008G07.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T163759Z_S008G08.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T164436Z_S008G09.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T143137Z_S006G07.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T143814Z_S006G08.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T144451Z_S006G09.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T163154Z_S008G07.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T163831Z_S008G08.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T164508Z_S008G09.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240730T163226Z_S008G07.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240730T163903Z_S008G08.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240730T164540Z_S008G09.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240731T144556Z_S006G09.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240731T163242Z_S008G07.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240731T163919Z_S008G08.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240731T164556Z_S008G09.tif",
 ]
 
 

@@ -10,7 +10,7 @@ data:
  pixel_padding: 1
  number_channels: 23
  fill_value: -9999.0
- valid_min: 0.0
+ valid_min: -1000.0
  valid_max: 1000000
  reader_type: "gtiff_multifile"
  reader_kwargs:

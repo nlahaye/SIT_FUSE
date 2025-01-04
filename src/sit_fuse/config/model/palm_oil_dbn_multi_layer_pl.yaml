@@ -8,8 +8,8 @@ data:
  scale_data: True
  pixel_padding: 1
  number_channels: 8
- fill_value: 0.0
- valid_min: -99999.0
+ fill_value: -99999.0
+ valid_min: -900.0
  valid_max: 100000000
  reader_type: "gtiff"
  reader_kwargs:
@@ -27,6 +27,7 @@ data:
 
 
  files_test: [
+"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h1v1.tif",
 "/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h0v1.tif",
 "/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h0v2.tif",
 "/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h1v0.tif",
@@ -45,13 +46,13 @@ scaler:
  name: "standard" 
 
 output:
- out_dir: "/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_PL_RESOURCE_TEST/"
- generate_intermediate_output: False
-
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_PL_RESOURCE_TEST_2/"
+ generate_intermediate_output: True
+ generate_train_output: True
 
 dbn:
  model_type: ["gaussian_selu", "gaussian_selu", "gaussian_selu"]
- dbn_arch: [2000, 1000, 500] #[250, 500, 2000] #, 2000]
+ dbn_arch: [2000, 1500, 1000] #[250, 500, 2000] #, 2000]
  gibbs_steps: [1,1,1] #, 7, 7] #, 10] #, 25]
  temp: [1.0, 1.0,1.0] #, 1.0, 1.0] ##[0.9, 0.75, 0.5] #, 1.0] #, 0.5] #, 0.5] 
  normalize_learnergy: [False, True, True]
@@ -61,7 +62,7 @@ encoder_type: "dbn"
 encoder:
  tiled: False
  tune_scaler: False
- subset_training: 2000000
+ subset_training: -1 #10000000
  overwrite_model: False
  training:
   learning_rate: [0.00001, 0.00001, 0.00001]
@@ -69,8 +70,8 @@ encoder:
   weight_decay: [0.0001, 0.0001, 0.0001]
   nesterov_accel: [True, True, True]
   batch_size: 128
-  epochs: 30
-  accelerator: "cpu"
+  epochs: 5
+  accelerator: "gpu"
   devices: 1
   gradient_clip_val: 0.1
   precision: "16-mixed"
@@ -92,8 +93,8 @@ cluster:
  training:
   learning_rate: 0.0001
   batch_size: 1000
-  epochs: 30
-  accelerator: "cpu"
+  epochs: 5
+  accelerator: "gpu"
   devices: 1
   gradient_clip_val: 0.1
   precision: "16-mixed"
@@ -105,7 +106,7 @@ cluster:
   lambda: 1.0
   num_classes: 100
   training:
-   accelerator: "cpu"
+   accelerator: "gpu"
    devices: 1
    gradient_clip_val: 0.1
    precision: "16-mixed"
@@ -114,7 +115,7 @@ cluster:
    min_samples: 1000
    learning_rate: 0.0001
    batch_size: 1000
-   epochs: 30
+   epochs: 5
 
 
 

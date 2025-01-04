@@ -47,9 +47,6 @@ data:
 "/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_20_20190806_2052_2106_V03.tif"
 ]
 
-# indices: [
-#"/data/nlahaye/output/Learnergy/PCA_eMAS_FULL_STRAT_MULTI_LAYER_PL_5/eMASL1B_19910_20_20190806_2052_2106_V03.pca.indices.zarr"
-#]
 
 scaler:
  name: "standard"

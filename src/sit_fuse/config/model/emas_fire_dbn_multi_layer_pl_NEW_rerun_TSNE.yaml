@@ -29,7 +29,6 @@ data:
   chans: []
   transform: []
 
-
  files_train: [
 '/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_10_20190806_1858_1910_V03.tif',
 '/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19911_10_20190807_2004_2016_V03.tif',
@@ -47,9 +46,6 @@ data:
 "/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_20_20190806_2052_2106_V03.tif"
 ]
 
- indices: [
-"/data/nlahaye/output/Learnergy/PCA_eMAS_FULL_STRAT_MULTI_LAYER_PL_5/eMASL1B_19910_20_20190806_2052_2106_V03.pca.indices.zarr"
-]
 
 scaler:
  name: "standard" 
