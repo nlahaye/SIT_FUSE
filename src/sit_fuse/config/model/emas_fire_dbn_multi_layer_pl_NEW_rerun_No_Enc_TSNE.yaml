@@ -9,6 +9,7 @@ analysis:
   lr: 200
  embed_func: "no_encoding"
  build_knn_graphs: True
+ run_projection: True
 
 data:
  tile: False
@@ -40,6 +41,10 @@ data:
 "/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_20_20190806_2052_2106_V03.tif"
 ]
 
+ indices: [
+ "/data/nlahaye/output/Learnergy/DBN_eMAS_FULL_STRAT_MULTI_LAYER_PL_4/eMASL1B_19910_20_20190806_2052_2106_V03.dbn_2_layer_2000.indices.zarr"
+]
+ 
  final_labels: [
 "/data/nlahaye/output/Learnergy/DBN_eMAS_FULL_STRAT_MULTI_LAYER_PL_4/eMASL1B_19910_20_20190806_2052_2106_V03.tif.clust.data_78999clusters.zarr.full_geo.tif.fire_smoke.tif.Contours.tif"
 ]

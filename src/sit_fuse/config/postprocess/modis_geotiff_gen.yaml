@@ -9,43 +9,32 @@ data:
  create_separate: False
 
  cluster_fnames: [
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/aqua_modis_vis01_20190806_205000_wgs84_fit.tif.clust.data_78699clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/aqua_modis_vis01_20190807_195500_wgs84_fit.tif.clust.data_76497clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/aqua_modis_vis01_20190808_203500_wgs84_fit.tif.clust.data_78699clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/aqua_modis_vis01_20190809_212000_wgs84_fit.tif.clust.data_78693clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/aqua_modis_vis01_20190810_202500_wgs84_fit.tif.clust.data_78693clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/aqua_modis_vis01_20190812_201000_wgs84_fit.tif.clust.data_76478clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/aqua_modis_vis01_20190812_215000_wgs84_fit.tif.clust.data_76461clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190807_181000_wgs84_fit.tif.clust.data_76499clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190807_194500_wgs84_fit.tif.clust.data_78668clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190808_185000_wgs84_fit.tif.clust.data_78699clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190809_175500_wgs84_fit.tif.clust.data_63795clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190809_193500_wgs84_fit.tif.clust.data_78693clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190810_184000_wgs84_fit.tif.clust.data_78698clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190811_192000_wgs84_fit.tif.clust.data_78655clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190811_192500_wgs84_fit.tif.clust.data_78668clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190812_182500_wgs84_fit.tif.clust.data_76499clusters.zarr",
-"/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190812_200500_wgs84_fit.tif.clust.data_63795clusters.zarr",
-]
+ "/data/nlahaye/output/Learnergy/MODIS_FIREX/aqua_modis_vis01_20190806_205000_wgs84_fit.tif.clust.data_76999clusters.zarr",
+ "/data/nlahaye/output/Learnergy/MODIS_FIREX/aqua_modis_vis01_20190807_195500_wgs84_fit.tif.clust.data_77899clusters.zarr",
+ "/data/nlahaye/output/Learnergy/MODIS_FIREX/aqua_modis_vis01_20190808_203500_wgs84_fit.tif.clust.data_76999clusters.zarr",
+ "/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190807_181000_wgs84_fit.tif.clust.data_77899clusters.zarr",
+ "/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190807_194500_wgs84_fit.tif.clust.data_76998clusters.zarr",
+ "/data/nlahaye/output/Learnergy/MODIS_FIREX/terra_modis_vis01_20190808_185000_wgs84_fit.tif.clust.data_76999clusters.zarr",
+ ]
 
  gtiff_data: [
 "/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/MODIS/inputs/cropped/aqua_modis_vis01_20190806_205000_wgs84_fit.tif",
 "/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/MODIS/inputs/cropped/aqua_modis_vis01_20190807_195500_wgs84_fit.tif",
 "/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/MODIS/inputs/cropped/aqua_modis_vis01_20190808_203500_wgs84_fit.tif",
-"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/MODIS/inputs/cropped/aqua_modis_vis01_20190809_212000_wgs84_fit.tif",
-"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/MODIS/inputs/cropped/aqua_modis_vis01_20190810_202500_wgs84_fit.tif",
-"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/MODIS/inputs/cropped/aqua_modis_vis01_20190812_201000_wgs84_fit.tif",
-"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/MODIS/inputs/cropped/aqua_modis_vis01_20190812_215000_wgs84_fit.tif",
+#"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/MODIS/inputs/cropped/aqua_modis_vis01_20190809_212000_wgs84_fit.tif",
+#"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/MODIS/inputs/cropped/aqua_modis_vis01_20190810_202500_wgs84_fit.tif",
+#"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/MODIS/inputs/cropped/aqua_modis_vis01_20190812_201000_wgs84_fit.tif",
+#"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/MODIS/inputs/cropped/aqua_modis_vis01_20190812_215000_wgs84_fit.tif",
 "/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/MODIS/inputs/cropped/terra_modis_vis01_20190807_181000_wgs84_fit.tif",
 "/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/MODIS/inputs/cropped/terra_modis_vis01_20190807_194500_wgs84_fit.tif",
 "/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/MODIS/inputs/cropped/terra_modis_vis01_20190808_185000_wgs84_fit.tif",
-"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/MODIS/inputs/cropped/terra_modis_vis01_20190809_175500_wgs84_fit.tif",
-"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/MODIS/inputs/cropped/terra_modis_vis01_20190809_193500_wgs84_fit.tif",
-"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/MODIS/inputs/cropped/terra_modis_vis01_20190810_184000_wgs84_fit.tif",
-"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/MODIS/inputs/cropped/terra_modis_vis01_20190811_192000_wgs84_fit.tif",
-"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/MODIS/inputs/cropped/terra_modis_vis01_20190811_192500_wgs84_fit.tif",
-"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/MODIS/inputs/cropped/terra_modis_vis01_20190812_182500_wgs84_fit.tif",
-"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/MODIS/inputs/cropped/terra_modis_vis01_20190812_200500_wgs84_fit.tif"
+#"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/MODIS/inputs/cropped/terra_modis_vis01_20190809_175500_wgs84_fit.tif",
+#"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/MODIS/inputs/cropped/terra_modis_vis01_20190809_193500_wgs84_fit.tif",
+#"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/MODIS/inputs/cropped/terra_modis_vis01_20190810_184000_wgs84_fit.tif",
+#"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/MODIS/inputs/cropped/terra_modis_vis01_20190811_192000_wgs84_fit.tif",
+#"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/MODIS/inputs/cropped/terra_modis_vis01_20190811_192500_wgs84_fit.tif",
+#"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/MODIS/inputs/cropped/terra_modis_vis01_20190812_182500_wgs84_fit.tif",
+#"/data/nlahaye/remoteSensing/CSDSA/MISR_MODIS_VIIRS_WF/MODIS/inputs/cropped/terra_modis_vis01_20190812_200500_wgs84_fit.tif"
 ]
 
 context:

@@ -175,8 +175,6 @@ class SFDatasetConv(SFDataset):
 			last_count = len(self.data)
 			sub_data_total = []
 			
-			#TODO - 0 imputation - fix with mean later
-			data_local[r][np.where(data_local[r] <= -999999)] = 0.0	
 
 			pixel_padding = (window_size[dim1] - 1) //2
 
@@ -216,6 +214,10 @@ class SFDatasetConv(SFDataset):
 					np.delete(tmp, delete_inds, axis=0)	
 					np.delete(tgts2, delete_inds, axis=0) 
 
+
+                                #TODO - 0 imputation - fix with mean later
+                                #data_local[r][np.where(data_local[r] <= -999999)] = 0.0
+ 
 				if isinstance(self.data, list):
 					self.data = tmp
 					self.targets = tgts2

@@ -252,7 +252,7 @@ cluster:
   finetune_encoder: False
   learning_rate: 0.0001
   batch_size: 2
-  epochs: 10 
+  epochs: 100 
   accelerator: "gpu"
   devices: 1
   gradient_clip_val: 0.01
@@ -272,6 +272,6 @@ cluster:
    save_dir: "wandb_ijepa_full"
    batch_size: 4
    min_samples: 1000
-   epochs: 5
+   epochs: 100
    lambda: 1.0
  

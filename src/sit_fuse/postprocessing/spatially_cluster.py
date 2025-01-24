@@ -7,6 +7,10 @@ applicable U.S. export laws and regulations. User has the responsibility to obta
 required before exporting such information to foreign countries or providing access to foreign persons.
 """
 
+from joblib import Parallel, delayed
+from tqdm_joblib import tqdm_joblib
+import torch
+from sw_approx import sw_approx
 import zarr
 import argparse
 import numpy as np
@@ -16,6 +20,7 @@ import cv2
 import os
 import csv
 
+from tqdm import tqdm
 from tabulate import tabulate
 from pprint import pprint
 
@@ -28,7 +33,50 @@ import matplotlib.pyplot as plt
 import ot
 import geopy.distance
 
-from sklearn.cluster import KMeans
+from sklearn.cluster import MiniBatchKMeans
+
+
+def load_image(fname):
+    dat = gdal.Open(fname)
+    imgData = dat.ReadAsArray()
+    arr = imgData
+    arr_tensor = torch.from_numpy(arr)
+
+    return arr_tensor
+
+def calc_swd(fname1, fname2):
+    arr_tensor = load_image(fname1)
+    arr_tensor2 = load_image(fname2)
+
+    d2 = max(arr_tensor2.shape[1], arr_tensor.shape[1])
+    d1 = max(arr_tensor2.shape[0], arr_tensor.shape[0])
+    tmp2 = torch.zeros((d1,d2))
+    tmp2[:arr_tensor2.shape[0],:arr_tensor2.shape[1]] =arr_tensor2
+    tmp =torch.zeros((d1,d2))
+    tmp[:arr_tensor.shape[0],:arr_tensor.shape[1]] = arr_tensor
+
+    swd_value = sw_approx(tmp, tmp2)
+    return swd_value        
+
+
+def compare_parallel(data_fnames, njobs=70): 
+
+    results = None
+    with tqdm_joblib(tqdm(desc="My calculation", total=(len(data_fnames)* (len(data_fnames)-1)))) as progress_bar:
+        results = Parallel(n_jobs=njobs)(
+            delayed(calc_swd)(data_fnames[i], data_fnames[j])
+            for i in range(len(data_fnames))
+            for j in range(i + 1, len(data_fnames))
+        )
+ 
+    compare = torch.zeros((len(data_fnames),len(data_fnames)))
+    index = 0
+    for i in range(len(data_fnames)):
+        for j in range(i + 1, len(data_fnames)):
+            compare[i,j] = results[index]
+            index += 1
+
+    return compare
 
 def main(yml_fpath):
 
@@ -43,38 +91,14 @@ def main(yml_fpath):
 
 
     conts = []
-    comparison = np.zeros((len(data_fnames),len(data_fnames)))
-    compare = np.zeros((len(data_fnames),len(data_fnames)))
-    distances = np.zeros((len(data_fnames),len(data_fnames)))
 
-    new_cs = osr.SpatialReference()
-    new_cs.ImportFromEPSG(4326)
+    compare_parallel(data_fnames)
 
-    for i in range(len(data_fnames)):
-        dat = gdal.Open(data_fnames[i])
-        imgData = dat.ReadAsArray()
-        arr = imgData
-        
-        for j in range(len(data_fnames)):
-            dat2 = gdal.Open(data_fnames[j])
-            imgData2 = dat2.ReadAsArray()
-
-            arr2 = imgData2
-            d2 = max(arr2.shape[1], arr.shape[1])
-            d1 = max(arr2.shape[0], arr.shape[0])
-            tmp2 = np.zeros((d1,d2))
-            tmp2[:arr2.shape[0],:arr2.shape[1]] = arr2
-            tmp = np.zeros((d1,d2))
-            tmp[:arr.shape[0],:arr.shape[1]] = arr
-
-            compare[i,j] = ot.sliced_wasserstein_distance(tmp, tmp2, n_projections=1000, seed=1)
-
-
-
+    compare = compare.detach().cpu().numpy()
     print("DISTRIBUTION COMPARISIONS")
     print(tabulate(compare))
 
-    kmeans = KMeans(n_clusters=5)
+    kmeans = MiniBatchKMeans(n_clusters=50)
     kmeans.fit(compare)
     labels = kmeans.labels_
 

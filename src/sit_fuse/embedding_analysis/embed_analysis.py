@@ -22,7 +22,7 @@ from scipy.spatial.distance import pdist, squareform
 from graspologic.embed import OmnibusEmbed, ClassicalMDS, AdjacencySpectralEmbed
 from graspologic.simulations import rdpg
 
-
+import copy
 import gc
 
 from resource import *
@@ -74,32 +74,45 @@ from sit_fuse.inference.generate_output import run_inference, get_model
 
 sys.setrecursionlimit(4500)
 
+FINAL_DCT = {
+        "proj_y": [],
+        "proj_x": [],
+        "bb_x": [],
+        "bb_y": [],
+        "bb_width": [],
+        "bb_height": [],
+        "heir_label": [],
+        "final_label": [],
+        "no_heir_label": []
+    }
+
 
 def run_tsne(embed, labels, coord, final_labels, out_fname, pca_embed = False, indices = None, recon_arr = None, recon_lab = None):
 
  
     if recon_lab is None or  recon_arr is None:
-   
         print(embed.shape, labels.shape, final_labels.shape, np.unique(labels), len(np.unique(labels)))
-        original_shape = (max(coord[:,0]), max(coord[:,1]))
+        original_shape = (max(coord[:,1])+1, max(coord[:,2])+1)
         for i in range(coord.shape[1]):
             print(max(coord[:,i]), coord.shape, i)
         if embed.ndim  == 4:
             embed = np.transpose(embed, axes=(0,2,3,1))
             reconstructed_arr = np.zeros((original_shape[0], original_shape[1], embed.shape[3]))
-            reconstructed_labels = np.zeros((original_shape[0], original_shape[1]))
+            reconstructed_labels = np.zeros((original_shape[0], original_shape[1])) - 1
         else:
             reconstructed_arr = np.zeros((original_shape[0], original_shape[1], embed.shape[1]))
-            reconstructed_labels = np.zeros((original_shape[0], original_shape[1]))
+            reconstructed_labels = np.zeros((original_shape[0], original_shape[1])) - 1
 
+        print(original_shape, coord.shape, reconstructed_arr.shape, reconstructed_labels.shape)
+        print(embed.shape, labels.shape)
 
         if embed.ndim  == 4:
             for i in range(embed.shape[0]):
                 print(coord[i], i, embed.shape, reconstructed_arr.shape) 
-                if coord[i,1]+embed.shape[2] > reconstructed_arr.shape[1] or coord[i,0]+embed.shape[1] > reconstructed_arr.shape[0]:
+                if coord[i,2]+embed.shape[2] > reconstructed_arr.shape[1] or coord[i,1]+embed.shape[1] > reconstructed_arr.shape[0]:
                     continue
-                reconstructed_arr[coord[i,0]:coord[i,0]+embed.shape[1], coord[i,1]:coord[i,1]+embed.shape[2], :] = embed[i,:,:,:]
-                reconstructed_labels[coord[i,0]:coord[i,0]+labels.shape[1], coord[i,1]:coord[i,1]+labels.shape[2]] = labels[i,:,:]
+                reconstructed_arr[coord[i,1]:coord[i,1]+embed.shape[1], coord[i,2]:coord[i,2]+embed.shape[2], :] = embed[i,:,:,:]
+                reconstructed_labels[coord[i,1]:coord[i,1]+labels.shape[1], coord[i,2]:coord[i,2]+labels.shape[2]] = labels[i,:,:]
                 #reconstructed_final_labels[coord[i,0], coord[i,1]] = final_labels[i]
         else:
             for i in range(embed.shape[0]):
@@ -114,29 +127,35 @@ def run_tsne(embed, labels, coord, final_labels, out_fname, pca_embed = False, i
         reconstructed_arr = recon_arr
         reconstructed_labels = recon_lab
 
+    recon_coord = np.indices(reconstructed_arr.shape[0:2])
+    recon_coord = np.moveaxis(recon_coord, 0,2)
+    print(recon_coord.shape, reconstructed_arr.shape, recon_coord.max(), recon_coord[:,0].max(), recon_coord[:,1].max())
+    recon_coord = recon_coord.reshape(-1,2)
+    print(recon_coord.shape, reconstructed_arr.shape, recon_coord.max(), recon_coord[:,0].max(), recon_coord[:,1].max())
 
+    final_labels = final_labels[:reconstructed_labels.shape[0],:reconstructed_labels.shape[1]]
     final_labels = final_labels.flatten()
     print("INTERMEDIATE RECON SHAPE", reconstructed_arr.shape, reconstructed_labels.reshape, np.unique(final_labels))
     embed = reconstructed_arr.reshape(-1, reconstructed_arr.shape[-1])
-    zarr.save(out_fname + ".embeddings.zarr", ind_tmp)
+    #zarr.save(out_fname + ".embeddings.zarr", embed)
     labels = reconstructed_labels.reshape(-1, 1)
     #else:
     #    embed = embed.reshape(-1, embed.shape[-1])
     #final_labels = final_labels.flatten()
     labels = labels.flatten()
     #final_labels = reconstructed_final_labels.flatten()
-    print("FLATTENED RECON SHAPE", embed.shape, final_labels.shape, labels.shape)
+    print("FLATTENED RECON SHAPE", embed.shape, final_labels.shape, labels.shape, indices)
     if indices is not None:
         ind_tmp = zarr.load(indices)
     else:
-        sub_ind_1 = np.where(final_labels == 0)[0]
+        sub_ind_1 = np.where((final_labels == 0) & (labels > 0.0))[0]
         sub_ind_2 = np.where(final_labels == 1)[0]
         sub_ind_3 = np.where(final_labels == 2)[0]
         sub_ind_4 = np.where(final_labels == 3)[0]
         ind_final = np.concatenate((sub_ind_4, sub_ind_2))
 
-        sub_sub_ind__3 = np.random.choice(sub_ind_3.shape[0], size=min(int(sub_ind_3.shape[0]), 3000), replace=False)
-        sub_sub_ind__1 = np.random.choice(sub_ind_1.shape[0], size=min(int(sub_ind_1.shape[0]), 5000), replace=False)
+        sub_sub_ind__3 = np.random.choice(sub_ind_3.shape[0], size=min(int(sub_ind_3.shape[0]), 10000), replace=False)
+        sub_sub_ind__1 = np.random.choice(sub_ind_1.shape[0], size=min(int(sub_ind_1.shape[0]), 10000), replace=False)
         ind_tmp = np.concatenate((ind_final, sub_ind_3[sub_sub_ind__3], sub_ind_1[sub_sub_ind__1]))
  
         #indices = np.random.choice(embed.shape[0], size=min(int(embed.shape[0]*0.05), 100000), replace=False)
@@ -145,11 +164,15 @@ def run_tsne(embed, labels, coord, final_labels, out_fname, pca_embed = False, i
         print(np.unique(final_labels))
         zarr.save(out_fname + ".indices.zarr", ind_tmp)
         print(ind_tmp.shape, out_fname + ".indices.zarr")
+    print(ind_tmp)
     indices = np.unique(ind_tmp)
-    print(indices.shape, "HERE INDICES", np.unique(labels[indices]), len(np.unique(labels[indices])))
+    print(indices.shape, "HERE INDICES", np.unique(labels[indices]), len(np.unique(labels[indices])), embed.shape, recon_coord.shape)
     test_data = embed[indices, :]
     clust_data = labels[indices]
     clust_data_2 = final_labels[indices]
+    print("RECON COORD TEST", recon_coord[:,0].max(), recon_coord[:,1].max())
+    recon_coord = recon_coord[indices, :]
+    print("RECON COORD TEST2", recon_coord[:,0].max(), recon_coord[:,1].max())
     print(test_data.shape, clust_data.shape, clust_data_2.shape, test_data.min(), test_data.max(), len(np.where(np.isnan(embed))[0]), len(np.where(~np.isnan(embed))[0]))
 
     
@@ -186,9 +209,27 @@ def run_tsne(embed, labels, coord, final_labels, out_fname, pca_embed = False, i
     final = np.zeros((fnl+1, fnl2+1), dtype=np.float32) - 1.0
     final2 = np.zeros((fnl+1, fnl2+1), dtype=np.float32) - 1.0
     print(out_fname + ".TSNE_Clust.tif", np.unique(final), np.unique(final2))
-    for i in range(indices.shape[0]):
+
+
+    final_dct = copy.deepcopy(FINAL_DCT)
+
+
+    for i in range(recon_coord.shape[0]):
+
+        final_dct["proj_y"].append(tsne_data[i,0])
+        final_dct["proj_x"].append(tsne_data[i,1])
+        final_dct["bb_x"].append(recon_coord[i,1])
+        final_dct["bb_y"].append(recon_coord[i,0])
+        final_dct["bb_width"].append(3) #TODO generalize
+        final_dct["bb_height"].append(3)
+        final_dct["heir_label"].append(clust_data[i] / 100.0)
+        final_dct["final_label"].append(clust_data_2[i])
+        final_dct["no_heir_label"].append(int(clust_data[i] / 100.0))
+
         final[tsne_data[i,0], tsne_data[i,1]] = clust_data[i] / 100.0
         final2[tsne_data[i,0], tsne_data[i,1]] = clust_data_2[i]
+
+    np.save(out_fname + ".viz_dict.npy", final_dct)
 
     out_ds = gdal.GetDriverByName("GTiff").Create(out_fname + ".TSNE_Clust.tif", final.shape[1], final.shape[0], 1, gdal.GDT_Float32)
     out_ds.GetRasterBand(1).WriteArray(final)
@@ -322,8 +363,8 @@ def main(yml_fpath):
             if not os.path.exists(output_fle + ".embeddings.zarr") or not os.path.exists(output_fle + ".embedding_labels.zarr"):
                 output, embed = run_inference(data, model, True, out_dir, output_fle + ".clust.data", tiled = tiled, return_embed =  True)
             else:
-                recon_arr = zarr.save(out_fname + ".embeddings.zarr", reconstructed_arr)
-                recon_lab = zarr.save(out_fname + ".embedding_labels.zarr", reconstructed_labels)
+                recon_arr = zarr.load(output_fle + ".embeddings.zarr")
+                recon_lab = zarr.load(output_fle + ".embedding_labels.zarr")
    
             is_pca = bool("pca" in embed_func )
             if run_projection:
