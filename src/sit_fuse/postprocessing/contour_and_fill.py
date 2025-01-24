@@ -78,7 +78,7 @@ def main(yml_fpath):
             write_geotiff(dat, imgData3, data_fnames[i] + ".ImFill_Init.tif")
         else:
             write_zarr(data_fnames[i] + ".ImFill_Init", imgData3.astype(np.int32))
-        cv2.waitKey(0)  
+        #cv2.waitKey(0)  
 
         # Invert floodfilled image
         im_floodfill_inv = cv2.bitwise_not(imgData3)
@@ -95,14 +95,14 @@ def main(yml_fpath):
             write_geotiff(dat, im_out, data_fnames[i] + ".ImFill_Final.tif")
         else:
             write_zarr(data_fnames[i] + ".ImFill_Final.zarr", im_out.astype(np.int32))
-        cv2.waitKey(0) 
+        #cv2.waitKey(0) 
  
         #ret, thresh = cv2.threshold(im_out.astype(np.int32), 0, 255, cv2.THRESH_BINARY) 
         im_out = im_out.astype(np.uint8) * 255
 
         # Find Canny edges
         edged = cv2.Canny(im_out, 30, 200)
-        cv2.waitKey(0)
+        #cv2.waitKey(0)
     
         # Finding Contours
         # Use a copy of the image e.g. edged.copy()

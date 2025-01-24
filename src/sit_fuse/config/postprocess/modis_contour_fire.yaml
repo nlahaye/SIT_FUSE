@@ -1,0 +1,20 @@
+
+
+data:
+ filename: [
+"/data/nlahaye/SIT_FUSE_Geo/MODIS_2025/terra_modis_vis01_20190807_194500_wgs84_fit.tif.clust.data_76998clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MODIS_2025/terra_modis_vis01_20190807_181000_wgs84_fit.tif.clust.data_77899clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/MODIS_2025/aqua_modis_vis01_20190807_195500_wgs84_fit.tif.clust.data_77899clusters.zarr.full_geo.fire.tif",
+]
+ reader_type: "gtiff"
+ reader_kwargs:
+  None:
+
+remove_singles: True
+remove_singles_2: True
+write_geotiff: True
+contour_min_size: 3
+
+dilations: 0
+erosions: 0
+

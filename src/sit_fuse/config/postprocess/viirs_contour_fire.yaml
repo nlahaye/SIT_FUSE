@@ -1,0 +1,20 @@
+
+
+data:
+ filename: [
+"/data/nlahaye/SIT_FUSE_Geo/VIIRS/noaa20_viirs_i01_20190806_191800_wgs84_fit.tif.clust.data_70799clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/VIIRS/npp_viirs_i01_20190806_214800_wgs84_fit.tif.clust.data_70799clusters.zarr.full_geo.fire.tif",
+"/data/nlahaye/SIT_FUSE_Geo/VIIRS/npp_viirs_i01_20190807_213000_wgs84_fit.tif.clust.data_70799clusters.zarr.full_geo.fire.tif",
+]
+ reader_type: "gtiff"
+ reader_kwargs:
+  None:
+
+remove_singles: True
+remove_singles_2: True
+write_geotiff: True
+contour_min_size: 2
+
+dilations: 0
+erosions: 0
+
