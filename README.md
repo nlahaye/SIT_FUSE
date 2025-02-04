@@ -6,7 +6,7 @@ description: >-
 
 # 🛰️ SIT-FUSE Docs
 
-SIT-FUSE utilizes self-supervised machine learning (ML)  that allows users to segment instances of objects in single and multi-sensor scenes, with minimal human intervention, even in low- and no-label environments. Can be used with image like and non image-like data.&#x20;
+SIT-FUSE utilizes self-supervised machine learning (ML) that allows users to segment instances of objects in single and multi-sensor scenes, with minimal human intervention, even in low- and no-label environments. Can be used with image like and non image-like data.
 
 Currently, this technology is being used with remotely sensed earth data to identify objects including:
 
@@ -42,5 +42,6 @@ Recent Talks:
 
 References:
 
-* Lahaye, N., Garay, M. J., Bue, B., El-Askary, H., Linstead, E. “A Quantitative Validation of  Multi-Modal Image Fusion and Segmentation for Object Detection and Tracking”. Remote Sens. 2021, 13, 2364. [https://doi.org/10.3390/rs13122364](https://doi.org/10.3390/rs13122364)&#x20;
+* Nicholas LaHaye, Anistasija Easley, Kyongsik Yun, Huikyo Lee, Erik Linstead, Michael J. Garay, Olga V. Kalashnikova: “Development and Application of Self-Supervised Machine Learning for Smoke Plume and Active Fire Identification from the FIREX-AQ Datasets”, 2025; [arXiv:2501.15343](http://arxiv.org/abs/2501.15343).
+* Lahaye, N., Garay, M. J., Bue, B., El-Askary, H., Linstead, E. “A Quantitative Validation of Multi-Modal Image Fusion and Segmentation for Object Detection and Tracking”. Remote Sens. 2021, 13, 2364. [https://doi.org/10.3390/rs13122364](https://doi.org/10.3390/rs13122364)
 * Lahaye, N., Ott, J., Garay, M. J., El-Askary, H., and Linstead, E., “Multi-modal object tracking and image fusion with unsupervised deep learning,” IEEE Journal of Selected Topics in Applied Earth Observations and Remote Sensing, vol. 12, no. 8, pp. 3056-3066, Aug. 2019, doi: [https://doi.org/10.1109/JSTARS.2019.2920234](https://doi.org/10.1109/JSTARS.2019.2920234)
