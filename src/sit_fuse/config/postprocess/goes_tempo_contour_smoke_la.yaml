@@ -1,0 +1,43 @@
+
+
+data:
+ filename: [
+"/data/nlahaye/SIT_FUSE_Geo/GOES_LA/OR_ABI-L1b-RadC-M6C01_G18_s20250111626178_e20250111628551_c20250111628587.tif.clust.data_73695clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_LA/OR_ABI-L1b-RadC-M6C01_G18_s20250101636176_e20250101638549_c20250101638587.tif.clust.data_71195clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_LA/OR_ABI-L1b-RadC-M6C01_G18_s20250111641178_e20250111643551_c20250111643589.tif.clust.data_73695clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_LA/OR_ABI-L1b-RadC-M6C01_G18_s20250101621176_e20250101623549_c20250101623591.tif.clust.data_71196clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_LA/OR_ABI-L1b-RadC-M6C01_G18_s20250101641176_e20250101643549_c20250101643584.tif.clust.data_71195clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_LA/OR_ABI-L1b-RadC-M6C01_G18_s20250111606178_e20250111608551_c20250111608581.tif.clust.data_71195clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_LA/OR_ABI-L1b-RadC-M6C01_G18_s20250111646178_e20250111648551_c20250111648592.tif.clust.data_73695clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_LA/OR_ABI-L1b-RadC-M6C01_G18_s20250111611178_e20250111613551_c20250111613581.tif.clust.data_71195clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_LA/OR_ABI-L1b-RadC-M6C01_G18_s20250101616176_e20250101618549_c20250101618587.tif.clust.data_71196clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_LA/OR_ABI-L1b-RadC-M6C01_G18_s20250101601176_e20250101603549_c20250101603589.tif.clust.data_71195clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_LA/OR_ABI-L1b-RadC-M6C01_G18_s20250101606176_e20250101608549_c20250101608591.tif.clust.data_71196clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_LA/OR_ABI-L1b-RadC-M6C01_G18_s20250111651178_e20250111653551_c20250111653583.tif.clust.data_73695clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_LA/OR_ABI-L1b-RadC-M6C01_G18_s20250111636178_e20250111638551_c20250111638584.tif.clust.data_73695clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_LA/OR_ABI-L1b-RadC-M6C01_G18_s20250101626176_e20250101628549_c20250101628586.tif.clust.data_71196clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_LA/OR_ABI-L1b-RadC-M6C01_G18_s20250101631176_e20250101633549_c20250101633587.tif.clust.data_71196clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_LA/OR_ABI-L1b-RadC-M6C01_G18_s20250111616178_e20250111618551_c20250111618583.tif.clust.data_73645clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_LA/OR_ABI-L1b-RadC-M6C01_G18_s20250101611176_e20250101613549_c20250101613598.tif.clust.data_71196clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_LA/OR_ABI-L1b-RadC-M6C01_G18_s20250111601178_e20250111603551_c20250111603586.tif.clust.data_71195clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_LA/OR_ABI-L1b-RadC-M6C01_G18_s20250111621178_e20250111623551_c20250111623592.tif.clust.data_73689clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_LA/OR_ABI-L1b-RadC-M6C01_G18_s20250101656176_e20250101658549_c20250101658584.tif.clust.data_71195clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_LA/OR_ABI-L1b-RadC-M6C01_G18_s20250101646176_e20250101648549_c20250101648587.tif.clust.data_71195clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_LA/OR_ABI-L1b-RadC-M6C01_G18_s20250101651176_e20250101653549_c20250101653591.tif.clust.data_71195clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_LA/OR_ABI-L1b-RadC-M6C01_G18_s20250111631178_e20250111633551_c20250111633580.tif.clust.data_73695clusters.zarr.full_geo.smoke.tif",
+"/data/nlahaye/SIT_FUSE_Geo/GOES_LA/OR_ABI-L1b-RadC-M6C01_G18_s20250111656178_e20250111658551_c20250111658585.tif.clust.data_73695clusters.zarr.full_geo.smoke.tif",
+]
+ reader_type: "gtiff"
+ reader_kwargs:
+  None:
+
+remove_singles: True
+remove_singles_2: True
+write_geotiff: True
+contour_min_size: 5
+
+
+dilations: 0
+erosions: 0
+
+
