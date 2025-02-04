@@ -10,59 +10,39 @@ data:
 
  
  gtiff_data: [
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240725T163105Z_S008G07.tif.clust.data_137196clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240725T163742Z_S008G08.tif.clust.data_137199clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240725T164419Z_S008G09.tif.clust.data_137194clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240726T143122Z_S006G07.tif.clust.data_137180clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240726T143759Z_S006G08.tif.clust.data_137175clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240726T144436Z_S006G09.tif.clust.data_89799clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240726T163122Z_S008G07.tif.clust.data_137199clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240726T163759Z_S008G08.tif.clust.data_137199clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240726T164436Z_S008G09.tif.clust.data_137196clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240727T143137Z_S006G07.tif.clust.data_137180clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240727T143814Z_S006G08.tif.clust.data_137180clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240727T144451Z_S006G09.tif.clust.data_137005clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240728T163154Z_S008G07.tif.clust.data_137199clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240728T163831Z_S008G08.tif.clust.data_137199clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240728T164508Z_S008G09.tif.clust.data_137197clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240730T163226Z_S008G07.tif.clust.data_137199clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240730T163903Z_S008G08.tif.clust.data_137195clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240730T164540Z_S008G09.tif.clust.data_137196clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240731T144556Z_S006G09.tif.clust.data_137005clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240731T163242Z_S008G07.tif.clust.data_137199clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240731T163919Z_S008G08.tif.clust.data_137195clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240731T164556Z_S008G09.tif.clust.data_137196clusters.zarr.full_geo.tif",
+"/data/nlahaye/SIT_FUSE_Geo/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T154529Z_S005G09.tif.clust.data_137176clusters.zarr.full_geo.tif",
+"/data/nlahaye/SIT_FUSE_Geo/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T164529Z_S006G09.tif.clust.data_137175clusters.zarr.full_geo.tif",
+"/data/nlahaye/SIT_FUSE_Geo/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T174529Z_S007G09.tif.clust.data_137191clusters.zarr.full_geo.tif",
+"/data/nlahaye/SIT_FUSE_Geo/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T184529Z_S008G09.tif.clust.data_137194clusters.zarr.full_geo.tif",
+"/data/nlahaye/SIT_FUSE_Geo/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T194529Z_S009G09.tif.clust.data_137195clusters.zarr.full_geo.tif",
+"/data/nlahaye/SIT_FUSE_Geo/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T204529Z_S010G09.tif.clust.data_137191clusters.zarr.full_geo.tif",
+"/data/nlahaye/SIT_FUSE_Geo/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T214529Z_S011G09.tif.clust.data_137191clusters.zarr.full_geo.tif",
+"/data/nlahaye/SIT_FUSE_Geo/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T222537Z_S012G06.tif.clust.data_137175clusters.zarr.full_geo.tif",
+"/data/nlahaye/SIT_FUSE_Geo/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T230545Z_S013G06.tif.clust.data_137001clusters.zarr.full_geo.tif",
+"/data/nlahaye/SIT_FUSE_Geo/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T234553Z_S014G06.tif.clust.data_89799clusters.zarr.full_geo.tif",
+"/data/nlahaye/SIT_FUSE_Geo/TEMPO_LA/TEMPO_RAD_L1_V03_20250111T154553Z_S005G09.tif.clust.data_137110clusters.zarr.full_geo.tif",
+"/data/nlahaye/SIT_FUSE_Geo/TEMPO_LA/TEMPO_RAD_L1_V03_20250111T164553Z_S006G09.tif.clust.data_137175clusters.zarr.full_geo.tif",
 ]
  
  cluster_fnames: [
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240725T163105Z_S008G07.tif.clust.data_137196clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240725T163742Z_S008G08.tif.clust.data_137199clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240725T164419Z_S008G09.tif.clust.data_137194clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240726T143122Z_S006G07.tif.clust.data_137180clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240726T143759Z_S006G08.tif.clust.data_137175clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240726T144436Z_S006G09.tif.clust.data_89799clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240726T163122Z_S008G07.tif.clust.data_137199clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240726T163759Z_S008G08.tif.clust.data_137199clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240726T164436Z_S008G09.tif.clust.data_137196clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240727T143137Z_S006G07.tif.clust.data_137180clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240727T143814Z_S006G08.tif.clust.data_137180clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240727T144451Z_S006G09.tif.clust.data_137005clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240728T163154Z_S008G07.tif.clust.data_137199clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240728T163831Z_S008G08.tif.clust.data_137199clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240728T164508Z_S008G09.tif.clust.data_137197clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240730T163226Z_S008G07.tif.clust.data_137199clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240730T163903Z_S008G08.tif.clust.data_137195clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240730T164540Z_S008G09.tif.clust.data_137196clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240731T144556Z_S006G09.tif.clust.data_137005clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240731T163242Z_S008G07.tif.clust.data_137199clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240731T163919Z_S008G08.tif.clust.data_137195clusters.zarr.full_geo.tif",
-"/data/nlahaye/SIT_FUSE_Geo/TEMPO_DATA_Paper/TEMPO_RAD_L1_V03_20240731T164556Z_S008G09.tif.clust.data_137196clusters.zarr.full_geo.tif",
+"/data/nlahaye/SIT_FUSE_Geo/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T154529Z_S005G09.tif.clust.data_137176clusters.zarr.full_geo.tif",
+"/data/nlahaye/SIT_FUSE_Geo/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T164529Z_S006G09.tif.clust.data_137175clusters.zarr.full_geo.tif",
+"/data/nlahaye/SIT_FUSE_Geo/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T174529Z_S007G09.tif.clust.data_137191clusters.zarr.full_geo.tif",
+"/data/nlahaye/SIT_FUSE_Geo/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T184529Z_S008G09.tif.clust.data_137194clusters.zarr.full_geo.tif",
+"/data/nlahaye/SIT_FUSE_Geo/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T194529Z_S009G09.tif.clust.data_137195clusters.zarr.full_geo.tif",
+"/data/nlahaye/SIT_FUSE_Geo/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T204529Z_S010G09.tif.clust.data_137191clusters.zarr.full_geo.tif",
+"/data/nlahaye/SIT_FUSE_Geo/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T214529Z_S011G09.tif.clust.data_137191clusters.zarr.full_geo.tif",
+"/data/nlahaye/SIT_FUSE_Geo/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T222537Z_S012G06.tif.clust.data_137175clusters.zarr.full_geo.tif",
+"/data/nlahaye/SIT_FUSE_Geo/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T230545Z_S013G06.tif.clust.data_137001clusters.zarr.full_geo.tif",
+"/data/nlahaye/SIT_FUSE_Geo/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T234553Z_S014G06.tif.clust.data_89799clusters.zarr.full_geo.tif",
+"/data/nlahaye/SIT_FUSE_Geo/TEMPO_LA/TEMPO_RAD_L1_V03_20250111T154553Z_S005G09.tif.clust.data_137110clusters.zarr.full_geo.tif",
+"/data/nlahaye/SIT_FUSE_Geo/TEMPO_LA/TEMPO_RAD_L1_V03_20250111T164553Z_S006G09.tif.clust.data_137175clusters.zarr.full_geo.tif",
 ]
 
 context: 
  apply_context: True
  clusters: [
- [29.818, 29.851, 29.859, 29.873, 29.89, 29.916, 29.918, 29.92, 29.925, 29.926, 29.942, 29.953, 29.958, 29.974, 29.988, 89.734, 29.802, 29.803, 29.808, 29.809, 29.812, 29.815, 29.83, 29.831, 29.836, 29.838, 29.84, 29.846, 29.854, 29.862, 29.863, 29.866, 29.867, 29.872, 29.875, 29.878, 29.882, 29.895, 29.897, 29.904, 29.906, 29.908, 29.923, 29.928, 29.932, 29.933, 29.939, 29.943, 29.944, 29.95, 29.952, 29.956, 29.963, 29.976, 29.978, 29.984, 29.986, 29.992, 29.997, 89.607, 89.616, 89.621, 89.64, 89.655, 89.657, 89.66, 89.682, 89.712, 89.719, 89.746, 89.748, 89.786, 29.883, 89.705, 89.751, 89.789, 36.988, 117.803, 117.807, 117.808, 117.821, 117.845, 117.862, 117.869, 117.873, 117.877, 117.901, 117.905, 117.911, 117.92, 117.938, 117.939, 117.942, 117.952, 117.962, 117.978, 117.983, 117.993, 137.001, 137.002, 137.014, 137.041, 137.052, 137.061, 137.065, 137.101, 137.102, 137.106, 137.139, 137.148, 137.152, 137.158, 137.161, 137.178, 137.184, 36.802, 36.825, 36.834, 36.843, 36.844, 36.873, 36.894, 36.909, 36.915, 36.923, 36.936, 36.947, 36.964, 36.983, 36.991, 36.999, 89.611, 89.612, 89.658, 89.728, 89.768, 89.77, 89.778, 117.802, 117.806, 117.812, 117.817, 117.818, 117.822, 117.823, 117.825, 117.827, 117.83, 117.834, 117.839, 117.84, 117.85, 117.852, 117.855, 117.856, 117.857, 117.858, 117.859, 117.861, 117.866, 117.867, 117.874, 117.88, 117.881, 117.883, 117.886, 117.887, 117.893, 117.894, 117.895, 117.898, 117.899, 117.9, 117.912, 117.914, 117.918, 117.919, 117.921, 117.925, 117.926, 117.927, 117.928, 117.937, 117.94, 117.941, 117.954, 117.956, 117.959, 117.964, 117.967, 117.969, 117.972, 117.975, 117.976, 117.98, 117.981, 117.982, 117.985, 117.986, 117.988, 117.991, 117.998, 137.0, 137.006, 137.024, 137.03, 137.043, 137.053, 137.068, 137.072, 137.078, 137.096, 137.098, 137.107, 137.11, 137.114, 137.12, 137.125, 137.126, 137.136, 137.138, 137.141, 137.146, 137.15, 137.166, 137.174, 137.175, 137.179, 137.183, 137.187, 137.19, 89.61, 89.619, 89.722, 117.907, 117.916]
+[29.807, 29.808, 29.855, 29.868, 29.886, 29.895, 29.898, 29.899, 29.906, 29.923, 29.925, 29.964, 29.991, 29.997, 89.6, 89.601, 89.604, 89.618, 89.652, 89.711, 89.731, 89.738, 89.76, 89.765, 89.774, 89.799, 29.817, 29.836, 29.838, 29.848, 29.853, 29.858, 29.871, 29.877, 29.882, 29.887, 29.896, 29.901, 29.911, 29.939, 29.957, 29.967, 29.978, 29.984, 29.985, 29.989, 36.863, 36.87, 36.973, 36.988, 89.602, 89.603, 89.61, 89.615, 89.631, 89.643, 89.644, 89.651, 89.659, 89.677, 89.682, 89.715, 89.723, 89.724, 89.734, 89.741, 89.746, 89.748, 89.749, 89.771, 89.778, 89.781, 89.795, 89.798, 29.947, 36.819, 89.608, 89.654, 89.674, 89.695, 89.759, 89.77, 89.787, 117.845, 117.869, 117.877, 117.942, 117.954, 36.867, 36.98, 89.662, 89.693, 89.704, 89.728, 89.797, 117.83, 117.865, 117.885, 117.906, 117.937, 117.957, 36.827, 36.924, 36.951, 89.683, 89.699, 89.753, 89.789, 117.842, 117.849, 117.859, 117.9, 117.903, 117.909, 117.913, 117.919, 117.934, 117.981, 117.995, 137.055, 36.853, 36.907, 36.939, 89.612, 89.632, 89.703, 89.796, 117.825, 117.844, 117.852, 117.871, 117.932, 137.028, 137.096, 137.14, 89.607, 89.705, 89.756, 89.775, 89.792, 117.914, 137.032, 137.144, 137.175, 137.194, 89.641, 89.645, 89.646, 89.649, 89.691, 89.721, 89.725, 89.793, 117.861, 117.87, 117.894, 117.967, 117.997, 137.167, 29.821, 29.87, 29.937, 29.943, 29.956, 29.963, 29.986, 89.605, 89.648, 89.653, 89.656, 89.658, 89.66, 89.675, 89.678, 89.68, 89.689, 89.708, 89.713, 89.737, 89.739, 89.754, 29.851, 29.953, 89.696, 29.804, 29.936, 89.616, 89.629, 89.636, 89.668, 89.719, 89.779, 89.79, 89.794, 29.946, 89.628, 89.743]
 ]
  name: ["smoke"]
  compare_truth: False
