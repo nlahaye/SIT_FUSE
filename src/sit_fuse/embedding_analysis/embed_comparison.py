@@ -132,6 +132,10 @@ def run_nomic_analysis(embedding_functions, knn_graphs, out_dir):
     omni_embds = OmnibusEmbed(n_components=2).fit_transform(list(knn_graphs.values()))
     fig, ax = plt.subplots(1,1)
 
+
+    out_dct = {"embed_funcs": embedding_functions, "omni_embeds": omni_embds}
+    np.save(out_dir + "/omni.viz_dict.npy", out_dct)   
+ 
     #colors = ListedColormap(CMAP_COLORS[0:int(len(embedding_functions) - (-1) + 1)])
 
     colors = ['red', 'black', 'blue', 'orange', 'green']

@@ -89,10 +89,16 @@ FINAL_DCT = {
 
 def run_tsne(embed, labels, coord, final_labels, out_fname, pca_embed = False, indices = None, recon_arr = None, recon_lab = None):
 
+
+    coord_coord_1 = 1
+    coord_coord_2 = 2
+    if coord.ndim < 3:
+        coord_coord_1 = 0
+        coord_coord_2 = 1
  
     if recon_lab is None or  recon_arr is None:
         print(embed.shape, labels.shape, final_labels.shape, np.unique(labels), len(np.unique(labels)))
-        original_shape = (max(coord[:,1])+1, max(coord[:,2])+1)
+        original_shape = (max(coord[:,coord_coord_1])+1, max(coord[:,coord_coord_2])+1)
         for i in range(coord.shape[1]):
             print(max(coord[:,i]), coord.shape, i)
         if embed.ndim  == 4:
@@ -109,15 +115,15 @@ def run_tsne(embed, labels, coord, final_labels, out_fname, pca_embed = False, i
         if embed.ndim  == 4:
             for i in range(embed.shape[0]):
                 print(coord[i], i, embed.shape, reconstructed_arr.shape) 
-                if coord[i,2]+embed.shape[2] > reconstructed_arr.shape[1] or coord[i,1]+embed.shape[1] > reconstructed_arr.shape[0]:
+                if coord[i,coord_coord_2]+embed.shape[2] > reconstructed_arr.shape[1] or coord[i,coord_coord_1]+embed.shape[1] > reconstructed_arr.shape[0]:
                     continue
-                reconstructed_arr[coord[i,1]:coord[i,1]+embed.shape[1], coord[i,2]:coord[i,2]+embed.shape[2], :] = embed[i,:,:,:]
-                reconstructed_labels[coord[i,1]:coord[i,1]+labels.shape[1], coord[i,2]:coord[i,2]+labels.shape[2]] = labels[i,:,:]
+                reconstructed_arr[coord[i,coord_coord_1]:coord[i,coord_coord_1]+embed.shape[1], coord[i,coord_coord_2]:coord[i,coord_coord_2]+embed.shape[2], :] = embed[i,:,:,:]
+                reconstructed_labels[coord[i,coord_coord_1]:coord[i,coord_coord_1]+labels.shape[1], coord[i,coord_coord_2]:coord[i,coord_coord_2]+labels.shape[2]] = labels[i,:,:]
                 #reconstructed_final_labels[coord[i,0], coord[i,1]] = final_labels[i]
         else:
             for i in range(embed.shape[0]):
-                reconstructed_arr[coord[i,1], coord[i,2]] = embed[i]
-                reconstructed_labels[coord[i,1], coord[i,2]] = labels[i]
+                reconstructed_arr[coord[i,coord_coord_1], coord[i,coord_coord_2]] = embed[i]
+                reconstructed_labels[coord[i,coord_coord_1], coord[i,coord_coord_2]] = labels[i]
                 #reconstructed_final_labels[coord[i,0], coord[i,1]] = final_labels[i]
 
         zarr.save(out_fname + ".embeddings.zarr", reconstructed_arr)
@@ -184,7 +190,7 @@ def run_tsne(embed, labels, coord, final_labels, out_fname, pca_embed = False, i
         #aff500 = openTSNE.affinity.PerplexityBasedNN(test_data,perplexity=5000, n_jobs=50, random_state=20)
         #tsne_data = openTSNE.TSNE(n_jobs=50, verbose=True, metric="cosine", exaggeration = 2,
         #        random_state=42).fit(affinities=aff500)
-        reducer = umap.UMAP()
+        reducer = umap.UMAP(metric="cosine", n_components=2)
 
         tsne_data = reducer.fit_transform(test_data)
     else:

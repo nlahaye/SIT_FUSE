@@ -1,0 +1,102 @@
+
+low_res:
+ data:
+  fill_value: -9.96921e+36
+  valid_min: -9.0e+35 #0.0000001
+  valid_max: 9.0e+36
+  reader_type: "tempo_netcdf"
+  reader_kwargs:
+   no_arg: ''
+  geo_reader_type: "tempo_netcdf_geo"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: [
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T214529Z_S011G09.nc",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250111T164553Z_S006G09.nc",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T164529Z_S006G09.nc",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T222537Z_S012G06.nc",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T154529Z_S005G09.nc",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T230545Z_S013G06.nc",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T174529Z_S007G09.nc",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T234553Z_S014G06.nc",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T184529Z_S008G09.nc",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T204529Z_S010G09.nc",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250111T154553Z_S005G09.nc",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T194529Z_S009G09.nc",
+]
+
+  geo_filenames: [
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T214529Z_S011G09.nc",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250111T164553Z_S006G09.nc",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T164529Z_S006G09.nc",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T222537Z_S012G06.nc",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T154529Z_S005G09.nc",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T230545Z_S013G06.nc",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T174529Z_S007G09.nc",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T234553Z_S014G06.nc",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T184529Z_S008G09.nc",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T204529Z_S010G09.nc",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250111T154553Z_S005G09.nc",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T194529Z_S009G09.nc",
+]
+
+  chan_dim: 2
+  geo_coord_dim: 0
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+high_res:
+ data:
+  valid_min: 0.0
+  valid_max: 100000000
+  reader_type: "numpy"
+  reader_kwargs:
+   no_arg: "no_arg"
+  geo_reader_type: "numpy"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: []
+  geo_filenames: []
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 1
+  geo_lon_index: 0
+
+
+fusion:
+ projection_id: 4326
+ description: "Generating eMAS GeoTiffs"
+ area_id: "eMAS"
+ projection_proj4:
+  #proj: "utm"
+  #zone: 11
+  proj: "longlat"
+  datum: "WGS84" 
+ final_resolution: 0.09 #0.00225 #0.000225
+ projection_units: "degrees"
+ resample_radius: 50000
+ resample_n_neighbors: 128
+ resample_n_procs: 10
+ resample_epsilon: 1.6
+ use_bilinear: True 
+ lon_bounds: [-130.0, -117.0]
+ lat_bounds: [33.0, 43.0]
+
+output_files: [
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T214529Z_S011G09.tif",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250111T164553Z_S006G09.tif",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T164529Z_S006G09.tif",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T222537Z_S012G06.tif",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T154529Z_S005G09.tif",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T230545Z_S013G06.tif",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T174529Z_S007G09.tif",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T234553Z_S014G06.tif",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T184529Z_S008G09.tif",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T204529Z_S010G09.tif",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250111T154553Z_S005G09.tif",
+"/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250110T194529Z_S009G09.tif",
+]
+
+
+

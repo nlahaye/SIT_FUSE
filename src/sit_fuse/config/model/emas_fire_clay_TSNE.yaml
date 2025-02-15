@@ -10,7 +10,7 @@ analysis:
   lr: 200
  embed_func: "clay_init"
  build_knn_graphs: True
-
+ run_projection: True
 
 
 data:
