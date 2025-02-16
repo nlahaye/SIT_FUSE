@@ -8,6 +8,7 @@ analysis:
   metric: "euclidean"
   patience: 1000
   lr: 200
+ run_projection: True
  embed_func: "clay_init"
  build_knn_graphs: True
 

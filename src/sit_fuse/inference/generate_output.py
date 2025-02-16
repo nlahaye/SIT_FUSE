@@ -54,9 +54,9 @@ def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled 
 
     ind = 0
     #output_batch_size = min(5000, max(int(dat.data_full.shape[0] / 5), dat.data_full.shape[0]))
-    output_batch_size = 10000 #10 #0 #1
+    output_batch_size = 10000 #10000 #10 #0 #1
     if tiled:
-        output_batch_size = 50
+        output_batch_size = 5 #50
 
     output_sze = dat.data_full.shape[0]
     append_remainder = int(output_batch_size - (output_sze % output_batch_size))
@@ -70,6 +70,7 @@ def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled 
         dat.targets_full = np.concatenate((dat.targets_full,dat.targets_full[0:append_remainder]))
 
 
+    print(output_batch_size)
     test_loader = DataLoader(dat, batch_size=output_batch_size, shuffle=False, \
     num_workers = 0, drop_last = False, pin_memory = pin_mem)
     ind = 0

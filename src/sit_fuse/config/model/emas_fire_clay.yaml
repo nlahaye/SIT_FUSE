@@ -26,6 +26,10 @@ data:
   chans: []
   transform: []
 
+ files_test: [
+"/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_20_20190806_2052_2106_V03.tif",
+  ]
+
  files_train: [
 '/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19910_10_20190806_1858_1910_V03.tif',
 '/data/nlahaye/remoteSensing/eMAS_new/eMASL1B_19911_10_20190807_2004_2016_V03.tif',

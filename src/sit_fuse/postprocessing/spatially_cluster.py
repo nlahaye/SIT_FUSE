@@ -10,12 +10,14 @@ required before exporting such information to foreign countries or providing acc
 from joblib import Parallel, delayed
 from tqdm_joblib import tqdm_joblib
 import torch
-from sw_approx import sw_approx
+#from sw_approx import sw_approx
+from sliceduot.sliced_uot import unbalanced_sliced_ot, sliced_unbalanced_ot
 import zarr
 import argparse
 import numpy as np
 from osgeo import gdal, osr
 from sit_fuse.utils import get_read_func, read_yaml
+from sit_fuse.models.layers.random_conv_2d import RandomConv2d
 import cv2
 import os
 import csv
@@ -25,6 +27,7 @@ from tabulate import tabulate
 from pprint import pprint
 
 import diplib as dip
+import scipy as sp
 
 import matplotlib
 matplotlib.use('agg')
@@ -35,46 +38,145 @@ import geopy.distance
 
 from sklearn.cluster import MiniBatchKMeans
 
+def convolutional_sliced_wasserstein(X, Y, conv_net, num_projections=50):
+    """
+    Computes the Convolutional Sliced Wasserstein distance between two sets of samples.
+
+    Args:
+        X: NumPy array of shape (n_samples1, height, width, channels) representing the first set of samples.
+        Y: NumPy array of shape (n_samples2, height, width, channels) representing the second set of samples.
+        num_projections: Number of random projections to use.
+        filter_size: Size of the convolutional filters.
+        num_filters: Number of convolutional filters.
+
+    Returns:
+        The Convolutional Sliced Wasserstein distance between X and Y.
+    """
+ 
+    with torch.no_grad():
+        # Define the convolutional layer
+
+        # Apply the convolutional layer to the samples
+        X_features = conv_net(X) #.detach().numpy()
+        Y_features = conv_net(Y) #.detach().numpy()
+
+    # Flatten the feature maps
+    X_features_flat = X_features.reshape(X_features.shape[0], -1)
+    Y_features_flat = Y_features.reshape(Y_features.shape[0], -1)
+
+    C1 = torch.cdist(X_features_flat, X_features_flat)
+    C2 = torch.cdist(Y_features_flat, Y_features_flat)
+ 
+    C1 /= C1.max()
+    C2 /= C2.max()
+    nx = ot.backend.get_backend(C1, C2)
+    p = ot.unif(X_features_flat.shape[0], type_as=C1)
+    q = ot.unif(Y_features_flat.shape[0], type_as=C1)
+
+    # Conditional Gradient algorithm
+    gw0, log0 = ot.gromov.gromov_wasserstein(
+        C1, C2, p, q, "square_loss", verbose=False, log=True
+    )
+ 
+    ## Generate random projections
+    #projections = np.random.randn(num_projections, X_features_flat.shape[1])
+    #projections /= np.linalg.norm(projections, axis=1, keepdims=True)
+
+    # Project the feature maps
+    #print(X_features_flat.shape, projections.shape, Y_features_flat.shape)
+    #X_projected = X_features_flat @ projections.T
+    #Y_projected = Y_features_flat @ projections.T
+
+    # Compute the Sliced Wasserstein distance
+    #sw_distances = [ot.wasserstein_1d(np.sort(X_projected[:, i]), np.sort(Y_projected[:, i])) for i in range(num_projections)]
+    #csw_distance = np.mean(sw_distances)
+
+    return log0["gw_dist"] #csw_distance
 
 def load_image(fname):
     dat = gdal.Open(fname)
     imgData = dat.ReadAsArray()
     arr = imgData
-    arr_tensor = torch.from_numpy(arr)
+    arr_tensor = arr
 
     return arr_tensor
 
-def calc_swd(fname1, fname2):
-    arr_tensor = load_image(fname1)
-    arr_tensor2 = load_image(fname2)
+def calc_swd(data_fnames, i, batch_size = 1000, im_resize = 128):
+ 
+    if im_resize > 0.0:
+        arr_tensor = torch.from_numpy(cv2.resize(load_image(data_fnames[i]), (im_resize,im_resize)))
+    else:
+        arr_tensor = torch.from_numpy(load_image(data_fnames[i]))
 
-    d2 = max(arr_tensor2.shape[1], arr_tensor.shape[1])
-    d1 = max(arr_tensor2.shape[0], arr_tensor.shape[0])
-    tmp2 = torch.zeros((d1,d2))
-    tmp2[:arr_tensor2.shape[0],:arr_tensor2.shape[1]] =arr_tensor2
-    tmp =torch.zeros((d1,d2))
-    tmp[:arr_tensor.shape[0],:arr_tensor.shape[1]] = arr_tensor
+    swds = []   
+ 
+   
+    a = torch.ones(batch_size)/100
+    b = torch.ones(batch_size)/100
+    filter_size=3
+    num_filters=16
+    conv_layer = RandomConv2d(1, num_filters, filter_size).cuda() 
+ 
+    for j in range(i, len(data_fnames), batch_size):
+        batch_tmp = []
+        batch_tmp2 = [] 
+        for m in range(j+1, min(j+batch_size+1, len(data_fnames))):
+            batch_tmp = []
+            batch_tmp2 = []
+            ##for k in range(m, min(j+batch_size+1, len(data_fnames))):
+ 
+            if im_resize > 0.0: 
+                arr_tensor2 = torch.from_numpy(cv2.resize(load_image(data_fnames[m]), (im_resize,im_resize)))
+            else:
+                arr_tensor2 = torch.from_numpy(load_image(data_fnames[m]))   
 
-    swd_value = sw_approx(tmp, tmp2)
-    return swd_value        
+                #d2 = max(arr_tensor2.shape[1], arr_tensor.shape[1])
+                #d1 = max(arr_tensor2.shape[0], arr_tensor.shape[0])
+                #tmp2 = arr_tensor2 #torch.zeros((d1,d2))
+                #tmp2[:arr_tensor2.shape[0],:arr_tensor2.shape[1]] =arr_tensor2
+                #tmp =torch.zeros((d1,d2))
+                #tmp[:arr_tensor.shape[0],:arr_tensor.shape[1]] = arr_tensor
+            batch_tmp2.append(arr_tensor2) 
+            batch_tmp.append(arr_tensor)
+             
+            if len(batch_tmp) == 0:
+                print(j+1, j+batch_size)
+                continue
+            batch_tmp = torch.stack(batch_tmp, dim=0)
+            batch_tmp2 = torch.stack(batch_tmp2, dim=0)
+            #print("HERE", batch_tmp.shape, batch_tmp2.shape)
+        
+            #get_random_projections(, n_projections, seed=None, backend=None, type_as=None)
+            #swd_value, _, _, a_SUOT, b_SUOT, _ = unbalanced_sliced_ot(a, b, batch_tmp.cuda(), batch_tmp2.cuda(), p=2, num_projections=500, rho1=1, rho2=1, niter=10)
+            swd_value = convolutional_sliced_wasserstein(batch_tmp.cuda(), batch_tmp2.cuda(), conv_layer)
+
+            #swd_value = sw_approx(batch_tmp.cuda(), batch_tmp2.cuda())
+ 
+            #print("HERE2", batch_tmp2.shape)
+            swds.append(swd_value) #.extend(swd_value) #.detach().cpu().numpy())
+
+    return swds
+     
 
 
-def compare_parallel(data_fnames, njobs=70): 
+def compare_parallel(data_fnames, njobs=20, batch_size=1000, im_resize = 128): 
 
     results = None
-    with tqdm_joblib(tqdm(desc="My calculation", total=(len(data_fnames)* (len(data_fnames)-1)))) as progress_bar:
+    with tqdm_joblib(tqdm(desc="My calculation", total=(len(data_fnames)))) as progress_bar:
         results = Parallel(n_jobs=njobs)(
-            delayed(calc_swd)(data_fnames[i], data_fnames[j])
+            delayed(calc_swd)(data_fnames, i, batch_size, im_resize)
             for i in range(len(data_fnames))
-            for j in range(i + 1, len(data_fnames))
+            #for j in range(i + 1, len(data_fnames))
         )
  
     compare = torch.zeros((len(data_fnames),len(data_fnames)))
     index = 0
+    print("LOOPING", len(data_fnames), len(results[0]), len(results))
     for i in range(len(data_fnames)):
-        for j in range(i + 1, len(data_fnames)):
-            compare[i,j] = results[index]
-            index += 1
+        print(len(results[i]))
+        for j in range(len(results[i])):
+            compare[i,i+j] = results[i][j].detach().cpu()
+            compare[i+j, i]
 
     return compare
 
@@ -88,17 +190,21 @@ def main(yml_fpath):
     data_reader_kwargs = yml_conf["data"]["reader_kwargs"]
     wrt_geotiff = yml_conf["write_geotiff"] 
     label_fname = yml_conf["data"]["label_fname"]
-
+    batch_size = yml_conf["data"]["batch_size"]
+    im_resize = yml_conf["data"]["im_resize"]
+    njobs = yml_conf["njobs"]
+    k = yml_conf["k_clusters"]
+ 
 
     conts = []
 
-    compare_parallel(data_fnames)
+    compare = compare_parallel(data_fnames, njobs, batch_size, im_resize)
 
-    compare = compare.detach().cpu().numpy()
+    compare = compare.numpy()
     print("DISTRIBUTION COMPARISIONS")
     print(tabulate(compare))
 
-    kmeans = MiniBatchKMeans(n_clusters=50)
+    kmeans = MiniBatchKMeans(n_clusters=k)
     kmeans.fit(compare)
     labels = kmeans.labels_
 

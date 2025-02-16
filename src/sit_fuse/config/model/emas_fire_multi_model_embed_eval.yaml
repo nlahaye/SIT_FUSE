@@ -3,7 +3,7 @@ analysis:
  knn_graphs: 
   no_encoding: "/data/nlahaye/output/Learnergy//NO_ENC_eMAS_FULL_STRAT_MULTI_LAYER_PL_5/no_encoding.zarr"
   pca: "/data/nlahaye/output/Learnergy/PCA_eMAS_FULL_STRAT_MULTI_LAYER_PL_5/pca.zarr"
-  dbn_2_layer_1000:  "/data/nlahaye/output/Learnergy/DBN_eMAS_FULL_STRAT_MULTI_LAYER_PL_4/dbn_2_layer_2000.zarr"
+  dbn_2_layer_2000:  "/data/nlahaye/output/Learnergy/DBN_eMAS_FULL_STRAT_MULTI_LAYER_PL_4/dbn_2_layer_2000.zarr"
  tsne:
   perplexity: 2200
   niter: 5000
@@ -12,7 +12,7 @@ analysis:
   metric: "euclidean"
   patience: 1000
   lr: 200
- embedding_functions: ["no_encoding", "pca", "dbn_2_layer_1000"]
+ embedding_functions: ["no_encoding", "pca", "dbn_2_layer_2000"]
  build_knn_graphs: True
 
 data:

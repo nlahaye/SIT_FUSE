@@ -1182,6 +1182,8 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         #    find associated cluster
         if "sif" in input_file_type:
             clust_fname = os.path.join(os.path.join(clusters_dir, "sif_finalday_" + str(ind) + ".tif"))
+        elif "daily" in input_file_type:
+            clust_fname = os.path.join(os.path.join(clusters_dir, pd.to_datetime(str(date)).strftime("%Y%m%d") + "_karenia_brevis_bloom" + ".tif"))
         else:
             if "S3B" in input_file_type:     
                 clust_fname = os.path.join(os.path.join(clusters_dir, "S3B_OLCI_ERRNT." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".tif"))
@@ -1247,7 +1249,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
             count = count + 1
             neighbours = []
             for index2, poi2 in gdf.iterrows():
-                print(abs(poi2.geometry.distance(poi.geometry)) < radius_degrees, "DISTANCE")
+                #print(abs(poi2.geometry.distance(poi.geometry)) < radius_degrees, "DISTANCE")
                 if abs(poi2.geometry.distance(poi.geometry)) < radius_degrees:
                     print(poi.geometry, poi2.geometry, poi2.geometry.distance(poi.geometry))
                     neighbours.append(index2)
@@ -1263,6 +1265,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
                 continue
             clusters = clust[neighbours]
             clusters_index = [np.nan]*n_clusters
+            print(np.unique(clusters))
             clusts = np.unique(clusters).astype(np.int32)
             print(clusts, len(clusters_index))
             for c in clusts:
