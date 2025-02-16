@@ -37,9 +37,10 @@ def gen_zonal_histogram(zone_raster_path, value_raster_path, zonal_histogram = N
       if zone is not None:
         mask = zone_array == zone
         masked_values = value_array[mask]
-        hist, bins = np.histogram(masked_values, bins=sorted(np.unique(masked_values)))
+        bins, hist = np.unique(masked_values, return_counts=True)
         if zone not in zonal_histograms.keys():
             zonal_histograms[zone] = {} 
+        print(unique_zones, hist, bins)
         for b in range(len(bins)):
             if bins[b] not in zonal_histograms[zone].keys():
                 zonal_histograms[zone][bins[b]] = hist[b] 
