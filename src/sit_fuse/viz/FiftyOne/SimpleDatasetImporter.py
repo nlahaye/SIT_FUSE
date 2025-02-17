@@ -10,14 +10,6 @@ from PIL import Image
 from osgeo import gdal
 import glob
  
-#images_patt = "/home/nlahaye/eMAS_DBN_Embeddings/*.tif"
-
-#fire_label_dict = {
-#    0: "Nothing",
-#    1: "Fire",
-#    2: "Smoke",
-#    3: "Fire_Smoke",
-        }
 
 
 def gtif_to_png(filepath):
@@ -45,7 +37,7 @@ def gtif_to_png(filepath):
     Image.fromarray(RGB).save(filepath + ".png")
 
 
-def import_dataset(label_extension, images_patt, label_dict, dataset_name):
+def import_dataset(label_extension, images_patt, label_dict, dataset_name, no_heir=False):
  
     samples = []
     #labels_path = "/home/nlahaye/eMAS_DBN_Embeddings/eMASL1B_19910_20_20190806_2052_2106_V03.dbn_2_layer_2000.viz_dict.npy"
@@ -53,8 +45,8 @@ def import_dataset(label_extension, images_patt, label_dict, dataset_name):
         gtif_to_png(filepath)
         sample = fo.Sample(filepath=filepath+".png")
   
-        my_dict = np.load(os.path.join(os.path.dirname(filepath), os.path.basename(filepath) \
-                + "." + dataset_name + ".viz_dict.npy", allow_pickle=True).item()
+        my_dict = np.load(os.path.join(os.path.dirname(filepath), os.path.splitext(os.path.basename(filepath))[0] \
+                + label_extension), allow_pickle=True).item()
  
         detections = []
         #TODO
@@ -68,20 +60,25 @@ def import_dataset(label_extension, images_patt, label_dict, dataset_name):
             h_bb = my_dict["bb_height"][i] / h
             rel_box = [x, y, w_bb, h_bb]
 
-            #fire_label = fire_label_dict[my_dict["final_label"][i]]
             final_label = label_dict[my_dict["final_label"][i]]
             heir_label = str(my_dict["heir_label"][i])
             no_heir_label = str(my_dict["no_heir_label"][i])
 
-            detections.append(fo.Detection(label=fire_label, bounding_box=rel_box, no_heir=no_heir_label, heir=heir_label,
-                tags=[no_heir_label, heir_label, fire_label]))
+
+            tgs = [no_heir_label, heir_label, final_label]
+            if no_heir:
+                tgs = [heir_label, final_label]
+
+
+            detections.append(fo.Detection(label=final_label, bounding_box=rel_box, no_heir=no_heir_label, heir=heir_label,
+                tags=tgs))
 
         print("HERE", len(detections))
         sample["detections"] = fo.Detections(detections=detections)
         samples.append(sample)
 
     # Create dataset
-    dataset = fo.Dataset(name=dataset_name, overwrite=True) #"eMAS_dbn_2_layer_2000", overwrite=True)
+    dataset = fo.Dataset(name=dataset_name, overwrite=True)
     dataset.persistent = True
     dataset.add_samples(samples) 
 
@@ -90,12 +87,13 @@ def import_dataset(label_extension, images_patt, label_dict, dataset_name):
 
 
 
-def comp_viz(dataset, dataset_name, labels_path):
+def comp_viz(dataset, dataset_name, label_extension):
  
-    for sample in dataset.samples:
- 
-        ind = np.where[os.path.basename(sample.filepath) in label_paths] 
-        labels_path = labels_paths[ind][0]   #"/home/nlahaye/eMAS_DBN_Embeddings/eMASL1B_19910_20_20190806_2052_2106_V03.dbn_2_layer_2000.viz_dict.npy"
+    for sample in dataset:
+
+        labels_path = os.path.join(os.path.dirname(sample.filepath), os.path.splitext(os.path.splitext(os.path.basename(sample.filepath))[0])[0] \
+            + label_extension)
+
         my_dict = np.load(labels_path, allow_pickle=True).item()
 
         sample = dataset.first()

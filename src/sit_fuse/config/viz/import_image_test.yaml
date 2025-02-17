@@ -1,0 +1,15 @@
+
+dataset_dir: "/home/nlahaye/eMAS_DBN_Embeddings/"
+label_extension: ".dbn_2_layer_2000.viz_dict.npy"
+images_patt: "/home/nlahaye/eMAS_DBN_Embeddings/*.tif"
+no_heir: True
+
+final_label_dict:
+ 0: "Nothing"
+ 1: "Fire"
+ 2: "Smoke"
+ 3: "Fire_Smoke"
+
+dataset_name: "eMAS_dbn_2_layer_2000"
+
+
