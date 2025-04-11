@@ -1,6 +1,6 @@
 
 dbf: True
-dbf_percentage_thresh: 0.6
+dbf_percentage_thresh: 0.5
 dbf_list: [[
 "/data/nlahaye/SIT_FUSE_Geo/TEMPO_LA/GOES_FIRE_OUTPUT_9.csv",
 "/data/nlahaye/SIT_FUSE_Geo/TEMPO_LA/GOES_FIRE_OUTPUT_8.csv",
