@@ -1,7 +1,8 @@
 
 
-
-
+import pickle
+from collections import Counter
+import cv2
 import numpy as np
 import os
 from osgeo import gdal
@@ -24,8 +25,10 @@ def gen_zonal_histogram(zone_raster_path, value_raster_path, zonal_histogram = N
               in the value raster.
     """
 
-    zone_array = gdal.Open(zone_raster_path).ReadAsArray()
+    zone_array_1 = gdal.Open(zone_raster_path).ReadAsArray()
     value_array = gdal.Open(value_raster_path).ReadAsArray()
+
+    zone_array = cv2.resize(zone_array_1, (value_array.shape[1],value_array.shape[0]), interpolation=cv2.INTER_NEAREST)
 
     unique_zones = np.unique(zone_array)
     if zonal_histogram is None:
@@ -37,14 +40,16 @@ def gen_zonal_histogram(zone_raster_path, value_raster_path, zonal_histogram = N
       if zone is not None:
         mask = zone_array == zone
         masked_values = value_array[mask]
-        hist, bins = np.histogram(masked_values, bins=sorted(np.unique(masked_values)))
+        #hist, bins = np.histogram(masked_values, bins=sorted(np.unique(masked_values)))
+        c = Counter(masked_values)
         if zone not in zonal_histograms.keys():
             zonal_histograms[zone] = {} 
-        for b in range(len(bins)):
-            if bins[b] not in zonal_histograms[zone].keys():
-                zonal_histograms[zone][bins[b]] = hist[b] 
+        #for b in range(len(bins)):
+        for k, v in c.items():
+            if k not in zonal_histograms[zone].keys():
+                zonal_histograms[zone][k] = v
             else:
-                zonal_histograms[zone][bins[b]] = zonal_histograms[zone][bins[b]] + hist[b] 
+                zonal_histograms[zone][k] = zonal_histograms[zone][k] + v
 
     return zonal_histograms
 
@@ -60,11 +65,13 @@ def main(yml_fpath):
     out_tag = yml_conf["output"]["class_name"]
 
     zonal_histogram = None
-    for i in range(len(clust_gtiffs)):
+    print(len(clust_gtiffs), len(label_gtiffs[0]))
+    for i in range(len(label_gtiffs)):
         for j in range(len(label_gtiffs[i])):
-            zonal_histogram = gen_zonal_histogram(label_gtiffs[i][j], clust_gtiffs[i], zonal_histogram)
+            zonal_histogram = gen_zonal_histogram(label_gtiffs[i][j], clust_gtiffs[j], zonal_histogram)
 
-    np.save(os.path.join(out_dir, out_tag + "_hist_ditc.npy"))
+        with open(os.path.join(out_dir, out_tag[i] + "_hist_dict.pkl"), 'wb') as handle:
+                pickle.dump(zonal_histogram, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 if __name__ == '__main__':

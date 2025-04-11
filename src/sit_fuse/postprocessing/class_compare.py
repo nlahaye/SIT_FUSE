@@ -24,6 +24,7 @@ import datetime
 import copy
 import dbfread
 import pandas as pd
+import pickle
 from osgeo import gdal
 
 from sit_fuse.utils import numpy_to_torch, read_yaml, get_read_func
@@ -172,6 +173,52 @@ def get_class_mask_func(key):
         return class_mask_gen_basic
 
 
+def read_label_counts_pkl(pkl_list):
+
+    new_data_label_counts = {}
+    init_data_label_counts = {}
+
+
+    for i in range(len(pkl_list)):
+        init_data_label_counts[i] = {'total' : 0} 
+
+        itr = pkl_list[i]
+        for key in itr.keys():
+                try:
+                    label = float(key)
+                    count = int(itr[key])
+                    if label not in new_data_label_counts.keys():
+                            new_data_label_counts[label] = {i : count, 'total' : count}
+                    elif i in new_data_label_counts[label].keys():
+                             new_data_label_counts[label][i] = new_data_label_counts[label][i] + count
+                             new_data_label_counts[label]['total'] = new_data_label_counts[label]['total'] + count
+                    else:
+                             new_data_label_counts[label][i] = count
+                             new_data_label_counts[label]['total'] = new_data_label_counts[label]['total'] + count
+
+                    if label not in init_data_label_counts[i].keys():
+                            init_data_label_counts[i][label] = count
+                    else:
+                            init_data_label_counts[i][label] = init_data_label_counts[i][label] + count
+                    init_data_label_counts[i]['total'] = init_data_label_counts[i]['total'] + count
+
+                except ValueError:
+                    continue
+
+
+    for key in init_data_label_counts.keys():
+            init_data_label_counts[key] = OrderedDict(sorted(init_data_label_counts[key].items(), reverse = True, key=lambda item: item[1]))
+    for key in new_data_label_counts.keys():
+            new_data_label_counts[key] = OrderedDict(sorted(new_data_label_counts[key].items(), reverse = True, key=lambda item: item[1]))
+
+  
+
+    print("KEYS")
+    pprint(init_data_label_counts)
+    print("KEYS")
+    pprint(new_data_label_counts)
+    return new_data_label_counts, init_data_label_counts
+
 def read_label_counts_dbfs(dbf_list):
 
     new_data_label_counts = {}
@@ -233,7 +280,13 @@ def read_label_counts_dbfs(dbf_list):
 
 def run_compare_dbf(dbf_list, percent_threshold):
 
-    new_data_label_counts, init_data_label_counts = read_label_counts_dbfs(dbf_list)
+    if '.pkl' in dbf_list[0][0]:
+        pkl_list = None
+        with open(dbf_list[0][0], 'rb') as handle:
+            pkl_list = pickle.load(handle)
+        new_data_label_counts, init_data_label_counts = read_label_counts_pkl(pkl_list)
+    else:
+        new_data_label_counts, init_data_label_counts = read_label_counts_dbfs(dbf_list)
         
     new_data_label_percentage = {}
     init_data_label_percentage = {}
