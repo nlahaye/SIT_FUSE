@@ -57,8 +57,8 @@ def train_dc_no_pt(yml_conf, dataset, conv=False):
 
     num_classes = yml_conf["cluster"]["num_classes"]
 
-    img_size = 9 #TODO yml_conf["data"]["tile_size"][0]
-    in_chans = 25 #TODO yml_conf["data"]["tile_size"][2]
+    img_size = yml_conf["data"]["tile_size"][0]*yml_conf["data"]["tile_size"][1]
+    in_chans = yml_conf["data"]["tile_size"][2]
 
     model = DeepCluster(num_classes=num_classes, conv=yml_conf["conv"], img_size=img_size, in_chans=in_chans)
 
