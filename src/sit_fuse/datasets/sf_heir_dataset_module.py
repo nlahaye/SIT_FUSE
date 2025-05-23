@@ -24,8 +24,16 @@ class SFHeirDataModule(pl.LightningDataModule):
     def setup(self, stage=None):
         self.n_visible = self.dataset.data_full.shape[1]
         train_max = int(self.dataset.data_full.shape[0]*(1.0-self.val_percent))
-        self.train_dataset = SimpleDataset(torch.from_numpy(self.dataset.data_full[:train_max]))
-        self.val_dataset = SimpleDataset(torch.from_numpy(self.dataset.data_full[train_max:]))
+
+        if not torch.is_tensor(self.dataset.data_full[:train_max]):
+            self.train_dataset = SimpleDataset(torch.from_numpy(self.dataset.data_full[:train_max]))
+        else:
+            self.train_dataset = SimpleDataset(self.dataset.data_full[:train_max])
+
+        if not torch.is_tensor(self.dataset.data_full[train_max:]):
+            self.val_dataset = SimpleDataset(torch.from_numpy(self.dataset.data_full[train_max:]))
+        else:
+            self.val_dataset = SimpleDataset(self.dataset.data_full[train_max:])
 
     def train_dataloader(self):
         return DataLoader(

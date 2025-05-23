@@ -27,8 +27,17 @@ class SFDataModule(pl.LightningDataModule):
         self.n_visible = dataset.data_full.shape[1]
         train_max = int(dataset.data_full.shape[0]*(1.0-self.val_percent))
         print(train_max, "HERE TRAIN MAX")
-        self.train_dataset = SimpleDataset(torch.from_numpy(dataset.data_full[:train_max]))
-        self.val_dataset = SimpleDataset(torch.from_numpy(dataset.data_full[train_max:]))
+
+         
+        if not torch.is_tensor(dataset.data_full[:train_max]):
+            self.train_dataset = SimpleDataset(torch.from_numpy(dataset.data_full[:train_max]))
+        else:
+            self.train_dataset = SimpleDataset(dataset.data_full[:train_max])
+   
+        if not torch.is_tensor(dataset.data_full[train_max:]):
+            self.val_dataset = SimpleDataset(torch.from_numpy(dataset.data_full[train_max:]))
+        else:
+            self.val_dataset = SimpleDataset(dataset.data_full[train_max:])
 
     def train_dataloader(self):
         return DataLoader(
