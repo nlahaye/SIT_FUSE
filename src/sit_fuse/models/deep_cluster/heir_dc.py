@@ -52,7 +52,7 @@ class Heir_DC(pl.LightningModule):
         #define model layers
         self.pretrained_model = None
         if encoder_type is None:
-            self.pretrained_model = DeepCluster.load_from_checkpoint(pretrained_model_path, img_size=yml_conf["data"]["tile_size"][0], in_chans=yml_conf["data"]["tile_size"][2]) #Why arent these being saved
+            self.pretrained_model = DeepCluster.load_from_checkpoint(pretrained_model_path, img_size=int(yml_conf["data"]["tile_size"][0]*yml_conf["data"]["tile_size"][1]), in_chans=yml_conf["data"]["tile_size"][2]) #Why arent these being saved
         elif "pca" in encoder_type:
             self.pretrained_model = PCA_DC.load_from_checkpoint(pretrained_model_path, pretrained_model=encoder)
             self.encoder = encoder
@@ -140,7 +140,7 @@ class Heir_DC(pl.LightningModule):
             
             encoder_output_size = None
             if self.encoder_type is None:
-                n_visible = yml_conf["data"]["tile_size"][0]*yml_conf["data"]["tile_size"][2]
+                n_visible = yml_conf["data"]["tile_size"][0]*yml_conf["data"]["tile_size"][1]*yml_conf["data"]["tile_size"][2]
             elif self.encoder_type == "ijepa":
                 #TODO encoder_output_size = get_output_shape(self.encoder, (1, yml_conf["data"]["tile_size"][2],self.pretrained_model.pretrained_model.img_size,self.pretrained_model.pretrained_model.img_size))
                 #n_visible = encoder_output_size[2] #*encoder_output_size[2]
@@ -349,6 +349,7 @@ class Heir_DC(pl.LightningModule):
         #print("HERE OUTPUT", y.shape, x.shape)
 
   
+        tmp_prob_subset = None
         tmp_subset = None
         tmp = y.clone()
 
@@ -359,21 +360,25 @@ class Heir_DC(pl.LightningModule):
             tmp = torch.argmax(y, dim=0) 
 
         tmp_full = None
+        tmp_prob_full = None
         if y.ndim == 2:
             if train:
                 tmp_full = torch.zeros((y.shape[0], self.num_classes), device=y.device, dtype=torch.float32)
             else:
                 tmp_full = torch.zeros((y.shape[0], 1), device=y.device, dtype=torch.float32)
+            tmp_prob_full = torch.zeros((y.shape[0], 1), device=y.device, dtype=torch.float32)
         elif y.ndim == 3:
             if train:
                 tmp_full = torch.zeros((self.num_classes, y.shape[-2], y.shape[-1]), device=y.device, dtype=torch.float32)
             else:
                 tmp_full = torch.zeros((1, y.shape[-2], y.shape[-1]), device=y.device, dtype=torch.float32)
+            tmp_prob_full = torch.zeros((1, y.shape[-2], y.shape[-1]), device=y.device, dtype=torch.float32)
         elif y.ndim == 4:
             if train:
                 tmp_full = torch.zeros((y.shape[0], self.num_classes, y.shape[-2], y.shape[-1]), device=y.device, dtype=torch.float32)
             else:
                 tmp_full = torch.zeros((y.shape[0], 1, y.shape[-2], y.shape[-1]), device=y.device, dtype=torch.float32)
+            tmp_prob_full = torch.zeros((y.shape[0], 1, y.shape[-2], y.shape[-1]), device=y.device, dtype=torch.float32)
 
 
         f = lambda z: str(z)
@@ -432,6 +437,7 @@ class Heir_DC(pl.LightningModule):
             input_tmp = input_tmp[inds2,:] 
 
 
+            tmp_prob = None
 
             if key in self.clust_tree["1"].keys() and self.clust_tree["1"][key] is not None:
                 tmp = self.clust_tree["1"][key].forward(input_tmp) #torch.unsqueeze(x[inds],dim=0))
@@ -441,10 +447,11 @@ class Heir_DC(pl.LightningModule):
                     tmp = tmp[0]
 
                 if train == False:
-
+                    tmp_prob = torch.max(tmp, dim=1).values
                     tmp = torch.argmax(tmp, dim=1)
                     tmp = tmp + self.num_classes*tmp4[inds2]
                     tmp = torch.unsqueeze(tmp, dim=1)
+                    tmp_prob = torch.unsqueeze(tmp_prob, dim=1)
             elif train == False:
                 tmp = self.num_classes*tmp4[inds2]
                 tmp = torch.unsqueeze(tmp, dim=1)
@@ -453,7 +460,11 @@ class Heir_DC(pl.LightningModule):
 
             if tmp_subset is None:
                 tmp_subset = tmp.clone()
+                if tmp_prob is not None:
+                    tmp_prob_subset = tmp_prob.clone()
             else:
+                if tmp_prob is not None and tmp_prob_subset is not None:
+                    tmp_prob_subset = torch.cat((tmp_prob_subset, tmp_prob), dim=0)
                 tmp_subset = torch.cat((tmp_subset, tmp), dim=0)
 
             #print(y.shape, tmp.shape, tmp_full.shape, y.shape)
@@ -461,18 +472,25 @@ class Heir_DC(pl.LightningModule):
 
             if y.ndim == 2:
                 tmp_full[inds[0],:] = tmp.type(tmp_full.dtype)
+                if tmp_prob is not None:
+                    tmp_prob_full[inds[0],:] = tmp_prob.type(tmp_prob_full.dtype)
             elif y.ndim == 3:
                 tmp_full[:,inds[0],inds[1]] = tmp.type(tmp_full.dtype)
+                if tmp_prob is not None:
+                    tmp_prob_full[:,inds[0],inds[1]] = tmp_prob.type(tmp_prob_full.dtype)
             elif y.ndim == 4:
                 tmp_full[inds[0],:,inds[1],inds[2]] = tmp.type(tmp_full.dtype)
+                if tmp_prob is not None:
+                    tmp_prob_full[inds[0],:,inds[1],inds[2]] = tmp_prob.type(tmp_prob_full.dtype)
             del tmp
+            del tmp_prob
 
         if tmp_subset is None or tmp_full is None:
             return None
 
         if return_embed:
-            return tmp_subset, tmp_full, x
-        return tmp_subset, tmp_full
+            return tmp_subset, tmp_full, x, tmp_prob_subset, tmp_prob_full
+        return tmp_subset, tmp_full, tmp_prob_subset, tmp_prob_full
 
     
     def training_step(self, batch, batch_idx):
