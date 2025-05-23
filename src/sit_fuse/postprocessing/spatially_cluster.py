@@ -11,7 +11,7 @@ from joblib import Parallel, delayed
 from tqdm_joblib import tqdm_joblib
 import torch
 #from sw_approx import sw_approx
-from sliceduot.sliced_uot import unbalanced_sliced_ot, sliced_unbalanced_ot
+#from sliceduot.sliced_uot import unbalanced_sliced_ot, sliced_unbalanced_ot
 import zarr
 import argparse
 import numpy as np
