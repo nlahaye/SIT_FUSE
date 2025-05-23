@@ -122,9 +122,9 @@ class JEPASegmentor(nn.Module):
             vit_encoder,
             feature_maps=feature_maps,
         )
-        self.upsamples = [nn.Upsample(scale_factor=2**i) for i in range(3)] #+ [
-            #nn.Upsample(scale_factor=4),
-        #]
+        self.upsamples = [nn.Upsample(scale_factor=2**i) for i in range(4)] + [
+            nn.Upsample(scale_factor=4),
+        ]
 
         chan_mult = len(feature_maps)  + 6
 
