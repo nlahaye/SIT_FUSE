@@ -10,6 +10,8 @@ import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
+import copy
+
 from sklearn import metrics, manifold
 from pprint import pprint
 
@@ -36,6 +38,8 @@ from learnergy.models.deep import DBN, ConvDBN
 from segmentation.models.gcn import GCN
 from segmentation.models.deeplabv3_plus_xception import DeepLab
 from segmentation.models.unet import UNetEncoder, UNetDecoder
+
+from sklearn.preprocessing import RobustScaler
 
 import openTSNE
 
@@ -73,7 +77,7 @@ sys.setrecursionlimit(4500)
 
 
 
-def bootstrap_null(graph, number_of_bootstraps=25, n_components=None, umap_n_neighbors=32, acorn=None):
+def bootstrap_null(graph, number_of_bootstraps=25, n_components=None, umap_n_neighbors=32, acorn=None, fname_uid=""):
     '''
     Constructs a bootstrap null distribution for the difference of latent positions of the nodes in the passed graph
     :param graph: [N, N] binary symmetric hollow matrix to model
@@ -88,7 +92,7 @@ def bootstrap_null(graph, number_of_bootstraps=25, n_components=None, umap_n_nei
     if acorn is not None:
         np.random.seed(acorn)
 
-    ase_latents = AdjacencySpectralEmbed(n_components=n_components, svd_seed=acorn).fit_transform(graph)
+    ase_latents = AdjacencySpectralEmbed(n_components=n_components, svd_seed=acorn, n_elbows=5).fit_transform(graph)
 
     n, n_components = ase_latents.shape
 
@@ -99,9 +103,31 @@ def bootstrap_null(graph, number_of_bootstraps=25, n_components=None, umap_n_nei
         graph_b = rdpg(ase_latents, directed=False)
 
         bootstrap_latents = OmnibusEmbed(n_components=n_components).fit_transform([graph, graph_b])
+        scaler = RobustScaler(quantile_range=(10.0,90.0))
+        data = copy.deepcopy(bootstrap_latents[0])
+        for k in range(1, len(bootstrap_latents)):
+            data = np.concatenate((data, bootstrap_latents[k]))
+        scaler.fit(data)
+        del data 
+        for k in range(bootstrap_latents.shape[0]):
+            bootstrap_latents[k] = scaler.transform(bootstrap_latents[k])
         distances[i] = np.linalg.norm(bootstrap_latents[0] - bootstrap_latents[1], axis=1)
-
-    return distances.transpose((1, 0)), n_components
+        print("HERE", n, n_components, distances[i], bootstrap_latents.shape, distances[i].shape)
+        #fig = plt.figure()
+        #ax = fig.add_subplot(projection='3d')
+        #ct = ax.scatter(bootstrap_latents[0,:,0], bootstrap_latents[0,:,1], bootstrap_latents[0,:,2], marker='s', c="blue",
+        #    label="INIT", s=100)
+        #ax.scatter(bootstrap_latents[1,:,0], bootstrap_latents[1,:,1], bootstrap_latents[1,:,2], marker='.', c="red",
+        #    label="AdjSpectral", s=100)
+        #plt.legend(fontsize=20)
+     
+        #for j in range(200):
+        #    idx = np.random.randint(n, size=1)
+        #    ax.plot([bootstrap_latents[0,idx,0], bootstrap_latents[0,idx,1], bootstrap_latents[0,idx,2]], [bootstrap_latents[1,idx,0], bootstrap_latents[1,idx,1], bootstrap_latents[1,idx,2]])
+        #plt.tight_layout()
+        #plt.savefig("Bootstrap_Mapping_" + str(i) + fname_uid)
+        #plt.clf()
+    return distances.transpose((1, 0)) , n_components
 
 
 def get_cdf(pvalues, num=26):
@@ -120,8 +146,8 @@ def build_dist_mtx(embedding_functions, knn_graphs):
     dist_matrix = np.zeros((len(embedding_functions), len(embedding_functions)))
     for i, embed_function1 in enumerate(embedding_functions):
         for j, embed_function2 in enumerate(embedding_functions[i+1:], i+1):
-            omni_embds = OmnibusEmbed(n_components=2).fit_transform([knn_graphs[embed_function1], knn_graphs[embed_function2]])
-            temp_dist = np.linalg.norm(omni_embds[0] - omni_embds[1]) / np.linalg.norm( (omni_embds[0] + omni_embds[1]) / 2 )
+            omni_embds = OmnibusEmbed(n_components=3).fit_transform([knn_graphs[embed_function1], knn_graphs[embed_function2]])
+            temp_dist = np.linalg.norm(omni_embds[0] - omni_embds[1]) / np.linalg.norm( (omni_embds[0] + omni_embds[1])) # / 2 )
             dist_matrix[i,j] = temp_dist
             dist_matrix[j,i] = temp_dist
     return dist_matrix
@@ -129,25 +155,47 @@ def build_dist_mtx(embedding_functions, knn_graphs):
 def run_nomic_analysis(embedding_functions, knn_graphs, out_dir):
 
     #- now, we can "easily" learn a joint/aligned low-dimensional embedding of the two sets of embeddings
-    omni_embds = OmnibusEmbed(n_components=2).fit_transform(list(knn_graphs.values()))
-    fig, ax = plt.subplots(1,1)
+    omni_embds = OmnibusEmbed(n_components=3).fit_transform(list(knn_graphs.values()))
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
 
+    scaler = RobustScaler(quantile_range=(10.0,90.0))
+    data = copy.deepcopy(omni_embds[0])
+    print(omni_embds[0].shape, "OMNI SHAPE")
+    for i in range(1, len(embedding_functions)):
+        data = np.concatenate((data, omni_embds[i]))
+    scaler.fit(data)
+    #for i, embed_function in enumerate(embedding_functions):
+    #   scaler.partial_fit(omni_embds[i])
+    for i, embed_function in enumerate(embedding_functions):
+       omni_embds[i] = scaler.transform(omni_embds[i])
+    #scaler = None
+    del data
 
     out_dct = {"embed_funcs": embedding_functions, "omni_embeds": omni_embds}
     np.save(out_dir + "/omni.viz_dict.npy", out_dct)   
  
     #colors = ListedColormap(CMAP_COLORS[0:int(len(embedding_functions) - (-1) + 1)])
 
-    colors = ['red', 'black', 'blue', 'orange', 'green']
-    for i, embed_function in enumerate(embedding_functions):
-        ax.scatter(omni_embds[i, :, 0], omni_embds[i, :, 1], c=colors[i], label=embed_function)
+
+    colors = ['red', 'black', 'blue', 'orange', 'green', "magenta", "cyan", "olive", "purple"]
+    for i, embed_function in enumerate(embedding_functions): # < 5 < 40 < 5
+        inds = np.where((omni_embds[i, :, 0] > 1) & (omni_embds[i, :, 1] > 20) & (omni_embds[i, :, 2] > 0))
+        ax.scatter(omni_embds[i, inds, 0], omni_embds[i, inds, 1], omni_embds[i, inds, 2], c=colors[i], label=embed_function)
     #ax.set_cmap(cmap)
-    ax.legend(loc='upper left')
+    # Shrink current axis by 20%
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.7, box.height])
+
+    # Put a legend to the right of the current axis
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+
 
     plt.show()
     print("Plotting Scatter Embed")
-    plt.savefig(os.path.join(out_dir, "Embed_Scatter.png"))
+    plt.savefig(os.path.join(out_dir, "Embed_Scatter_" + embedding_functions[0] + ".png"))
     plt.clf()
+    plt.close(fig)    
 
     #- A simple "check" to see if the two embedding functions represent document i differently
     #- is to look at the distance || omni[0][i] - omni[1][i] ||
@@ -159,28 +207,33 @@ def run_nomic_analysis(embedding_functions, knn_graphs, out_dir):
     #- A more statistically rigorous way to determine *if* a document has moved
     #- is to use the hypothesis test described in the paper
 
-  
+    """ TODO REMOVE 
     for i, embed_function in enumerate(embedding_functions):
-        for j, embed_function2 in enumerate(embedding_functions):
-            null_dist = bootstrap_null(knn_graphs[embedding_functions[i]], number_of_bootstraps=100)[0]
+        for j in range(i+1,len(embedding_functions)):
+            embed_function2 = embedding_functions[j]
+            null_dist, ase_n_components  = bootstrap_null(knn_graphs[embedding_functions[i]], n_components=None, number_of_bootstraps=20, fname_uid="_" + embedding_functions[i] + "_" + embedding_functions[j])
             test_statistics = np.linalg.norm(omni_embds[i] - omni_embds[j], axis=1)
             p_values = []
 
+            print(test_statistics.shape, null_dist.shape, omni_embds[i].shape)
+
             for st, test_statistic in enumerate(test_statistics):
+                print("DIST", np.mean(test_statistic), np.mean(null_dist[st]), test_statistic.shape, null_dist.shape)
                 p_value = np.mean(test_statistic < null_dist[st])
                 p_values.append(p_value)
     
     
             #- same joint embedding space as above, but this time just plotting nomic-ai/nomic-embed-text-v1.5
             #- and adding color intensity to represent p-value
-            fig, ax = plt.subplots(1,1)
+            fig = plt.figure()
+            ax = fig.add_subplot(projection='3d')
             for d in range(omni_embds.shape[1]):
-                ax.scatter(omni_embds[i, d, 0], omni_embds[i, d, 1], label=embed_function, color=colors[i], alpha=1-p_values[d])
+                ax.scatter(omni_embds[i, d, 0], omni_embds[i, d, 1], omni_embds[i, d, 2], label=embed_function, color=colors[i], alpha=1-p_values[d])
             plt.show()
             print("Plotting Null Hyp Scatter")
-            plt.savefig(os.path.join(out_dir, "Embed_Scatter_Null_Hyp_" + embed_function + "_" + embed_function + ".png"))
+            plt.savefig(os.path.join(out_dir, "Embed_Scatter_Null_Hyp_" + embed_function + "_" + embed_function2 + ".png"))
             plt.clf()
- 
+            plt.close(fig) 
             #- Notice that the ranking of the p-values is related to but does not equal ranking of || omni[0][i] - omni[1][i] ||
             print(np.argsort(p_values)[::-1])
 
@@ -198,22 +251,36 @@ def run_nomic_analysis(embedding_functions, knn_graphs, out_dir):
             plt.show()
             print("Plotting P-Value")
             plt.savefig(os.path.join(out_dir, "P_Value_Dist_" + embed_function + "_" + embed_function2 + ".png"))
-
-    fig, ax = plt.subplots(1,1)
-
+            plt.clf()
+            plt.close(fig)
+    """
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
     #- Get low-dimensional representations of embedding models.
     #- "Families" of embedding models are close to each other in this space.
     dist_matrix = build_dist_mtx(embedding_functions, knn_graphs)
  
     print(dist_matrix.shape)
-
-    cmds_embds = ClassicalMDS().fit_transform(dist_matrix)
+ 
+    colors = ['red', 'black', 'blue', 'orange', 'green', "magenta", "cyan", "olive", "purple"]
+    cmds_embds = ClassicalMDS(n_components=3).fit_transform(dist_matrix)
     for i, cmds in enumerate(cmds_embds):
-        ax.scatter(cmds[0], cmds[1], label=embedding_functions[i])
-    ax.legend(loc='center left')
-    plt.show()
-    plt.savefig(os.path.join(out_dir, "Embed_Space_Dist_Mtx.png"))
+        ax.scatter(cmds[0], cmds[1], cmds[2], label=embedding_functions[i], c=colors[i])
 
+    #ax.set_yscale('log')
+    #ax.set_xscale('log')
+    #ax.set_zscale('log')
+    # Shrink current axis by 20%
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.7, box.height])
+
+    # Put a legend to the right of the current axis
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+ 
+
+    plt.show()
+    plt.savefig(os.path.join(out_dir, "Embed_Space_Dist_Mtx_" + embedding_functions[0] + ".png"))
+    plt.close(fig)
 
 def main(yml_fpath):
 
@@ -227,24 +294,18 @@ def main(yml_fpath):
 
     for key in knn_graphs.keys():
         knn_graphs[key] = zarr.load(knn_graphs[key])
+   
+        print(knn_graphs[key].shape)
+        knn_graphs[key] = np.array(knn_graphs[key])
+        middle = int(knn_graphs[key].shape[0]/2)
+        ind1 = middle - 5000
+        ind2 = middle + 5000
+        #already randomized
+        knn_graphs[key] = knn_graphs[key][ind1:ind2,ind1:ind2]
         print(knn_graphs[key].shape)
 
  
     run_nomic_analysis(embedding_functions, knn_graphs, out_dir)
-
-    for i in range(len(test_fnames)):
-        if isinstance(test_fnames[i], list):
-            output_fle = os.path.basename(test_fnames[i][0])
-        else:
-            output_fle = os.path.basename(test_fnames[i])
-        data, output_file  = get_prediction_dataset(yml_conf, test_fnames[i])
-        if data.data_full is None:
-            print("SKIPPING", test_fnames[i], " No valid samples")
-            continue
-        context_labels = gdal.Open(final_labels[i]).ReadAsArray()
-        if model.clust_tree_ckpt is not None:
-            _, output, embed = run_inference(data, model, True, out_dir, output_fle + ".clust.data", tiled = tiled)
-            run_tsne(embed, output, context_labels, output_fle) 
 
 				                
 

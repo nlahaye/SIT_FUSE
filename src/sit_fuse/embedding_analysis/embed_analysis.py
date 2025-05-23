@@ -31,6 +31,7 @@ import torch
 from torch.utils.data import DataLoader, TensorDataset
 
 import pickle
+import joblib
 
 from learnergy.models.deep import DBN, ConvDBN
 
@@ -87,27 +88,28 @@ FINAL_DCT = {
     }
 
 
-def run_tsne(embed, labels, coord, final_labels, out_fname, pca_embed = False, indices = None, recon_arr = None, recon_lab = None):
+def prep_tsne(embed, labels, coord, final_labels, out_fname, pca_embed = False, indices = None, recon_arr = None, recon_lab = None):
 
 
     coord_coord_1 = 1
     coord_coord_2 = 2
-    if coord.ndim < 3:
+    if coord.ndim < 3 and coord.shape[1] < 3:
         coord_coord_1 = 0
         coord_coord_2 = 1
- 
+
     if recon_lab is None or  recon_arr is None:
-        print(embed.shape, labels.shape, final_labels.shape, np.unique(labels), len(np.unique(labels)))
+        if final_labels is not None:
+            print("HERE ERROR", embed.shape, labels.shape, final_labels.shape, np.unique(labels), len(np.unique(labels)))
         original_shape = (max(coord[:,coord_coord_1])+1, max(coord[:,coord_coord_2])+1)
         for i in range(coord.shape[1]):
             print(max(coord[:,i]), coord.shape, i)
         if embed.ndim  == 4:
             embed = np.transpose(embed, axes=(0,2,3,1))
-            reconstructed_arr = np.zeros((original_shape[0], original_shape[1], embed.shape[3]))
-            reconstructed_labels = np.zeros((original_shape[0], original_shape[1])) - 1
+            reconstructed_arr = np.zeros((original_shape[0], original_shape[1], embed.shape[3]), dtype=np.float32)
+            reconstructed_labels = np.zeros((original_shape[0], original_shape[1]), dtype=np.float32) - 1
         else:
-            reconstructed_arr = np.zeros((original_shape[0], original_shape[1], embed.shape[1]))
-            reconstructed_labels = np.zeros((original_shape[0], original_shape[1])) - 1
+            reconstructed_arr = np.zeros((original_shape[0], original_shape[1], embed.shape[1]), dtype=np.float32)
+            reconstructed_labels = np.zeros((original_shape[0], original_shape[1]), dtype=np.float32) - 1
 
         print(original_shape, coord.shape, reconstructed_arr.shape, reconstructed_labels.shape)
         print(embed.shape, labels.shape)
@@ -139,74 +141,108 @@ def run_tsne(embed, labels, coord, final_labels, out_fname, pca_embed = False, i
     recon_coord = recon_coord.reshape(-1,2)
     print(recon_coord.shape, reconstructed_arr.shape, recon_coord.max(), recon_coord[:,0].max(), recon_coord[:,1].max())
 
-    final_labels = final_labels[:reconstructed_labels.shape[0],:reconstructed_labels.shape[1]]
-    final_labels = final_labels.flatten()
+ 
+    if final_labels is not None:
+        final_labels = final_labels[:reconstructed_labels.shape[0],:reconstructed_labels.shape[1]]
+        final_labels = final_labels.flatten()
     print("INTERMEDIATE RECON SHAPE", reconstructed_arr.shape, reconstructed_labels.reshape, np.unique(final_labels))
     embed = reconstructed_arr.reshape(-1, reconstructed_arr.shape[-1])
-    #zarr.save(out_fname + ".embeddings.zarr", embed)
     labels = reconstructed_labels.reshape(-1, 1)
-    #else:
-    #    embed = embed.reshape(-1, embed.shape[-1])
-    #final_labels = final_labels.flatten()
     labels = labels.flatten()
-    #final_labels = reconstructed_final_labels.flatten()
-    print("FLATTENED RECON SHAPE", embed.shape, final_labels.shape, labels.shape, indices)
+    #print("FLATTENED RECON SHAPE", embed.shape, final_labels.shape, labels.shape, indices)
     if indices is not None:
         ind_tmp = zarr.load(indices)
     else:
-        sub_ind_1 = np.where((final_labels == 0) & (labels > 0.0))[0]
-        sub_ind_2 = np.where(final_labels == 1)[0]
-        sub_ind_3 = np.where(final_labels == 2)[0]
-        sub_ind_4 = np.where(final_labels == 3)[0]
-        ind_final = np.concatenate((sub_ind_4, sub_ind_2))
-
-        sub_sub_ind__3 = np.random.choice(sub_ind_3.shape[0], size=min(int(sub_ind_3.shape[0]), 10000), replace=False)
-        sub_sub_ind__1 = np.random.choice(sub_ind_1.shape[0], size=min(int(sub_ind_1.shape[0]), 10000), replace=False)
-        ind_tmp = np.concatenate((ind_final, sub_ind_3[sub_sub_ind__3], sub_ind_1[sub_sub_ind__1]))
- 
-        #indices = np.random.choice(embed.shape[0], size=min(int(embed.shape[0]*0.05), 100000), replace=False)
-        #indices2 = np.where((final_labels == 1) | (final_labels == 3))[0]
-        #ind_tmp = np.concatenate((list(indices), list(indices2)))
-        print(np.unique(final_labels))
+        ind_tmp = np.where((final_labels > 0.0)) #TODO configurable #np.indices(labels.shape)
         zarr.save(out_fname + ".indices.zarr", ind_tmp)
-        print(ind_tmp.shape, out_fname + ".indices.zarr")
-    print(ind_tmp)
+    #elif final_labels is not None:
+    #    #sub_inds = []
+    #    #for label in np.unique(final_labels):
+    #    #    if label > 0.0:
+    #    #        sub_ind = np.where((final_labels == label)[0]
+    #      
+    #    #sub_ind_1 = np.where((final_labels == 0) & (labels > 0.0))[0]
+    #    #sub_ind_2 = np.where(final_labels == 1)[0]
+    #    #sub_ind_3 = np.where(final_labels == 2)[0]
+    #    #sub_ind_4 = np.where(final_labels == 3)[0]
+    #    #ind_final = np.concatenate((sub_ind_4, sub_ind_2))
+    #
+    #    #sub_sub_ind__3 = np.random.choice(sub_ind_3.shape[0], size=min(int(sub_ind_3.shape[0]), 100), replace=False)
+    #    #sub_sub_ind__1 = np.random.choice(sub_ind_1.shape[0], size=min(int(sub_ind_1.shape[0]), 100), replace=False)
+    #    #ind_tmp = np.concatenate((ind_final, sub_ind_3[sub_sub_ind__3], sub_ind_1[sub_sub_ind__1]))
+    # 
+    #    print(np.unique(final_labels))
+    #    zarr.save(out_fname + ".indices.zarr", ind_tmp)
+    #    print(ind_tmp.shape, out_fname + ".indices.zarr")
+    #else:
+    #    ind_tmp = np.indices(labels.shape)
+    #print(ind_tmp)
     indices = np.unique(ind_tmp)
     print(indices.shape, "HERE INDICES", np.unique(labels[indices]), len(np.unique(labels[indices])), embed.shape, recon_coord.shape)
     test_data = embed[indices, :]
     clust_data = labels[indices]
-    clust_data_2 = final_labels[indices]
+    if final_labels is not None:
+        clust_data_2 = final_labels[indices]
     print("RECON COORD TEST", recon_coord[:,0].max(), recon_coord[:,1].max())
     recon_coord = recon_coord[indices, :]
     print("RECON COORD TEST2", recon_coord[:,0].max(), recon_coord[:,1].max())
-    print(test_data.shape, clust_data.shape, clust_data_2.shape, test_data.min(), test_data.max(), len(np.where(np.isnan(embed))[0]), len(np.where(~np.isnan(embed))[0]))
-
     
+    #reducer = loop_dict["reducer"]
+    #landmarks = loop_dict["landmarks"]
 
-    #if pca_embed:
-    #    tsne_data = test_data.cpu().numpy()
+    return {"test_data":test_data, "recon_coord":recon_coord, "clust_data":clust_data, "clust_data_2":clust_data_2, "out_fname":out_fname}
+
+
+def run_tsne(full_embed, is_pca):
+
+    if is_pca:
+        return None
+    n_components = 10
+    reducer = umap.UMAP(metric="cosine", n_neighbors=20, min_dist=0.5, n_components=n_components)
+    reducer.fit(full_embed)
+    return reducer
+  
+    #if not pca_embed and reducer is None:
+    #    reducer = umap.ParametricUMAP()
+    #    reducer.optimizer = keras.optimizers.Adam(1e-5, clipvalue=0.1)
+
+    #    reducer.fit(test_data)
+     
+
+    #if not pca_embed: 
+ 
+    #    if landmarks is None:
+    #        landmark_idx = list(np.random.choice(range(test_data.shape[0]), int(test_data.shape[0]/100), replace=False))
+    #        new_landmarks = reducer.transform(test_data[landmark_idx]) 
+    #    else:
+    #        landmarks = np.stack([np.array([np.nan, np.nan])]*test_data.shape[0] + list(landmarks))
+    #        reducer.landmark_loss_weight = 0.01
+    #        reducer.fit(test_data, landmark_positions=landmarks)
+    #        transformed = reducer.transform(test_data)
+    #        landmark_idx = list(np.random.choice(range(test_data.shape[0]), int(test_data.shape[0]/100), replace=False))
+    #        new_landmarks = np.concatenate((landmarks, transformed[landmark_idx])) 
+    
+ 
+    #return {"test_data":test_data, "reducer":reducer, "landmarks":new_landmarks, "recon_coord":recon_coord, "clust_data":clust_data, "clust_data_2":clust_data_2, "out_fname":out_fname}
+
+
+
+def transform_and_save(recon_coord, test_data, pca_embed, out_fname, clust_data, clust_data_2, reducer = None, scaler = None):
+
     if not pca_embed:
-        #tsne_data = tsne.fit_transform(test_data) #2200 #euclidean #2
-        #aff500 = openTSNE.affinity.PerplexityBasedNN(test_data,perplexity=5000, n_jobs=50, random_state=20)
-        #tsne_data = openTSNE.TSNE(n_jobs=50, verbose=True, metric="cosine", exaggeration = 2,
-        #        random_state=42).fit(affinities=aff500)
-        reducer = umap.UMAP(metric="cosine", n_components=2)
-
-        tsne_data = reducer.fit_transform(test_data)
+        tsne_data = reducer.transform(test_data)
     else:
-        tsne_data = test_data 
-    #final = plot_tsne(tsne_data, clust_data, test_coord)
+        tsne_data = test_data
 
-    #tsne_data = (tsne_data*100).astype(np.int32)
+    if scaler is not None:
+        tsne_data = scaler.transform(tsne_data)
+ 
 
     shift_1 = abs(min(tsne_data[:,0]))
     shift_2 = abs(min(tsne_data[:,1]))
 
     tsne_data[:,0] = tsne_data[:,0] + shift_1
     tsne_data[:,1] = tsne_data[:,1] + shift_2
-
-    scaler = MinMaxScaler()
-    tsne_data = scaler.fit_transform(tsne_data)
 
     tsne_data = (tsne_data*1000).astype(np.int32)
 
@@ -229,24 +265,27 @@ def run_tsne(embed, labels, coord, final_labels, out_fname, pca_embed = False, i
         final_dct["bb_width"].append(3) #TODO generalize
         final_dct["bb_height"].append(3)
         final_dct["heir_label"].append(clust_data[i] / 100.0)
-        final_dct["final_label"].append(clust_data_2[i])
+        if clust_data_2 is not None:
+            final_dct["final_label"].append(clust_data_2[i])
         final_dct["no_heir_label"].append(int(clust_data[i] / 100.0))
 
         final[tsne_data[i,0], tsne_data[i,1]] = clust_data[i] / 100.0
-        final2[tsne_data[i,0], tsne_data[i,1]] = clust_data_2[i]
+        if clust_data_2 is not None:
+            final2[tsne_data[i,0], tsne_data[i,1]] = clust_data_2[i]
 
     np.save(out_fname + ".viz_dict.npy", final_dct)
+
 
     out_ds = gdal.GetDriverByName("GTiff").Create(out_fname + ".TSNE_Clust.tif", final.shape[1], final.shape[0], 1, gdal.GDT_Float32)
     out_ds.GetRasterBand(1).WriteArray(final)
     out_ds.FlushCache()
     out_ds = None
  
-    out_ds = gdal.GetDriverByName("GTiff").Create(out_fname + ".TSNE_Final.tif", final.shape[1], final.shape[0], 1, gdal.GDT_Float32)
-    out_ds.GetRasterBand(1).WriteArray(final2)
-    out_ds.FlushCache()
-    out_ds = None
-
+    if clust_data_2 is not None:
+        out_ds = gdal.GetDriverByName("GTiff").Create(out_fname + ".TSNE_Final.tif", final.shape[1], final.shape[0], 1, gdal.GDT_Int16)
+        out_ds.GetRasterBand(1).WriteArray(final2)
+        out_ds.FlushCache()
+        out_ds = None
 
 
     out_ds = gdal.GetDriverByName("GTiff").Create(out_fname + ".TSNE_Clust_Round.tif", final.shape[1], final.shape[0], 1, gdal.GDT_Int32)
@@ -254,9 +293,10 @@ def run_tsne(embed, labels, coord, final_labels, out_fname, pca_embed = False, i
     out_ds.FlushCache()
     out_ds = None
 
-    return  test_data
+    return tsne_data
 
-def knn_graph(w, k, symmetrize=True, metric='euclidean'):
+
+def knn_graph(w, k, symmetrize=True, metric='cosine'):
     '''
     :param w: A weighted affinity graph of shape [N, N] or 2-d array 
     :param k: The number of neighbors to use
@@ -340,7 +380,9 @@ def main(yml_fpath):
 
     knn_graphs = yml_conf["analysis"]["build_knn_graphs"]
 
-
+    #loop_dict = {"reducer":None, "landmarks":None}
+    loop_dicts = []
+    int_embed = None
     for i in range(len(test_fnames)):
         if isinstance(test_fnames[i], list):
             output_fle = os.path.join(out_dir, os.path.basename(os.path.splitext(test_fnames[i][0])[0]) + "." + embed_func)
@@ -351,7 +393,9 @@ def main(yml_fpath):
         if data.data_full is None:
             print("SKIPPING", test_fnames[i], " No valid samples")
             continue
-        context_labels = gdal.Open(final_labels[i]).ReadAsArray()
+        context_labels = None
+        if len(final_labels) == len(test_fnames):
+            context_labels = gdal.Open(final_labels[i]).ReadAsArray()
         print(data.targets_full.shape)
         #if data.targets_full.ndim > 2:
         #    context_labels = context_labels[data.targets_full[0,:,1], data.targets_full[0,:,2]].flatten()
@@ -367,16 +411,90 @@ def main(yml_fpath):
         recon_lab = None
         if model.clust_tree_ckpt is not None:
             if not os.path.exists(output_fle + ".embeddings.zarr") or not os.path.exists(output_fle + ".embedding_labels.zarr"):
-                output, embed = run_inference(data, model, True, out_dir, output_fle + ".clust.data", tiled = tiled, return_embed =  True)
+                output, embed, _ = run_inference(data, model, True, out_dir, output_fle + ".clust.data", tiled = tiled, return_embed =  True)
             else:
                 recon_arr = zarr.load(output_fle + ".embeddings.zarr")
                 recon_lab = zarr.load(output_fle + ".embedding_labels.zarr")
    
             is_pca = bool("pca" in embed_func )
             if run_projection:
-                embed = run_tsne(embed, output, data.targets_full, context_labels, output_fle, is_pca, indices[i], recon_arr, recon_lab)
-                if knn_graphs and i == 0:	                
-                    build_knn_graph(embed, os.path.join(out_dir, embed_func + ".zarr"))
+                ind = None
+                if indices[0] is not None:
+                    ind = indices[i]
+                loop_dict = prep_tsne(embed, output, data.targets_full, context_labels, output_fle, is_pca, ind, recon_arr, recon_lab)
+                loop_dicts.append(loop_dict)
+                if int_embed is None:
+                    int_embed = loop_dict["test_data"]
+                else:
+                    int_embed = np.concatenate((int_embed, loop_dict["test_data"]))
+                print("INTERMEDIATE EMBEDDING SHAPE", int_embed.shape) 
+
+    del model
+
+    if run_projection:
+        reducer = None
+        scaler2 = None
+        scaler1 = None
+        reducer_fname = os.path.join(out_dir, 'umap_model.joblib')
+        scaler1_fname = os.path.join(out_dir, 'umap_pre_scaler.joblib')
+        scaler2_fname = os.path.join(out_dir, 'umap_post_scaler.joblib') 
+
+        if not os.path.exists(scaler1_fname) and not is_pca:
+            print("FITTING SCALER 1")
+            scaler1 = MinMaxScaler()
+            scaler1.fit(int_embed) #loop_dicts[1]["test_data"])
+            joblib.dump(scaler1, scaler1_fname)
+        elif not is_pca:
+            scaler1 = joblib.load(scaler1_fname)
+ 
+        #if not is_pca: 
+        #    int_embed = scaler1.transform(int_embed)
+
+        if not is_pca: 
+            int_embed = scaler1.transform(int_embed)
+        if not os.path.exists(reducer_fname) and not is_pca:
+            print("TRAINING UMAP")
+            reducer = run_tsne(int_embed, is_pca) #loop_dicts[1]["test_data"]), is_pca)
+            joblib.dump(reducer, reducer_fname)
+        elif not is_pca:
+            reducer = joblib.load(reducer_fname)
+
+        if reducer is not None:
+            int_embed = reducer.transform(int_embed)
+
+        if not os.path.exists(scaler2_fname):
+            print("FITTING SCALER 2")
+            scaler2 = MinMaxScaler()
+            if reducer is not None and scaler1 is not None:
+                scaler2.fit(int_embed) #loop_dicts[1]["test_data"])))
+            else:
+                scaler2.fit(int_embed)
+            joblib.dump(scaler2, scaler2_fname)
+        else:
+            scaler2 = joblib.load(scaler2_fname)
+
+        del int_embed 
+
+        final_embed = None
+        for i in range(len(test_fnames)):
+            inp = loop_dicts[i]["test_data"]
+            if not is_pca:
+                inp = scaler1.transform(inp)
+            print("Generating UMAP for", loop_dicts[i]["out_fname"])
+            tsne_data = transform_and_save(loop_dicts[i]["recon_coord"], inp, \
+                is_pca, loop_dicts[i]["out_fname"], loop_dicts[i]["clust_data"], loop_dicts[i]["clust_data_2"], \
+                reducer = reducer, scaler=scaler2)
+            if i % 2 > 0:
+                if final_embed is None:
+                    final_embed = tsne_data
+                else:
+                    final_embed = np.concatenate((final_embed, tsne_data))
+
+        del reducer
+        del loop_dicts
+        print("Building KNN Graph")
+        if knn_graphs:	                
+            build_knn_graph(final_embed, os.path.join(out_dir, embed_func + ".zarr"))
 
 
 
