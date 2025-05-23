@@ -257,10 +257,14 @@ def read_zarr_geo(filename, **kwargs):
 
 def read_pace_oc(filename, **kwargs):
 
-    vrs = ["RRS.V2_0.Rrs"]
-
+    vrs = ["RRS.V3_0.Rrs"]
+    kwrg = {}
     data = None
-    flename = filename + vrs[0] + ".4km.NRT.nc"
+    if "nrt"  in kwargs and  kwargs["nrt"]:
+        kwrg['nrt'] = kwargs["nrt"]
+        flename = filename + vrs[0] + ".4km.NRT.nc"
+    else:
+        flename = filename + vrs[0] + ".4km.nc"
     start_ind = 9
     print(flename, vrs[0][start_ind:])
     f = Dataset(flename)
@@ -287,7 +291,7 @@ def read_pace_oc(filename, **kwargs):
     dat = data.astype(np.float32)
 
     if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs:
-        loc = read_oc_geo(filename)
+        loc = read_oc_geo(filename, **kwrg)
         lat = loc[0]
         lon = loc[1]
         print(lat.shape, lon.shape, dat.shape)
@@ -488,9 +492,15 @@ def read_oc_geo(filename, **kwargs):
     vrs = ["lat", "lon"]
 
     if "PACE" not in filename:
-        f = Dataset(filename + "RRS.Rrs_443.4km.nc")
+        if "JPSS1" not in filename:
+            f = Dataset(filename + "RRS.Rrs_443.4km.nc")
+        else:
+            f = Dataset(filename + "RRS.Rrs_445.4km.nc")
     else:
-        f = Dataset(filename + "RRS.V2_0.Rrs.4km.NRT.nc")
+        if 'nrt'  in kwargs and kwargs['nrt']:
+            f = Dataset(filename + "RRS.V3_0.Rrs.4km.NRT.nc")
+        else:
+            f = Dataset(filename + "RRS.V3_0.Rrs.4km.nc")
     f.set_auto_maskandscale(False)
     data1 = []
     for i in range(len(vrs)):
@@ -1142,7 +1152,7 @@ def read_gtiff_generic(flename, **kwargs):
 
 
 #TODO generalize pieces for other tasks
-def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n_clusters, radius_degrees, ranges, global_max, input_file_type, karenia):
+def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n_clusters, radius_degrees, ranges, global_max, input_file_type, karenia, discard_lower=False, use_key='Total_Phytoplankton'): #, lookup = {}):
  
     print(insitu_fname)
     insitu_df = None
@@ -1150,15 +1160,15 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         insitu_df = pd.read_excel(insitu_fname)
     elif 'csv' in insitu_fname:
         insitu_df = pd.read_csv(insitu_fname)
- 
     if karenia:
         # Format Datetime Stamp
         insitu_df['Datetime'] = pd.to_datetime(insitu_df['Sample Date'])
         insitu_df.set_index('Datetime')
 
         # Shorten Karenia Column Name
-        insitu_df.rename(columns={"Karenia brevis abundance (cells/L)":'Total_Phytoplankton'}, inplace=True)
+        insitu_df.rename(columns={"Karenia brevis abundance (cells/L)":use_key}, inplace=True)
     else:
+        print(insitu_df['time'])
         # Format Datetime Stamp
         insitu_df['Datetime'] = pd.to_datetime(insitu_df['time'])
         insitu_df.set_index('Datetime')
@@ -1183,31 +1193,53 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         if "sif" in input_file_type:
             clust_fname = os.path.join(os.path.join(clusters_dir, "sif_finalday_" + str(ind) + ".tif"))
         elif "daily" in input_file_type:
-            clust_fname = os.path.join(os.path.join(clusters_dir, pd.to_datetime(str(date)).strftime("%Y%m%d") + "_karenia_brevis_bloom" + ".tif"))
+            file_ext = "_DAY." #"DAY." #"_DAY." TODO HERE
+            if "no_heir" in input_file_type:
+                file_ext = file_ext  + "no_heir."
+
+            if "alexandrium" in input_file_type:
+                file_ext = file_ext  + "alexandrium_bloom.tif"
+            elif "seriata" in input_file_type:
+                file_ext = file_ext  + "pseudo_nitzschia_seriata_bloom.tif"
+            elif "delicatissima" in input_file_type:
+                file_ext = file_ext  + "pseudo_nitzschia_delicatissima_bloom.tif"
+            else:
+                file_ext = file_ext  + "karenia_brevis_bloom.tif"
+            #clust_fname = os.path.join(os.path.join(clusters_dir, "AQUA_MODIS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m." + file_ext))
+            clust_fname = os.path.join(os.path.join(clusters_dir, pd.to_datetime(str(date)).strftime("%Y%m%d") +  file_ext))
+        elif "alexandrium" in input_file_type:
+            clust_fname = os.path.join(os.path.join(clusters_dir, pd.to_datetime(str(date)).strftime("%Y%m%d") + "_alexandrium_bloom" + ".tif"))
+        elif "pseudo_nitzschia_seriata" in input_file_type:
+            clust_fname = os.path.join(os.path.join(clusters_dir, pd.to_datetime(str(date)).strftime("%Y%m%d") + "_pseudo_nitzschia_seriata_bloom" + ".tif"))
+        elif "pseudo_nitzschia_delicatissima" in input_file_type:
+            clust_fname = os.path.join(os.path.join(clusters_dir, pd.to_datetime(str(date)).strftime("%Y%m%d") + "_pseudo_nitzschia_delicatissima_bloom" + ".tif"))
         else:
+            file_ext = ".tif"
+            if "no_heir" in input_file_type: 
+                file_ext = ".no_heir.tif"
             if "S3B" in input_file_type:     
-                clust_fname = os.path.join(os.path.join(clusters_dir, "S3B_OLCI_ERRNT." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".tif"))
+                clust_fname = os.path.join(os.path.join(clusters_dir, "S3B_OLCI_ERRNT." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext))
             elif "S3A" in input_file_type:
-                clust_fname = os.path.join(os.path.join(clusters_dir, "S3A_OLCI_ERRNT." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".tif"))
+                clust_fname = os.path.join(os.path.join(clusters_dir, "S3A_OLCI_ERRNT." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext))
             elif "SNPP_VIIRS" in input_file_type:
-                clust_fname = os.path.join(os.path.join(clusters_dir, "SNPP_VIIRS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".tif"))
+                clust_fname = os.path.join(os.path.join(clusters_dir, "SNPP_VIIRS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext))
             elif "JPSS1_VIIRS" in input_file_type:
-                clust_fname = os.path.join(os.path.join(clusters_dir, "JPSS1_VIIRS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".tif"))
+                clust_fname = os.path.join(os.path.join(clusters_dir, "JPSS1_VIIRS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext))
             elif "AQUA_MODIS" in input_file_type:
-                clust_fname = os.path.join(os.path.join(clusters_dir, "AQUA_MODIS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".tif"))
+                clust_fname = os.path.join(os.path.join(clusters_dir, "AQUA_MODIS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext))
             elif "TERRA_MODIS" in input_file_type:
-                clust_fname = os.path.join(os.path.join(clusters_dir, "TERRA_MODIS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".tif"))
+                clust_fname = os.path.join(os.path.join(clusters_dir, "TERRA_MODIS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext))
             elif "PACE_OCI" in input_file_type:
-                clust_fname = os.path.join(os.path.join(clusters_dir, "PACE_OCI." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + ".tif"))
+                clust_fname = os.path.join(os.path.join(clusters_dir, "PACE_OCI." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext))
         ind = ind + 1
 
-        print(clust_fname)
+        #print(clust_fname)
 
         dat_train = False
         dat_test = False
 
         clust_fname = glob(clust_fname)
-        print(clust_fname)
+        #print(clust_fname)
         
         if len(clust_fname) < 1:
             continue     
@@ -1222,7 +1254,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         clust = clust.ReadAsArray()
         clust = clust * 1000
         clust = clust.astype(np.int32)               
-        print(np.unique(clust))
+        #print(np.unique(clust))
  
         lat = latLon[:,:,0].reshape(clust.shape[0]*clust.shape[1])
         lon = latLon[:,:,1].reshape(clust.shape[0]*clust.shape[1])
@@ -1235,8 +1267,8 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
 
         gdf = gpd.GeoDataFrame(clust, geometry=gpd.GeoSeries.from_xy(lon, lat), crs=4326)
         subset = insitu_df[(insitu_df['Datetime'] == date)]
-        print(len(subset), date)
-        gdf_insitu = gpd.GeoDataFrame(subset["Total_Phytoplankton"], geometry=gpd.GeoSeries.from_xy(subset['Longitude'], subset['Latitude']), crs=4326)
+        #print(len(subset), date)
+        gdf_insitu = gpd.GeoDataFrame(subset[use_key], geometry=gpd.GeoSeries.from_xy(subset['Longitude'], subset['Latitude']), crs=4326)
 
         #gdf_proj = gdf.to_crs({"init": "EPSG:3857"})
         #gdf_insitu_proj = gdf_insitu.to_crs({"init": "EPSG:3857"})     
@@ -1244,14 +1276,17 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         dists = []
         count = -1
         hist_data = []
-        print("PRE-ITER", len(gdf_insitu))
+        #print("PRE-ITER", len(gdf_insitu))
         for index, poi in gdf_insitu.iterrows():
             count = count + 1
             neighbours = []
             for index2, poi2 in gdf.iterrows():
                 #print(abs(poi2.geometry.distance(poi.geometry)) < radius_degrees, "DISTANCE")
                 if abs(poi2.geometry.distance(poi.geometry)) < radius_degrees:
-                    print(poi.geometry, poi2.geometry, poi2.geometry.distance(poi.geometry))
+                    #print(poi.geometry, poi2.geometry, poi2.geometry.distance(poi.geometry))
+                    clust_val = clust[index2] / 1000.0 
+                    #if  discard_lower  and str(clust_val) in lookup and np.digitize(poi[use_key], ranges) < lookup[str(clust_val)]:
+                    #    continue
                     neighbours.append(index2)
             #print(poi.geometry)
             #x = poi.geometry.buffer(0.011) #.unary_union
@@ -1260,40 +1295,43 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
             #inds = gdf[~neighbours.is_empty]
             #print(index, poi)
             #print(inds, len(inds), len(clust))
-            print(len(neighbours), "HERE")
+            #print(len(neighbours), "HERE")
             if len(neighbours) < 1:
                 continue
             clusters = clust[neighbours]
             clusters_index = [np.nan]*n_clusters
-            print(np.unique(clusters))
+            #print(np.unique(clusters))
             clusts = np.unique(clusters).astype(np.int32)
-            print(clusts, len(clusters_index))
+            #print(clusts, len(clusters_index))
             for c in clusts:
                 clusters_index[c] = (c in clusters)
             hist_data.append(np.array(clusters_index))
             good_inds = np.where(np.isfinite(clusters_index))
             bad_inds = np.where(np.isnan(clusters_index))
-            print(good_inds, "HERE")
+            #print(good_inds, "HERE")
             #for j in range(len(clusters_index)):
-            hist_data[-1][good_inds] = poi["Total_Phytoplankton"]
+            hist_data[-1][good_inds] = poi[use_key]
             hist_data[-1][bad_inds] = -1
             #for j in good_inds[0]:
             #    if clusters_index[j]:
-            #        hist_data[-1][j] = poi["Total_Phytoplankton"]
+            #        hist_data[-1][j] = poi[use_key]
             #    else:
             #        hist_data[-1][j] = -1
 
         final_hist_data.extend(hist_data)
     fnl = np.array(final_hist_data, dtype=np.float32)
-    print(fnl.shape)
+    #print(fnl.shape)
+    if  fnl.ndim < 2:
+        return [[] for _ in range(len(ranges)-1)]
     fnl = np.swapaxes(fnl, 0,1)
-    print(fnl.shape, fnl.max())
+    #print(fnl.shape, fnl.max())
     ranges[-1] = max(ranges[-1], global_max)
     algal = [[] for _ in range(len(ranges)-1)]
     for i in range(fnl.shape[0]):
         hist, bins = np.histogram(fnl[i], bins=ranges, density=False)
         if max(hist) < 1:
             continue
+        #print(fnl[i], ranges)
         mx1 = np.argmax(hist)
         if mx1 == 0:
             sm = np.sum(hist[1:])
@@ -1307,7 +1345,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         plt.savefig("TEST_HIST_" + str(i) + ".png") 
         plt.clf()
     print("HERE FINAL", algal)
-
+    return algal
     
 
 
@@ -1428,6 +1466,7 @@ def read_sif(trop_fname, **kwargs):
 
     if "ungridded" in trop_fname: 
         sif_df = ds.to_dataframe()
+        sif_df[sif_df['sif'] < -900.0] = np.nan
         if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs:
             sif_df = sif_df[(sif_df['lat'] >= kwargs["start_lat"]-2) & (sif_df['lat'] <= kwargs["end_lat"]+2) &\
                 (sif_df['lon'] >= kwargs["start_lon"]-2) & (sif_df['lon'] <= kwargs["end_lon"]+2)]
@@ -1438,7 +1477,7 @@ def read_sif(trop_fname, **kwargs):
         sif_raw = make_geocube(vector_data=gdf,
                 measurements=["sif"],
                 output_crs=4326,
-                resolution=(-0.083,0.083)#,
+                resolution=(-0.063,0.063)#,
                 #fill = np.nan,
                 #interpolate_na_method="cubic"
             )
@@ -1450,8 +1489,9 @@ def read_sif(trop_fname, **kwargs):
         sif_raw = sif_raw.rename({'x': 'lon','y': 'lat'})
         #sif_raw.rio.set_spatial_dims("lat", "lon", inplace=True)
         #sif_raw = sif_raw.sortby("lat").sortby("lon")
-        tmp =  np.flipud(sif_raw["sif"].to_numpy()) #np.flipud(np.fliplr(sif_raw["sif"].to_numpy()))
-        tmp = np.fliplr(tmp)
+        #tmp =  np.flipud(sif_raw["sif"].to_numpy()) #np.flipud(np.fliplr(sif_raw["sif"].to_numpy()))
+        #tmp = np.fliplr(tmp)
+        tmp = sif_raw["sif"].to_numpy()
         sif_raw = xr.DataArray(tmp,\
             coords={'lat': sif_raw.lat.data,'lon': sif_raw.lon.data},\
             dims=["lat", "lon"]) 
@@ -1513,7 +1553,7 @@ def read_oc_and_trop(fnames, **kwargs):
 
     # Convert to xarray
     data_vrs = {}
-    dat1[np.where(dat1 < -900000)] = np.nan
+    dat1[np.where(dat1 < -90)] = np.nan
     oc_xr = xr.Dataset(coords=dict(lon=(["x"],lon),\
         lat=(["y"],lat)))
 
@@ -1540,7 +1580,7 @@ def read_oc_and_trop(fnames, **kwargs):
     #plt.savefig(trop_fname + ".NO_MASK.IMG.png")
     #plt.clf()
     sif_aoi_2 = sif_raw.interp_like(oc_xr2[0], method="nearest") #, assume_sorted=True, method_non_numeric="none")
-    sif_aoi_2 = sif_aoi_2.reindex(lat=lat, lon=lon, method="nearest", tolerance=0.045)
+    sif_aoi_2 = sif_aoi_2.reindex(lat=lat, lon=lon, method="nearest", tolerance=0.063)
  
     #plt.imshow(sif_aoi_2)
     #plt.savefig(trop_fname + ".REINDEXED_NO_MASK.IMG.png")
@@ -1787,7 +1827,7 @@ def get_lat_lon(fname):
     ds = gdal.Open(fname)
     xoffset, px_w, rot1, yoffset, px_h, rot2 = ds.GetGeoTransform()
     dataArr = ds.ReadAsArray()
-    print(dataArr.shape, "LONLAT")
+    #print(dataArr.shape, "LONLAT")
  
     ind = 1
     if dataArr.ndim == 3:
