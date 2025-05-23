@@ -21,9 +21,11 @@ from pprint import pprint
 
 DATE_RE = ".*(\d{8}).*"
 
-fname_res = ["(sif_finalday_\d+).*karenia_brevis_bloom.tif", ".*(\d{8}).*karenia_brevis_bloom.tif"]
+
+
+fname_res = ["(sif_finalday_\d+).*karenia_brevis_bloom.tif", ".*(\d{8}).*karenia_brevis_bloom.tif", ".*(\d{8}).*no_heir.*karenia_brevis_bloom.tif", ".*(\d{8}).*pseudo_nitzschia_seriata_bloom.tif", ".*(\d{8}).*pseudo_nitzschia_delicatissima_bloom.tif", ".*(\d{8}).*alexandrium_bloom.tif"]
  
-def merge_datasets(num_classes, paths, fname_str, out_dir, re_index = 0, base_index = 0): 
+def merge_datasets(paths, fname_str, out_dir, re_index = 0, base_index = 0): 
     for root, dirs, files in os.walk(paths[base_index]):
         for fle in files:
             if fname_str in fle:
@@ -50,8 +52,6 @@ def merge_datasets(num_classes, paths, fname_str, out_dir, re_index = 0, base_in
 
                 inds = np.where((imgData1 < 0) & (tmp >= 0))
                 imgData1[inds] = tmp[inds] 
-                #print(imgData1.max(), num_classes**(len(paths)-(1+base_index)))
-                #imgData1[inds] = imgData1[inds] #+ num_classes**(len(paths)-(1+base_index))
 
                 dqi[inds] = base_index                
                 for j in range(base_index+1, len(paths)):
@@ -60,11 +60,8 @@ def merge_datasets(num_classes, paths, fname_str, out_dir, re_index = 0, base_in
                         dat2 = gdal.Open(fle2)
                         imgData2 = dat2.ReadAsArray()
                         inds = np.where((imgData1 < 0) & (imgData2 >= 0))
-                        imgData1[inds] = imgData2[inds] #+ num_classes**(len(paths)-(1+j))
+                        imgData1[inds] = imgData2[inds]
                         dqi[inds] = j
-                        #inds = np.where((imgData1 % num_classes == 0) & (imgData2 > 0))
-                        #imgData1[inds] = imgData2[inds] + num_classes**(len(paths)-(1+j))
-                        #inds = np.where((imgData1 % num_classes == 0))
                         #imgData1[inds] = 0
                         #dat2.FlushCache()
                         dat2 = None
@@ -94,13 +91,15 @@ def merge_datasets(num_classes, paths, fname_str, out_dir, re_index = 0, base_in
 
 
 #assumes rename to having date in filename
-def merge_monthly(dirname, max_dqi, max_class):
+def merge_monthly(dirname, fname_str):
 
     monthlies = {}
 
     for root, dirs, files in os.walk(dirname):
         for fle in files:
             if "DQI" in fle:
+                continue
+            if fname_str not in fle:
                 continue
             mtch = re.search(DATE_RE, fle)
             if mtch:
@@ -120,8 +119,6 @@ def merge_monthly(dirname, max_dqi, max_class):
             newDqi = None
             dat = None
             pixCnt = None
-            #for i in range(0, max_dqi):
-            #    for k in range(max_class,0,-1):
             for j in range(0, len(monthlies[yr][mnth])):
                       
                 dqi_fname = os.path.splitext(monthlies[yr][mnth][j][1])[0] + ".DQI.tif"
@@ -162,14 +159,14 @@ def merge_monthly(dirname, max_dqi, max_class):
             dat.FlushCache()
             dat = None
     
-            out_ds = gdal.GetDriverByName("GTiff").Create(os.path.join(dirname, monthlies[yr][mnth][0][0].strftime("%Y%m") + "_karenia_brevis.Monthly.tif"), nx, ny, 1, gdal.GDT_Int32)
+            out_ds = gdal.GetDriverByName("GTiff").Create(os.path.join(dirname, monthlies[yr][mnth][0][0].strftime("%Y%m") + "_" + fname_str + ".Monthly.tif"), nx, ny, 1, gdal.GDT_Int32)
             out_ds.SetGeoTransform(geoTransform)
             out_ds.SetProjection(wkt)
             out_ds.GetRasterBand(1).WriteArray(newImgData)
             out_ds.FlushCache()
             out_ds = None
             
-            out_ds = gdal.GetDriverByName("GTiff").Create(os.path.join(dirname, monthlies[yr][mnth][0][0].strftime("%Y%m") + "_karenia_brevis.Monthly.DQI.tif"), nx, ny, 1, gdal.GDT_Int32)
+            out_ds = gdal.GetDriverByName("GTiff").Create(os.path.join(dirname, monthlies[yr][mnth][0][0].strftime("%Y%m") + "_" + fname_str + ".Monthly.DQI.tif"), nx, ny, 1, gdal.GDT_Int32)
             out_ds.SetGeoTransform(geoTransform)
             out_ds.SetProjection(wkt)
             out_ds.GetRasterBand(1).WriteArray(newDqi)
@@ -188,10 +185,10 @@ def main(yml_fpath):
  
     if yml_conf["gen_daily"]:
         for i in range(len(yml_conf['input_paths'])):
-            merge_datasets(yml_conf['num_classes'], yml_conf['input_paths'], 
+            merge_datasets(yml_conf['input_paths'], 
                 yml_conf['fname_str'], yml_conf['out_dir'], yml_conf['re_index'], i) 
     if yml_conf["gen_monthly"]:
-        merge_monthly(yml_conf['dirname'], yml_conf['max_dqi'], yml_conf['max_class'])  
+        merge_monthly(yml_conf['dirname'], yml_conf['fname_str'])  
  
 
 if __name__ == '__main__':
