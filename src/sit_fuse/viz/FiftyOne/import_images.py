@@ -12,15 +12,13 @@ def main(yml_fpath):
     # Import the dataset
     dataset_dir = yml_conf["dataset_dir"] #"/home/nlahaye/eMAS_DBN_Embeddings/"
     print("Importing dataset from '%s'" % dataset_dir)
-    dataset = import_dataset(yml_conf["label_extension"], yml_conf["images_patt"], yml_conf["final_label_dict"], yml_conf["dataset_name"], yml_conf["no_heir"])
+    dataset = import_dataset(yml_conf["label_extension"], yml_conf["images_patt"], yml_conf["final_label_dict"], \
+            yml_conf["dataset_name"], yml_conf["no_heir"], yml_conf["spatial_cluster_fname"])
 
     #results = comp_viz(dataset)
     results = comp_viz(dataset, yml_conf["dataset_name"], yml_conf["label_extension"])
 
  
-    # Print summary information about the dataset
-    print(dataset)
-
     # Print a sample
     print(dataset.first())
 
