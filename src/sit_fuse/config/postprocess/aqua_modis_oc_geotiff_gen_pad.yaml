@@ -21,7 +21,6 @@ data:
 "/data/nlahaye/output/Learnergy/MODIS_Gulf_of_Mexico/AQUA_MODIS.20180610.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/MODIS_Gulf_of_Mexico/AQUA_MODIS.20180611.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/MODIS_Gulf_of_Mexico/AQUA_MODIS.20180612.L3m.DAY.tif",
-"/data/nlahaye/output/Learnergy/MODIS_Gulf_of_Mexico/AQUA_MODIS.20180613.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/MODIS_Gulf_of_Mexico/AQUA_MODIS.20180614.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/MODIS_Gulf_of_Mexico/AQUA_MODIS.20180615.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/MODIS_Gulf_of_Mexico/AQUA_MODIS.20180616.L3m.DAY.tif",
@@ -575,7 +574,7 @@ data:
 "/data/nlahaye/output/Learnergy/MODIS_Gulf_of_Mexico/AQUA_MODIS.20191228.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/MODIS_Gulf_of_Mexico/AQUA_MODIS.20191229.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/MODIS_Gulf_of_Mexico/AQUA_MODIS.20191230.L3m.DAY.tif",
-"/data/nlahaye/output/Learnergy/MODIS_Gulf_of_Mexico/AQUA_MODIS.20191231.L3m.DAY.tif"
+"/data/nlahaye/output/Learnergy/MODIS_Gulf_of_Mexico/AQUA_MODIS.20191231.L3m.DAY.tif",
 ]
 
  cluster_fnames: [
@@ -591,7 +590,6 @@ data:
 "/data/nlahaye/output/Learnergy/MODIS_Gulf_of_Mexico/AQUA_MODIS.20180610.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/MODIS_Gulf_of_Mexico/AQUA_MODIS.20180611.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/MODIS_Gulf_of_Mexico/AQUA_MODIS.20180612.L3m.DAY.tif",
-"/data/nlahaye/output/Learnergy/MODIS_Gulf_of_Mexico/AQUA_MODIS.20180613.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/MODIS_Gulf_of_Mexico/AQUA_MODIS.20180614.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/MODIS_Gulf_of_Mexico/AQUA_MODIS.20180615.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/MODIS_Gulf_of_Mexico/AQUA_MODIS.20180616.L3m.DAY.tif",
@@ -1145,13 +1143,20 @@ data:
 "/data/nlahaye/output/Learnergy/MODIS_Gulf_of_Mexico/AQUA_MODIS.20191228.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/MODIS_Gulf_of_Mexico/AQUA_MODIS.20191229.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/MODIS_Gulf_of_Mexico/AQUA_MODIS.20191230.L3m.DAY.tif",
-"/data/nlahaye/output/Learnergy/MODIS_Gulf_of_Mexico/AQUA_MODIS.20191231.L3m.DAY.tif"
+"/data/nlahaye/output/Learnergy/MODIS_Gulf_of_Mexico/AQUA_MODIS.20191231.L3m.DAY.tif",
 ] 
 
 
 context:
  apply_context: True
- clusters: [[4.427, 4.822, 4.832, 4.849, 4.859, 4.862, 4.887, 6.905, 6.953, 6.964, 6.99, 6.996, 9.955, 9.962, 9.973, 12.325, 12.352, 15.575, 17.73, 17.774, 21.741, 26.82, 26.838, 26.855, 31.334, 31.392, 42.971, 42.988, 44.44, 44.466, 44.48, 44.488, 45.215, 45.225, 45.258, 45.573, 45.578, 45.579, 45.583, 46.208, 46.225, 46.289, 46.408, 46.423, 46.495, 47.927, 47.945, 47.951, 47.959, 47.995, 49.604, 49.626, 49.697, 51.866, 51.883, 57.603, 57.623, 57.643, 57.647, 57.648, 57.65, 57.666, 57.699, 61.764, 61.777, 63.13, 63.166, 63.194, 63.317, 63.321, 63.338, 63.341, 63.348, 63.353, 65.1, 65.112, 65.119, 65.135, 65.152, 65.171, 66.602, 66.61, 66.632], [6.753, 26.802, 26.863, 31.356, 51.858], [4.421, 4.46, 26.887, 42.94, 63.391], [12.332, 46.467, 51.819, 57.615, 61.758, 61.785, 63.1, 63.315, 63.322], [4.461, 9.912, 9.946, 9.99]]
+ clusters: [[0.427, 0.435, 0.455, 9.803, 9.826, 9.853, 9.868, 9.871, 9.875, 10.719, 10.735, 10.755, 10.773, 10.781, 10.791, 10.795, 11.74, 11.795, 19.618, 19.625, 19.627, 19.646, 19.654, 19.66, 19.665, 19.675, 19.681, 19.687, 23.6, 23.601, 23.609, 23.611, 23.612, 23.615, 23.62, 23.626, 23.628, 23.629, 23.635, 23.637, 23.645, 23.646, 23.654, 23.655, 23.67, 23.673, 23.678, 23.681, 23.687, 23.693, 30.21, 30.211, 30.212, 30.214, 30.217, 30.223, 30.224, 30.225, 30.226, 30.227, 30.229, 30.233, 30.239, 30.24, 30.243, 30.247, 30.251, 30.252, 30.263, 30.266, 30.267, 30.269, 30.276, 30.277, 30.279, 32.499, 36.107, 36.126, 36.143, 36.15, 36.162, 36.183, 40.801, 40.838, 40.841, 40.842, 40.847, 40.85, 40.86, 40.865, 40.889, 44.849, 44.874, 51.631, 51.694, 54.928, 54.986, 58.975, 63.96, 63.992, 69.272, 69.284, 69.288, 69.292, 69.405, 69.448, 69.46, 69.462, 69.47, 69.493, 70.65, 70.652, 70.675, 70.692, 70.693, 73.401, 73.435, 73.492, 73.588, 78.312, 78.336, 78.34, 78.352, 78.365, 78.369, 78.378], [0.461, 0.474, 23.68, 30.203, 30.221, 30.222, 30.257, 30.286, 30.287, 36.176, 69.203, 73.442, 73.443], [11.744, 23.697, 30.234, 30.249, 30.273, 30.275, 69.445, 69.487], [0.467, 30.253, 30.26, 30.282, 30.29, 30.295, 73.431], [11.748, 30.218, 30.235, 30.248, 30.255, 30.268, 30.293, 40.819, 11.759, 11.754, 11.796, 11.738, 11.77, 11.749, 11.787, 11.725, 11.788, 11.733, 11.797, 11.743, 11.707, 11.75, 11.781, 11.746, 11.784, 11.73, 11.799, 11.798, 11.76, 11.778, 11.758, 11.745, 11.702, 11.78, 11.704, 11.741, 11.734, 11.791, 11.763, 11.703, 11.724, 11.711, 11.713, 11.708, 11.72, 11.779, 11.732, 11.755, 11.706, 11.727, 11.786, 11.793, 11.718, 11.774, 11.729, 11.769, 11.777, 11.735, 11.79, 11.747, 11.768, 11.776, 11.753, 11.716, 11.761, 11.736, 11.756, 11.775, 11.783, 11.717, 11.764, 11.762, 11.773, 11.731, 11.709, 11.739, 11.705, 11.728, 11.789, 11.782, 11.752, 11.742, 11.71, 11.726, 11.714, 11.723, 11.712, 11.751, 11.722, 11.766, 11.715, 11.765, 11.794, 11.721, 11.792, 11.757, 11.771, 11.719, 11.7, 11.785, 11.767, 11.701, 11.772, 11.737], []]
+
+
+
+
+
+
+ background_class: 1
  name: "karenia_brevis_bloom" #i.e. smoke
  compare_truth: false
  generate_union: false

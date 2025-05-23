@@ -3,15 +3,15 @@ input_paths: ["/data/nlahaye/output/Learnergy/S3A_Gulf_of_Mexico/", "/data/nlaha
 
  
  
-fname_str: "karenia_brevis_bloom.tif"
-out_dir: "/data/nlahaye/output/MERGED_HAB_20240818/S3A/"
-num_classes: 5
+fname_str: "karenia_brevis_bloom"
+out_dir: "/data/nlahaye/output/MERGED_HAB_20250225/S3A/"
+num_classes: 9
 re_index: 1
 
 gen_daily: false
 gen_monthly: true
 
 
-dirname: "/data/nlahaye/output/MERGED_HAB_20240818/S3A/"
+dirname: "/data/nlahaye/output/MERGED_HAB_20250225/S3A/"
 max_dqi: 2
 max_class: 5

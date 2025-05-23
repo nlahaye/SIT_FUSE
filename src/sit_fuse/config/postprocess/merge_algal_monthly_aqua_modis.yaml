@@ -2,16 +2,16 @@
 input_paths: ["/data/nlahaye/output/Learnergy/MODIS_Gulf_of_Mexico/", "/data/nlahaye/output/Learnergy//TROP_ONLY_Gulf_of_Mexico/", "/data/nlahaye/output/Learnergy/MODIS_ONLY_Gulf_of_Mexico/"]
 
  
-fname_str: "karenia_brevis_bloom.tif"
-out_dir: "/data/nlahaye/output/MERGED_HAB_20240818/AQUA_MODIS/"
-num_classes: 5
+fname_str: "karenia_brevis_bloom"
+out_dir: "/data/nlahaye/output/MERGED_HAB_20250225/AQUA_MODIS/"
+num_classes: 9
 re_index: 1
 
 gen_daily: false
 gen_monthly: true
 
 
-dirname: "/data/nlahaye/output/MERGED_HAB_20240818/AQUA_MODIS/"
+dirname: "/data/nlahaye/output/MERGED_HAB_20250225/AQUA_MODIS/"
 max_dqi: 2
 max_class: 5
 

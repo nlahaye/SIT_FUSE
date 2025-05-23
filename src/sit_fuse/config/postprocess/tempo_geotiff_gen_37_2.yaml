@@ -1,0 +1,71 @@
+
+gen_from_geotiffs: False
+
+data:
+ clust_reader_type: "gtiff"
+ reader_kwargs:
+   no_arg: "no_arg" 
+ subset_inds: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[], [],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
+ create_separate: False
+
+ 
+ gtiff_data: [
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240725T163105Z_S008G07.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240725T163742Z_S008G08.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240725T164419Z_S008G09.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T143122Z_S006G07.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T143759Z_S006G08.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T144436Z_S006G09.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T163122Z_S008G07.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T163759Z_S008G08.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240726T164436Z_S008G09.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T143137Z_S006G07.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T143814Z_S006G08.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T144451Z_S006G09.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T163154Z_S008G07.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T163831Z_S008G08.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T164508Z_S008G09.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240730T163226Z_S008G07.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240730T163903Z_S008G08.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240730T164540Z_S008G09.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240731T144556Z_S006G09.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240731T163242Z_S008G07.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240731T163919Z_S008G08.tif",
+"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240731T164556Z_S008G09.tif",
+]
+
+
+ 
+ cluster_fnames: [
+"/data/nlahaye/output/Learnergy/TEMPO_TEST_Spatial_Paper/TEMPO_RAD_L1_V03_20240725T163105Z_S008G07.tif.clust.data_186163clusters.zarr",
+"/data/nlahaye/output/Learnergy/TEMPO_TEST_Spatial_Paper/TEMPO_RAD_L1_V03_20240725T163742Z_S008G08.tif.clust.data_186196clusters.zarr",
+"/data/nlahaye/output/Learnergy/TEMPO_TEST_Spatial_Paper/TEMPO_RAD_L1_V03_20240725T164419Z_S008G09.tif.clust.data_186199clusters.zarr",
+"/data/nlahaye/output/Learnergy/TEMPO_TEST_Spatial_Paper/TEMPO_RAD_L1_V03_20240726T143122Z_S006G07.tif.clust.data_186195clusters.zarr",
+"/data/nlahaye/output/Learnergy/TEMPO_TEST_Spatial_Paper/TEMPO_RAD_L1_V03_20240726T143759Z_S006G08.tif.clust.data_186199clusters.zarr",
+"/data/nlahaye/output/Learnergy/TEMPO_TEST_Spatial_Paper/TEMPO_RAD_L1_V03_20240726T144436Z_S006G09.tif.clust.data_186199clusters.zarr",
+"/data/nlahaye/output/Learnergy/TEMPO_TEST_Spatial_Paper/TEMPO_RAD_L1_V03_20240726T163122Z_S008G07.tif.clust.data_186188clusters.zarr",
+"/data/nlahaye/output/Learnergy/TEMPO_TEST_Spatial_Paper/TEMPO_RAD_L1_V03_20240726T163759Z_S008G08.tif.clust.data_186198clusters.zarr",
+"/data/nlahaye/output/Learnergy/TEMPO_TEST_Spatial_Paper/TEMPO_RAD_L1_V03_20240726T164436Z_S008G09.tif.clust.data_186199clusters.zarr",
+"/data/nlahaye/output/Learnergy/TEMPO_TEST_Spatial_Paper/TEMPO_RAD_L1_V03_20240727T143137Z_S006G07.tif.clust.data_186195clusters.zarr",
+"/data/nlahaye/output/Learnergy/TEMPO_TEST_Spatial_Paper/TEMPO_RAD_L1_V03_20240727T143814Z_S006G08.tif.clust.data_186199clusters.zarr",
+"/data/nlahaye/output/Learnergy/TEMPO_TEST_Spatial_Paper/TEMPO_RAD_L1_V03_20240727T144451Z_S006G09.tif.clust.data_186199clusters.zarr",
+"/data/nlahaye/output/Learnergy/TEMPO_TEST_Spatial_Paper/TEMPO_RAD_L1_V03_20240728T163154Z_S008G07.tif.clust.data_186179clusters.zarr",
+"/data/nlahaye/output/Learnergy/TEMPO_TEST_Spatial_Paper/TEMPO_RAD_L1_V03_20240728T163831Z_S008G08.tif.clust.data_186199clusters.zarr",
+"/data/nlahaye/output/Learnergy/TEMPO_TEST_Spatial_Paper/TEMPO_RAD_L1_V03_20240728T164508Z_S008G09.tif.clust.data_186199clusters.zarr",
+"/data/nlahaye/output/Learnergy/TEMPO_TEST_Spatial_Paper/TEMPO_RAD_L1_V03_20240730T163226Z_S008G07.tif.clust.data_186199clusters.zarr",
+"/data/nlahaye/output/Learnergy/TEMPO_TEST_Spatial_Paper/TEMPO_RAD_L1_V03_20240730T163903Z_S008G08.tif.clust.data_186199clusters.zarr",
+"/data/nlahaye/output/Learnergy/TEMPO_TEST_Spatial_Paper/TEMPO_RAD_L1_V03_20240730T164540Z_S008G09.tif.clust.data_186199clusters.zarr",
+"/data/nlahaye/output/Learnergy/TEMPO_TEST_Spatial_Paper/TEMPO_RAD_L1_V03_20240731T144556Z_S006G09.tif.clust.data_186199clusters.zarr",
+"/data/nlahaye/output/Learnergy/TEMPO_TEST_Spatial_Paper/TEMPO_RAD_L1_V03_20240731T163242Z_S008G07.tif.clust.data_186194clusters.zarr",
+"/data/nlahaye/output/Learnergy/TEMPO_TEST_Spatial_Paper/TEMPO_RAD_L1_V03_20240731T163919Z_S008G08.tif.clust.data_186199clusters.zarr",
+"/data/nlahaye/output/Learnergy/TEMPO_TEST_Spatial_Paper/TEMPO_RAD_L1_V03_20240731T164556Z_S008G09.tif.clust.data_186199clusters.zarr",
+]
+
+context: 
+ apply_context: False
+ clusters: [
+         [99.404, 99.405, 99.406, 99.414, 99.418, 99.425, 99.426, 99.431, 99.433, 99.434, 99.436, 99.437, 99.439, 99.44, 99.442, 99.443, 99.444, 99.445, 99.446, 99.449, 99.45, 99.453, 99.454, 99.456, 99.458, 99.459, 99.464, 99.466, 99.47, 99.473, 99.483, 99.485, 99.487, 99.492, 99.495, 99.499, 99.5, 99.503, 99.507, 99.515, 99.519, 99.532, 99.534, 99.536, 99.538, 99.54, 99.541, 99.543, 99.553, 99.555, 99.556, 99.557, 99.559, 99.561, 99.563, 99.571, 99.573, 99.587, 99.589, 99.591, 99.598, 130.911, 130.998, 133.856, 133.86, 133.882, 133.905, 133.919, 158.815, 158.855, 158.857, 158.872, 158.905, 99.41, 99.413, 99.42, 99.422, 99.423, 99.424, 99.429, 99.438, 99.451, 99.461, 99.471, 99.472, 99.475, 99.484, 99.489, 99.493, 99.497, 99.506, 99.511, 99.512, 99.513, 99.514, 99.528, 99.533, 99.535, 99.55, 99.552, 99.56, 99.588, 130.843, 133.813, 133.82, 133.833, 133.964, 133.967, 133.98, 158.821, 158.827, 158.832, 158.833, 158.842, 158.846, 158.86, 158.867, 158.875, 158.881, 158.883, 158.886, 158.892, 158.9, 158.901, 158.912, 158.92, 158.928, 158.929, 158.932, 158.958, 158.961, 158.971, 158.975, 158.977, 158.98, 158.989, 158.99, 158.998, 99.447, 130.954, 133.834, 133.94, 133.941]]
+ name: ["smoke"]
+ compare_truth: False
+ generate_union: False
+ background_class: 0

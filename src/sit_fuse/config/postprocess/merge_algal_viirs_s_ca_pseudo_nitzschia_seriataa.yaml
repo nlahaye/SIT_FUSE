@@ -1,0 +1,11 @@
+
+input_paths: ["/data/nlahaye/output/Learnergy/SNPP_VIIRS_S_CA/", "/data/nlahaye/output/Learnergy//TROP_ONLY_S_CA/", "/data/nlahaye/output/Learnergy/SNPP_VIIRS_ONLY_S_CA/"]
+ 
+fname_str: "DAY.pseudo_nitzschia_seriata_bloom.tif"
+out_dir: "/data/nlahaye/output/MERGED_HAB_20250225_S_CA/SNPP_VIIRS/"
+num_classes: 6
+re_index: 3
+
+gen_daily: true
+gen_monthly: false
+

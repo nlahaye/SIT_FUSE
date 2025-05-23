@@ -5,9 +5,9 @@ end_date: "2019-12-31"
 clusters: 120000
  
 clusters_dir: '/data/nlahaye/output/Learnergy/SNPP_VIIRS_ONLY_S_CA/'
-radius_degrees: 0.09 #0.0225
+radius_degrees: [0.09]  #0.0225
 #0.045 degrees = 5km
 global_max: 10000000
-ranges: [0,1000,10000,100000,1000000,10000000]
+ranges: [0,1000,10000,100000,1000000,10000000, 100000000]
 input_file_type: 'SNPP_VIIRS'
 

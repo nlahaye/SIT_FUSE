@@ -1,0 +1,122 @@
+
+low_res:
+ data:
+  valid_min: -100.0
+  valid_max: 99999999999
+  reader_type: "zarr_to_numpy"
+  reader_kwargs:
+   none: "None"
+  geo_reader_type: "zarr_to_numpy"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: [
+"/data/nlahaye/output/Learnergy/S3A_Gulf_of_Mexico/S3A_OLCI_ERRNT.20180913.L3m.DAY..clust.data_78398clusters.zarr",
+"/data/nlahaye/output/Learnergy/S3A_Gulf_of_Mexico/S3A_OLCI_ERRNT.20180913.L3m.DAY..clust.data_proba.zarr",
+"/data/nlahaye/output/Learnergy/S3A_Gulf_of_Mexico/S3A_OLCI_ERRNT.20180913.L3m.DAY..no_heir.clust.data_0clusters.zarr",
+"/data/nlahaye/output/Learnergy/S3A_Gulf_of_Mexico/S3A_OLCI_ERRNT.20180913.L3m.DAY..no_heir.clust.data_783clusters.zarr",
+"/data/nlahaye/output/Learnergy/S3A_Gulf_of_Mexico/S3A_OLCI_ERRNT.20180913.L3m.DAY..no_heir.clust.data_proba.zarr",
+"/data/nlahaye/output/Learnergy/S3A_Only_Gulf_of_Mexico/S3A_OLCI_ERRNT.20180913.L3m.DAY..clust.data_74399clusters.zarr",
+"/data/nlahaye/output/Learnergy/S3A_Only_Gulf_of_Mexico/S3A_OLCI_ERRNT.20180913.L3m.DAY..clust.data_proba.zarr",
+"/data/nlahaye/output/Learnergy/S3A_Only_Gulf_of_Mexico/S3A_OLCI_ERRNT.20180913.L3m.DAY..no_heir.clust.data_743clusters.zarr",
+"/data/nlahaye/output/Learnergy/S3A_Only_Gulf_of_Mexico/S3A_OLCI_ERRNT.20180913.L3m.DAY..no_heir.clust.data_proba.zarr",
+"/data/nlahaye/output/Learnergy/TROP_ONLY_Gulf_of_Mexico/SNPP_VIIRS.20180913.L3m.DAY..clust.data_79999clusters.zarr",
+"/data/nlahaye/output/Learnergy/TROP_ONLY_Gulf_of_Mexico/SNPP_VIIRS.20180913.L3m.DAY..clust.data_proba.zarr",
+"/data/nlahaye/output/Learnergy/TROP_ONLY_Gulf_of_Mexico/SNPP_VIIRS.20180913.L3m.DAY..no_heir.clust.data_799clusters.zarr",
+"/data/nlahaye/output/Learnergy/TROP_ONLY_Gulf_of_Mexico/SNPP_VIIRS.20180913.L3m.DAY..no_heir.clust.data_proba.zarr",
+"/data/nlahaye/output/Learnergy/MODIS_Gulf_of_Mexico/AQUA_MODIS.20180913.L3m.DAY..clust.data_76796clusters.zarr",
+"/data/nlahaye/output/Learnergy/MODIS_ONLY_Gulf_of_Mexico/AQUA_MODIS.20180913.L3m.DAY..clust.data_79998clusters.zarr",
+"/data/nlahaye/output/Learnergy/S3B_Gulf_of_Mexico/S3B_OLCI_ERRNT.20180913.L3m.DAY..clust.data_76799clusters.zarr",
+"/data/nlahaye/output/Learnergy/S3B_Only_Gulf_of_Mexico/S3B_OLCI_ERRNT.20180913.L3m.DAY..clust.data_63297clusters.zarr",
+"/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180913.L3m.DAY..clust.data_77396clusters.zarr",
+"/data/nlahaye/output/Learnergy/SNPP_VIIRS_ONLY_Gulf_of_Mexico/SNPP_VIIRS.20180913.L3m.DAY..clust.data_75498clusters.zarr",
+]
+
+
+
+  geo_filenames: [
+"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/gulf_of_mex_geo.zarr",
+"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/gulf_of_mex_geo.zarr",
+"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/gulf_of_mex_geo.zarr",
+"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/gulf_of_mex_geo.zarr",
+"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/gulf_of_mex_geo.zarr",
+"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/gulf_of_mex_geo.zarr",
+"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/gulf_of_mex_geo.zarr",
+"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/gulf_of_mex_geo.zarr",
+"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/gulf_of_mex_geo.zarr",
+"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/gulf_of_mex_geo.zarr",
+"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/gulf_of_mex_geo.zarr",
+"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/gulf_of_mex_geo.zarr",
+"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/gulf_of_mex_geo.zarr",
+"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/gulf_of_mex_geo.zarr",
+"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/gulf_of_mex_geo.zarr",
+"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/gulf_of_mex_geo.zarr",
+"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/gulf_of_mex_geo.zarr",
+"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/gulf_of_mex_geo.zarr",
+"/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/gulf_of_mex_geo.zarr",
+]
+
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+high_res:
+ data:
+  valid_min: 0.0
+  valid_max: 99999999999
+  reader_type: "zarr_to_numpy"
+  reader_kwargs:
+   no_arg: "no_arg"
+  geo_reader_type: "zarr_to_numpy"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: []
+  geo_filenames: []
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+fusion:
+ projection_id: 4326
+ description: "Generating S3 GeoTiffs"
+ area_id: "GERD Dam"
+ projection_proj4:
+  proj: "longlat"
+  datum: "WGS84"
+ final_resolution: 0.055
+ projection_units: "degrees"
+ resample_radius: 5000
+ resample_n_neighbors: 64
+ resample_n_procs: 10
+ resample_epsilon: 1.6
+ use_bilinear: False
+
+
+
+
+output_files: [
+"/data/nlahaye/output/Learnergy/S3A_Gulf_of_Mexico/S3A_OLCI_ERRNT.20180913.L3m.DAY.tif",
+"/data/nlahaye/output/Learnergy/S3A_Gulf_of_Mexico/S3A_OLCI_ERRNT.20180913.L3m.DAY.proba.tif",
+"/data/nlahaye/output/Learnergy/S3A_Gulf_of_Mexico/S3A_OLCI_ERRNT.20180913.L3m.DAY.no_heir.tif",
+"/data/nlahaye/output/Learnergy/S3A_Gulf_of_Mexico/S3A_OLCI_ERRNT.20180913.L3m.DAY.no_heir.tif",
+"/data/nlahaye/output/Learnergy/S3A_Gulf_of_Mexico/S3A_OLCI_ERRNT.20180913.L3m.DAY.no_heir.proba.tif",
+"/data/nlahaye/output/Learnergy/S3A_Only_Gulf_of_Mexico/S3A_OLCI_ERRNT.20180913.L3m.DAY.tif",
+"/data/nlahaye/output/Learnergy/S3A_Only_Gulf_of_Mexico/S3A_OLCI_ERRNT.20180913.L3m.DAY.proba.tif",
+"/data/nlahaye/output/Learnergy/S3A_Only_Gulf_of_Mexico/S3A_OLCI_ERRNT.20180913.L3m.DAY.no_heir.tif",
+"/data/nlahaye/output/Learnergy/S3A_Only_Gulf_of_Mexico/S3A_OLCI_ERRNT.20180913.L3m.DAY.no_heir.proba.tif",
+"/data/nlahaye/output/Learnergy/TROP_ONLY_Gulf_of_Mexico/SNPP_VIIRS.20180913.L3m.DAY.tif",
+"/data/nlahaye/output/Learnergy/TROP_ONLY_Gulf_of_Mexico/SNPP_VIIRS.20180913.L3m.DAY.proba.tif",
+"/data/nlahaye/output/Learnergy/TROP_ONLY_Gulf_of_Mexico/SNPP_VIIRS.20180913.L3m.DAY.no_heir.tif",
+"/data/nlahaye/output/Learnergy/TROP_ONLY_Gulf_of_Mexico/SNPP_VIIRS.20180913.L3m.DAY.no_heir.proba.tif",
+"/data/nlahaye/output/Learnergy/MODIS_Gulf_of_Mexico/AQUA_MODIS.20180913.L3m.DAY.tif",
+"/data/nlahaye/output/Learnergy/MODIS_ONLY_Gulf_of_Mexico/AQUA_MODIS.20180913.L3m.DAY.tif",
+"/data/nlahaye/output/Learnergy/S3B_Gulf_of_Mexico/S3B_OLCI_ERRNT.20180913.L3m.DAY.tif",
+"/data/nlahaye/output/Learnergy/S3B_Only_Gulf_of_Mexico/S3B_OLCI_ERRNT.20180913.L3m.DAY.tif",
+"/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180913.L3m.DAY.tif",
+"/data/nlahaye/output/Learnergy/SNPP_VIIRS_ONLY_Gulf_of_Mexico/SNPP_VIIRS.20180913.L3m.DAY.tif",
+
+]
+ 

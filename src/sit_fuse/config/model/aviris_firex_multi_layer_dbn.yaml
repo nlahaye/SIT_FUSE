@@ -6,9 +6,9 @@ data:
  scale_data: True
  pixel_padding: 0
  number_channels: 224
- fill_value: -9999.0
- valid_min:  -5.0
- valid_max: 20000
+ fill_value: -999999.0
+ valid_min:  -9.0e+35
+ valid_max: 9.03e+36
  subset_count: 1
  output_subset_count: 10
  reader_type: "gtiff"

@@ -1,0 +1,13 @@
+ 
+input_paths: ["/data/nlahaye/output/Learnergy/No_Data/", "/data/nlahaye/output/Learnergy/No_Data/", "/data/nlahaye/output/Learnergy/PACE_Only_S_CA/"]
+
+ 
+ 
+fname_str: "DAY.karenia_brevis_bloom.tif"
+out_dir: "/data/nlahaye/output/MERGED_HAB_20250225_S_CA/PACE/"
+num_classes: 8
+re_index: 1
+
+gen_daily: true
+gen_monthly: false
+

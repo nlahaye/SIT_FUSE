@@ -1,0 +1,11 @@
+
+input_paths: ["/data/nlahaye/output/Learnergy/JPSS1_VIIRS_S_CA/", "/data/nlahaye/output/Learnergy//TROP_ONLY_S_CA/", "/data/nlahaye/output/Learnergy/JPSS1_VIIRS_ONLY_S_CA/"]
+ 
+fname_str: "DAY.alexandrium_bloom.tif"
+out_dir: "/data/nlahaye/output/MERGED_HAB_20250225_S_CA/JPSS1_VIIRS/"
+num_classes: 6
+re_index: 5
+
+gen_daily: true
+gen_monthly: false
+

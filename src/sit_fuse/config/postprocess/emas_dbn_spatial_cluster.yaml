@@ -49,6 +49,6 @@ data:
  im_resize: -1
 
 njobs: 1
-k_clusters: 5
+k_clusters: 10
 write_geotiff: True
 

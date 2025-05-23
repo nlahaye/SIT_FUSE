@@ -28,6 +28,7 @@ data:
   transform: []
 
  files_train: [
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/S3A_OLCI_ERRNT.20180910.L3m.DAY.",
 "/data/nlahaye/remoteSensing/Multi_Year_WQ/S3A_OLCI_ERRNT.20180601.L3m.DAY.",
 "/data/nlahaye/remoteSensing/Multi_Year_WQ/S3A_OLCI_ERRNT.20180602.L3m.DAY.",
 "/data/nlahaye/remoteSensing/Multi_Year_WQ/S3A_OLCI_ERRNT.20180603.L3m.DAY.",
@@ -487,6 +488,16 @@ data:
 "/data/nlahaye/remoteSensing/Multi_Year_WQ/S3A_OLCI_ERRNT.20190831.L3m.DAY."]
 
  files_test: [
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/S3A_OLCI_ERRNT.20180910.L3m.DAY.",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/S3A_OLCI_ERRNT.20180911.L3m.DAY.",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/S3A_OLCI_ERRNT.20180912.L3m.DAY.",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/S3A_OLCI_ERRNT.20180913.L3m.DAY.",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/S3A_OLCI_ERRNT.20180914.L3m.DAY.",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/S3A_OLCI_ERRNT.20180915.L3m.DAY.",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/S3A_OLCI_ERRNT.20180916.L3m.DAY.",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/S3A_OLCI_ERRNT.20180917.L3m.DAY.",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/S3A_OLCI_ERRNT.20180918.L3m.DAY.",
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/S3A_OLCI_ERRNT.20180919.L3m.DAY.",
 "/data/nlahaye/remoteSensing/Multi_Year_WQ/S3A_OLCI_ERRNT.20190901.L3m.DAY.",
 "/data/nlahaye/remoteSensing/Multi_Year_WQ/S3A_OLCI_ERRNT.20190902.L3m.DAY.",
 "/data/nlahaye/remoteSensing/Multi_Year_WQ/S3A_OLCI_ERRNT.20190903.L3m.DAY.",

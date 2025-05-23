@@ -1,0 +1,17 @@
+  
+input_paths: ["/data/nlahaye/output/Learnergy/No_Data/", "/data/nlahaye/output/Learnergy/No_Data/", "/data/nlahaye/output/Learnergy/PACE_Only_Gulf_of_Mexico/"]
+
+ 
+fname_str: "DAY.karenia_brevis_bloom"
+out_dir: "/data/nlahaye/output/MERGED_HAB_20250225/PACE/"
+num_classes: 9
+re_index: 1
+
+gen_daily: false
+gen_monthly: true
+
+
+dirname: "/data/nlahaye/output/MERGED_HAB_20250225/PACE/"
+max_dqi: 2
+max_class: 5
+

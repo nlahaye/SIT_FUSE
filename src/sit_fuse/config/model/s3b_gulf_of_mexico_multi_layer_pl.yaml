@@ -615,6 +615,7 @@ scaler:
  name: "standard" 
 
 output:
+ return_prob: True
  out_dir: "/data/nlahaye/output/Learnergy/S3B_Gulf_of_Mexico/"
  generate_intermediate_output: True
 

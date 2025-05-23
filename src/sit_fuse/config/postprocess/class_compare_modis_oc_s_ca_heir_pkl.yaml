@@ -1,0 +1,13 @@
+
+
+
+
+
+dbf_list: [[
+'/data/nlahaye/output/Learnergy/MODIS_S_CA/tiered_hab_hist_dict.pkl'
+]]
+dbf: True
+dbf_percentage_thresh: 0.51
+
+
+

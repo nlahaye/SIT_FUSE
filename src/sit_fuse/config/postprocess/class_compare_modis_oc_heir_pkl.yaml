@@ -1,0 +1,13 @@
+
+
+
+
+
+dbf_list: [[
+'/data/nlahaye/output/Learnergy/MODIS_Gulf_of_Mexico/tiered_hab_hist_dict.pkl'
+]]
+dbf: True
+dbf_percentage_thresh: 0.51
+
+
+

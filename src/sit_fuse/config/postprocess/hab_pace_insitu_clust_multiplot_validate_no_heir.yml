@@ -1,0 +1,13 @@
+
+xl_fname: '/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/InSitu/New_FL_HAB_Karenia_Brevis.csv'
+start_date: "2024-03-01"
+end_date: "2025-03-31"
+clusters: 6001
+ 
+clusters_dir: '/data/nlahaye/output/MERGED_HAB_20250225/PACE_NO_HEIR/'
+radius_degrees: [0.045] #[0.01125, 0.0225, 0.045]
+#0.045 degrees = 5km
+global_max: 10000000
+ranges: [0,1000,10000,100000,1000000,10000000, 100000000]
+input_file_type: 'daily_no_heir'
+

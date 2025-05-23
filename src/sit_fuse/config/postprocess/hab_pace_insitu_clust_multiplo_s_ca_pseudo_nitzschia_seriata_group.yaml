@@ -1,0 +1,14 @@
+
+xl_fname: '/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/InSitu/HAB_S_CA_Combined.csv'
+start_date: "2024-03-01"
+end_date: "2025-03-31"
+clusters: 120000
+ 
+clusters_dir: '/data/nlahaye/output/Learnergy/PACE_Only_S_CA/'
+radius_degrees: [0.01125, 0.0225, 0.045, 0.09]
+global_max: 10000000
+ranges: [0,1000,10000,100000,1000000,10000000, 100000000]
+input_file_type: 'PACE_OCI'
+
+use_key: 'Pseudo_nitzschia_seriata_group'
+

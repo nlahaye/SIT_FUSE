@@ -1,9 +1,9 @@
 
 input_paths: ["/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/", "/data/nlahaye/output/Learnergy//TROP_ONLY_Gulf_of_Mexico/", "/data/nlahaye/output/Learnergy/SNPP_VIIRS_ONLY_Gulf_of_Mexico/"]
  
-fname_str: "karenia_brevis_bloom.tif"
-out_dir: "/data/nlahaye/output/MERGED_HAB_20240818/SNPP_VIIRS/"
-num_classes: 5
+fname_str: "DAY.karenia_brevis_bloom.tif"
+out_dir: "/data/nlahaye/output/MERGED_HAB_20250225/SNPP_VIIRS/"
+num_classes: 6
 re_index: 1
 
 gen_daily: true

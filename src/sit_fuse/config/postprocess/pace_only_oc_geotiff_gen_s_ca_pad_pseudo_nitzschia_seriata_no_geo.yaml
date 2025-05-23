@@ -1,0 +1,47 @@
+
+gen_from_geotiffs: True
+
+data:
+ clust_reader_type: "zarr_to_numpy"
+ reader_kwargs:
+   no_arg: "no_arg" 
+ subset_inds: []
+ create_separate: False
+  
+ gtiff_data: [
+"/data/nlahaye/output/Learnergy/PACE_Only_S_CA/PACE_OCI.20250220.L3m.DAY..clust.data_73298clusters.no_geo.tif",
+"/data/nlahaye/output/Learnergy/PACE_Only_S_CA/PACE_OCI.20250221.L3m.DAY..clust.data_73299clusters.no_geo.tif",
+"/data/nlahaye/output/Learnergy/PACE_Only_S_CA/PACE_OCI.20250222.L3m.DAY..clust.data_73299clusters.no_geo.tif",
+"/data/nlahaye/output/Learnergy/PACE_Only_S_CA/PACE_OCI.20250223.L3m.DAY..clust.data_73299clusters.no_geo.tif",
+"/data/nlahaye/output/Learnergy/PACE_Only_S_CA/PACE_OCI.20250224.L3m.DAY..clust.data_73299clusters.no_geo.tif",
+"/data/nlahaye/output/Learnergy/PACE_Only_S_CA/PACE_OCI.20250225.L3m.DAY..clust.data_73299clusters.no_geo.tif",
+"/data/nlahaye/output/Learnergy/PACE_Only_S_CA/PACE_OCI.20250226.L3m.DAY..clust.data_73299clusters.no_geo.tif",
+"/data/nlahaye/output/Learnergy/PACE_Only_S_CA/PACE_OCI.20250227.L3m.DAY..clust.data_73299clusters.no_geo.tif",
+"/data/nlahaye/output/Learnergy/PACE_Only_S_CA/PACE_OCI.20250228.L3m.DAY..clust.data_73299clusters.no_geo.tif"
+]
+
+ cluster_fnames: [
+"/data/nlahaye/output/Learnergy/PACE_Only_S_CA/PACE_OCI.20250220.L3m.DAY..clust.data_73298clusters.no_geo.tif",
+"/data/nlahaye/output/Learnergy/PACE_Only_S_CA/PACE_OCI.20250221.L3m.DAY..clust.data_73299clusters.no_geo.tif",
+"/data/nlahaye/output/Learnergy/PACE_Only_S_CA/PACE_OCI.20250222.L3m.DAY..clust.data_73299clusters.no_geo.tif",
+"/data/nlahaye/output/Learnergy/PACE_Only_S_CA/PACE_OCI.20250223.L3m.DAY..clust.data_73299clusters.no_geo.tif",
+"/data/nlahaye/output/Learnergy/PACE_Only_S_CA/PACE_OCI.20250224.L3m.DAY..clust.data_73299clusters.no_geo.tif",
+"/data/nlahaye/output/Learnergy/PACE_Only_S_CA/PACE_OCI.20250225.L3m.DAY..clust.data_73299clusters.no_geo.tif",
+"/data/nlahaye/output/Learnergy/PACE_Only_S_CA/PACE_OCI.20250226.L3m.DAY..clust.data_73299clusters.no_geo.tif",
+"/data/nlahaye/output/Learnergy/PACE_Only_S_CA/PACE_OCI.20250227.L3m.DAY..clust.data_73299clusters.no_geo.tif",
+"/data/nlahaye/output/Learnergy/PACE_Only_S_CA/PACE_OCI.20250228.L3m.DAY..clust.data_73299clusters.no_geo.tif"
+] 
+
+
+context:
+ apply_context: True
+ clusters: [[20.936, 25.081, 30.755, 31.197, 31.612, 31.62, 31.645, 31.664, 31.667, 35.421, 48.004, 48.015, 48.039, 48.067, 48.073, 73.21, 73.231, 73.238, 73.244, 73.247, 73.251, 73.267], [25.034, 25.073, 31.109, 31.158, 48.017, 48.033, 48.065, 73.218, 73.221, 31.162, 31.14, 31.121, 31.122, 31.178, 31.19, 25.072, 25.094, 25.035, 31.179, 31.198, 31.141, 31.108, 31.154, 31.185, 25.079, 25.053, 25.022, 25.058, 25.087, 25.066, 25.059, 25.003, 25.021, 25.002, 31.118, 31.155, 25.04, 31.123, 25.03, 25.064, 31.153, 31.171, 25.068, 25.005, 25.01, 25.017, 25.009, 25.054, 25.041, 25.036, 31.193, 25.043, 25.007, 25.008, 25.001, 25.067, 31.174, 31.164, 31.126, 31.144, 31.104, 25.057, 25.083, 31.11, 25.016, 31.166, 31.182, 25.098, 31.199, 25.051, 25.082, 25.026, 25.033, 25.027, 31.125, 25.011, 25.08, 25.077, 25.019, 25.06, 25.074, 25.023, 31.135, 25.031, 25.052, 25.065, 25.095, 31.159, 25.025, 31.195, 25.012, 31.117, 25.086, 31.134, 31.181, 31.13, 31.111, 31.114, 31.142, 31.177, 31.152, 31.168, 31.16, 25.037, 31.136, 31.169, 25.089, 25.088, 31.103, 25.056, 25.014, 25.048, 25.02, 25.061, 25.015, 31.175, 31.173, 25.042, 25.063, 25.062, 31.184, 25.075, 25.076, 25.099, 31.183, 25.069, 31.146, 25.078, 25.024, 25.071, 31.143, 25.091, 25.097, 25.093, 31.131, 25.032, 31.192, 25.05, 25.038, 25.006, 25.047, 25.0, 31.161, 25.092, 31.107, 25.046, 25.045, 25.09, 25.084, 31.132, 25.044, 31.156, 31.133, 25.018, 31.165, 31.112, 31.148, 31.151, 31.17, 31.194, 31.188, 31.12, 31.124, 31.101, 25.055, 25.085, 25.049, 25.096, 31.115, 25.039, 31.147, 31.187, 31.1, 31.119, 31.186, 31.127, 31.106, 25.004, 31.15, 25.029, 31.196, 31.189, 31.139, 31.137, 31.113, 31.172, 31.157, 31.191, 25.028, 31.102, 31.145, 31.167, 31.116, 31.163, 31.129, 31.138, 31.18, 31.128, 25.013, 31.176, 31.105, 31.149, 25.07], [30.429, 73.258, 73.289, 30.488, 30.487, 30.407, 30.411, 30.464, 30.468, 30.476, 30.447, 30.419, 30.469, 30.403, 30.434, 30.441, 30.409, 30.46, 30.45, 30.446, 30.478, 30.456, 30.443, 30.485, 30.406, 30.449, 30.412, 30.475, 30.455, 30.458, 30.48, 30.422, 30.421, 30.438, 30.431, 30.436, 30.47, 30.471, 30.416, 30.489, 30.465, 30.491, 30.41, 30.493, 30.402, 30.404, 30.442, 30.454, 30.466, 30.473, 30.495, 30.453, 30.439, 30.423, 30.425, 30.499, 30.445, 30.437, 30.417, 30.486, 30.408, 30.43, 30.405, 30.4, 30.444, 30.42, 30.467, 30.457, 30.427, 30.497, 30.477, 30.462, 30.415, 30.424, 30.451, 30.414, 30.496, 30.49, 30.448, 30.452, 30.482, 30.474, 30.413, 30.426, 30.432, 30.484, 30.472, 30.481, 30.479, 30.435, 30.401, 30.418, 30.428, 30.463, 30.433, 30.44, 30.494, 30.492, 30.498, 30.461, 30.459, 30.483], [], [], []]
+
+
+
+
+ name: "pseudo_nitzschia_seriata_bloom" #i.e. smoke
+ compare_truth: false
+ background_class: 1 
+ generate_union: false
+

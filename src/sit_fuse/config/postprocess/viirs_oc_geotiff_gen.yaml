@@ -21,7 +21,6 @@ data:
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180610.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180611.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180612.L3m.DAY.tif",
-"/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180613.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180614.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180615.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180616.L3m.DAY.tif",
@@ -86,7 +85,6 @@ data:
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180818.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180819.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180820.L3m.DAY.tif",
-"/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180821.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180822.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180823.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180824.L3m.DAY.tif",
@@ -290,7 +288,6 @@ data:
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20190315.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20190316.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20190317.L3m.DAY.tif",
-"/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20190318.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20190319.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20190320.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20190321.L3m.DAY.tif",
@@ -576,7 +573,7 @@ data:
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20191228.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20191229.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20191230.L3m.DAY.tif",
-"/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20191231.L3m.DAY.tif"
+"/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20191231.L3m.DAY.tif",
 ]
 
  cluster_fnames: [
@@ -592,7 +589,6 @@ data:
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180610.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180611.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180612.L3m.DAY.tif",
-"/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180613.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180614.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180615.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180616.L3m.DAY.tif",
@@ -657,7 +653,6 @@ data:
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180818.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180819.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180820.L3m.DAY.tif",
-"/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180821.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180822.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180823.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20180824.L3m.DAY.tif",
@@ -861,7 +856,6 @@ data:
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20190315.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20190316.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20190317.L3m.DAY.tif",
-"/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20190318.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20190319.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20190320.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20190321.L3m.DAY.tif",
@@ -1147,7 +1141,7 @@ data:
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20191228.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20191229.L3m.DAY.tif",
 "/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20191230.L3m.DAY.tif",
-"/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20191231.L3m.DAY.tif"
+"/data/nlahaye/output/Learnergy/SNPP_VIIRS_Gulf_of_Mexico/SNPP_VIIRS.20191231.L3m.DAY.tif",
 ] 
 
 
@@ -1155,7 +1149,10 @@ data:
 
 context:
  apply_context: True
- clusters: [[0.191, 1.006, 1.045, 2.213, 2.261, 2.299, 5.989, 6.266, 6.27, 6.277, 6.288, 6.291, 6.296, 7.114, 7.153, 12.605, 12.606, 12.632, 12.642, 12.667, 12.672, 12.683, 12.685, 12.696, 12.809, 12.832, 12.834, 12.835, 12.839, 12.846, 14.321, 14.33, 14.385, 18.721, 18.77, 18.784, 28.944, 28.966, 41.9, 41.913, 41.92, 41.946, 41.98, 42.905, 42.918, 42.961, 43.801, 43.809, 43.828, 43.843, 43.848, 43.852, 43.872, 50.044, 50.502, 50.531, 50.55, 50.56, 50.587, 51.2, 51.21, 51.22, 51.241, 51.256, 51.257, 51.268, 51.287, 51.652, 51.657, 51.674, 51.693, 59.026, 59.074, 63.91, 63.943, 63.949, 64.101, 64.156, 64.164, 64.2, 64.203, 64.249, 64.253, 64.267, 64.278, 66.19, 66.302, 66.31, 66.314, 66.319, 66.325, 66.327, 66.328, 66.333, 66.355, 66.363, 66.379, 66.38, 67.434, 67.465, 67.472, 67.489, 75.078, 77.308, 77.388], [2.258, 6.249, 18.716, 41.929, 51.27, 63.922, 66.334], [6.294, 7.171, 12.639, 12.679, 27.774, 41.905, 51.273, 66.313, 66.371, 67.419], [2.296, 6.203, 41.931, 43.871, 51.251, 63.997, 64.25, 67.4], [2.218, 2.254, 6.205, 42.919, 42.964, 50.515, 50.551, 51.293, 66.368, 67.455]]
+ clusters: [[10.448, 10.477, 10.489, 10.496, 12.004, 12.023, 12.045, 12.05, 12.084, 12.091, 14.602, 14.605, 14.615, 19.0, 19.019, 19.041, 19.073, 19.084, 19.085, 19.094, 32.758, 32.785, 36.29, 41.606, 41.61, 41.613, 41.614, 41.619, 41.622, 41.624, 41.63, 41.631, 41.632, 41.635, 41.636, 41.637, 41.639, 41.646, 41.647, 41.649, 41.653, 41.657, 41.661, 41.668, 41.669, 41.672, 41.673, 41.677, 41.684, 41.688, 41.695, 41.696, 43.024, 43.033, 43.053, 43.055, 43.065, 43.066, 43.067, 43.084, 43.085, 43.088, 44.012, 44.02, 44.025, 44.033, 44.071, 44.086, 44.092, 45.001, 45.003, 45.008, 45.011, 45.014, 45.016, 45.019, 45.02, 45.021, 45.022, 45.023, 45.025, 45.039, 45.042, 45.044, 45.046, 45.051, 45.055, 45.056, 45.06, 45.063, 45.069, 45.07, 45.078, 45.08, 45.084, 45.088, 45.089, 45.091, 45.098, 53.922, 53.966, 53.975, 53.976, 53.982, 58.872, 64.699, 64.705, 64.711, 64.712, 64.718, 64.724, 64.736, 64.739, 64.74, 64.748, 64.757, 64.765, 64.767, 64.768, 64.775, 64.779, 64.78, 64.782, 64.797, 66.508, 66.537, 66.545, 66.547, 66.551, 66.554, 66.56, 66.561, 66.562, 66.567, 66.575, 66.583, 66.596, 66.597, 73.903, 73.905, 73.91, 73.915, 73.918, 73.926, 73.936, 73.939, 73.958, 73.979, 73.98, 74.802, 74.805, 74.81, 74.812, 74.814, 74.816, 74.822, 74.823, 74.825, 74.832, 74.834, 74.84, 74.843, 74.844, 74.846, 74.849, 74.85, 74.852, 74.857, 74.86, 74.862, 74.863, 74.865, 74.873, 74.877, 74.878, 74.881, 74.884, 74.89, 74.894, 74.896, 74.898, 77.825, 77.85, 77.855, 77.878], [41.621, 41.642, 41.652, 41.659, 43.023, 44.078, 45.0, 45.031, 45.068, 73.947, 74.808, 74.811, 74.819, 74.827, 74.879, 74.887], [41.602, 41.608, 41.626, 41.634, 41.667, 41.692, 44.006, 74.803, 74.809, 74.893, 74.895, 44.043, 44.087, 44.022, 44.09, 44.014, 44.099, 44.073, 44.036, 44.056, 44.029, 44.075, 44.094, 44.024, 44.077, 44.044, 44.013, 44.061, 44.083, 44.011, 44.079, 44.008, 41.675, 44.053, 44.06, 44.004, 44.069, 44.041, 44.049, 44.04, 44.046, 41.663, 41.699, 41.676, 44.097, 44.017, 44.085, 44.003, 44.039, 44.047, 44.063, 44.005, 44.08, 44.07, 41.66, 44.035, 44.034, 41.681, 44.093, 44.076, 44.088, 44.098, 44.042, 41.65, 44.081, 44.052, 44.084, 44.091, 44.066, 44.064, 44.007, 41.644, 41.645, 44.019, 41.611, 41.678, 41.68, 41.674, 41.616, 41.666, 41.623, 41.612, 41.685, 41.67, 41.607, 41.683, 41.603, 41.697, 41.641, 41.671, 41.662, 44.026, 44.067, 44.054, 44.03, 44.062, 44.001, 44.0, 44.045, 44.016, 44.021, 44.051, 44.002, 44.031, 44.028, 44.027, 44.038, 44.018, 44.048, 44.009, 44.089, 44.023, 44.082, 44.057, 44.055, 41.627, 41.628, 41.665, 44.096, 44.072, 44.095, 44.05, 41.691, 44.065, 44.068, 41.655, 44.015, 44.058, 41.6, 44.032, 41.664, 41.682, 41.633, 41.698, 41.64, 41.686, 44.059, 41.679, 41.629, 44.037, 41.651, 41.605, 41.618, 41.648, 41.601, 41.656, 44.01, 41.643], [41.615, 41.617, 41.62, 41.654, 41.658, 41.687, 41.689, 41.693, 41.694, 44.074, 45.085, 73.913, 73.944, 74.8, 74.801, 74.804, 74.858, 77.813, 77.891], [41.604, 41.625, 41.638, 41.69, 73.929, 73.952, 73.997], [41.609]]
+
+#[[10.448, 10.477, 10.489, 10.496, 12.004, 12.023, 12.045, 12.05, 12.084, 12.091, 14.602, 14.605, 14.615, 19.0, 19.019, 19.041, 19.073, 19.084, 19.085, 19.094, 32.758, 32.785, 36.29, 41.606, 41.61, 41.613, 41.614, 41.619, 41.622, 41.624, 41.63, 41.631, 41.632, 41.635, 41.636, 41.637, 41.639, 41.646, 41.647, 41.649, 41.653, 41.657, 41.661, 41.668, 41.669, 41.672, 41.673, 41.677, 41.684, 41.688, 41.695, 41.696, 43.024, 43.033, 43.053, 43.055, 43.065, 43.066, 43.067, 43.084, 43.085, 43.088, 44.012, 44.02, 44.025, 44.033, 44.071, 44.086, 44.092, 45.001, 45.003, 45.008, 45.011, 45.014, 45.016, 45.019, 45.02, 45.021, 45.022, 45.023, 45.025, 45.039, 45.042, 45.044, 45.046, 45.051, 45.055, 45.056, 45.06, 45.063, 45.069, 45.07, 45.078, 45.08, 45.084, 45.088, 45.089, 45.091, 45.098, 53.922, 53.966, 53.975, 53.976, 53.982, 58.872, 64.699, 64.705, 64.711, 64.712, 64.718, 64.724, 64.736, 64.739, 64.74, 64.748, 64.757, 64.765, 64.767, 64.768, 64.775, 64.779, 64.78, 64.782, 64.797, 66.508, 66.537, 66.545, 66.547, 66.551, 66.554, 66.56, 66.561, 66.562, 66.567, 66.575, 66.583, 66.596, 66.597, 73.903, 73.905, 73.91, 73.915, 73.918, 73.926, 73.936, 73.939, 73.958, 73.979, 73.98, 74.802, 74.805, 74.81, 74.812, 74.814, 74.816, 74.822, 74.823, 74.825, 74.832, 74.834, 74.84, 74.843, 74.844, 74.846, 74.849, 74.85, 74.852, 74.857, 74.86, 74.862, 74.863, 74.865, 74.873, 74.877, 74.878, 74.881, 74.884, 74.89, 74.894, 74.896, 74.898, 77.825, 77.85, 77.855, 77.878], [41.621, 41.642, 41.652, 41.659, 43.023, 44.078, 45.0, 45.031, 45.068, 73.947, 74.808, 74.811, 74.819, 74.827, 74.879, 74.887], [41.602, 41.608, 41.626, 41.634, 41.667, 41.692, 44.006, 74.803, 74.809, 74.893, 74.895], [41.615, 41.617, 41.62, 41.654, 41.658, 41.687, 41.689, 41.693, 41.694, 44.074, 45.085, 73.913, 73.944, 74.8, 74.801, 74.804, 74.858, 77.813, 77.891], [41.604, 41.625, 41.638, 41.69, 73.929, 73.952, 73.997], [41.609]]
+ background_class: 1
  name: "karenia_brevis_bloom" #i.e. smoke
  compare_truth: false
  generate_union: false

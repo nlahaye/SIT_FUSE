@@ -27,7 +27,9 @@ data:
   chans: []
   transform: []
 
+
  files_train: [
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180807.L3m.DAY.",
 "/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180601.L3m.DAY.",
 "/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180602.L3m.DAY.",
 "/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180603.L3m.DAY.",
@@ -487,6 +489,7 @@ data:
 "/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20190831.L3m.DAY."]
 
  files_test: [
+"/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20180807.L3m.DAY.",
 "/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20190901.L3m.DAY.",
 "/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20190902.L3m.DAY.",
 "/data/nlahaye/remoteSensing/Multi_Year_WQ/AQUA_MODIS.20190903.L3m.DAY.",
