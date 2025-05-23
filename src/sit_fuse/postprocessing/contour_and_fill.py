@@ -73,7 +73,10 @@ def main(yml_fpath):
         mask = np.zeros((h+2, w+2), np.uint8)
   
         # Floodfill from point (0, 0)
-        cv2.floodFill(imgData3, mask, (0,0), 255);
+        cv2.floodFill(imgData3, mask, (0,0), 255)
+        cv2.floodFill(imgData3, mask, (w-1,0), 255)
+        cv2.floodFill(imgData3, mask, (w-1, h-1), 255)
+        cv2.floodFill(imgData3, mask, (0, h-1), 255)
         if wrt_geotiff:
             write_geotiff(dat, imgData3, data_fnames[i] + ".ImFill_Init.tif")
         else:
