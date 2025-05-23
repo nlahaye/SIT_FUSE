@@ -154,7 +154,6 @@ def pretrain_PCA(yml_conf, dataset):
 
     save_dir = os.path.join(save_dir, "encoder")
 
-    save_dir = os.path.join(save_dir, "encoder")
     os.makedirs(save_dir, exist_ok=True)
     joblib.dump(pca.pca, os.path.join(save_dir, "pca.pkl"))
 def pretrain_MAE(yml_conf, dataset):
