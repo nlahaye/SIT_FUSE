@@ -69,7 +69,8 @@ def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled 
         dat.data_full = np.concatenate((dat.data_full,dat.data_full[0:append_remainder]))
         dat.targets_full = np.concatenate((dat.targets_full,dat.targets_full[0:append_remainder]))
 
-
+    output = None
+    output_prob = None
     print(output_batch_size)
     test_loader = DataLoader(dat, batch_size=output_batch_size, shuffle=False, \
     num_workers = 0, drop_last = False, pin_memory = pin_mem)
@@ -87,22 +88,27 @@ def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled 
         with torch.no_grad():
             if hasattr(mdl, 'clust_tree'):
                 if return_embed:
-                    _, output, embed = mdl.forward(dat_dev, return_embed=return_embed)
+                    _, output, embed, _, output_prob = mdl.forward(dat_dev, return_embed=return_embed)
                 else:
-                    _, output = mdl.forward(dat_dev, return_embed=return_embed)
+                    _, output, _, output_prob = mdl.forward(dat_dev, return_embed=return_embed)
             else:
                 if return_embed:
                     output, embed  = mdl.forward(dat_dev, return_embed=return_embed)
                 else:
                     output = mdl.forward(dat_dev)
+
+                output_prob = torch.max(torch.nn.functional.softmax(output, dim=1), dim=1).values 
                 output = torch.argmax(torch.nn.functional.softmax(output, dim=1), dim=1)
                 #print("HERE", output.shape, torch.unique(output))
         if isinstance(output, list) or isinstance(output, tuple):
             output = output[0] #TODO improve usage uf multi-headed output after single-headed approach validated
+            if output_prob is not None:
+                output_prob = output_prob[0]
         #output = torch.unsqueeze(torch.argmax(output, axis = 1), axis=1)
  
         if use_gpu == True:
             output = output.detach().cpu()
+            output_prob = output_prob.detach().cpu()
 
         dat_dev = dat_dev.detach().cpu()
         lab_dev = lab_dev.detach().cpu()
@@ -113,6 +119,7 @@ def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled 
 
         if output.ndim == 1:
             output = torch.unsqueeze(output, dim=1)
+            output_prob = torch.unsqueeze(output_prob, dim=1)
         if output_full is None:
             if dat.data_full.ndim > 2:
                 out_d1 = 1
@@ -120,10 +127,12 @@ def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled 
                 if output.ndim > 3:
                     out_d1 = 2
                     out_d2 = 3
+                output_prob_full = torch.zeros((dat.data_full.shape[0], output.shape[out_d1], output.shape[out_d2]), dtype=torch.float32)
                 output_full = torch.zeros((dat.data_full.shape[0], output.shape[out_d1], output.shape[out_d2]), dtype=torch.float32)
                 #print("INIT DATA FULL", dat.init_data_shape, dat.init_data_shape[2:], output_full.shape)
             else:
                 output_full = torch.zeros(dat.data_full.shape[0], output.shape[1], dtype=torch.float32)
+                output_prob_full = torch.zeros(dat.data_full.shape[0], output.shape[1], dtype=torch.float32)
         ind1 = ind2
         print("HERE", output.shape, output_full.shape, dat.data_full.shape, "HERE")
         if dat_dev.ndim > 2:
@@ -132,12 +141,15 @@ def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled 
                 ind2 = output_full.shape[0]
             #print("HERE", output.shape)
             output_full[ind1:ind2,:,:] = torch.squeeze(output)
-
+            if output_prob is not None:
+                output_prob_full[ind1:ind2,:,:] = torch.squeeze(output_prob)
         else:
             ind2 += dat_dev.shape[0]
             if ind2 > output_full.shape[0]:
                 ind2 = output_full.shape[0]
             output_full[ind1:ind2,:] = output
+            if output_prob is not None:
+                output_prob_full[ind1:ind2,:] = output_prob
 
         if embed is not None:
   
@@ -166,22 +178,23 @@ def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled 
         del output
         del dat_dev
         del lab_dev
+        del output_prob
         count = count + 1
 
 
-    return output_full, embed_full
+    return output_full, embed_full, output_prob_full
 
 
 
 def generate_output(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled = False, return_embed = False):
 
-    output_full, embed_full = run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem, tiled, return_embed)
+    output_full, embed_full, output_prob = run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem, tiled, return_embed)
 
     print("SAVING", os.path.join(out_dir, output_fle), dat.targets_full.shape, output_full.shape)
-    plot_clusters(dat.targets_full, output_full.numpy(), os.path.join(out_dir, output_fle)) 
+    plot_clusters(dat.targets_full, output_full.numpy(), os.path.join(out_dir, output_fle), output_prob, pixel_padding=1) 
 
 
-def plot_clusters(coord, output_data, output_basename, pixel_padding=1):
+def plot_clusters(coord, output_data, output_basename, output_prob = None, pixel_padding=1):
 
         max_cluster = output_data.shape[1]
         min_cluster = 0
@@ -191,6 +204,7 @@ def plot_clusters(coord, output_data, output_basename, pixel_padding=1):
         #    labels = np.argmax(output_data, axis = 1)
         #else:
         labels = output_data.astype(np.int32)
+        prob = output_prob
         max_cluster = labels.max() #TODO this better!!!
 
         #print(np.unique(labels).shape, "UNIQUE LABELS", np.unique(labels), coord.shape, output_data.shape)
@@ -212,14 +226,18 @@ def plot_clusters(coord, output_data, output_basename, pixel_padding=1):
         #1 subtracted to separate No Data from areas that have cluster value 0.
         if labels.ndim <= 2:
             data = np.zeros((((int)(max_dim1)+1+pixel_padding), ((int)(max_dim2)+pixel_padding+1))) - 1
+            prob_data =  np.zeros((((int)(max_dim1)+1+pixel_padding), ((int)(max_dim2)+pixel_padding+1)))
             labels = np.array(labels)
             print("ASSIGNING LABELS", min_cluster, max_cluster)
             print(data.shape, labels.shape, coord.shape)
             for i in range(labels.shape[0]):
+                if prob is not None:
+                    prob_data[coord[i,line_ind], coord[i,samp_ind]] = prob[i]
                 data[coord[i,line_ind], coord[i,samp_ind]] = labels[i]
                 #print(data.shape, coord[i,1], coord[i,2], labels[i], max_dim1, max_dim2)
     
         else:
+            prob_data =  np.zeros((((int)(max_dim1)+1+pixel_padding), ((int)(max_dim2)+pixel_padding+1)))
             data = np.zeros((((int)(max_dim1)+1+pixel_padding), ((int)(max_dim2)+pixel_padding+1))) - 1
             labels = np.array(labels)
             #print("ASSIGNING LABELS", min_cluster, max_cluster)
@@ -232,6 +250,8 @@ def plot_clusters(coord, output_data, output_basename, pixel_padding=1):
                 max_line = min(data.shape[0],   coord[i,line_ind]+labels[i].shape[0])
                 max_samp = min(data.shape[1],   coord[i,samp_ind]+labels[i].shape[1])
 
+                if prob is not None:
+                    prob_data[coord[i,line_ind]:max_line, coord[i,samp_ind]:max_samp] = prob[i, :max_line - coord[i,line_ind], :max_samp - coord[i,samp_ind]]
 
                 data[coord[i,line_ind]:max_line, coord[i,samp_ind]:max_samp] = labels[i, :max_line - coord[i,line_ind], :max_samp - coord[i,samp_ind]] 
 
@@ -241,6 +261,7 @@ def plot_clusters(coord, output_data, output_basename, pixel_padding=1):
         #print(data)
         data = (data/1000.0).astype(np.float32)
         #print(data)
+        data2_prob = da.from_array(prob_data)
         data2 = da.from_array(data)
         #del data
 
@@ -253,10 +274,22 @@ def plot_clusters(coord, output_data, output_basename, pixel_padding=1):
         plt.colorbar()
         plt.savefig(output_basename + "_" + str(n_clusters_local) + "clusters.png", dpi=400, bbox_inches='tight')
         plt.clf()
+        if prob is not None:
+            da.to_zarr(data2_prob,output_basename + "_proba.zarr", overwrite=True)
+            img = plt.imshow(data, vmin=0, vmax=100, cmap='plasma')
+            plt.colorbar()
+            plt.savefig(output_basename + "_proba.png", dpi=400, bbox_inches='tight')
+            plt.clf()
+
+            file_ext = ".no_geo.proba"
+            fname = output_basename + file_ext + ".tif"
+            out_ds = gdal.GetDriverByName("GTiff").Create(fname, data.shape[1], data.shape[0], 1, gdal.GDT_Float32)
+            out_ds.GetRasterBand(1).WriteArray(prob_data)
+            out_ds.FlushCache()
+            out_ds = None
 
         file_ext = ".no_geo"
         fname = output_basename + "_" + str(n_clusters_local) + "clusters" + file_ext + ".tif"
-
         #print("HERE", data.min(), data.max(), data.mean(), data.std(), data.shape)
         out_ds = gdal.GetDriverByName("GTiff").Create(fname, data.shape[1], data.shape[0], 1, gdal.GDT_Float32)
         out_ds.GetRasterBand(1).WriteArray(data)
@@ -441,6 +474,7 @@ def main(yml_fpath):
                 if model.clust_tree[lab1][lab2] is not None:
                     model.clust_tree[lab1][lab2] = model.clust_tree[lab1][lab2].cuda() 
   
+
  
     out_dir = yml_conf["output"]["out_dir"]
     generate_intermediate_output = yml_conf["output"]["generate_intermediate_output"]
