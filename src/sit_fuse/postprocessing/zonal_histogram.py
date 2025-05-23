@@ -67,10 +67,10 @@ def main(yml_fpath):
     zonal_histogram = None
     print(len(clust_gtiffs), len(label_gtiffs[0]))
     for i in range(len(label_gtiffs)):
-        for j in range(len(label_gtiffs[i])):
-            zonal_histogram = gen_zonal_histogram(label_gtiffs[i][j], clust_gtiffs[j], zonal_histogram)
+        #for j in range(len(label_gtiffs[i])):
+        zonal_histogram = gen_zonal_histogram(label_gtiffs[i], clust_gtiffs[i], zonal_histogram)
 
-        with open(os.path.join(out_dir, out_tag[i] + "_hist_dict.pkl"), 'wb') as handle:
+    with open(os.path.join(out_dir, out_tag + "_hist_dict.pkl"), 'wb') as handle:
                 pickle.dump(zonal_histogram, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
