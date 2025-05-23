@@ -136,7 +136,7 @@ def heir_dc(yml_conf, dataset, ckpt_path):
 
         encoder_dir = os.path.join(save_dir_byol, "encoder")
         in_chans = yml_conf["data"]["tile_size"][2]
-        tile_size = yml_conf["data"]["tile_size"][0]
+        tile_size = yml_conf["data"]["tile_size"][0]*yml_conf["data"]["tile_size"][1]
         encoder_ckpt_path = os.path.join(encoder_dir, "byol.ckpt")
 
 
@@ -198,7 +198,7 @@ def heir_dc(yml_conf, dataset, ckpt_path):
         encoder_output_size = None
         n_visible = 0
         if "encoder_type" not in yml_conf.keys():
-            n_visible = yml_conf["data"]["tile_size"][2] * yml_conf["data"]["tile_size"][0]
+            n_visible = yml_conf["data"]["tile_size"][2] * yml_conf["data"]["tile_size"][0] * yml_conf["data"]["tile_size"][1]
         elif yml_conf["encoder_type"] == "ijepa":
             #TODO encoder_output_size = get_output_shape(model.pretrained_model.pretrained_model.model, (2, in_chans,model.pretrained_model.pretrained_model.img_size,model.pretrained_model.pretrained_model.img_size))
             #n_visible = encoder_output_size[2] #[1]*encoder_output_size[2]
