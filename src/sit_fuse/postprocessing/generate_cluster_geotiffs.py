@@ -22,7 +22,7 @@ matplotlib.use('agg')
 import matplotlib.pyplot as plt
  
 def generate_cluster_masks_no_geo(data_reader, data_reader_kwargs, subset_inds, cluster_data, 
-    apply_context, context_clusters, context_name, compare, create_separate, generate_union = False, cluster_dependencies={}):
+    apply_context, context_clusters, context_name, compare, create_separate, generate_union = False, cluster_dependencies={}, background_class = 0):
 
         read_func = get_read_func(data_reader)
     
@@ -69,7 +69,7 @@ def generate_cluster_masks_no_geo(data_reader, data_reader_kwargs, subset_inds, 
                                outUnion[ind] = 1   
   
                        inds = np.where((outDat < 0) & (dbnDat1 >= 0))
-                       outDat[inds] = 0
+                       outDat[inds] = background_class
                        outDat2[inds] = 0
                        outDatFull = np.zeros((ny,nx), dtype=np.float32) - 1
                        outDatFull2 = np.zeros((ny,nx), dtype=np.float32) - 1
@@ -131,7 +131,7 @@ def generate_cluster_masks_no_geo(data_reader, data_reader_kwargs, subset_inds, 
  
 
 def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
-    cluster_data, gtiff_data, apply_context, context_clusters, context_name, compare, create_separate, generate_union = False, cluster_dependencies={}):
+    cluster_data, gtiff_data, apply_context, context_clusters, context_name, compare, create_separate, generate_union = False, cluster_dependencies={}, background_class = 0):
 
 	read_func = get_read_func(data_reader)
 
@@ -252,7 +252,7 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 						outUnion[ind] = 1
 
 				inds = np.where((outDat[0:dbnDat1.shape[0],0: dbnDat1.shape[1]] < 0) & (dbnDat1 >= 0))
-				outDat[inds] = 0
+				outDat[inds] = background_class
 				outDat2[inds] = 0
 				outDatFull = np.zeros(imgData.shape, dtype=np.float32) - 1
 				outDatFull2 = np.zeros(imgData.shape, dtype=np.float32) - 1
@@ -382,7 +382,7 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
  
 
 
-def generate_separate_from_full(gtiff_data, apply_context, context_clusters, context_name, create_separate=True, generate_union=False, cluster_dependencies={}):
+def generate_separate_from_full(gtiff_data, apply_context, context_clusters, context_name, create_separate=True, generate_union=False, cluster_dependencies={}, background_class = 0):
         outUnionFull = None
         combine_classes = False
         if not isinstance(context_name, list):
@@ -444,7 +444,7 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
  
                             if not combine_classes:
                                 inds = np.where((outDatFull < 0) & (imgData >= 0))
-                                outDatFull[inds] = 0
+                                outDatFull[inds] = background_class
                                 outDatFull2[inds] = 0
                                 file_ext = "." + context_name[j]
 
@@ -497,7 +497,7 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
                                     
                         if combine_classes:
                             inds = np.where((outDatFull < 0) & (imgData >= 0))
-                            outDatFull[inds] = 0
+                            outDatFull[inds] = background_class
                             outDatFull2[inds] = 0
                             file_ext = "." + context_name[0]
 
@@ -622,20 +622,25 @@ def main(yml_fpath):
     if "cluster_dependencies" in yml_conf["context"]:
         clust_dep = yml_conf["context"]["cluster_dependencies"]
 
+    if "background_class" in yml_conf["context"]:
+        background_class = yml_conf["context"]["background_class"]
  
+
     if gtiff_data is not None:
         if gen_from_gtiffs:
             generate_separate_from_full(gtiff_data = cluster_data, apply_context = apply_context,
-                context_clusters = context_clusters, context_name = context_name, create_separate=create_separate, generate_union=generate_union, cluster_dependencies=clust_dep)
+                context_clusters = context_clusters, context_name = context_name, create_separate=create_separate, \
+                generate_union=generate_union, cluster_dependencies=clust_dep, background_class = background_class)
         else: 
             generate_cluster_gtiffs(data_reader = reader, data_reader_kwargs = data_reader_kwargs, subset_inds = subset_inds,
                 cluster_data = cluster_data, gtiff_data = gtiff_data, apply_context = apply_context,
                 context_clusters = context_clusters, context_name = context_name, compare = compare, 
-                    create_separate = create_separate, generate_union=generate_union, cluster_dependencies=clust_dep)
+                    create_separate = create_separate, generate_union=generate_union, cluster_dependencies=clust_dep, background_class = background_class)
     else:
         generate_cluster_masks_no_geo(data_reader = reader, data_reader_kwargs = data_reader_kwargs, subset_inds = subset_inds,
                 cluster_data = cluster_data, apply_context = apply_context, context_clusters = context_clusters, 
-                context_name = context_name, compare = compare, create_separate = create_separate, generate_union=generate_union, cluster_dependencies=clust_dep)
+                context_name = context_name, compare = compare, create_separate = create_separate, generate_union=generate_union, \
+                cluster_dependencies=clust_dep, background_class = background_class)
 
 if __name__ == '__main__':
 
