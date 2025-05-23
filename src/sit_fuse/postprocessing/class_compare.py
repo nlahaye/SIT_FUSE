@@ -178,8 +178,9 @@ def read_label_counts_pkl(pkl_list):
     new_data_label_counts = {}
     init_data_label_counts = {}
 
-
-    for i in range(len(pkl_list)):
+    for i in pkl_list.keys():
+        if i == 1: 
+            continue
         init_data_label_counts[i] = {'total' : 0} 
 
         itr = pkl_list[i]
@@ -321,19 +322,22 @@ def run_compare_dbf(dbf_list, percent_threshold):
 
     assignment = []
     uncertain = []
+    max_key = -1000
     for key in sorted(init_data_label_percentage.keys()):
+        max_key = max(max_key, key)
+    for iasn in range(int(max_key)):
         assignment.append([])
     assignment.append([])
     for key in new_data_label_percentage.keys():
-        if key <= 0.0:
+        if key < 0.0:
             continue
         #skip total
         assign = list(new_data_label_percentage[key].items())[1]
         if assign[0] == 'total':
             assign = list(new_data_label_percentage[key].items())[0]
         percentage = assign[1]
-        index = assign[0]
-        print(percentage)
+        index = int(assign[0])
+        print(percentage, index)
         if percentage >= percent_threshold:
             assignment[index].append(key)
         else:
