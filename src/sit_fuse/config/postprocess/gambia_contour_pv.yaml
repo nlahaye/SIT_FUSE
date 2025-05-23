@@ -1,0 +1,19 @@
+
+
+data:
+ filename: [
+"/mnt/data/DBN_PV_MAPPING_WIDE/gambia_6_band_post_clustering_clip.PV_Map.tif"
+]
+ reader_type: "gtiff"
+ reader_kwargs:
+  None:
+
+remove_singles: True
+remove_singles_2: True
+write_geotiff: True
+contour_min_size: 50
+
+
+dilations: 2
+erosions: 2
+

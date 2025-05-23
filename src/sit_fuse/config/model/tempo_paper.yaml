@@ -135,78 +135,8 @@ data:
 "/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T163154Z_S008G07.tif",
 "/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T163831Z_S008G08.tif",
 "/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T164508Z_S008G09.tif",
-
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T173255Z_S008G04.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T173908Z_S008G05.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T174518Z_S008G06.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T183137Z_S009G07.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T183814Z_S009G08.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T184451Z_S009G09.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T193137Z_S010G07.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T193814Z_S010G08.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T194451Z_S010G09.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T203137Z_S011G07.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T203814Z_S011G08.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T204451Z_S011G09.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T213137Z_S012G07.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T213814Z_S012G08.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T214451Z_S012G09.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T223137Z_S013G07.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T223814Z_S013G08.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T224451Z_S013G09.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T231142Z_S014G04.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T231819Z_S014G05.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T232456Z_S014G06.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T235147Z_S015G04.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240727T235824Z_S015G05.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T173154Z_S009G07.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T173831Z_S009G08.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T174508Z_S009G09.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T183154Z_S010G07.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T183831Z_S010G08.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T184508Z_S010G09.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T193154Z_S011G07.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T193831Z_S011G08.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T194508Z_S011G09.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T203154Z_S012G07.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T203831Z_S012G08.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T204508Z_S012G09.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T213154Z_S013G07.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T213831Z_S013G08.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T214508Z_S013G09.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T223154Z_S014G07.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T223831Z_S014G08.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T224508Z_S014G09.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T231159Z_S015G04.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T231836Z_S015G05.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T232513Z_S015G06.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T235204Z_S016G04.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240728T235841Z_S016G05.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240729T173210Z_S009G07.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240729T173847Z_S009G08.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240729T174524Z_S009G09.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240729T183210Z_S010G07.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240729T183847Z_S010G08.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240729T184524Z_S010G09.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240729T193210Z_S011G07.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240729T193847Z_S011G08.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240729T194524Z_S011G09.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240729T203210Z_S012G07.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240729T203847Z_S012G08.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240729T204524Z_S012G09.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240729T213210Z_S013G07.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240729T213847Z_S013G08.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240729T214524Z_S013G09.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240729T223210Z_S014G07.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240729T223847Z_S014G08.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240729T224524Z_S014G09.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240729T231215Z_S015G04.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240729T231852Z_S015G05.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240729T232529Z_S015G06.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240729T235220Z_S016G04.tif",
-"/data/nlahaye/remoteSensing/TEMPO/TEMPO_RAD_L1_V03_20240729T235857Z_S016G05.tif",
-
 ]
+
 
 scaler:
  name: "standard" 
@@ -218,7 +148,7 @@ output:
 
 dbn:
  model_type: ["gaussian_selu", "gaussian_selu", "gaussian_selu"]
- dbn_arch: [8000, 4000, 2000] #[250, 500, 2000] #, 2000]
+ dbn_arch: [4000, 3000, 2000] #[250, 500, 2000] #, 2000]
  gibbs_steps: [1,1,1] #, 7, 7] #, 10] #, 25]
  temp: [1.0, 1.0, 1.0] #, 1.0, 1.0] ##[0.9, 0.75, 0.5] #, 1.0] #, 0.5] #, 0.5] 
  normalize_learnergy: [False, True, True]

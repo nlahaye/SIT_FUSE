@@ -1,0 +1,13 @@
+
+dbf: True
+dbf_percentage_thresh: 0.51
+dbf_list: [[
+ '/data/nlahaye/output/GOES_TEMPO/fire_hist_dict.pkl'
+ 
+
+]]
+
+
+
+
+

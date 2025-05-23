@@ -1,0 +1,30 @@
+
+gen_from_geotiffs: True
+
+data:
+ clust_reader_type: "gtiff"
+ reader_kwargs:
+   no_arg: "no_arg" 
+ subset_inds: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[], [],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
+ create_separate: False
+
+ 
+ gtiff_data: [
+"/mnt/data/PV_Mapping/gambia_pv_test/test.tif.clust.data_71499clusters.full_geo.tif"
+]
+
+ 
+ cluster_fnames: [
+"/mnt/data/PV_Mapping/gambia_pv_test/test.tif.clust.data_71499clusters.full_geo.tif"
+]
+
+context: 
+ apply_context: True
+ clusters: [
+[23.215, 23.233, 23.261, 23.27, 38.71, 38.716, 38.776, 38.782, 38.792, 38.797]
+]
+
+ name: ["solar"]
+ compare_truth: false
+ generate_union: False
+

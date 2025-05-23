@@ -174,11 +174,9 @@ def read_emit(filename, **kwargs):
 
 def read_emit_l2(filename, **kwargs):
 
-    ds = Dataset(filename[0])
-    #dat = ds.variables['reflectance'][:]
-
-    dat = gdal.Open(filename[1]).ReadAsArray() 
-
+    ds = Dataset(filename)
+    dat = ds.variables['reflectance'][:]
+ 
     print(dat.shape)
 
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:

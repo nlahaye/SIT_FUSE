@@ -1,0 +1,32 @@
+
+gen_from_geotiffs: False
+
+data:
+ clust_reader_type: "zarr_to_numpy"
+ reader_kwargs:
+   no_arg: "no_arg" 
+ subset_inds: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[], [],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
+ create_separate: False
+
+ 
+ gtiff_data: [
+"/mnt/data/PV_Mapping/gambia_6_band_test.tif",
+"/mnt/data/PV_Mapping/gambia_6_band_test.tif"
+]
+
+
+
+ cluster_fnames: [
+"/mnt/data/DBN_PV_MAPPING_CDBN/gambia_6_band_test.tif.clust.data_599clusters.zarr",
+"/mnt/data/DBN_PV_MAPPING_CDBN/gambia_6_band_test.tif.no_heir.clust.data_5clusters.zarr"
+
+]
+
+context: 
+ apply_context: False
+ clusters: [[0.062, 0.165, 0.261, 0.294, 0.31, 0.348, 0.424, 0.453, 0.48, 0.517, 0.537, 0.638, 0.729, 0.778]]
+
+ name: ["PV_Map"]
+ compare_truth: false
+ generate_union: False
+

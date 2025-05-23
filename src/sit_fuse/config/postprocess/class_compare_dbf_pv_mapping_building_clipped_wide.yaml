@@ -1,0 +1,13 @@
+
+dbf: True
+dbf_percentage_thresh: 0.75
+dbf_list: [[
+"/mnt/data/DBN_PV_MAPPING_WIDE_CLIPPED/pv_building_clipped_wide_OUTPUT.csv"
+],
+[
+"/mnt/data/DBN_PV_MAPPING_WIDE_CLIPPED/background_building_clipped_wide_OUTPUT.csv"
+]]
+
+
+
+
