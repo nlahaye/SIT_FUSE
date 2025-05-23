@@ -1,0 +1,34 @@
+
+gen_from_geotiffs: True
+
+data:
+ clust_reader_type: "gtiff"
+ reader_kwargs:
+   no_arg: "no_arg" 
+ subset_inds: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[], [],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
+ create_separate: False
+
+ 
+ gtiff_data: [
+"/mnt/data/PV_Mapping/gambia_6_band_building_clipped.tif",
+]
+
+
+
+ cluster_fnames: [
+"/mnt/data/DBN_PV_MAPPING_WIDE_CLIPPED/gambia_6_band_building_clipped.tif.clust.data_78499clusters.zarr.full_geo.tif",
+]
+
+context: 
+ apply_context: True
+ clusters: [[0.148, 0.18, 0.181, 0.182, 0.187, 0.198, 26.105, 26.12, 26.149, 26.155, 26.166, 26.179, 26.187, 26.192, 27.842, 29.462, 38.857, 39.616, 47.848, 55.534, 57.302, 57.32, 57.335, 57.382]]
+         
+#[0.18, 0.181, 0.187, 27.842, 29.462, 39.616, 47.848, 57.302, 57.32]]
+         
+         
+ 
+ background_class: 2
+ name: "PV_Map"
+ compare_truth: false
+ generate_union: False
+
