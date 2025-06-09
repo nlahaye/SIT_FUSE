@@ -1,6 +1,0 @@
----
-icon: wrench
----
-
-# GeoTiff generation
-

@@ -4,12 +4,12 @@ description: Steps for getting context assigned output from our labels and GeoTi
 
 # Context Assignment
 
-{% content-ref url="class-comparison.md" %}
-[class-comparison.md](class-comparison.md)
+{% content-ref url="class-comparison/" %}
+[class-comparison](class-comparison/)
 {% endcontent-ref %}
 
-{% content-ref url="geotiff-generation.md" %}
-[geotiff-generation.md](geotiff-generation.md)
+{% content-ref url="geotiff-generation/" %}
+[geotiff-generation](geotiff-generation/)
 {% endcontent-ref %}
 
 {% content-ref url="contours.md" %}

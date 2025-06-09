@@ -12,7 +12,7 @@ The William's Flat's Fire was well documented through the 2019 FIRE-X AQ field c
 
 Through each instrument, we are able to see different aspects of the fire due to the abundance of [spectral bands](https://www.earthdatascience.org/courses/earth-analytics/multispectral-remote-sensing-data/introduction-multispectral-imagery-r/). Different bands allow us to see key elements of the fire such as the smoke, the active fire, and the remaining burn scar.&#x20;
 
-For example, [eMAS data](https://asapdata.arc.nasa.gov/emas/data/flt\_html/19910.html), originally comprised of HDF files but since converted to GeoTiff files ([preprocessing step](../../file-conversion.md)), has 38 spectral bands. We can look at these spectral band in QGIS. We will use an eMAS image for our demonstration (Figure 1).
+For example, [eMAS data](https://asapdata.arc.nasa.gov/emas/data/flt_html/19910.html), originally comprised of HDF files but since converted to GeoTiff files, has 38 spectral bands. We can look at these spectral band in QGIS. We will use an eMAS image for our demonstration (Figure 1).
 
 1. Open QGIS.
 2. Open your converted GeoTiff file (.tif).
@@ -21,17 +21,9 @@ For example, [eMAS data](https://asapdata.arc.nasa.gov/emas/data/flt\_html/19910
 
 3. In the [Layer Styling panel](qgis-configuration.md), select `Multiband color` and then from the drop down that appears, select `Singleband gray`. This will cause the data to be in grayscale (Figure 2).
 
-<div>
+<div><figure><img src="../../../.gitbook/assets/Screenshot 2024-10-18 at 11.47.44 AM.png" alt="" width="443"><figcaption><p>Layer Styling Panel</p></figcaption></figure> <figure><img src="../../../.gitbook/assets/Screenshot 2024-10-18 at 11.53.28 AM.png" alt=""><figcaption><p>Figure 2. Grayscale (Singleband gray)</p></figcaption></figure></div>
 
-<figure><img src="../../../.gitbook/assets/Screenshot 2024-10-18 at 11.47.44 AM.png" alt="" width="443"><figcaption><p>Layer Styling Panel</p></figcaption></figure>
-
- 
-
-<figure><img src="../../../.gitbook/assets/Screenshot 2024-10-18 at 11.53.28 AM.png" alt=""><figcaption><p>Figure 2. Grayscale (Singleband gray)</p></figcaption></figure>
-
-</div>
-
-4. Now, right under the `Singleband` gray button, we see `Gray band` and `Band 01 (Gray).` Select the latter and you should see a drop down of all of the different bands. Of course the number of bands will vary based on what instrument the data was sourced from, but for eMAS we see 38.
+4. Now, right under the `Singleband` gray button, we see `Gray band` and `Band 01 (Gray)`. Select the latter and you should see a drop down of all of the different bands. Of course the number of bands will vary based on what instrument the data was sourced from, but for eMAS we see 38.
 
 <figure><img src="../../../.gitbook/assets/Screenshot 2024-10-18 at 11.51.50 AM.png" alt="" width="119"><figcaption><p>eMAS bands</p></figcaption></figure>
 

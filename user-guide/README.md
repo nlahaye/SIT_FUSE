@@ -1,5 +1,6 @@
 ---
-description: The SIT FUSE User Guide
+description: The SIT-FUSE User Guide
+icon: user-robot
 ---
 
 # User Guide
@@ -20,12 +21,8 @@ description: The SIT FUSE User Guide
 [conda-virtual-environment.md](conda-virtual-environment.md)
 {% endcontent-ref %}
 
-{% content-ref url="training/" %}
-[training](training/)
-{% endcontent-ref %}
-
-{% content-ref url="file-conversion.md" %}
-[file-conversion.md](file-conversion.md)
+{% content-ref url="model-training/" %}
+[model-training](model-training/)
 {% endcontent-ref %}
 
 {% content-ref url="post-processing/" %}
