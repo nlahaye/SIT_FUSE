@@ -1,0 +1,65 @@
+
+low_res:
+ data:
+  valid_min: 0.0
+  valid_max: 100
+  reader_type: "viirs_aero_mask"
+  reader_kwargs:
+   bool_aero: True
+  geo_reader_type: "viirs_aero_mask_geo"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: [
+"/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19915_22_20190815_2231_2241_20201001_1745.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19916_20_20190817_0057_0108_20201001_1804.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19911_10_20190807_2004_2016_20201001_1655.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19919_13_20190821_2324_2339_20201001_1837.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19916_14_20190816_2313_2327_20201001_1759.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19919_14_20190821_2343_2356_20201001_1838.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19910_20_20190806_2052_2106_20201001_1636.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19916_18_20190817_0023_0036_20201001_1802.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19910_06_20190806_1815_1824_20201001_1621.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19919_17_20190822_0036_0104_20201001_1841.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19911_09_20190807_1947_2002_20201001_1654.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19916_17_20190817_0006_0020_20201001_1801.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19916_10_20190816_2201_2214_20201001_1755.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19910_10_20190806_1858_1910_20201001_1626.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19915_17_20190815_2122_2143_20201001_1741.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19916_15_20190816_2330_2345_20201001_1759.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19915_23_20190815_2247_2256_20201001_1746.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19916_11_20190816_2219_2234_20201001_1756.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19916_16_20190816_2349_0002_20201001_1800.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19916_19_20190817_0040_0054_20201001_1803.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19912_07_20190808_1806_1821_20201001_1708.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19915_21_20190815_2216_2225_20201001_1744.nc"
+]
+
+  geo_filenames: ["/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19915_22_20190815_2231_2241_20201001_1745.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19916_20_20190817_0057_0108_20201001_1804.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19911_10_20190807_2004_2016_20201001_1655.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19919_13_20190821_2324_2339_20201001_1837.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19916_14_20190816_2313_2327_20201001_1759.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19919_14_20190821_2343_2356_20201001_1838.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19910_20_20190806_2052_2106_20201001_1636.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19916_18_20190817_0023_0036_20201001_1802.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19910_06_20190806_1815_1824_20201001_1621.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19919_17_20190822_0036_0104_20201001_1841.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19911_09_20190807_1947_2002_20201001_1654.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19916_17_20190817_0006_0020_20201001_1801.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19916_10_20190816_2201_2214_20201001_1755.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19910_10_20190806_1858_1910_20201001_1626.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19915_17_20190815_2122_2143_20201001_1741.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19916_15_20190816_2330_2345_20201001_1759.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19915_23_20190815_2247_2256_20201001_1746.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19916_11_20190816_2219_2234_20201001_1756.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19916_16_20190816_2349_0002_20201001_1800.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19916_19_20190817_0040_0054_20201001_1803.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19912_07_20190808_1806_1821_20201001_1708.nc","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19915_21_20190815_2216_2225_20201001_1744.nc"
+]
+
+  chan_dim: 0
+  geo_coord_dim: 0
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+high_res:
+ data:
+  valid_min: 0.0
+  valid_max: 100000000
+  reader_type: "numpy"
+  reader_kwargs:
+   no_arg: "no_arg"
+  geo_reader_type: "numpy"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: []
+  geo_filenames: []
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+fusion:
+ projection_id: 4326
+ description: "Generating emas GeoTiffs"
+ area_id: "eMAS"
+ projection_proj4:
+  proj: "longlat"
+  datum: "WGS84"
+ final_resolution: 0.00045
+ projection_units: "degrees"
+ resample_radius: 500
+ resample_n_neighbors: 64
+ resample_n_procs: 5
+ resample_epsilon: 1.6
+ use_bilinear: False
+ #lon_bounds: [-120.5, -118.0]
+ #lat_bounds: [47.5, 50.0]
+
+
+
+output_files: [
+"/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19915_22_20190815_2231_2241_20201001_1745.nc5.tif","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19916_20_20190817_0057_0108_20201001_1804.nc5.tif","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19911_10_20190807_2004_2016_20201001_1655.nc5.tif","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19919_13_20190821_2324_2339_20201001_1837.nc5.tif","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19916_14_20190816_2313_2327_20201001_1759.nc5.tif","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19919_14_20190821_2343_2356_20201001_1838.nc5.tif","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19910_20_20190806_2052_2106_20201001_1636.nc5.tif","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19916_18_20190817_0023_0036_20201001_1802.nc5.tif","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19910_06_20190806_1815_1824_20201001_1621.nc5.tif","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19919_17_20190822_0036_0104_20201001_1841.nc5.tif","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19911_09_20190807_1947_2002_20201001_1654.nc5.tif","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19916_17_20190817_0006_0020_20201001_1801.nc5.tif","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19916_10_20190816_2201_2214_20201001_1755.nc5.tif","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19910_10_20190806_1858_1910_20201001_1626.nc5.tif","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19915_17_20190815_2122_2143_20201001_1741.nc5.tif","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19916_15_20190816_2330_2345_20201001_1759.nc5.tif","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19915_23_20190815_2247_2256_20201001_1746.nc5.tif","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19916_11_20190816_2219_2234_20201001_1756.nc5.tif","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19916_16_20190816_2349_0002_20201001_1800.nc5.tif","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19916_19_20190817_0040_0054_20201001_1803.nc5.tif","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19912_07_20190808_1806_1821_20201001_1708.nc5.tif","/Users/stasyaeasley/Desktop/ncfiles/eMASL2AER_19915_21_20190815_2216_2225_20201001_1744.nc5.tif"
+]
+

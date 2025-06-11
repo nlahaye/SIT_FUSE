@@ -9,7 +9,7 @@ required before exporting such information to foreign countries or providing acc
 import numpy as np
 from pyresample.geometry import AreaDefinition
 from pyresample import area_config, bilinear, geometry, data_reduce, create_area_def, kd_tree
-from utils import numpy_to_torch, read_yaml, get_read_func
+from sit_fuse.utils import numpy_to_torch, read_yaml, get_read_func
 from osgeo import gdal, osr
 import argparse
 import os
