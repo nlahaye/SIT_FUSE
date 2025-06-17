@@ -17,7 +17,7 @@ low_res:
     end_lat: 30.4159
     mask_oceans: True
   filenames:
-   ["/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240801.L3m.DAY.",
+   ["/mnt/data/PACE_OCI_REFLECTANCES/PACE_OCI.20240801.L3m.DAY.",
 #    "/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240802.L3m.DAY.",
 #    "/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240803.L3m.DAY.",
 #    "/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240804.L3m.DAY.",
@@ -31,7 +31,7 @@ low_res:
 
 
   geo_filenames:
-   ["/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240801.L3m.DAY.",
+   ["/mnt/data/PACE_OCI_REFLECTANCES/PACE_OCI.20240801.L3m.DAY.",
 #    "/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240802.L3m.DAY.",
 #    "/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240803.L3m.DAY.",
 #    "/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240804.L3m.DAY.",
@@ -83,7 +83,7 @@ fusion:
 
 
 output_files:
-  ["/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240801.L3m.DAY.RRS.V3_0.Rrs.4km.tif",
+  ["/mnt/data/PACE_OCI_REFLECTANCES/PACE_OCI.20240801.L3m.DAY.RRS.V3_0.Rrs.4km.tif",
 #"/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240802.L3m.DAY.RRS.V3_0.Rrs.4km.tif",
 #"/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240803.L3m.DAY.RRS.V3_0.Rrs.4km.tif",
 #"/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240804.L3m.DAY.RRS.V3_0.Rrs.4km.tif",
