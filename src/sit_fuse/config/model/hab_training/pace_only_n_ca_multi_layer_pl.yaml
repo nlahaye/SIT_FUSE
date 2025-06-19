@@ -486,7 +486,7 @@ scaler:
  name: "standard" 
 
 output:
- out_dir: "/mnt/data/OC_SIF_HABs_2025/OUTPUT/PACE_OCI_CA_NEW/"
+ out_dir: "/mnt/data/OC_SIF_HABs_2025/OUTPUT/PACE_OCI/"
  generate_intermediate_output: True
 
 

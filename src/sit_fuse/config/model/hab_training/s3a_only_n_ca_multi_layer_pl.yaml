@@ -495,7 +495,7 @@ scaler:
  name: "standard" 
 
 output:
- out_dir: "/mnt/data/OC_SIF_HABs_2025/OUTPUT/S3A_OLCI_CA_NEW/"
+ out_dir: "/mnt/data/OC_SIF_HABs_2025/OUTPUT/S3A_OLCI/"
  generate_intermediate_output: True
 
 

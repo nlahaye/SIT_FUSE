@@ -501,7 +501,7 @@ scaler:
  name: "standard" 
 
 output:
- out_dir: "/mnt/data/OC_SIF_HABs_2025/OUTPUT/MODIS_AQUA_CA_NEW/"
+ out_dir: "/mnt/data/OC_SIF_HABs_2025/OUTPUT/AQUA_MODIS/"
  generate_intermediate_output: True
 
 

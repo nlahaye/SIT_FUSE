@@ -502,7 +502,7 @@ scaler:
  name: "standard" 
 
 output:
- out_dir: "/mnt/data/OC_SIF_HABs_2025/OUTPUT/JPSS2_VIIRS_CA_NEW/" # doesn't exist yet, need to train
+ out_dir: "/mnt/data/OC_SIF_HABs_2025/OUTPUT/JPSS2_VIIRS/" # doesn't exist yet, need to train
  generate_intermediate_output: True
 
 

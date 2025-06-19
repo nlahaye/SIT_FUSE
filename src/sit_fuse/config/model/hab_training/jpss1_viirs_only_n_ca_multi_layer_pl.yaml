@@ -502,7 +502,7 @@ scaler:
  name: "standard" 
 
 output:
- out_dir: "/mnt/data/OC_SIF_HABs_2025/OUTPUT/JPSS1_VIIRS_CA_NEW/" # this is where wandb_dbn is but im not sure if this is the correct output dir
+ out_dir: "/mnt/data/OC_SIF_HABs_2025/OUTPUT/JPSS1_VIIRS/" # this is where wandb_dbn is but im not sure if this is the correct output dir
  generate_intermediate_output: True
 
 

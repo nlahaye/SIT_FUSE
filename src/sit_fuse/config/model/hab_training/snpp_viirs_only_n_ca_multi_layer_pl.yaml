@@ -485,7 +485,7 @@ scaler:
  name: "standard" 
 
 output:
- out_dir: "/mnt/data/OC_SIF_HABs_2025/OUTPUT/SNPP_VIIRS_CA_NEW/"
+ out_dir: "/mnt/data/OC_SIF_HABs_2025/OUTPUT/SNPP_VIIRS/"
  generate_intermediate_output: True
 
 
