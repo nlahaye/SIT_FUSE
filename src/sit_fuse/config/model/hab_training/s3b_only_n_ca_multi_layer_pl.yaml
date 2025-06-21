@@ -494,7 +494,7 @@ scaler:
  name: "standard" 
 
 output:
- out_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/S3B_OLCI/"
+ out_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/S3B_OLCI_S_CA/"
  generate_intermediate_output: True
 
 
