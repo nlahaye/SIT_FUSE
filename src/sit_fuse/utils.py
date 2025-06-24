@@ -329,13 +329,19 @@ def read_pace_oc(filename, **kwargs):
 
 
 def read_s3_oc(filename, **kwargs):
+    vrs = ["RRS.Rrs_400","RRS.Rrs_412","RRS.Rrs_443","RRS.Rrs_490","RRS.Rrs_510","RRS.Rrs_560","RRS.Rrs_620","RRS.Rrs_665","RRS.Rrs_674","RRS.Rrs_681", "RRS.Rrs_709"]
 
     #vrs = ["CHL.chlor_a", "KD.Kd_490", "RRS.aot_865", "RRS.angstrom"]
-    vrs = ["RRS.Rrs_400","RRS.Rrs_412","RRS.Rrs_443","RRS.Rrs_490","RRS.Rrs_510","RRS.Rrs_560","RRS.Rrs_620","RRS.Rrs_665","RRS.Rrs_674","RRS.Rrs_681", "RRS.Rrs_709"]
- 
+
     data1 = None
     for i in range(len(vrs)):
-        flename = filename + vrs[i] + ".4km.nc"
+        kwrg = {}
+        if "nrt" in kwargs and kwargs["nrt"]:
+            kwrg['nrt'] = kwargs["nrt"]
+            flename = filename + vrs[0] + ".4km.NRT.nc"
+        else:
+            flename = filename + vrs[0] + ".4km.nc"
+        #flename = filename + vrs[i] + ".4km.nc"
         print(flename)
         f = Dataset(flename)
         f.set_auto_maskandscale(False)
