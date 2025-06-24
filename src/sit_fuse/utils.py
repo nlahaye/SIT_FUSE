@@ -413,19 +413,22 @@ def read_viirs_oc(filename, **kwargs):
     vrs2 = ["RRS.Rrs_411", "RRS.Rrs_445", "RRS.Rrs_489", "RRS.Rrs_556", "RRS.Rrs_667"]
 
     #"RRS.aot_862", "RRS.Rrs_410", "RRS.Rrs_443", "RRS.Rrs_486", "RRS.Rrs_551", "RRS.Rrs_671"]
+    if 'JPSS1' in filename:
+        vrs = vrs2
 
     data1 = []
     kwrg = {}
+    if "nrt" in kwargs and kwargs["nrt"]:
+        kwrg['nrt'] = kwargs["nrt"]
+
     for i in range(len(vrs)):
-        if 'JPSS1' in filename:
-            vrs = vrs2
-        if "nrt" in kwargs and kwargs["nrt"]:
-            vrs = vrs[i]
-            kwrg['nrt'] = kwargs["nrt"]
-            flename = filename + vrs[0] + ".4km.NRT.nc"
+        var = vrs[i]
+        if "nrt" in kwargs:
+            flename = filename + var + ".4km.NRT.nc"
         else:
-            flename = filename + vrs[0] + ".4km.nc"
-        #flename = filename + vrs[i] + ".4km.nc"
+            flename = filename + var + ".4km.nc"
+        print("Trying to open:", flename)
+        # #flename = filename + vrs[i] + ".4km.nc"
         f = Dataset(flename)
         f.set_auto_maskandscale(False)
         start_ind = 4
