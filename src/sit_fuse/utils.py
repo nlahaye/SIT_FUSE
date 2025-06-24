@@ -334,8 +334,9 @@ def read_s3_oc(filename, **kwargs):
     #vrs = ["CHL.chlor_a", "KD.Kd_490", "RRS.aot_865", "RRS.angstrom"]
 
     data1 = None
+    kwrg = {}
+
     for i in range(len(vrs)):
-        kwrg = {}
         var = vrs[i]
         if "nrt" in kwargs and kwargs["nrt"]:
             kwrg['nrt'] = kwargs["nrt"]
@@ -343,7 +344,7 @@ def read_s3_oc(filename, **kwargs):
         else:
             flename = filename + var + ".4km.nc"
         #flename = filename + vrs[i] + ".4km.nc"
-        print(flename)
+        print(flename )
         f = Dataset(flename)
         f.set_auto_maskandscale(False)
         start_ind = 4
@@ -372,7 +373,7 @@ def read_s3_oc(filename, **kwargs):
     dat = data1.astype(np.float32)
 
     if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs:
-        loc = read_oc_geo(filename, **kwargs)
+        loc = read_oc_geo(filename, **kwrg)
         lat = loc[0]
         lon = loc[1]
         print(lat.shape, lon.shape, dat.shape)
