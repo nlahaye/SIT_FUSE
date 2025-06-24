@@ -405,7 +405,7 @@ def read_s3_oc(filename, **kwargs):
 
 
 def read_viirs_oc(filename, **kwargs):
-
+    print("nrt flag:", kwargs.get("nrt"))
     #vrs = ["CHL.chlor_a", "KD.Kd_490", "PAR.par", "PIC.pic", "POC.poc", "RRS.aot_862", "RRS.angstrom"]
     #vrs2 = ["CHL.chlor_a", "KD.Kd_490", "PAR.par", "PIC.pic", "POC.poc", "RRS.aot_868", "RRS.angstrom"]
 
@@ -418,15 +418,13 @@ def read_viirs_oc(filename, **kwargs):
 
     data1 = []
     kwrg = {}
-    if "nrt" in kwargs and kwargs["nrt"]:
-        kwrg['nrt'] = kwargs["nrt"]
 
     for i in range(len(vrs)):
-        var = vrs[i]
-        if "nrt" in kwargs:
-            flename = filename + var + ".4km.NRT.nc"
+        if "nrt" in kwargs and kwargs["nrt"]:
+            kwrg['nrt'] = kwargs["nrt"]
+            flename = filename + vrs[i] + ".4km.NRT.nc"
         else:
-            flename = filename + var + ".4km.nc"
+            flename = filename + vrs[i] + ".4km.nc"
         print("Trying to open:", flename)
         # #flename = filename + vrs[i] + ".4km.nc"
         f = Dataset(flename)
@@ -496,14 +494,15 @@ def read_viirs_oc(filename, **kwargs):
 def read_oc_geo(filename, **kwargs):
 
     vrs = ["lat", "lon"]
+
     if "PACE" not in filename:
         if "JPSS1" not in filename:
             f = Dataset(filename + "RRS.Rrs_443.4km.nc")
         else:
-            try:
-                f = Dataset(filename + "RRS.Rrs_445.4km.nc")
-            except FileNotFoundError:
+            if 'nrt'  in kwargs and kwargs['nrt']:
                 f = Dataset(filename + "RRS.Rrs_445.4km.NRT.nc")
+            else:
+                f = Dataset(filename + "RRS.Rrs_445.4km.nc")
     else:
         if 'nrt'  in kwargs and kwargs['nrt']:
             f = Dataset(filename + "RRS.V3_0.Rrs.4km.NRT.nc")

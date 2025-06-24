@@ -15,11 +15,12 @@ data:
  output_subset_count: 1
  reader_type: "pace_oc"
  reader_kwargs:
+  nrt: True
   start_lon: -128.00
   end_lon: -116.00
   start_lat: 30.00
   end_lat: 37.00
-  #mask_shp: "/data/nlahaye/remoteSensing/Lakes/glwd_1.shp"
+  # mask_shp: "/data/nlahaye/remoteSensing/Lakes/glwd_1.shp"
   mask_oceans: True
  chan_dim: 0
  delete_chans: []
