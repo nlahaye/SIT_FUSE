@@ -338,13 +338,14 @@ def read_s3_oc(filename, **kwargs):
 
     for i in range(len(vrs)):
         var = vrs[i]
+        print(kwargs["nrt"])
         if "nrt" in kwargs and kwargs["nrt"]:
             kwrg['nrt'] = kwargs["nrt"]
             flename = filename + var + ".4km.NRT.nc"
         else:
             flename = filename + var + ".4km.nc"
         #flename = filename + vrs[i] + ".4km.nc"
-        print(flename )
+        print(flename + "ERM")
         f = Dataset(flename)
         f.set_auto_maskandscale(False)
         start_ind = 4
