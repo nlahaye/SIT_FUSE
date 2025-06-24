@@ -372,7 +372,7 @@ def read_s3_oc(filename, **kwargs):
     dat = data1.astype(np.float32)
 
     if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs:
-        loc = read_oc_geo(filename)
+        loc = read_oc_geo(filename, **kwargs)
         lat = loc[0]
         lon = loc[1]
         print(lat.shape, lon.shape, dat.shape)
