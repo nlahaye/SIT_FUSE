@@ -335,6 +335,7 @@ def read_s3_oc(filename, **kwargs):
     data1 = None
     for i in range(len(vrs)):
         flename = filename + vrs[i] + ".4km.nc"
+        print(flename)
         f = Dataset(flename)
         f.set_auto_maskandscale(False)
         start_ind = 4
@@ -414,11 +415,17 @@ def read_viirs_oc(filename, **kwargs):
     #"RRS.aot_862", "RRS.Rrs_410", "RRS.Rrs_443", "RRS.Rrs_486", "RRS.Rrs_551", "RRS.Rrs_671"]
 
     data1 = []
+    kwrg = {}
     for i in range(len(vrs)):
         if 'JPSS1' in filename:
             vrs = vrs2
-
-        flename = filename + vrs[i] + ".4km.nc"
+        if "nrt" in kwargs and kwargs["nrt"]:
+            vrs = vrs[i]
+            kwrg['nrt'] = kwargs["nrt"]
+            flename = filename + vrs[0] + ".4km.NRT.nc"
+        else:
+            flename = filename + vrs[0] + ".4km.nc"
+        #flename = filename + vrs[i] + ".4km.nc"
         f = Dataset(flename)
         f.set_auto_maskandscale(False)
         start_ind = 4
@@ -444,7 +451,7 @@ def read_viirs_oc(filename, **kwargs):
     dat = np.array(data1).astype(np.float32)
 
     if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs: 
-        loc = read_oc_geo(filename)
+        loc = read_oc_geo(filename, **kwrg)
         lat = loc[0]
         lon = loc[1]
         print(lat.shape, lon.shape, dat.shape)
@@ -490,7 +497,10 @@ def read_oc_geo(filename, **kwargs):
         if "JPSS1" not in filename:
             f = Dataset(filename + "RRS.Rrs_443.4km.nc")
         else:
-            f = Dataset(filename + "RRS.Rrs_445.4km.nc")
+            try:
+                f = Dataset(filename + "RRS.Rrs_445.4km.nc")
+            except FileNotFoundError:
+                f = Dataset(filename + "RRS.Rrs_445.4km.NRT.nc")
     else:
         if 'nrt'  in kwargs and kwargs['nrt']:
             f = Dataset(filename + "RRS.V3_0.Rrs.4km.NRT.nc")
