@@ -335,7 +335,7 @@ def read_s3_oc(filename, **kwargs):
 
     data1 = None
     kwrg = {}
-    print(kwargs["nrt"])
+    print("nrt in kwargs:", kwargs.get("nrt", "NOT SET"))
 
     for i in range(len(vrs)):
         var = vrs[i]
