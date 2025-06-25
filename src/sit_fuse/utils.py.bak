@@ -496,13 +496,13 @@ def read_oc_geo(filename, **kwargs):
     vrs = ["lat", "lon"]
 
     if "PACE" not in filename:
-        file_ext = ".4km.nc"
-        if 'nrt'  in kwargs and kwargs['nrt']:
-            file_ext = ".4km.NRT.nc"
         if "JPSS1" not in filename:
-            f = Dataset(filename + "RRS.Rrs_443" + file_ext)
+            f = Dataset(filename + "RRS.Rrs_443.4km.nc")
         else:
-            f = Dataset(filename + "RRS.Rrs_445" + file_ext)
+            if 'nrt'  in kwargs and kwargs['nrt']:
+                f = Dataset(filename + "RRS.Rrs_445.4km.NRT.nc")
+            else:
+                f = Dataset(filename + "RRS.Rrs_445.4km.nc")
     else:
         if 'nrt'  in kwargs and kwargs['nrt']:
             f = Dataset(filename + "RRS.V3_0.Rrs.4km.NRT.nc")
