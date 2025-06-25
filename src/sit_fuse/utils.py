@@ -332,9 +332,15 @@ def read_s3_oc(filename, **kwargs):
     vrs = ["RRS.Rrs_400","RRS.Rrs_412","RRS.Rrs_443","RRS.Rrs_490","RRS.Rrs_510","RRS.Rrs_560","RRS.Rrs_620","RRS.Rrs_665","RRS.Rrs_674","RRS.Rrs_681", "RRS.Rrs_709"]
 
     #vrs = ["CHL.chlor_a", "KD.Kd_490", "RRS.aot_865", "RRS.angstrom"]
+    kwrg = {}
     data1 = None
     for i in range(len(vrs)):
-        flename = filename + vrs[i] + ".4km.nc"
+        if "nrt" in kwargs and kwargs["nrt"]:
+            kwrg['nrt'] = kwargs["nrt"]
+            flename = filename + vrs[i] + ".4km.NRT.nc"
+        else:
+            flename = filename + vrs[i] + ".4km.nc"
+        # flename = filename + vrs[i] + ".4km.nc"
         print(flename)
         f = Dataset(flename)
         f.set_auto_maskandscale(False)
@@ -364,7 +370,7 @@ def read_s3_oc(filename, **kwargs):
     dat = data1.astype(np.float32)
 
     if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs:
-        loc = read_oc_geo(filename)
+        loc = read_oc_geo(filename, **kwrg)
         lat = loc[0]
         lon = loc[1]
         print(lat.shape, lon.shape, dat.shape)
@@ -425,7 +431,6 @@ def read_viirs_oc(filename, **kwargs):
             flename = filename + vrs[i] + ".4km.NRT.nc"
         else:
             flename = filename + vrs[i] + ".4km.nc"
-        print("Trying to open:", flename)
         # #flename = filename + vrs[i] + ".4km.nc"
         f = Dataset(flename)
         f.set_auto_maskandscale(False)
@@ -547,9 +552,15 @@ def read_modis_oc(filename, **kwargs):
     #vrs = ["CHL.chlor_a", "FLH.ipar", "FLH.nflh", "KD.Kd_490", "PAR.par", "PIC.pic", "POC.poc", "RRS.aot_869", "RRS.angstrom"]
     vrs = ["RRS.Rrs_412", "RRS.Rrs_443", "RRS.Rrs_469", "RRS.Rrs_488", "RRS.Rrs_531", "RRS.Rrs_547", "RRS.Rrs_555", "RRS.Rrs_645", "RRS.Rrs_667", "RRS.Rrs_678"]
 
+    kwrg = {}
     data1 = []
     for i in range(len(vrs)):
-        flename = filename + vrs[i] + ".4km.nc"
+        if "nrt" in kwargs and kwargs["nrt"]:
+            kwrg['nrt'] = kwargs["nrt"]
+            flename = filename + vrs[i] + ".4km.NRT.nc"
+        else:
+            flename = filename + vrs[i] + ".4km.nc"
+        # flename = filename + vrs[i] + ".4km.nc"
         print(flename)
         f = Dataset(flename)
         f.set_auto_maskandscale(False)
@@ -578,7 +589,7 @@ def read_modis_oc(filename, **kwargs):
         #    plt.savefig(filename + "CHLOR_FULL.png")
     dat = np.array(data1).astype(np.float32)
 
-    loc = read_oc_geo(filename)
+    loc = read_oc_geo(filename, **kwrg)
     lat = loc[0]
     lon = loc[1]
     print(lat.shape, lon.shape, dat.shape)
