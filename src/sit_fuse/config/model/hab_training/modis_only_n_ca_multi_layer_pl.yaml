@@ -15,13 +15,13 @@ data:
  output_subset_count: 1
  reader_type: "modis_oc"
  reader_kwargs:
-  nrt: True
   start_lon: -128.00
   end_lon: -116.00
   start_lat: 30.00
   end_lat: 38.94
   #mask_shp: "/data/nlahaye/remoteSensing/Lakes/glwd_1.shp"
   mask_oceans: True
+  nrt: True
  chan_dim: 0
  delete_chans: []
  transform_default:
@@ -29,7 +29,7 @@ data:
   transform: []
 
  files_train: [
-"/mnt/data/REFLECTANCES/MODIS_AQUA/AQUA_MODIS.20250501.L3m.DAY.",
+#"/mnt/data/REFLECTANCES/MODIS_AQUA/AQUA_MODIS.20250501.L3m.DAY.",
 "/mnt/data/REFLECTANCES/MODIS_AQUA/AQUA_MODIS.20250502.L3m.DAY.",
 "/mnt/data/REFLECTANCES/MODIS_AQUA/AQUA_MODIS.20250503.L3m.DAY.",
 "/mnt/data/REFLECTANCES/MODIS_AQUA/AQUA_MODIS.20250504.L3m.DAY.",
