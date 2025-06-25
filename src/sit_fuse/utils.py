@@ -504,19 +504,10 @@ def read_oc_geo(filename, **kwargs):
         file_ext = ".4km.nc"
         if 'nrt'  in kwargs and kwargs['nrt']:
             file_ext = ".4km.NRT.nc"
-        if "AQUA" in filename:
-            f = Dataset(filename + "RRS.Rrs_443" + file_ext)
-        if "S3" in filename:
-            f = Dataset(filename + "RRS.Rrs_443" + file_ext)
-        if "JPSS1" in filename:
-            f = Dataset(filename + "RRS.Rrs_445" + file_ext)
-
-        """
         if "JPSS1" not in filename:
             f = Dataset(filename + "RRS.Rrs_443" + file_ext)
         else: 
             f = Dataset(filename + "RRS.Rrs_443" + file_ext)
-        """
     else:
         if 'nrt'  in kwargs and kwargs['nrt']:
             f = Dataset(filename + "RRS.V3_0.Rrs.4km.NRT.nc")
