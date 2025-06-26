@@ -230,7 +230,7 @@ class SFDatasetConv(SFDataset):
                     self.data = tmp
                     self.targets = tgts2
                 else:
-                    self.data = np.append(self.data, data_local[r], axis=0)
+                    self.data = np.append(self.data, tmp, axis=0)
                     self.targets = np.append(self.targets, tgts2, axis=0)
             else:
                 if (data_local[r].max() > -999999):
