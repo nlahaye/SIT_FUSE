@@ -419,7 +419,7 @@ def read_viirs_oc(filename, **kwargs):
     vrs2 = ["RRS.Rrs_411", "RRS.Rrs_445", "RRS.Rrs_489", "RRS.Rrs_556", "RRS.Rrs_667"]
 
     #"RRS.aot_862", "RRS.Rrs_410", "RRS.Rrs_443", "RRS.Rrs_486", "RRS.Rrs_551", "RRS.Rrs_671"]
-    if 'JPSS1' in filename:
+    if 'JPSS1' in filename or "JPSS2" in filename:
         vrs = vrs2
 
     data1 = []
