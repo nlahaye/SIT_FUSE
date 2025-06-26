@@ -167,12 +167,11 @@ class SFDatasetConv(SFDataset):
         self.chan_dim = 0
         self.n_chans = data_local[0].shape[self.chan_dim]
 
-        window_size = [0, 0, 0]
-        tile_step_final = [0, 0, 0]
-
         self.data = []
         self.targets = []
         if self.tile:
+            window_size = [0, 0, 0]
+            tile_step_final = [0, 0, 0]
             window_size[dim1] = self.tile_size[0]
             window_size[dim2] = self.tile_size[1]
             tile_step_final[dim1] = self.tile_step[0]
@@ -186,7 +185,7 @@ class SFDatasetConv(SFDataset):
             last_count = len(self.data)
             sub_data_total = []
 
-            pixel_padding = (window_size[dim1] - 1) // 2
+            #pixel_padding = (window_size[dim1] - 1) // 2
 
             tgts = np.indices(data_local[r].shape[1:])
 
