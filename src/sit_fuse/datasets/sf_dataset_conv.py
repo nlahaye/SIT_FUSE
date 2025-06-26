@@ -105,14 +105,11 @@ class SFDatasetConv(SFDataset):
         strat_local = []
         dat_begin = []
         for i in range(0, len(self.filenames)):
-            try:
-                dat = self.read_func(self.filenames[i], **self.read_func_kwargs).astype(np.float32)
-            except Exception as e:
-                print(f"[WARNING] Skipping file {self.filenames[i]} due to read error: {e}")
-                continue
             # if (type(self.filenames[i]) == str and os.path.exists(self.filenames[i])) or (
             #         type(self.filenames[i]) is list and os.path.exists(self.filenames[i][1])):
             #     print(self.filenames[i])
+            #
+            # Throws an error because file extensions only appended later
             strat_data = None
             dat = self.read_func(self.filenames[i], **self.read_func_kwargs).astype(np.float32)
             if self.stratify_data is not None and "kmeans" not in self.stratify_data:
@@ -170,11 +167,12 @@ class SFDatasetConv(SFDataset):
         self.chan_dim = 0
         self.n_chans = data_local[0].shape[self.chan_dim]
 
+        window_size = [0, 0, 0]
+        tile_step_final = [0, 0, 0]
+
         self.data = []
         self.targets = []
         if self.tile:
-            window_size = [0, 0, 0]
-            tile_step_final = [0, 0, 0]
             window_size[dim1] = self.tile_size[0]
             window_size[dim2] = self.tile_size[1]
             tile_step_final[dim1] = self.tile_step[0]
