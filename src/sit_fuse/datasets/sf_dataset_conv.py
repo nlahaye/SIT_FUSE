@@ -105,77 +105,66 @@ class SFDatasetConv(SFDataset):
         strat_local = []
         dat_begin = []
         for i in range(0, len(self.filenames)):
-            if (type(self.filenames[i]) == str and os.path.exists(self.filenames[i])) or (
-                    type(self.filenames[i]) is list and os.path.exists(self.filenames[i][1])):
-                print(self.filenames[i])
-                strat_data = None
-
-                for i in range(len(self.filenames)): #stasya
-                    try:
-                        print(f"[DEBUG] Checking file {self.filenames[i]}")
-                        if isinstance(self.filenames[i], str) and os.path.exists(self.filenames[i]):
-                            dat = self.read_func(self.filenames[i], **self.read_func_kwargs).astype(np.float32)
-                        elif isinstance(self.filenames[i], list) and os.path.exists(self.filenames[i][1]):
-                            dat = self.read_func(self.filenames[i], **self.read_func_kwargs).astype(np.float32)
-                        else:
-                            print(f"[WARNING] File does not exist: {self.filenames[i]}")
-                            continue
-                    except Exception as e:
-                        print(f"[ERROR] Failed to read file {self.filenames[i]} with error:\n{e}")
-                        continue
-                if len(data_local) == 0:
-                    raise RuntimeError("No data was loaded. All file reads failed. Check logs above.")
-
-                #dat = self.read_func(self.filenames[i], **self.read_func_kwargs).astype(np.float32)
-                if self.stratify_data is not None and "kmeans" not in self.stratify_data:
-                    strat_data = self.stratify_data["reader"](self.stratify_data["filename"][i], \
-                                                              **self.stratify_data["reader_kwargs"])
-                for t in range(len(self.transform_chans)):
-                    slc = [slice(None)] * dat.ndim
-                    slc[self.chan_dim] = slice(self.transform_chans[t], self.transform_chans[t] + 1)
-                    tmp = dat[tuple(slc)]
-                    if self.valid_min is not None:
-                        inds = np.where(tmp < self.valid_min - 0.00000000005)
-                        tmp[inds] = self.transform_value[t]
-                    if self.valid_max is not None:
-                        inds = np.where(tmp > self.valid_max - 0.00000000005)
-                        tmp[inds] = self.transform_value[t]
-                if len(self.transform_chans) > 0:
-                    del slc
-                    del tmp
-
-                dat = np.delete(dat, self.delete_chans, self.chan_dim)
-
+            try:
+                dat = self.read_func(self.filenames[i], **self.read_func_kwargs).astype(np.float32)
+            except Exception as e:
+                print(f"[WARNING] Skipping file {self.filenames[i]} due to read error: {e}")
+                continue
+            # if (type(self.filenames[i]) == str and os.path.exists(self.filenames[i])) or (
+            #         type(self.filenames[i]) is list and os.path.exists(self.filenames[i][1])):
+            #     print(self.filenames[i])
+            strat_data = None
+            dat = self.read_func(self.filenames[i], **self.read_func_kwargs).astype(np.float32)
+            if self.stratify_data is not None and "kmeans" not in self.stratify_data:
+                strat_data = self.stratify_data["reader"](self.stratify_data["filename"][i], \
+                                                          **self.stratify_data["reader_kwargs"])
+            for t in range(len(self.transform_chans)):
+                slc = [slice(None)] * dat.ndim
+                slc[self.chan_dim] = slice(self.transform_chans[t], self.transform_chans[t] + 1)
+                tmp = dat[tuple(slc)]
                 if self.valid_min is not None:
-                    dat[np.where(dat < self.valid_min - 0.00000000005)] = -999999
+                    inds = np.where(tmp < self.valid_min - 0.00000000005)
+                    tmp[inds] = self.transform_value[t]
                 if self.valid_max is not None:
-                    dat[np.where(dat > self.valid_max - 0.00000000005)] = -999999
-                if self.fill_value is not None:
-                    dat[np.where(dat == self.fill_value)] = -999999
-                dat[np.where(np.logical_not(np.isfinite(dat)))] = -999999
-                dat = np.moveaxis(dat, self.chan_dim, 0)
-                if self.data_fraction > 1:
-                    dat_index_1_1 = self.data_fraction_index * int(dat.shape[1] // self.data_fraction)
-                    dat_index_1_2 = (self.data_fraction_index + 1) * int(dat.shape[1] // self.data_fraction)
-                    #dat_index_2_2 = (self.data_fraction_index+1) * int(dat.shape[2]//self.data_fraction)
-                    if self.data_fraction_index == self.data_fraction - 1:
-                        dat_index_1_2 = dat.shape[1]
-                    #dat_index_2_2 = dat.shape[2]
-                    #dat_index_2_1 = self.data_fraction_index * int(dat.shape[2]//self.data_fraction)
-                    dat_begin.append([dat_index_1_1, 0])
-                    dat = dat[:, dat_index_1_1:dat_index_1_2, :]
-                else:
-                    dat_begin.append([0, 0])
+                    inds = np.where(tmp > self.valid_max - 0.00000000005)
+                    tmp[inds] = self.transform_value[t]
+            if len(self.transform_chans) > 0:
+                del slc
+                del tmp
 
-                data_local.append(dat)
+            dat = np.delete(dat, self.delete_chans, self.chan_dim)
 
-                if strat_data is not None:
-                    #TODO Generalize to multi-class
-                    strat_data = strat_data.astype(np.int32)
-                    strat_data[np.where(strat_data < 0)] = 0
-                    strat_data[np.where(strat_data > 0)] = 1
-                    strat_local.append(strat_data)
+            if self.valid_min is not None:
+                dat[np.where(dat < self.valid_min - 0.00000000005)] = -999999
+            if self.valid_max is not None:
+                dat[np.where(dat > self.valid_max - 0.00000000005)] = -999999
+            if self.fill_value is not None:
+                dat[np.where(dat == self.fill_value)] = -999999
+            dat[np.where(np.logical_not(np.isfinite(dat)))] = -999999
+            dat = np.moveaxis(dat, self.chan_dim, 0)
+            if self.data_fraction > 1:
+                dat_index_1_1 = self.data_fraction_index * int(dat.shape[1] // self.data_fraction)
+                dat_index_1_2 = (self.data_fraction_index + 1) * int(dat.shape[1] // self.data_fraction)
+                #dat_index_2_2 = (self.data_fraction_index+1) * int(dat.shape[2]//self.data_fraction)
+                if self.data_fraction_index == self.data_fraction - 1:
+                    dat_index_1_2 = dat.shape[1]
+                #dat_index_2_2 = dat.shape[2]
+                #dat_index_2_1 = self.data_fraction_index * int(dat.shape[2]//self.data_fraction)
+                dat_begin.append([dat_index_1_1, 0])
+                dat = dat[:, dat_index_1_1:dat_index_1_2, :]
+            else:
+                dat_begin.append([0, 0])
 
+            data_local.append(dat)
+
+            if strat_data is not None:
+                #TODO Generalize to multi-class
+                strat_data = strat_data.astype(np.int32)
+                strat_data[np.where(strat_data < 0)] = 0
+                strat_data[np.where(strat_data > 0)] = 1
+                strat_local.append(strat_data)
+
+        del dat
         dim1 = 1
         dim2 = 2
         self.chan_dim = 0
