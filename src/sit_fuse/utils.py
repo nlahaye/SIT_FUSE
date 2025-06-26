@@ -411,7 +411,6 @@ def read_s3_oc(filename, **kwargs):
 
 
 def read_viirs_oc(filename, **kwargs):
-    print("nrt flag:", kwargs.get("nrt"))
     #vrs = ["CHL.chlor_a", "KD.Kd_490", "PAR.par", "PIC.pic", "POC.poc", "RRS.aot_862", "RRS.angstrom"]
     #vrs2 = ["CHL.chlor_a", "KD.Kd_490", "PAR.par", "PIC.pic", "POC.poc", "RRS.aot_868", "RRS.angstrom"]
 
@@ -419,9 +418,7 @@ def read_viirs_oc(filename, **kwargs):
     vrs2 = ["RRS.Rrs_411", "RRS.Rrs_445", "RRS.Rrs_489", "RRS.Rrs_556", "RRS.Rrs_667"]
 
     #"RRS.aot_862", "RRS.Rrs_410", "RRS.Rrs_443", "RRS.Rrs_486", "RRS.Rrs_551", "RRS.Rrs_671"]
-    if 'JPSS1' in filename:
-        vrs = vrs2
-    if "JPSS2" in filename:
+    if 'JPSS' in filename:
         vrs = vrs2
 
     data1 = []
