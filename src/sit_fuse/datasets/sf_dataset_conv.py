@@ -109,7 +109,24 @@ class SFDatasetConv(SFDataset):
                     type(self.filenames[i]) is list and os.path.exists(self.filenames[i][1])):
                 print(self.filenames[i])
                 strat_data = None
-                dat = self.read_func(self.filenames[i], **self.read_func_kwargs).astype(np.float32)
+
+                for i in range(len(self.filenames)): #stasya
+                    try:
+                        print(f"[DEBUG] Checking file {self.filenames[i]}")
+                        if isinstance(self.filenames[i], str) and os.path.exists(self.filenames[i]):
+                            dat = self.read_func(self.filenames[i], **self.read_func_kwargs).astype(np.float32)
+                        elif isinstance(self.filenames[i], list) and os.path.exists(self.filenames[i][1]):
+                            dat = self.read_func(self.filenames[i], **self.read_func_kwargs).astype(np.float32)
+                        else:
+                            print(f"[WARNING] File does not exist: {self.filenames[i]}")
+                            continue
+                    except Exception as e:
+                        print(f"[ERROR] Failed to read file {self.filenames[i]} with error:\n{e}")
+                        continue
+                if len(data_local) == 0:
+                    raise RuntimeError("No data was loaded. All file reads failed. Check logs above.")
+
+                #dat = self.read_func(self.filenames[i], **self.read_func_kwargs).astype(np.float32)
                 if self.stratify_data is not None and "kmeans" not in self.stratify_data:
                     strat_data = self.stratify_data["reader"](self.stratify_data["filename"][i], \
                                                               **self.stratify_data["reader_kwargs"])
