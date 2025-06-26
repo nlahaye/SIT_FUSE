@@ -12,10 +12,12 @@ import numpy as np
 import random
 import copy
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 import sys
+
 sys.setrecursionlimit(4500)
 
 #ML imports
@@ -29,12 +31,14 @@ import argparse
 
 from skimage.util import view_as_windows
 
+
 class SFDatasetConv(SFDataset):
 
     def __init__(self):
         pass
 
-    def read_data_preprocessed(self, data_filename, indices_filename, transform = None, subset_training = -1, stratify_data = None):
+    def read_data_preprocessed(self, data_filename, indices_filename, transform=None, subset_training=-1,
+                               stratify_data=None):
 
         self.data_full = np.load(data_filename, allow_pickle=True)
         self.targets_full = np.load(indices_filename, allow_pickle=True)
@@ -49,20 +53,24 @@ class SFDatasetConv(SFDataset):
         self.subset_training = subset_training
         self.stratify_data = stratify_data
 
-        if (((self.subset_training < self.data_full.shape[0] and self.subset_training > 0)) and (self.stratify_data or self.stratify_data["kmeans"])):
+        if (((self.subset_training < self.data_full.shape[0] and self.subset_training > 0)) and (
+                self.stratify_data or self.stratify_data["kmeans"])):
             if self.subset_training > 0 and self.stratify_data and self.stratify_data["kmeans"]:
                 self.__stratify_k_means__(flatten=True)
             else:
-                self.data_full = self.data_full[:self.subset_training,:]
-                self.targets_full = self.targets_full[:self.subset_training,:]
+                self.data_full = self.data_full[:self.subset_training, :]
+                self.targets_full = self.targets_full[:self.subset_training, :]
 
-
-    def read_and_preprocess_data(self, filenames, read_func, read_func_kwargs, delete_chans, valid_min, valid_max, fill_value = -999999, chan_dim = 0, transform_chans = [], transform_values = [], transform=None, tile = False, tile_size = None, tile_step = None, subset_training = -1, stratify_data = None, data_fraction = 1, data_fraction_index = 1, basic_preprocess = False, do_shuffle = True):
+    def read_and_preprocess_data(self, filenames, read_func, read_func_kwargs, delete_chans, valid_min, valid_max,
+                                 fill_value=-999999, chan_dim=0, transform_chans=[], transform_values=[],
+                                 transform=None, tile=False, tile_size=None, tile_step=None, subset_training=-1,
+                                 stratify_data=None, data_fraction=1, data_fraction_index=1, basic_preprocess=False,
+                                 do_shuffle=True):
         #Scaler info isnt used here, but keeping same interface as SFDataset
 
-                #TODO Employ stratification
+        #TODO Employ stratification
         self.train_indices = None
- 
+
         self.scaler = None
         self.filenames = filenames
         self.transform = transform
@@ -97,18 +105,17 @@ class SFDatasetConv(SFDataset):
         strat_local = []
         dat_begin = []
         for i in range(0, len(self.filenames)):
-            print(f"[DEBUG] Checking file {self.filenames[i]}") #stasya
-
-            if (type(self.filenames[i]) == str and os.path.exists(self.filenames[i])) or (type(self.filenames[i]) is list and os.path.exists(self.filenames[i][1])):
+            if (type(self.filenames[i]) == str and os.path.exists(self.filenames[i])) or (
+                    type(self.filenames[i]) is list and os.path.exists(self.filenames[i][1])):
                 print(self.filenames[i])
                 strat_data = None
                 dat = self.read_func(self.filenames[i], **self.read_func_kwargs).astype(np.float32)
                 if self.stratify_data is not None and "kmeans" not in self.stratify_data:
                     strat_data = self.stratify_data["reader"](self.stratify_data["filename"][i], \
-                        **self.stratify_data["reader_kwargs"])
+                                                              **self.stratify_data["reader_kwargs"])
                 for t in range(len(self.transform_chans)):
                     slc = [slice(None)] * dat.ndim
-                    slc[self.chan_dim] = slice(self.transform_chans[t], self.transform_chans[t]+1)
+                    slc[self.chan_dim] = slice(self.transform_chans[t], self.transform_chans[t] + 1)
                     tmp = dat[tuple(slc)]
                     if self.valid_min is not None:
                         inds = np.where(tmp < self.valid_min - 0.00000000005)
@@ -131,17 +138,17 @@ class SFDatasetConv(SFDataset):
                 dat[np.where(np.logical_not(np.isfinite(dat)))] = -999999
                 dat = np.moveaxis(dat, self.chan_dim, 0)
                 if self.data_fraction > 1:
-                    dat_index_1_1 = self.data_fraction_index * int(dat.shape[1]//self.data_fraction)
-                    dat_index_1_2 = (self.data_fraction_index+1) * int(dat.shape[1]//self.data_fraction)
+                    dat_index_1_1 = self.data_fraction_index * int(dat.shape[1] // self.data_fraction)
+                    dat_index_1_2 = (self.data_fraction_index + 1) * int(dat.shape[1] // self.data_fraction)
                     #dat_index_2_2 = (self.data_fraction_index+1) * int(dat.shape[2]//self.data_fraction)
-                    if self.data_fraction_index == self.data_fraction -1:
+                    if self.data_fraction_index == self.data_fraction - 1:
                         dat_index_1_2 = dat.shape[1]
-                        #dat_index_2_2 = dat.shape[2]
+                    #dat_index_2_2 = dat.shape[2]
                     #dat_index_2_1 = self.data_fraction_index * int(dat.shape[2]//self.data_fraction)
                     dat_begin.append([dat_index_1_1, 0])
-                    dat = dat[:,dat_index_1_1:dat_index_1_2, :]
+                    dat = dat[:, dat_index_1_1:dat_index_1_2, :]
                 else:
-                    dat_begin.append([0,0])
+                    dat_begin.append([0, 0])
 
                 data_local.append(dat)
 
@@ -152,25 +159,23 @@ class SFDatasetConv(SFDataset):
                     strat_data[np.where(strat_data > 0)] = 1
                     strat_local.append(strat_data)
 
+        del dat
         dim1 = 1
         dim2 = 2
         self.chan_dim = 0
         self.n_chans = data_local[0].shape[self.chan_dim]
 
-        if len(data_local) == 0: #stasya
-            raise RuntimeError(f"No valid data was loaded. Check the filenames passed in: {self.filenames}")
-
         self.data = []
         self.targets = []
         if self.tile:
-            window_size = [0,0,0]
-            tile_step_final = [0,0,0]
+            window_size = [0, 0, 0]
+            tile_step_final = [0, 0, 0]
             window_size[dim1] = self.tile_size[0]
             window_size[dim2] = self.tile_size[1]
             tile_step_final[dim1] = self.tile_step[0]
             tile_step_final[dim2] = self.tile_step[1]
-            tile_step_final[self.chan_dim] = data_local[0].shape[self.chan_dim]#*2
-            window_size[self.chan_dim] = data_local[0].shape[self.chan_dim]#*2
+            tile_step_final[self.chan_dim] = data_local[0].shape[self.chan_dim]  #*2
+            window_size[self.chan_dim] = data_local[0].shape[self.chan_dim]  #*2
             window_size = tuple(window_size)
         self.stratify_training = []
         for r in range(len(data_local)):
@@ -178,13 +183,12 @@ class SFDatasetConv(SFDataset):
             last_count = len(self.data)
             sub_data_total = []
 
-
-            pixel_padding = (window_size[dim1] - 1) //2
+            pixel_padding = (window_size[dim1] - 1) // 2
 
             tgts = np.indices(data_local[r].shape[1:])
-                         
-            tgts[0,:,:] = tgts[0,:,:] + dat_begin[r][0]
-            tgts[1,:,:] = tgts[1,:,:] + dat_begin[r][1]
+
+            tgts[0, :, :] = tgts[0, :, :] + dat_begin[r][0]
+            tgts[1, :, :] = tgts[1, :, :] + dat_begin[r][1]
             #tgts = tgts[:,pixel_padding:tgts.shape[1] - pixel_padding,pixel_padding:tgts.shape[2] - pixel_padding]
             #tgts = np.concatenate((np.full((1,tgts.shape[1], tgts.shape[2]),r, dtype=np.int16), tgts), axis=0)
             print(data_local[r].shape)
@@ -192,14 +196,14 @@ class SFDatasetConv(SFDataset):
                 self.init_data_shape = data_local[r].shape
             if self.tile:
                 tmp = np.squeeze(view_as_windows(data_local[r], window_size, step=tile_step_final))
-                tmp = tmp.reshape((tmp.shape[0]*tmp.shape[1], tmp.shape[2], tmp.shape[3], tmp.shape[4]))
+                tmp = tmp.reshape((tmp.shape[0] * tmp.shape[1], tmp.shape[2], tmp.shape[3], tmp.shape[4]))
 
-                window_size_tgt = [2,window_size[1],window_size[2]]
-                tile_step_tgt = [2,tile_step_final[1],tile_step_final[2]]
+                window_size_tgt = [2, window_size[1], window_size[2]]
+                tile_step_tgt = [2, tile_step_final[1], tile_step_final[2]]
                 tgts2 = np.squeeze(view_as_windows(tgts, window_size_tgt, step=tile_step_tgt))
                 ###cntr = int(tile_step_final[1]/2)
-                tgts2 = tgts2[:,:,:,0,0]
-                tgts2 = tgts2.reshape(tgts2.shape[0]*tgts2.shape[1], tgts2.shape[2])
+                tgts2 = tgts2[:, :, :, 0, 0]
+                tgts2 = tgts2.reshape(tgts2.shape[0] * tgts2.shape[1], tgts2.shape[2])
                 #tgts = tgts.reshape((3,tgts.shape[1]*tgts.shape[2])).astype(np.int16)
                 #tgts = np.swapaxes(tgts, 0, 1)
                 print("TESTING INDS", tmp.shape, tgts2.shape)
@@ -217,10 +221,9 @@ class SFDatasetConv(SFDataset):
                     np.delete(tmp, delete_inds, axis=0)
                     np.delete(tgts2, delete_inds, axis=0)
 
+                    #TODO - 0 imputation - fix with mean later
+                #data_local[r][np.where(data_local[r] <= -999999)] = 0.0
 
-                                #TODO - 0 imputation - fix with mean later
-                                #data_local[r][np.where(data_local[r] <= -999999)] = 0.0
- 
                 if isinstance(self.data, list):
                     self.data = tmp
                     self.targets = tgts2
@@ -228,13 +231,13 @@ class SFDatasetConv(SFDataset):
                     self.data = np.append(self.data, tmp, axis=0)
                     self.targets = np.append(self.targets, tgts2, axis=0)
             else:
-                if(data_local[r].max() > -999999):
-                    if(data_local[r].mean() == 0.0 and data_local[r].std()):
+                if (data_local[r].max() > -999999):
+                    if (data_local[r].mean() == 0.0 and data_local[r].std()):
                         count = count + 1
                         continue
                     else:
-                        np.append(self.data,data_local[r], axis = 0)
-                        np.append(self.targets,[r,0,0], axis = 0)
+                        np.append(self.data, data_local[r], axis=0)
+                        np.append(self.targets, [r, 0, 0], axis=0)
                 else:
                     count = count + 1
                     continue
@@ -242,19 +245,19 @@ class SFDatasetConv(SFDataset):
                 print("ERROR NO DATA RECEIVED FROM", self.filenames[r])
             elif len(strat_local) > 0:
                 pass
-                #TODO FIX
-                #Preprocess stratification data in same manner
-                #if len(strat_local) > 0:
-                #	strat_local[r] = strat_local[r][self.pixel_padding:strat_local[r].shape[1] - \
-                #	self.pixel_padding,self.pixel_padding:strat_local[r].shape[1] - self.pixel_padding]
-                #print(strat_local[r].shape)
-                #sub_data_strat = np.squeeze(strat_local[r].flatten())
-                #self.stratify_training.append(sub_data_strat)
+            #TODO FIX
+            #Preprocess stratification data in same manner
+            #if len(strat_local) > 0:
+            #	strat_local[r] = strat_local[r][self.pixel_padding:strat_local[r].shape[1] - \
+            #	self.pixel_padding,self.pixel_padding:strat_local[r].shape[1] - self.pixel_padding]
+            #print(strat_local[r].shape)
+            #sub_data_strat = np.squeeze(strat_local[r].flatten())
+            #self.stratify_training.append(sub_data_strat)
             print("SKIPPED", count, "SAMPLES OUT OF", len(self.data), data_local[r].shape, dim1, dim2, self.chan_dim)
         if self.do_shuffle:
             print("SHUFFLING", self.data.shape, self.targets.shape)
             p = np.random.permutation(self.data.shape[0])
-            self.data_full = torch.from_numpy(self.data[p]) #np.array(self.data).astype(np.float32) #float32
+            self.data_full = torch.from_numpy(self.data[p])  #np.array(self.data).astype(np.float32) #float32
             self.targets_full = torch.from_numpy(self.targets[p])  #np.array(self.targets).astype(np.int16)
             if len(self.stratify_training) > 0:
                 self.stratify_training = torch.from_numpy(self.stratify_training[p])
@@ -269,7 +272,6 @@ class SFDatasetConv(SFDataset):
         if self.basic_preprocess:
             return
 
-
         #Subset data for training and/or stratify
         if self.subset_training > 0 or (self.stratify_data and self.stratify_data["kmeans"]):
             if len(self.stratify_training) > 0:
@@ -279,8 +281,8 @@ class SFDatasetConv(SFDataset):
             elif self.stratify_data and self.stratify_data["kmeans"]:
                 self.__stratify_k_means__(flatten=True)
             else:
-                self.data_full = self.data_full[:self.subset_training,:,:,:]
-                self.targets_full = self.targets_full[:self.subset_training,:]
+                self.data_full = self.data_full[:self.subset_training, :, :, :]
+                self.targets_full = self.targets_full[:self.subset_training, :]
 
         self.chan_dim = 1
         self.mean_per_channel = []
@@ -289,22 +291,21 @@ class SFDatasetConv(SFDataset):
             mean_per_channel = []
             std_per_channel = []
 
- 
             for chan in range(0, self.data_full.shape[self.chan_dim]):
                 #TODO slice to make more generic
-                subd = self.data_full[:,chan,:,:]
+                subd = self.data_full[:, chan, :, :]
                 inds = np.where(subd <= -999999)
                 inds2 = np.where(subd > -999999)
                 mean_per_channel.append(np.squeeze(subd[inds2].mean()))
                 std_per_channel.append(np.squeeze(subd[inds2].std()))
                 subd[inds] = mean_per_channel[chan]
-                self.data_full[:,chan,:,:] = subd
+                self.data_full[:, chan, :, :] = subd
 
             transform_norm = torch.nn.Sequential(
                 #transforms.ToTensor(),
                 transforms.Normalize(mean_per_channel, std_per_channel)
             )
-                       
+
             self.mean_per_channel = mean_per_channel
             self.std_per_channel = std_per_channel
             self.transform = transform_norm
@@ -314,22 +315,23 @@ class SFDatasetConv(SFDataset):
         self.targets = self.targets_full
 
         print(self.data_full.min(), self.data_full.mean(), self.data_full.max(), self.data_full.std(), "STATS_2")
+
     def __len__(self):
         """
-        Overriding of Dataset internal function __len__.
+		Overriding of Dataset internal function __len__.
         
-        :return: Number of samples.
-        """
+		:return: Number of samples.
+		"""
         return len(self.data_full)
 
     def __getitem__(self, idx):
         """
-        Overriding of Dataset internal function __getitem__.
+		Overriding of Dataset internal function __getitem__.
 
-        :param idx: Index of sample to be returned.
+		:param idx: Index of sample to be returned.
 
-        :return: Sample and associated idx.
-        """
+		:return: Sample and associated idx.
+		"""
         if torch.is_tensor(idx):
             idx = idx.tolist()
 
@@ -337,11 +339,8 @@ class SFDatasetConv(SFDataset):
 
         return sample, self.targets_full[idx]
 
-
- 
     def __train_scalers__(self, data):
         pass
-
 
 
 def main(yml_fpath):
@@ -351,10 +350,6 @@ def main(yml_fpath):
     #Get config values 
     data_train = yml_conf["data"]["files_train"]
 
-    print("[INFO] Training data files from YAML:") #stasya
-    for f in data_train:
-        print(" →", f)
-
     tile = False
     tile_size = None
     tile_step = None
@@ -362,7 +357,7 @@ def main(yml_fpath):
     tile_size = yml_conf["data"]["tile_size"]
     tile_step = yml_conf["data"]["tile_step"]
 
-    data_reader =  yml_conf["data"]["reader_type"]
+    data_reader = yml_conf["data"]["reader_type"]
     data_reader_kwargs = yml_conf["data"]["reader_kwargs"]
     fill = yml_conf["data"]["fill_value"]
     chan_dim = yml_conf["data"]["chan_dim"]
@@ -372,7 +367,7 @@ def main(yml_fpath):
     scale_data = yml_conf["data"]["scale_data"]
 
     transform_chans = yml_conf["data"]["transform_default"]["chans"]
-    transform_values =  yml_conf["data"]["transform_default"]["transform"]
+    transform_values = yml_conf["data"]["transform_default"]["transform"]
 
     out_dir = yml_conf["output"]["out_dir"]
     os.makedirs(out_dir, exist_ok=True)
@@ -389,43 +384,37 @@ def main(yml_fpath):
     stratify_data = None
     if "stratify_data" in yml_conf["encoder"]["training"]:
         stratify_data = yml_conf["encoder"]["training"]["stratify_data"]
- 
+
     if stratify_data is not None and "kmeans" not in stratify_data:
         strat_read_func = get_read_func(stratify_data["reader"])
         stratify_data["reader"] = strat_read_func
 
-
-
     x2 = SFDatasetConv()
     x2.read_and_preprocess_data(data_train, read_func, data_reader_kwargs, delete_chans=delete_chans, \
-            valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
-            transform_values=transform_values, transform=None, tile=tile, tile_size=tile_size, tile_step=tile_step,
-            subset_training = subset_training, stratify_data=stratify_data, basic_preprocess=False)
+                                valid_min=valid_min, valid_max=valid_max, fill_value=fill, chan_dim=chan_dim,
+                                transform_chans=transform_chans, \
+                                transform_values=transform_values, transform=None, tile=tile, tile_size=tile_size,
+                                tile_step=tile_step,
+                                subset_training=subset_training, stratify_data=stratify_data, basic_preprocess=False)
 
     #if x2.train_indices is not None:
     #    np.save(os.path.join(out_dir, "train_indices"), x2.train_indices)
 
-
     np.save(os.path.join(out_dir, "train_data.indices"), x2.targets_full)
     np.save(os.path.join(out_dir, "train_data"), x2.data_full)
- 
+
     if hasattr(x2, "mean_per_channel"):
-        state_dict = {"mean_per_channel" : x2.mean_per_channel, "std_per_channel" : x2.std_per_channel}
+        state_dict = {"mean_per_channel": x2.mean_per_channel, "std_per_channel": x2.std_per_channel}
         torch.save(state_dict, os.path.join(out_dir, "encoder_data_transform.ckpt"))
 
 
-
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-y", "--yaml", help="YAML file for data config.")
+    args = parser.parse_args()
+    from timeit import default_timer as timer
 
-        parser = argparse.ArgumentParser()
-        parser.add_argument("-y", "--yaml", help="YAML file for data config.")
-        args = parser.parse_args()
-        from timeit import default_timer as timer
-        start = timer()
-        main(args.yaml)
-        end = timer()
-        print(end - start) # Time in seconds, e.g. 5.38091952400282
-
-
-
-
+    start = timer()
+    main(args.yaml)
+    end = timer()
+    print(end - start)  # Time in seconds, e.g. 5.38091952400282
