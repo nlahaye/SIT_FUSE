@@ -503,10 +503,11 @@ def read_oc_geo(filename, **kwargs):
         file_ext = ".4km.nc"
         if 'nrt'  in kwargs and kwargs['nrt']:
             file_ext = ".4km.NRT.nc"
-        if "JPSS1" not in filename:
+
+        if "JPSS" not in filename:
             f = Dataset(filename + "RRS.Rrs_443" + file_ext)
         else: 
-            f = Dataset(filename + "RRS.Rrs_443" + file_ext)
+            f = Dataset(filename + "RRS.Rrs_445" + file_ext)
     else:
         if 'nrt'  in kwargs and kwargs['nrt']:
             f = Dataset(filename + "RRS.V3_0.Rrs.4km.NRT.nc")
@@ -1242,6 +1243,8 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
                 clust_fname = os.path.join(os.path.join(clusters_dir, "SNPP_VIIRS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext))
             elif "JPSS1_VIIRS" in input_file_type:
                 clust_fname = os.path.join(os.path.join(clusters_dir, "JPSS1_VIIRS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext))
+            elif "JPSS2_VIIRS" in input_file_type:
+                clust_fname = os.path.join(os.path.join(clusters_dir, "JPSS2_VIIRS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext))
             elif "AQUA_MODIS" in input_file_type:
                 clust_fname = os.path.join(os.path.join(clusters_dir, "AQUA_MODIS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext))
             elif "TERRA_MODIS" in input_file_type:
