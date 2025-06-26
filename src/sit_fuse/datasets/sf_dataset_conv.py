@@ -150,8 +150,8 @@ class SFDatasetConv(SFDataset):
 					strat_data[np.where(strat_data > 0)] = 1
 					strat_local.append(strat_data)
 
+				del dat
 
-		del dat 
 		dim1 = 1
 		dim2 = 2
 		self.chan_dim = 0
