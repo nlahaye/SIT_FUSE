@@ -225,7 +225,7 @@ class SFDatasetConv(SFDataset):
 
                     #TODO - 0 imputation - fix with mean later
                 #data_local[r][np.where(data_local[r] <= -999999)] = 0.0
-
+                print(f"Loop {r}: self.data type = {type(self.data)}")
                 if isinstance(self.data, list):
                     self.data = tmp
                     self.targets = tgts2
@@ -247,6 +247,7 @@ class SFDatasetConv(SFDataset):
                         # Optional: check dimensionality
                         print("self.data ndim:", getattr(self.data, 'ndim', 'N/A'))
                         print("data_local[r] ndim:", data_local[r].ndim)
+                        print("self.data sample:", self.data if isinstance(self.data, list) else self.data.shape)
                         np.append(self.data, data_local[r], axis=0)
                         np.append(self.targets, [r, 0, 0], axis=0)
                 else:
