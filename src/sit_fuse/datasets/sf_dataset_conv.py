@@ -238,7 +238,7 @@ class SFDatasetConv(SFDataset):
                         count = count + 1
                         continue
                     else:
-                        np.append(self.data, data_local[r], axis=0)
+                        np.append(self.data, data_local[r], axis=1)
                         np.append(self.targets, [r, 0, 0], axis=0)
                 else:
                     count = count + 1
