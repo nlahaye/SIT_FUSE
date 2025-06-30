@@ -1,6 +1,6 @@
 
 data:
- tile: True
+ tile: False
  tile_size: [3,3,32]
  tile_step: [1,1,32]
  num_loader_workers: 10
