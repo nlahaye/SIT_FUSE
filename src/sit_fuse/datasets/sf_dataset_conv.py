@@ -238,7 +238,16 @@ class SFDatasetConv(SFDataset):
                         count = count + 1
                         continue
                     else:
-                        np.append(self.data, data_local[r], axis=1)
+                        print("self.data type:", type(self.data))
+                        print("self.data shape:", getattr(self.data, 'shape', 'not an array'))
+
+                        print("data_local[r] type:", type(data_local[r]))
+                        print("data_local[r] shape:", data_local[r].shape)
+
+                        # Optional: check dimensionality
+                        print("self.data ndim:", getattr(self.data, 'ndim', 'N/A'))
+                        print("data_local[r] ndim:", data_local[r].ndim)
+                        np.append(self.data, data_local[r], axis=0)
                         np.append(self.targets, [r, 0, 0], axis=0)
                 else:
                     count = count + 1
