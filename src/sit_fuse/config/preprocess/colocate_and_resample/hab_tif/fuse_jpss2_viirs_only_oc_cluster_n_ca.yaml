@@ -1,0 +1,230 @@
+
+low_res:
+ data:
+  valid_min: -100.0
+  valid_max: 99999999999
+  reader_type: "zarr_to_numpy"
+  reader_kwargs:
+   none: "None"
+  geo_reader_type: "zarr_to_numpy"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: [
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240305.L3m.DAY..clust.data_69197clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240307.L3m.DAY..clust.data_69186clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240308.L3m.DAY..clust.data_58888clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240309.L3m.DAY..clust.data_69199clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240310.L3m.DAY..clust.data_69199clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240311.L3m.DAY..clust.data_69197clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240312.L3m.DAY..clust.data_69185clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240313.L3m.DAY..clust.data_69185clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240314.L3m.DAY..clust.data_69198clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240315.L3m.DAY..clust.data_69199clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240316.L3m.DAY..clust.data_69199clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240317.L3m.DAY..clust.data_69198clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240318.L3m.DAY..clust.data_69199clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240319.L3m.DAY..clust.data_69199clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240320.L3m.DAY..clust.data_69199clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240321.L3m.DAY..clust.data_69197clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240322.L3m.DAY..clust.data_69197clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240323.L3m.DAY..clust.data_59393clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240324.L3m.DAY..clust.data_69185clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240325.L3m.DAY..clust.data_69199clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240326.L3m.DAY..clust.data_69195clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240327.L3m.DAY..clust.data_69199clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240328.L3m.DAY..clust.data_69199clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240329.L3m.DAY..clust.data_36648clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240330.L3m.DAY..clust.data_69192clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240331.L3m.DAY..clust.data_69197clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240401.L3m.DAY..clust.data_69197clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240402.L3m.DAY..clust.data_69197clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240403.L3m.DAY..clust.data_69135clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240404.L3m.DAY..clust.data_59399clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240405.L3m.DAY..clust.data_69198clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240406.L3m.DAY..clust.data_69197clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240407.L3m.DAY..clust.data_59393clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240408.L3m.DAY..clust.data_36699clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240409.L3m.DAY..clust.data_69108clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240410.L3m.DAY..clust.data_69198clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240411.L3m.DAY..clust.data_69196clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240412.L3m.DAY..clust.data_59395clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240413.L3m.DAY..clust.data_59397clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240414.L3m.DAY..clust.data_69198clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240415.L3m.DAY..clust.data_36699clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240416.L3m.DAY..clust.data_69197clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240417.L3m.DAY..clust.data_69197clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240418.L3m.DAY..clust.data_69196clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240419.L3m.DAY..clust.data_69198clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240420.L3m.DAY..clust.data_69198clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240421.L3m.DAY..clust.data_69198clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240422.L3m.DAY..clust.data_59397clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240423.L3m.DAY..clust.data_69196clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240424.L3m.DAY..clust.data_36696clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240425.L3m.DAY..clust.data_69198clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240426.L3m.DAY..clust.data_36698clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240427.L3m.DAY..clust.data_58893clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240428.L3m.DAY..clust.data_58824clusters.zarr",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240429.L3m.DAY..clust.data_58824clusters.zarr",
+]
+
+
+  geo_filenames: [
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+]
+
+  chan_dim: 2
+  geo_coord_dim: 2
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+high_res:
+ data:
+  valid_min: 0.0
+  valid_max: 99999999999
+  reader_type: "zarr_to_numpy"
+  reader_kwargs:
+   no_arg: "no_arg"
+  geo_reader_type: "zarr_to_numpy"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: []
+  geo_filenames: []
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+fusion:
+ projection_id: 4326
+ description: "Generating JPSS1 VIIRS GeoTiffs"
+ area_id: "GERD Dam"
+ projection_proj4:
+  proj: "longlat"
+  datum: "WGS84"
+ final_resolution: 0.055
+ projection_units: "degrees"
+ resample_radius: 5000
+ resample_n_neighbors: 64
+ resample_n_procs: 10
+ resample_epsilon: 1.6
+ use_bilinear: False
+
+
+
+
+output_files: [
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240305.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240307.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240308.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240309.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240310.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240311.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240312.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240313.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240314.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240315.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240316.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240317.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240318.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240319.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240320.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240321.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240322.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240323.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240324.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240325.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240326.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240327.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240328.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240329.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240330.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240331.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240401.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240402.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240403.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240404.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240405.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240406.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240407.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240408.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240409.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240410.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240411.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240412.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240413.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240414.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240415.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240416.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240417.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240418.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240419.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240420.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240421.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240422.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240423.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240424.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240425.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240426.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240427.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240428.L3m.DAY.RRS.Rrs_489.4km.tif",
+"/mnt/data/REFLECTANCES/JPSS2_VIIRS/JPSS2_VIIRS.20240429.L3m.DAY.RRS.Rrs_489.4km.tif",
+]
+
+
+ 
