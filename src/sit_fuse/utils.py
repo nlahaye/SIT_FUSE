@@ -504,7 +504,7 @@ def read_oc_geo(filename, **kwargs):
     if "PACE" not in filename:
         if 'nrt' in kwargs and kwargs['nrt']:
             try:
-                file_ext = ".4km.nrt"
+                file_ext = ".4km.nc"
                 if "JPSS" not in filename:
                     f = Dataset(filename + "RRS.Rrs_443" + file_ext)
                 else:
