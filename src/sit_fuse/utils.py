@@ -423,16 +423,14 @@ def read_viirs_oc(filename, **kwargs):
 
     data1 = []
     kwrg = {}
+    allow_nrt = kwargs.get("nrt", False)
 
     for i in range(len(vrs)):
-        if "nrt" in kwargs and kwargs["nrt"]:
-            kwrg['nrt'] = kwargs["nrt"]
-            try:
-                flename = filename + vrs[i] + ".4km.nc"
-            except FileNotFoundError:
-                flename = filename + vrs[i] + ".4km.NRT.nc"
-        else:
-            flename = filename + vrs[i] + ".4km.nc"
+        base = filename + vrs[i] + ".4km"
+        flename = base + ".nc"
+        if not os.path.exists(flename) and allow_nrt:
+            flename = base + ".NRT.nc"
+            kwrg["nrt"] = True
         f = Dataset(flename)
         f.set_auto_maskandscale(False)
         start_ind = 4
@@ -500,26 +498,17 @@ def read_viirs_oc(filename, **kwargs):
 def read_oc_geo(filename, **kwargs):
 
     vrs = ["lat", "lon"]
-
     if "PACE" not in filename:
-        if 'nrt' in kwargs and kwargs['nrt']:
-            try:
-                file_ext = ".4km.nc"
-                if "JPSS" not in filename:
-                    f = Dataset(filename + "RRS.Rrs_443" + file_ext)
-                else:
-                    f = Dataset(filename + "RRS.Rrs_445" + file_ext)
-            except FileNotFoundError:
-                file_ext = ".4km.NRT.nc"
-                if "JPSS" not in filename:
-                    f = Dataset(filename + "RRS.Rrs_443" + file_ext)
-                else:
-                    f = Dataset(filename + "RRS.Rrs_445" + file_ext)
-    else:
-        if 'nrt'  in kwargs and kwargs['nrt']:
-            f = Dataset(filename + "RRS.V3_0.Rrs.4km.NRT.nc")
-        else:
-            f = Dataset(filename + "RRS.V3_0.Rrs.4km.nc")
+        stem = "RRS.Rrs_445" if "JPSS" in filename else "RRS.Rrs_443"
+        base = f"{filename}{stem}.4km"
+    else:  # PACE has its own naming convention
+        base = f"{filename}RRS.V3_0.Rrs.4km"
+
+    flename = base + ".nc"
+    if not os.path.exists(flename) and kwargs.get("nrt", False):
+        flename = base + ".NRT.nc"
+
+    f = Dataset(flename)
     f.set_auto_maskandscale(False)
     data1 = []
     for i in range(len(vrs)):
