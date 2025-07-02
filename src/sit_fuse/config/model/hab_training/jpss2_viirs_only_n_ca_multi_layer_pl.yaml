@@ -504,7 +504,7 @@ scaler:
  name: "standard" 
 
 output:
- out_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/"
+ out_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS_FINAL/"
  generate_intermediate_output: True
 
 
