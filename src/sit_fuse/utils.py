@@ -427,10 +427,12 @@ def read_viirs_oc(filename, **kwargs):
     for i in range(len(vrs)):
         if "nrt" in kwargs and kwargs["nrt"]:
             kwrg['nrt'] = kwargs["nrt"]
-            flename = filename + vrs[i] + ".4km.NRT.nc"
+            try:
+                flename = filename + vrs[i] + ".4km.nc"
+            except FileNotFoundError:
+                flename = filename + vrs[i] + ".4km.NRT.nc"
         else:
             flename = filename + vrs[i] + ".4km.nc"
-        # #flename = filename + vrs[i] + ".4km.nc"
         f = Dataset(flename)
         f.set_auto_maskandscale(False)
         start_ind = 4
@@ -500,14 +502,19 @@ def read_oc_geo(filename, **kwargs):
     vrs = ["lat", "lon"]
 
     if "PACE" not in filename:
-        file_ext = ".4km.nc"
-        if 'nrt'  in kwargs and kwargs['nrt']:
-            file_ext = ".4km.NRT.nc"
-
-        if "JPSS" not in filename:
-            f = Dataset(filename + "RRS.Rrs_443" + file_ext)
-        else: 
-            f = Dataset(filename + "RRS.Rrs_445" + file_ext)
+        if 'nrt' in kwargs and kwargs['nrt']:
+            try:
+                file_ext = ".4km.nrt"
+                if "JPSS" not in filename:
+                    f = Dataset(filename + "RRS.Rrs_443" + file_ext)
+                else:
+                    f = Dataset(filename + "RRS.Rrs_445" + file_ext)
+            except FileNotFoundError:
+                file_ext = ".4km.NRT.nc"
+                if "JPSS" not in filename:
+                    f = Dataset(filename + "RRS.Rrs_443" + file_ext)
+                else:
+                    f = Dataset(filename + "RRS.Rrs_445" + file_ext)
     else:
         if 'nrt'  in kwargs and kwargs['nrt']:
             f = Dataset(filename + "RRS.V3_0.Rrs.4km.NRT.nc")
