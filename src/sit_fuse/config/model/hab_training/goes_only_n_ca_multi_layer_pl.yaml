@@ -13,11 +13,11 @@ data:
  output_subset_count: 10
  reader_type: "gtiff"
  reader_kwargs:
-  no_arg: ''
-  #start_sample: 2800
-  #end_sample: 3800
-  #start_line: 100 
-  #end_line: 1200
+  start_lon: -128.00
+  end_lon: -116.00
+  start_lat: 30.00
+  end_lat: 38.94
+  mask_oceans: True
  chan_dim: 0
  delete_chans: [] #[3,7,8,9,10,11,12,15]
  transform_default:
