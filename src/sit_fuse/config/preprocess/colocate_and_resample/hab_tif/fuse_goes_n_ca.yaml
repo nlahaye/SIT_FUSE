@@ -2421,6 +2421,8 @@ fusion:
  resample_n_procs: 10
  resample_epsilon: 1.6
  use_bilinear: True
+ lon_bounds: [ -128.0, -116.0 ]
+ lat_bounds: [ 30.0, 38.94 ]
        
 output_files: [
 "/mnt/data/GOES_18_CA_COASTAL_FINAL/OR_ABI-L1b-RadC-M6C01_G18_s20250061601170_e20250061603543_c20250061603589.tif",
