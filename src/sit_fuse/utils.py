@@ -417,7 +417,7 @@ def read_viirs_oc(filename, **kwargs):
 
     data1 = []
     for i in range(len(vrs)):
-        if 'JPSS1' in filename:
+        if 'JPSS' in filename:
             vrs = vrs2
 
         flename = filename + vrs[i] + ".4km.nc"
@@ -490,7 +490,7 @@ def read_oc_geo(filename, **kwargs):
     vrs = ["lat", "lon"]
 
     if "PACE" not in filename:
-        if "JPSS1" not in filename:
+        if "JPSS" not in filename:
             f = Dataset(filename + "RRS.Rrs_443.4km.nc")
         else:
             f = Dataset(filename + "RRS.Rrs_445.4km.nc")
@@ -1140,6 +1140,29 @@ def read_gtiff_generic(flename, **kwargs):
 	dat = gdal.Open(flename, gdal.GA_ReadOnly).ReadAsArray()
 	print(dat.shape)
 	dat[np.where(dat.max() <= 0.0)] = -9999.0
+
+	tmp1 = None
+	tmp2 = None
+	if "mask_oceans" in kwargs:
+		latlon = read_gtiff_generic_geo(flename, **kwargs)
+		land_temp = ocean_basins_50.mask(latlon[1], latlon[1])
+		land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
+		tmp1 = land_temp.isnull().to_numpy().astype(np.bool_)
+
+		final_mask = None
+		if tmp1 is not None and tmp2 is not None:
+			final_mask = xr.apply_ufunc(np.logical_and, tmp1, tmp2, vectorize=True, dask="parallelized",\
+				input_core_dims=[[],[]], output_core_dims=[[],[]])
+		elif tmp1 is not None:
+			final_mask = tmp1
+		elif tmp2 is not None:
+			final_mask = tmp2
+
+		if final_mask is not None:
+			print(final_mask)
+			dat[:,final_mask] = -9999.0
+ 
+
 	if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
 		if len(dat.shape) == 3:
 			dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
@@ -1223,6 +1246,8 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
                 clust_fname = os.path.join(os.path.join(clusters_dir, "SNPP_VIIRS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext))
             elif "JPSS1_VIIRS" in input_file_type:
                 clust_fname = os.path.join(os.path.join(clusters_dir, "JPSS1_VIIRS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext))
+            elif "JPSS2_VIIRS" in input_file_type:
+                clust_fname = os.path.join(os.path.join(clusters_dir, "JPSS2_VIIRS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext))
             elif "AQUA_MODIS" in input_file_type:
                 clust_fname = os.path.join(os.path.join(clusters_dir, "AQUA_MODIS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext))
             elif "TERRA_MODIS" in input_file_type:
