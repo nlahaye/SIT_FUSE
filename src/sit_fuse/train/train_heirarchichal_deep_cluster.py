@@ -142,7 +142,8 @@ def heir_dc(yml_conf, dataset, ckpt_path):
 
         model_type = cutout_ratio_range = yml_conf["byol"]["model_type"]
         if model_type == "GCN":
-            encoder = GCN(num_classes, in_chans)
+            #encoder = GCN(num_classes, in_chans)
+            encoder = GCN(num_classes, in_chans, pretrained = False, use_deconv=True, use_resnet_gcn=True)
         elif model_type == "DeepLab":
             encoder = DeepLab(num_classes, in_chans, backbone='resnet', pretrained=True, checkpoint_path=encoder_dir)
         elif model_type == "DCE":
@@ -202,7 +203,7 @@ def heir_dc(yml_conf, dataset, ckpt_path):
         elif yml_conf["encoder_type"] == "ijepa":
             #TODO encoder_output_size = get_output_shape(model.pretrained_model.pretrained_model.model, (2, in_chans,model.pretrained_model.pretrained_model.img_size,model.pretrained_model.pretrained_model.img_size))
             #n_visible = encoder_output_size[2] #[1]*encoder_output_size[2]
-             n_visible = 1024
+             n_visible = 512 #1024
         elif yml_conf["encoder_type"] == "dbn":
             encoder_output_size = (1, model.pretrained_model.pretrained_model.models[-1].n_hidden)
             n_visible = encoder_output_size[1]
