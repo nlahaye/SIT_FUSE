@@ -10,6 +10,8 @@ import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
+import dask
+
 import copy
 
 from sklearn import metrics, manifold
@@ -100,18 +102,19 @@ def bootstrap_null(graph, number_of_bootstraps=25, n_components=None, umap_n_nei
     distances = np.zeros((number_of_bootstraps, n))
 
     for i in tqdm(range(number_of_bootstraps)):
+        print("BOOTSTRAP", i)
         graph_b = rdpg(ase_latents, directed=False)
 
         bootstrap_latents = OmnibusEmbed(n_components=n_components).fit_transform([graph, graph_b])
-        scaler = RobustScaler(quantile_range=(10.0,90.0))
-        data = copy.deepcopy(bootstrap_latents[0])
-        for k in range(1, len(bootstrap_latents)):
-            data = np.concatenate((data, bootstrap_latents[k]))
-        scaler.fit(data)
-        del data 
-        for k in range(bootstrap_latents.shape[0]):
-            bootstrap_latents[k] = scaler.transform(bootstrap_latents[k])
-        distances[i] = np.linalg.norm(bootstrap_latents[0] - bootstrap_latents[1], axis=1)
+        #scaler = RobustScaler(quantile_range=(10.0,90.0))
+        #data = copy.deepcopy(bootstrap_latents[0])
+        #for k in range(1, len(bootstrap_latents)):
+        #    data = np.concatenate((data, bootstrap_latents[k]))
+        #scaler.fit(data)
+        #del data 
+        #for k in range(bootstrap_latents.shape[0]):
+        #    bootstrap_latents[k] = scaler.transform(bootstrap_latents[k])
+        #distances[i] = np.linalg.norm(bootstrap_latents[0] - bootstrap_latents[1], axis=1)
         print("HERE", n, n_components, distances[i], bootstrap_latents.shape, distances[i].shape)
         #fig = plt.figure()
         #ax = fig.add_subplot(projection='3d')
@@ -155,22 +158,20 @@ def build_dist_mtx(embedding_functions, knn_graphs):
 def run_nomic_analysis(embedding_functions, knn_graphs, out_dir):
 
     #- now, we can "easily" learn a joint/aligned low-dimensional embedding of the two sets of embeddings
-    omni_embds = OmnibusEmbed(n_components=3).fit_transform(list(knn_graphs.values()))
-    fig = plt.figure()
-    ax = fig.add_subplot(projection='3d')
+    omni_embds = OmnibusEmbed(n_components=3).fit_transform(list(knn_graphs.values())) #list()
 
-    scaler = RobustScaler(quantile_range=(10.0,90.0))
-    data = copy.deepcopy(omni_embds[0])
+    #scaler = RobustScaler(quantile_range=(10.0,90.0))
+    #data = copy.deepcopy(omni_embds[0])
     print(omni_embds[0].shape, "OMNI SHAPE")
-    for i in range(1, len(embedding_functions)):
-        data = np.concatenate((data, omni_embds[i]))
-    scaler.fit(data)
+    #for i in range(1, len(embedding_functions)):
+    #    data = np.concatenate((data, omni_embds[i]))
+    #scaler.fit(data)
     #for i, embed_function in enumerate(embedding_functions):
     #   scaler.partial_fit(omni_embds[i])
-    for i, embed_function in enumerate(embedding_functions):
-       omni_embds[i] = scaler.transform(omni_embds[i])
+    #for i, embed_function in enumerate(embedding_functions):
+    #   omni_embds[i] = scaler.transform(omni_embds[i])
     #scaler = None
-    del data
+    #del data
 
     out_dct = {"embed_funcs": embedding_functions, "omni_embeds": omni_embds}
     np.save(out_dir + "/omni.viz_dict.npy", out_dct)   
@@ -179,11 +180,20 @@ def run_nomic_analysis(embedding_functions, knn_graphs, out_dir):
 
 
     colors = ['red', 'black', 'blue', 'orange', 'green', "magenta", "cyan", "olive", "purple"]
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
     for i, embed_function in enumerate(embedding_functions): # < 5 < 40 < 5
-        inds = np.where((omni_embds[i, :, 0] > 1) & (omni_embds[i, :, 1] > 20) & (omni_embds[i, :, 2] > 0))
-        ax.scatter(omni_embds[i, inds, 0], omni_embds[i, inds, 1], omni_embds[i, inds, 2], c=colors[i], label=embed_function)
-    #ax.set_cmap(cmap)
-    # Shrink current axis by 20%
+        print(omni_embds.shape, colors[i], i, embed_function)
+        #inds = np.where((omni_embds[i, :, 0] > 1) & (omni_embds[i, :, 1] > 20) & (omni_embds[i, :, 2] > 0))
+        #ax.scatter(omni_embds[i, inds, 0], omni_embds[i, inds, 1], omni_embds[i, inds, 2], c=colors[i], label=embed_function)
+        ax.scatter(omni_embds[i,:,0], omni_embds[i, :,1], omni_embds[i, :,2], c=colors[i], label=embed_function)
+        #ax.set_cmap(cmap)
+        # Shrink current axis by 20%
+        #plt.axis('off')
+    plt.tick_params(left=False,
+                    bottom=False,
+                    labelleft=False,
+                    labelbottom=False)
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.7, box.height])
 
@@ -193,7 +203,7 @@ def run_nomic_analysis(embedding_functions, knn_graphs, out_dir):
 
     plt.show()
     print("Plotting Scatter Embed")
-    plt.savefig(os.path.join(out_dir, "Embed_Scatter_" + embedding_functions[0] + ".png"))
+    plt.savefig(os.path.join(out_dir, "Embed_Scatter_multi" + ".png"))
     plt.clf()
     plt.close(fig)    
 
@@ -207,9 +217,9 @@ def run_nomic_analysis(embedding_functions, knn_graphs, out_dir):
     #- A more statistically rigorous way to determine *if* a document has moved
     #- is to use the hypothesis test described in the paper
 
-    """ TODO REMOVE 
     for i, embed_function in enumerate(embedding_functions):
         for j in range(i+1,len(embedding_functions)):
+            print("HERE", i, j)
             embed_function2 = embedding_functions[j]
             null_dist, ase_n_components  = bootstrap_null(knn_graphs[embedding_functions[i]], n_components=None, number_of_bootstraps=20, fname_uid="_" + embedding_functions[i] + "_" + embedding_functions[j])
             test_statistics = np.linalg.norm(omni_embds[i] - omni_embds[j], axis=1)
@@ -253,7 +263,6 @@ def run_nomic_analysis(embedding_functions, knn_graphs, out_dir):
             plt.savefig(os.path.join(out_dir, "P_Value_Dist_" + embed_function + "_" + embed_function2 + ".png"))
             plt.clf()
             plt.close(fig)
-    """
     fig = plt.figure()
     ax = fig.add_subplot(projection='3d')
     #- Get low-dimensional representations of embedding models.
@@ -293,15 +302,17 @@ def main(yml_fpath):
     final_labels = yml_conf["data"]["final_labels"]
 
     for key in knn_graphs.keys():
-        knn_graphs[key] = zarr.load(knn_graphs[key])
-   
-        print(knn_graphs[key].shape)
-        knn_graphs[key] = np.array(knn_graphs[key])
-        middle = int(knn_graphs[key].shape[0]/2)
-        ind1 = middle - 5000
-        ind2 = middle + 5000
+        knn_graphs[key] = zarr.load(knn_graphs[key]).astype(np.float32)
+        print(knn_graphs[key].min(), knn_graphs[key].max(), np.unique(knn_graphs[key]))    
+        knn_graphs[key] = knn_graphs[key].astype(np.int8)
+
+        #print(knn_graphs[key].shape)
+        #knn_graphs[key] = np.array(knn_graphs[key])
+        ##middle = int(knn_graphs[key].shape[0]/2)
+        ##ind1 = middle - 5000
+        ##ind2 = middle + 5000
         #already randomized
-        knn_graphs[key] = knn_graphs[key][ind1:ind2,ind1:ind2]
+        ##knn_graphs[key] = knn_graphs[key][ind1:ind2,ind1:ind2]
         print(knn_graphs[key].shape)
 
  
