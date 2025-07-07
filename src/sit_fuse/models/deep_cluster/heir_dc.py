@@ -144,7 +144,7 @@ class Heir_DC(pl.LightningModule):
             elif self.encoder_type == "ijepa":
                 #TODO encoder_output_size = get_output_shape(self.encoder, (1, yml_conf["data"]["tile_size"][2],self.pretrained_model.pretrained_model.img_size,self.pretrained_model.pretrained_model.img_size))
                 #n_visible = encoder_output_size[2] #*encoder_output_size[2]
-                n_visible = 1024 # 2048
+                n_visible = 512 #1024 # 2048
                 #print(encoder_output_size, yml_conf["data"]["tile_size"], self.pretrained_model.pretrained_model.img_size)
             elif self.encoder_type == "clay":
                 n_visible = 768
@@ -219,6 +219,8 @@ class Heir_DC(pl.LightningModule):
     def forward(self, x, perturb = False, train=False, return_embed=False):
         #TODO fix for multi-head
 
+        tile_size = x.shape[1]
+
         dt = x.dtype
         y = self.pretrained_model.forward(x)
         #print(y.shape, "Y_SHAPE")
@@ -231,7 +233,7 @@ class Heir_DC(pl.LightningModule):
         #else:
         if hasattr(self, 'encoder') and self.encoder is not None:
 
-            if  self.encoder_type == "byol" and self.pretrained_model.model_type == "Unet":
+            if self.encoder_type == "byol" and self.pretrained_model.model_type == "Unet":
                 x, x1, x2, x3, x4 = self.encoder[0].full_forward(x)   
                 x4 = F.interpolate(x4, size=x3.size()[2:], mode='bilinear', align_corners=True)
                 x3 = F.interpolate(self.pretrained_model.pretrained_model.br5(x3 + x4), size=x2.size()[2:], mode='bilinear', align_corners=True)
@@ -242,6 +244,37 @@ class Heir_DC(pl.LightningModule):
                 if perturb:
                     x = x + torch.from_numpy(self.rng.normal(0.0, 0.01, \
                                 (x.shape))).type(x.dtype).to(x.device) 
+
+            elif self.encoder_type == "byol" and self.pretrained_model.model_type == "GCN":
+                x1, x2, x3, x4, conv1_sz = self.encoder.backbone(x)
+                x1 = self.encoder.br1(self.encoder.gcn1(x1))
+                x2 = self.encoder.br2(self.encoder.gcn2(x2))
+                x3 = self.encoder.br3(self.encoder.gcn3(x3))
+                x4 = self.encoder.br4(self.encoder.gcn4(x4))
+            
+                if self.encoder.use_deconv:
+                    # Padding because when using deconv, if the size is odd, we'll have an alignment error
+                    x4 = self.encoder.decon4(x4)
+                    if x4.size() != x3.size(): x4 = self.encoder._pad(x4, x3)
+                    x3 = self.encoder.decon3(self.encoder.br5(x3 + x4))
+                    if x3.size() != x2.size(): x3 = self.encoder._pad(x3, x2)
+                    x2 = self.encoder.decon2(self.encoder.br6(x2 + x3))
+                    x1 = self.encoder.decon1(self.encoder.br7(x1 + x2))
+ 
+                    x = self.encoder.br9(self.encoder.decon5(self.encoder.br8(x1)))
+                else:
+                    x4 = F.interpolate(x4, size=x3.size()[2:], mode='bilinear', align_corners=True)
+                    x3 = F.interpolate(self.encoder.br5(x3 + x4), size=x2.size()[2:], mode='bilinear', align_corners=True)
+                    x2 = F.interpolate(self.encoder.br6(x2 + x3), size=x1.size()[2:], mode='bilinear', align_corners=True)
+                    x1 = F.interpolate(self.encoder.br7(x1 + x2), size=conv1_sz, mode='bilinear', align_corners=True)
+
+                    x = self.encoder.br9(F.interpolate(self.encoder.br8(x1), size=x.size()[2:], mode='bilinear', align_corners=True))
+                x = self.encoder.final_conv(x)
+                if perturb:
+                    x = x + torch.from_numpy(self.rng.normal(0.0, 0.01, \
+                                (x.shape))).type(x.dtype).to(x.device)
+
+
 
             elif self.encoder_type == "pca":
                 x = torch.from_numpy(self.pretrained_model.pretrained_model(x.cpu().numpy())).type(x.dtype).to(x.device)         
@@ -262,7 +295,7 @@ class Heir_DC(pl.LightningModule):
 
                 x = F.interpolate(
                     x,
-                    size=(15, 15),
+                    size=(tile_size, tile_size),
                     mode="bilinear",
                     align_corners=False,
                 )  # Resize to match labels size
@@ -286,7 +319,7 @@ class Heir_DC(pl.LightningModule):
 
                 x = F.interpolate(
                     x,
-                    size=(16, 16),
+                    size=(tile_size, tile_size),
                     mode="bilinear",
                     align_corners=False,
                 )  # Resize to match labels size
@@ -304,7 +337,7 @@ class Heir_DC(pl.LightningModule):
 
                 x = F.interpolate(
                     x,
-                    size=(45, 45),
+                    size=(tile_size, tile_size), #ize=(45, 45),
                     mode="bilinear",
                     align_corners=False,
                 )  # Resize to match labels size
@@ -322,7 +355,7 @@ class Heir_DC(pl.LightningModule):
 
                 x = F.interpolate(
                     x,
-                    size=(4, 4),
+                    size=(tile_size, tile_size),
                     mode="bilinear",
                     align_corners=False,
                 )  # Resize to match labels size
@@ -433,7 +466,7 @@ class Heir_DC(pl.LightningModule):
                 #input_tmp = torch_flatten(input_tmp, start_dim=0, end_dim=1)
               
             #print(input_tmp.shape, x.shape, tmp2_2.shape, tmp2.shape)
-            #print(inds2)
+            print(min(inds2), max(inds2), input_tmp.shape, "HERE", tmp2.shape, tmp2_2.shape, tmp4.shape, tmp.shape, tmp3.shape, x.shape)
             input_tmp = input_tmp[inds2,:] 
 
 
