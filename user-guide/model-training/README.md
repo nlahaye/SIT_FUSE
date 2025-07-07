@@ -1,8 +1,8 @@
 ---
-description: WIP this needs more context even im confused LOL
+description: Steps to train SIT-FUSE
 ---
 
-# Training
+# Model Training
 
 {% content-ref url="training-dataset-preprocessing-examples.md" %}
 [training-dataset-preprocessing-examples.md](training-dataset-preprocessing-examples.md)
@@ -12,8 +12,8 @@ description: WIP this needs more context even im confused LOL
 [training-command-examples.md](training-command-examples.md)
 {% endcontent-ref %}
 
-{% content-ref url="../inference-command-examples.md" %}
-[inference-command-examples.md](../inference-command-examples.md)
+{% content-ref url="inference-command-examples.md" %}
+[inference-command-examples.md](inference-command-examples.md)
 {% endcontent-ref %}
 
 {% content-ref url="training-summary.md" %}

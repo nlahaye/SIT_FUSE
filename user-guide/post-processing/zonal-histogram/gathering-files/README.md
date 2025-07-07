@@ -30,9 +30,9 @@ _Hint 2: type `pwd` to see your current location._
 * The `*` is a wildcard, meaning we are telling the computer that we don't care what comes before `.shp`, as long as the file has `.shp` at the end of the name.
 * `sort` sorts the files alphabetically, which is critical for the organization of our YAML.
 
-<figure><img src="../../../.gitbook/assets/Screenshot 2024-10-24 at 9.14.29 PM.png" alt=""><figcaption><p>Example output for step 3</p></figcaption></figure>
+<figure><img src="../../../../.gitbook/assets/Screenshot 2024-10-24 at 9.14.29 PM.png" alt=""><figcaption><p>Example output for step 3</p></figcaption></figure>
 
-Note: Ideally your labels are organized with respect to the exact image/data/gtiff they labeled (aka they're organized/separated by folders, as seen above with `MASTER1, MASTER10, MASTER11, MASTER2,...etc`). We want the labels for each specific image to be grouped together in order for the YAML to read them properly. See the `Labeler's Note` in [Creating and modifying shapefiles](../labeling-tutorial/creating-and-modifying-shapefiles.md) after step 7.
+Note: Ideally your labels are organized with respect to the exact image/data/gtiff they labeled (aka they're organized/separated by folders, as seen above with `MASTER1, MASTER10, MASTER11, MASTER2,...etc`). We want the labels for each specific image to be grouped together in order for the YAML to read them properly. See the `Labeler's Note` in [Creating and modifying shapefiles](../../labeling-tutorial/creating-and-modifying-shapefiles.md) after step 7.
 
 4. Copy the desired output and input it into the `shp_files` configuration of your YAML file. Don't worry about formatting right now, we'll see some examples in the [next page](code-configuration.md). Just make sure every label you want is included, and try to ensure they are grouped in the way described in the above note.&#x20;
 5. Repeat this process for `input_files` , which would look something like `find $PWD -name "*.tif" | sort` . Make sure every GeoTiff that you want is included.

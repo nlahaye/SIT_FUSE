@@ -27,13 +27,13 @@ icon: fill-drip
     <figure><img src="../../../.gitbook/assets/Screenshot 2024-10-18 at 12.46.43 PM.png" alt="" width="375"><figcaption><p>New Shapefile Layer menu</p></figcaption></figure>
 6. In the window that appears begin by giving the file a name next to `File name`.&#x20;
 
-Try to give it a unique name that won't be confused later. For example, include the name of the instrument, the date that the data corresponds to, and the feature being labeled (eMAS\_08022019\_fire). This is just a guideline though, feel free to be as detailed as you'd like. Naming the shapefile after the original file with the specific feature at the end is also always a safe bet (eMASL1B\_19910\_06\_20190806\_1815\_1824\_V03\_fire).
+Try to give it a unique name that won't be confused later. For example, include the name of the instrument, the date that the data corresponds to, and the feature being labeled (e.g. eMAS\_08022019\_fire). This is just a guideline though, feel free to be as detailed as you'd like. Naming the shapefile after the original file with the specific feature at the end is also always a safe bet (e.g. eMASL1B\_19910\_06\_20190806\_1815\_1824\_V03\_fire).
 
 7. Then, select the button with 3 dots to the right of the file name, choose a directory for the shapefile to be stored in, and click save.&#x20;
 
 Try to save all the shape files for one image/images from the same instrument/scene in the same folder for easier access later. Stay consistent with how/where shape files (for every image) are stored, we'll need to access their file paths later.
 
-**Labeler's Note**: I would recommend the example organization below. Other organizations (such as folders corresponding to each label\_type (e.g. smoke, fire, background, etc.)) typically become a lot harder to work with during future steps when we need to gather all of the files using the command line. An organization, with each folder corresponding to an image, makes organizing the YAML a lot easier.
+**Labeler's Note**: I would recommend the example organization below. Other organizations (such as folders corresponding to each label\_type (e.g. smoke, fire, background, etc.) typically become a lot harder to work with during future steps when we need to gather all of the files using the command line. An organization, with each folder corresponding to an image, makes organizing the YAML a lot easier.
 
 Here's an example organization:
 
@@ -62,6 +62,6 @@ Here is an example of a label of the burnscar from the William's Flat's Fire.
 
 <figure><img src="../../../.gitbook/assets/Screenshot 2024-10-18 at 1.18.57 PM.png" alt="" width="375"><figcaption><p>Figure 1. eMAS William's Flat's Fire, greyband 9, burnscar label</p></figcaption></figure>
 
-Congrats, you now have your first label! Use these steps to create as many labels as needed. For more documentation on more complex features (deleting labels, modifying labels, etc.) see [Other shapefile tools](other-shapefile-tools.md).
+Congrats, you now have your first label! Use these steps to create as many labels as needed. For more documentation on more complex features (deleting labels, modifying labels, etc.) see [Other shapefile tools](broken-reference).
 
-**Labeler's Note:** For better results, create a background label(s)! You can create a general label (e.g. \_background_)_ for each image that encompasses everything _except_ the features you are labeling, or you can create a background label for each specific feature (e.g. \_fire_\__background, \_smoke_\__background) of each image, which encompasses everything _except_ that specific feature. For example, its okay if the label for \_fire_\__background overlapped onto the \_smoke label.
+**Labeler's Note:** It is important to create a background label(s) so that SIT-FUSE can better segment key features of the image. You can create a general label (e.g. \_backgroun&#x64;_)_ for each image that encompasses everything _except_ the features you are labeling, or you can create a background label for each specific feature (e.g. \_fir&#x65;_\__&#x62;ackground, \_smok&#x65;_\__&#x62;ackground) of each image, which encompasses everything _except_ that specific feature. For example, its okay if the label for \_fir&#x65;_\__&#x62;ackground overlapped onto the \_smoke label.
