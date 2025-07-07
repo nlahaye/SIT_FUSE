@@ -19,7 +19,7 @@ from sit_fuse.models.encoders.dbn_pl import DBN_PL
 from sit_fuse.models.encoders.byol_pl import BYOL_Learner
 from sit_fuse.models.encoders.pca_encoder import PCAEncoder
 from sit_fuse.models.encoders.cnn_encoder import DeepConvEncoder
-from sit_fuse.datasets.sf_dataset_module import SFDataModule
+from sit_fuse.datasets.sf_dataset_module_multi import SFDataModuleMulti
 from sit_fuse.utils import read_yaml
 
 from segmentation.models.gcn import GCN
@@ -34,17 +34,23 @@ import os
 
 import joblib
 
-def load_encoders(yml_conf)
+def load_encoders(yml_conf, datasets, conv=False):
 
     encoder_confs = yml_conf["late_fusion"]["encoders"]	
-    encoders = None
-    for conf in encoder_confs
-        yml_conf_tmp = read_yaml(yml_fpath)
+    encoders = []
+    n_visible = 0
+    datasets.setup()
+    for i in range(len(encoder_confs)):
+        conf = encoder_confs[i]
+
+        yml_conf_tmp = read_yaml(conf)
         dbn_arch = tuple(yml_conf_tmp["dbn"]["dbn_arch"])
         gibbs_steps = tuple(yml_conf_tmp["dbn"]["gibbs_steps"])
         normalize_learnergy = tuple(yml_conf_tmp["dbn"]["normalize_learnergy"])
         batch_normalize = tuple(yml_conf_tmp["dbn"]["batch_normalize"])
         temp = tuple(yml_conf_tmp["dbn"]["temp"])
+
+        n_visible = n_visible + dbn_arch[-1]
 
         learning_rate = tuple(yml_conf_tmp["encoder"]["training"]["learning_rate"])
         momentum = tuple(yml_conf_tmp["encoder"]["training"]["momentum"])
@@ -56,7 +62,7 @@ def load_encoders(yml_conf)
         dbn = None
         if not conv:
             model_type = tuple(yml_conf_tmp["dbn"]["model_type"])
-            dbn = DBN(model=model_type, n_visible=dataset.n_visible, n_hidden=dbn_arch, steps=gibbs_steps,
+            dbn = DBN(model=model_type, n_visible=datasets.n_visible, n_hidden=dbn_arch, steps=gibbs_steps,
                  learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=use_gpu)
         else:
             model_type = yml_conf_tmp["dbn"]["model_type"]
@@ -70,14 +76,12 @@ def load_encoders(yml_conf)
  
         encoders.append(dbn)
 
-    return encoders
+    return encoders, n_visible
 
 
-def pretrain_late_fusion_DBN(yml_conf, dataset, conv = False):
+def pretrain_late_fusion_DBN(yml_conf, datasets, conv = False):
 
-    dataset.setup()
-
-    encoders = load_encoders(yml_conf)
+    encoders, n_visible = load_encoders(yml_conf, datasets, conv)
 
     dbn_arch = tuple(yml_conf["dbn"]["dbn_arch"])
     gibbs_steps = tuple(yml_conf["dbn"]["gibbs_steps"])
@@ -94,7 +98,7 @@ def pretrain_late_fusion_DBN(yml_conf, dataset, conv = False):
     use_gpu = bool((accelerator == "gpu")) 
     if not conv:
         model_type = tuple(yml_conf["dbn"]["model_type"])
-        dbn = DBN(model=model_type, n_visible=dataset.n_visible, n_hidden=dbn_arch, steps=gibbs_steps,
+        dbn = DBN(model=model_type, n_visible=n_visible, n_hidden=dbn_arch, steps=gibbs_steps,
              learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=use_gpu)
     else:
         model_type = yml_conf["dbn"]["model_type"]
@@ -133,7 +137,7 @@ def pretrain_late_fusion_DBN(yml_conf, dataset, conv = False):
         dbn.models[i].batch_normalize = batch_normalize[i]
 
 
-        model = Late_Fusion_DBN_PL(current_rbm, save_dir, encoders, previous_layers,
+        model = Late_Fusion_DBN_PL(current_rbm, save_dir, encoders, datasets, previous_layers,
             learning_rate[i], momentum[i], nesterov_accel[i], decay[i])
 
         lr_monitor = LearningRateMonitor(logging_interval="step")
@@ -167,7 +171,7 @@ def pretrain_late_fusion_DBN(yml_conf, dataset, conv = False):
                 gradient_clip_val=gradient_clip_val
             )
 
-        trainer.fit(model, dataset)
+        trainer.fit(model, datasets)
 
         if use_wandb_logger:
             wandb.finish()
@@ -475,11 +479,23 @@ def main(yml_fpath):
     val_percent = float(yml_conf["data"]["val_percent"])
     batch_size = yml_conf["encoder"]["training"]["batch_size"]    
 
-    dataset = SFDataModule(yml_conf, batch_size, num_loader_workers, val_percent=val_percent)
+    encoder_confs = yml_conf["late_fusion"]["encoders"]
+    encoders = None
+    n_visible = 0
+    confs = []
+    for i in range(len(encoder_confs)):
+        print(encoder_confs[i])
+        conf = encoder_confs[i]
+
+        yml_conf_tmp = read_yaml(conf)
+        print(yml_conf_tmp["data"].keys())
+        confs.append(yml_conf_tmp) 
+ 
+    datasets = SFDataModuleMulti(confs, batch_size, num_loader_workers, val_percent=val_percent)
 
     if "encoder_type" in yml_conf:
         if "dbn" in yml_conf["encoder_type"]:
-            pretrain_late_fusion_DBN(yml_conf, dataset) 
+            pretrain_late_fusion_DBN(yml_conf, datasets) 
 
 
 
