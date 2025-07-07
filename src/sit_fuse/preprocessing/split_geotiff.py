@@ -47,7 +47,15 @@ def create_tiles(minx, miny, maxx, maxy, n):
     return matrix
 
 
-def split(file_name, n):
+def thresh_data(data, thresh):
+
+    data[np.where(data < thresh)] = 0
+    data[np.where(data >= thresh)] = 1
+    data = data.astype(np.int8)
+    return data
+
+
+def split(file_name, n, thresh = None):
     raw_file_name = os.path.splitext(os.path.basename(file_name))[0]
     driver = gdal.GetDriverByName('GTiff')
     dataset = gdal.Open(file_name)
@@ -70,7 +78,7 @@ def split(file_name, n):
     width = maxx - minx
     height = maxy - miny
  
-    output_path = raw_file_name
+    output_path = os.path.dirname(file_name)
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
@@ -89,6 +97,8 @@ def split(file_name, n):
 
     tile_num = 0
     for tile in tiles:
+
+        
 
         minx = tile[0][0]
         maxx = tile[1][0]
@@ -111,6 +121,9 @@ def split(file_name, n):
 
         data = dataset.ReadAsArray(i1, j1, new_cols, new_rows)
 
+        if thresh is not None:
+            data = thresh_data(data, thresh)
+
         #print data
 
         new_x = xOrigin + i1*pixelWidth
@@ -121,18 +134,30 @@ def split(file_name, n):
         new_transform = (new_x, transform[1], transform[2], new_y, transform[4], transform[5])
 
         output_file_base = raw_file_name + "_" + str(tile_num) + ".tif"
-        output_file = output_file_base
+        output_file = os.path.join(output_path, output_file_base)
+        print(output_file, data.min(), data.max())
 
         print(data.shape)
+
+        dt = gdal.GDT_Float32
+        nchans = 1
+        if data.ndim > 2:
+            nchans = data.shape[0]
+        if thresh is not None:
+            dt = gdal.GDT_Byte
+
         dst_ds = driver.Create(output_file,
                                new_cols,
                                new_rows,
-                               data.shape[0],
-                               gdal.GDT_Float32)
+                               nchans,
+                               dt)
  
         #writting output raster
-        for chan in range(0, data.shape[0]):
-            dst_ds.GetRasterBand((chan+1)).WriteArray( data[chan])
+        for chan in range(0, nchans):
+            if nchans > 1:
+                dst_ds.GetRasterBand((chan+1)).WriteArray( data[chan])
+            else:
+                dst_ds.GetRasterBand((chan+1)).WriteArray(data) 
 
         tif_metadata = {
             "minX": str(minx), "maxX": str(maxx),
@@ -167,9 +192,12 @@ def main(yml_fpath):
     #Run 
     fnames = yml_conf["fnames"]
     n_sq_tiles = yml_conf["n_sq_tiles"]
+    thresh = None
+    if "thresh" in yml_conf:
+        thresh = yml_conf["thresh"]
 
     for i in range(len(fnames)):
-        split(fnames[i], n_sq_tiles)
+        split(fnames[i], n_sq_tiles, thresh)
 
 
 if __name__ == '__main__':
