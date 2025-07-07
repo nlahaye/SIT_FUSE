@@ -49,7 +49,7 @@ class SFDatasetConv(SFDataset):
 		self.subset_training = subset_training
 		self.stratify_data = stratify_data
 
-		if (((self.subset_training < self.data_full.shape[0] and self.subset_training > 0)) and (self.stratify_data or self.stratify_data["kmeans"])):
+		if (((self.subset_training < self.data_full.shape[0] and self.subset_training > 0)) and self.stratify_data):
 			if self.subset_training > 0 and self.stratify_data and self.stratify_data["kmeans"]:
 				self.__stratify_k_means__(flatten=True)
 			else:
@@ -75,6 +75,7 @@ class SFDatasetConv(SFDataset):
 		self.transform_value = transform_values
 		self.transform = transform
 		self.read_func = read_func
+		self.init_shape = []
 		self.read_func_kwargs = read_func_kwargs
 		self.tile = tile
 		self.tile_size = tile_size
@@ -141,6 +142,7 @@ class SFDatasetConv(SFDataset):
 				else:
 					dat_begin.append([0,0])  
 
+				self.init_shape.append(dat.shape[1:])
 				data_local.append(dat)
 				
 				if strat_data is not None:
@@ -189,13 +191,17 @@ class SFDatasetConv(SFDataset):
 				self.init_data_shape = data_local[r].shape        	
 			if self.tile:
 				tmp = np.squeeze(view_as_windows(data_local[r], window_size, step=tile_step_final))
-				tmp = tmp.reshape((tmp.shape[0]*tmp.shape[1], tmp.shape[2], tmp.shape[3], tmp.shape[4]))			
+				if tmp.ndim > 3:
+					tmp = tmp.reshape((tmp.shape[0]*tmp.shape[1], tmp.shape[2], tmp.shape[3], tmp.shape[4]))			
+				else:
+					tmp = tmp.reshape((1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
 
 				window_size_tgt = [2,window_size[1],window_size[2]]
 				tile_step_tgt = [2,tile_step_final[1],tile_step_final[2]]
 				tgts2 = np.squeeze(view_as_windows(tgts, window_size_tgt, step=tile_step_tgt))
 				###cntr = int(tile_step_final[1]/2)
-				tgts2 = tgts2[:,:,:,0,0]
+				if tgts2.ndim > 3:
+					tgts2 = tgts2[:,:,:,0,0]
 				tgts2 = tgts2.reshape(tgts2.shape[0]*tgts2.shape[1], tgts2.shape[2])
 				#tgts = tgts.reshape((3,tgts.shape[1]*tgts.shape[2])).astype(np.int16)
 				#tgts = np.swapaxes(tgts, 0, 1)     
