@@ -1,0 +1,19 @@
+  
+input_paths: ["/data/nlahaye/output/Learnergy/No_Data/",
+              "/data/nlahaye/output/Learnergy/No_Data/",
+              "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/SNPP_VIIRS_S_CA/"]
+
+ 
+fname_str: "pseudo_nitzschia_delicatissima_bloom"
+out_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/MERGED_HAB/SNPP_VIIRS/"
+num_classes: 9
+re_index: 4
+
+gen_daily: false
+gen_monthly: true
+
+
+dirname: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/MERGED_HAB/SNPP_VIIRS/"
+max_dqi: 2
+max_class: 5
+

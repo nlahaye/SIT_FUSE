@@ -1,0 +1,15 @@
+ 
+input_paths: ["/data/nlahaye/output/Learnergy/No_Data/",
+              "/data/nlahaye/output/Learnergy/No_Data/",
+              "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/PACE_S_CA/"]
+
+ 
+ 
+fname_str: "DAY.karenia_brevis_bloom.tif"
+out_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/MERGED_HAB/PACE/"
+num_classes: 8
+re_index: 1
+
+gen_daily: true
+gen_monthly: false
+
