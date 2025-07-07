@@ -241,7 +241,7 @@ def dc_DBN(yml_conf, dataset, conv=False):
         model = DBN_DC(dbn, num_classes=num_classes, conv=conv)
     else:
         lr = yml_conf["cluster"]["training"]["learning_rate"]
-        model = CDBN_DC(dbn, num_classes=num_classes, weight_decay=0.95, lr = lr)
+        model = CDBN_DC(dbn, num_classes=num_classes, weight_decay=0.95, lr = lr, out_num_filters = dbn_arch[0][-1])
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
@@ -553,7 +553,7 @@ def dc_BYOL(yml_conf, dataset):
     model_type = cutout_ratio_range = yml_conf["byol"]["model_type"]
     model_2 = None
     if model_type == "GCN":
-        model_2 = GCN(num_classes, in_chans)
+        model_2 = GCN(num_classes, in_chans, pretrained = False, use_deconv=True, use_resnet_gcn=True)
         model_2.load_state_dict(torch.load(ckpt_path))
     elif model_type == "DeepLab":
         model_2 = DeepLab(num_classes, in_chans, backbone='resnet', pretrained=True, checkpoint_path=encoder_dir)
