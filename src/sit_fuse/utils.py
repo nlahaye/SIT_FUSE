@@ -1142,10 +1142,11 @@ def read_gtiff_generic(flename, **kwargs):
 	dat[np.where(dat.max() <= 0.0)] = -9999.0
 
 	tmp1 = None
-	tmp2 = None
+	tmp2 = None # TODO add in generic masking abilities
 	if "mask_oceans" in kwargs:
+
 		latlon = read_gtiff_generic_geo(flename, **kwargs)
-		land_temp = ocean_basins_50.mask(latlon[1], latlon[1])
+		land_temp = ocean_basins_50.mask(latlon[:,:,1], latlon[:,:,0])
 		land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
 		tmp1 = land_temp.isnull().to_numpy().astype(np.bool_)
 
