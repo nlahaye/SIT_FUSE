@@ -17,6 +17,7 @@ class Late_Fusion_DBN_PL(pl.LightningModule):
             model,
             save_dir,
             encoders,
+            datasets,
             previous_layers = None,
             learning_rate = 1e-5,
             momentum = 0.95,
@@ -30,6 +31,7 @@ class Late_Fusion_DBN_PL(pl.LightningModule):
 
         #define models
         self.model = model
+        self.datasets = datasets
         self.save_dir = save_dir
         self.previous_layers = previous_layers
         self.lr = learning_rate
@@ -45,7 +47,7 @@ class Late_Fusion_DBN_PL(pl.LightningModule):
     def forward(self, dat):
 
         dat = None
-        for x, encoder in zip(self.encoders, dat):
+        for encoder, x in zip(self.encoders, dat):
             if dat is None:
                 dat = encoder(x) 
             else:
@@ -57,7 +59,7 @@ class Late_Fusion_DBN_PL(pl.LightningModule):
     def training_step(self, batch, batch_idx):
   
         dat = None
-        for x, encoder in zip(self.encoders, batch):
+        for encoder, x in zip(self.encoders, batch):
             if dat is None:
                 dat = encoder(x)
             else:
@@ -111,7 +113,7 @@ class Late_Fusion_DBN_PL(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
 
         dat = None
-        for x, encoder in zip(self.encoders, batch):
+        for encoder, x in zip(self.encoders, batch):
             if dat is None:
                 dat = encoder(x)
             else:
@@ -162,6 +164,9 @@ class Late_Fusion_DBN_PL(pl.LightningModule):
             self.log('train_batch_pl', batch_pl, sync_dist=True)
 
         return loss
+
+
+        
 
     
     def predict_step(self, batch, batch_idx, dataloader_idx):

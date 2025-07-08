@@ -354,7 +354,7 @@ def pretrain_BYOL(yml_conf, dataset):
  
     model_type = yml_conf["byol"]["model_type"]
     if model_type == "GCN":
-        model = GCN(num_classes, in_chans) 
+        model = GCN(num_classes, in_chans, pretrained = False, use_deconv=True, use_resnet_gcn=True) 
     elif model_type == "DeepLab":
         model = DeepLab(num_classes, in_channels=in_chans, backbone='resnet', pretrained=True, checkpoint_path=save_dir,  output_stride=16) 
     elif model_type == "Unet":

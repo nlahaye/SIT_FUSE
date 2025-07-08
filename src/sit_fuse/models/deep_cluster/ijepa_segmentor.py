@@ -94,7 +94,7 @@ class JEPASegmentEncoder(nn.Module):
         for idx in range(len(_cube)):
             if idx in self.feature_maps:
                 tmp_cube = rearrange(
-                    _cube[idx], "B (H W) D -> B D H W", H=H // 1, W=W // 1
+                    _cube[idx], "B (H W) D -> B D H W", H=H // self.vit_encoder.patch_size , W=W // self.vit_encoder.patch_size    #division by patch size here
                 )
                 features.append(tmp_cube)
         # Apply FPN layers
@@ -126,10 +126,11 @@ class JEPASegmentor(nn.Module):
             nn.Upsample(scale_factor=4),
         ]
 
-        chan_mult = len(feature_maps)  + 6
+        chan_mult = len(feature_maps)  + 6 #7
 
         self.fusion = nn.Conv2d(self.encoder.vit_encoder.student_encoder.dim *chan_mult, self.encoder.vit_encoder.student_encoder.dim, kernel_size=1)
         self.seg_head = nn.Conv2d(self.encoder.vit_encoder.student_encoder.dim, num_classes, kernel_size=1)
+
 
     def forward(self, datacube):
         """

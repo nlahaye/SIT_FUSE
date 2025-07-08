@@ -166,22 +166,48 @@ class BYOL_DC(pl.LightningModule):
         x2_2 = self.pretrained_model.br2(self.pretrained_model.gcn2(x2_2))
         x3_2 = self.pretrained_model.br3(self.pretrained_model.gcn3(x3_2))
         x4_2 = self.pretrained_model.br4(self.pretrained_model.gcn4(x4_2))
+
+
+
+        if self.pretrained_model.use_deconv:
+            # Padding because when using deconv, if the size is odd, we'll have an alignment error
+            x4 = self.pretrained_model.decon4(x4)
+            if x4.size() != x3.size(): x4 = self.pretrained_model._pad(x4, x3)
+            x3 = self.pretrained_model.decon3(self.pretrained_model.br5(x3 + x4))
+            if x3.size() != x2.size(): x3 = self.pretrained_model._pad(x3, x2)
+            x2 = self.pretrained_model.decon2(self.pretrained_model.br6(x2 + x3))
+            x1 = self.pretrained_model.decon1(self.pretrained_model.br7(x1 + x2))
+
+            x = self.pretrained_model.br9(self.pretrained_model.decon5(self.pretrained_model.br8(x1)))
+
+
+            x4_2 = self.pretrained_model.decon4(x4_2)
+            if x4_2.size() != x3_2.size(): x4_2 = self.pretrained_model._pad(x4_2, x3_2)
+            x3_2 = self.pretrained_model.decon3(self.pretrained_model.br5(x3_2 + x4_2))
+            if x3_2.size() != x2_2.size(): x3_2 = self.pretrained_model._pad(x3_2, x2_2)
+            x2_2 = self.pretrained_model.decon2(self.pretrained_model.br6(x2_2 + x3_2))
+            x1_2 = self.pretrained_model.decon1(self.pretrained_model.br7(x1_2 + x2_2))
+
+            x_2 = self.pretrained_model.br9(self.pretrained_model.decon5(self.pretrained_model.br8(x1_2)))
+
+
+        else:
  
-        x4 = F.interpolate(x4, size=x3.size()[2:], mode='bilinear', align_corners=True)
-        x3 = F.interpolate(self.pretrained_model.br5(x3 + x4), size=x2.size()[2:], mode='bilinear', align_corners=True)
-        x2 = F.interpolate(self.pretrained_model.br6(x2 + x3), size=x1.size()[2:], mode='bilinear', align_corners=True)
-        x1 = F.interpolate(self.pretrained_model.br7(x1 + x2), size=conv1_sz, mode='bilinear', align_corners=True)
+            x4 = F.interpolate(x4, size=x3.size()[2:], mode='bilinear', align_corners=True)
+            x3 = F.interpolate(self.pretrained_model.br5(x3 + x4), size=x2.size()[2:], mode='bilinear', align_corners=True)
+            x2 = F.interpolate(self.pretrained_model.br6(x2 + x3), size=x1.size()[2:], mode='bilinear', align_corners=True)
+            x1 = F.interpolate(self.pretrained_model.br7(x1 + x2), size=conv1_sz, mode='bilinear', align_corners=True)
 
-        x = self.pretrained_model.br9(F.interpolate(self.pretrained_model.br8(x1), size=x.size()[2:], mode='bilinear', align_corners=True))
+            x = self.pretrained_model.br9(F.interpolate(self.pretrained_model.br8(x1), size=x.size()[2:], mode='bilinear', align_corners=True))
  
-        x4_2 = F.interpolate(x4_2, size=x3_2.size()[2:], mode='bilinear', align_corners=True)
-        x3_2 = F.interpolate(self.pretrained_model.br5(x3_2 + x4_2), size=x2_2.size()[2:], mode='bilinear', align_corners=True)
-        x2_2 = F.interpolate(self.pretrained_model.br6(x2_2 + x3_2), size=x1_2.size()[2:], mode='bilinear', align_corners=True)
-        x1_2 = F.interpolate(self.pretrained_model.br7(x1_2 + x2_2), size=conv1_sz, mode='bilinear', align_corners=True)
+            x4_2 = F.interpolate(x4_2, size=x3_2.size()[2:], mode='bilinear', align_corners=True)
+            x3_2 = F.interpolate(self.pretrained_model.br5(x3_2 + x4_2), size=x2_2.size()[2:], mode='bilinear', align_corners=True)
+            x2_2 = F.interpolate(self.pretrained_model.br6(x2_2 + x3_2), size=x1_2.size()[2:], mode='bilinear', align_corners=True)
+            x1_2 = F.interpolate(self.pretrained_model.br7(x1_2 + x2_2), size=conv1_sz, mode='bilinear', align_corners=True)
 
-        x_2 = self.pretrained_model.br9(F.interpolate(self.pretrained_model.br8(x1_2), \
-            size=x.size()[2:], mode='bilinear', align_corners=True))
-
+            x_2 = self.pretrained_model.br9(F.interpolate(self.pretrained_model.br8(x1_2), \
+                size=x.size()[2:], mode='bilinear', align_corners=True))
+ 
         x = F.softmax(self.pretrained_model.final_conv(x), dim=1).flatten(start_dim=2).permute(0,2,1).flatten(start_dim=0,end_dim=1)
         x_2 = F.softmax(self.pretrained_model.final_conv(x_2), dim=1).flatten(start_dim=2).permute(0,2,1).flatten(start_dim=0,end_dim=1)
 

@@ -34,18 +34,20 @@ class CDBNSegmentEncoder(nn.Module):
 
         self.feature_maps = feature_maps
         self.cdbn_encoder = cdbn_encoder
-   
+  
+        filters = self.cdbn_encoder.model.feature_maps
+ 
 
         # Define Feature Pyramid Network (FPN) layers
         self.fpn1 = nn.Sequential(
-            nn.ConvTranspose2d(100, 300, kernel_size=2, stride=2),
-            nn.BatchNorm2d(300),
+            nn.ConvTranspose2d(filters[0], filters[0]*2, kernel_size=2, stride=2),
+            nn.BatchNorm2d(filters[0]*2),
             nn.GELU(),
-            nn.ConvTranspose2d(300, 200, kernel_size=2, stride=2),
+            nn.ConvTranspose2d(filters[0]*2, filters[0]*4, kernel_size=2, stride=2),
         )
 
         self.fpn2 = nn.Sequential(
-            nn.ConvTranspose2d(200, 200, kernel_size=2, stride=2),
+            nn.ConvTranspose2d(filters[1], filters[1]*2, kernel_size=2, stride=2),
         )
 
         self.fpn3 = nn.Identity()
@@ -128,7 +130,6 @@ class CDBNSegmentor(nn.Module):
             #nn.Upsample(scale_factor=4),
         #]
 
-        chan_mult = len(feature_maps)  + 6
 
         self.fusion = nn.Conv2d(400,900, kernel_size=1)
         self.seg_head = nn.Conv2d(900, num_classes, kernel_size=1)

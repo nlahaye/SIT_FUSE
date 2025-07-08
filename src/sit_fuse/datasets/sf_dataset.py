@@ -148,6 +148,7 @@ class SFDataset(torch.utils.data.Dataset):
 		self.valid_min = valid_min
 		self.valid_max = valid_max
 		self.fill_value = fill_value
+		self.init_shape = []
 		self.chan_dim = chan_dim
 		self.transform_chans = transform_chans
 		self.transform_value = transform_values
@@ -225,6 +226,7 @@ class SFDataset(torch.utils.data.Dataset):
 				print("HERE", dat.shape, len(data_local))                                 
 				#Append data and stratification data from current files to full set
 				if dat.ndim == 3:
+					self.init_shape.append(dat.shape[:2])
 					data_local.append(dat)
 				else:
 					if len(data_local) == 0:

@@ -256,7 +256,6 @@ def toGeotiff(output_image, area_def, out_fname, proj_id):
  
   # set-up projection of output Geotiff
   srs = osr.SpatialReference()
-  srs = osr.SpatialReference()
   srs.ImportFromEPSG(proj_id)
   srs = srs.ExportToWkt()
   dstds.SetProjection(srs)

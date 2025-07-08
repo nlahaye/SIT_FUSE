@@ -34,7 +34,7 @@ class CDBN_DC(pl.LightningModule):
         #define model layers
         self.pretrained_model = pretrained_model
 
-        feature_maps = [0,1,2]  
+        feature_maps = [i for i in range(len(pretrained_model.model.feature_maps)) + 1
         self.segmentor = CDBNSegmentor(num_classes, feature_maps, self.pretrained_model)
         self.mlp_head = self.segmentor.seg_head
   

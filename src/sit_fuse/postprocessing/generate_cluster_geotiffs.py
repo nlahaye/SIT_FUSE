@@ -22,7 +22,7 @@ matplotlib.use('agg')
 import matplotlib.pyplot as plt
  
 def generate_cluster_masks_no_geo(data_reader, data_reader_kwargs, subset_inds, cluster_data, 
-    apply_context, context_clusters, context_name, compare, create_separate, generate_union = False, cluster_dependencies={}, background_class = 0):
+    apply_context, context_clusters, context_name, compare, create_separate, generate_union = False, cluster_dependencies={}, background_class = 0, tiered_masking = None):
 
         read_func = get_read_func(data_reader)
     
@@ -30,6 +30,13 @@ def generate_cluster_masks_no_geo(data_reader, data_reader_kwargs, subset_inds, 
         totalTruth = []
         outUnionFull = None
         for p in range(len(cluster_data)):
+
+            tiered_masking_masks = None
+            tiered_masking_classes = None
+            if tiered_masking is not None:
+                tiered_masking_masks = tiered_masking["masks"][p]
+                tiered_masking_classes = tiered_masking["tiered_classes"][p]          
+ 
             outUnion = None
             print("FNAME1", cluster_data[p])
 
@@ -131,7 +138,7 @@ def generate_cluster_masks_no_geo(data_reader, data_reader_kwargs, subset_inds, 
  
 
 def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
-    cluster_data, gtiff_data, apply_context, context_clusters, context_name, compare, create_separate, generate_union = False, cluster_dependencies={}, background_class = 0):
+    cluster_data, gtiff_data, apply_context, context_clusters, context_name, compare, create_separate, generate_union = False, cluster_dependencies={}, background_class = 0, tiered_masking = None):
 
 	read_func = get_read_func(data_reader)
 
@@ -143,6 +150,13 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 		outUnion = None
 		if not os.path.exists(cluster_data[p]):
 			continue		
+
+		tiered_masking_masks = None
+		tiered_masking_classes = None
+		if tiered_masking is not None:
+			tiered_masking_masks = tiered_masking["masks"][p]
+			tiered_masking_classes = tiered_masking["tiered_classes"][p]
+			print(tiered_masking_masks, tiered_masking_classes)
 
 		dbnDat1 = read_func(cluster_data[p], **data_reader_kwargs).astype(np.float32)
 		#dbnDat1 = np.fliplr(dbnDat1)
@@ -263,6 +277,12 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 					outDatFull = outDat
 					outDatFull2 = outDat2
 				file_ext = "." + context_name[j]
+
+  
+				if tiered_masking is not None:
+					outDatFull = apply_tiered_masking(tiered_masking_masks, tiered_masking_classes, outDatFull)
+					outDatFull2 = apply_tiered_masking(tiered_masking_masks, tiered_masking_classes, outDatFull2)
+
  
 				fname = cluster_data[p] + file_ext + ".tif"
 				out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
@@ -271,6 +291,8 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 				out_ds.SetProjection(wkt)
 				if gcpcount > 0:
 					out_ds.SetGCPs(gcp, gcpproj)
+				if outDatFull is None:
+					continue
 				out_ds.GetRasterBand(1).WriteArray(outDatFull)
 				out_ds.FlushCache()
 				out_ds = None
@@ -334,6 +356,8 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 					cm2 = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
 					pprint(cm)
 					pprint(cm2) 
+              
+
 
 		if create_separate:
 			for i in range(len(classes)):
@@ -382,7 +406,7 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
  
 
 
-def generate_separate_from_full(gtiff_data, apply_context, context_clusters, context_name, create_separate=True, generate_union=False, cluster_dependencies={}, background_class = 0):
+def generate_separate_from_full(gtiff_data, apply_context, context_clusters, context_name, create_separate=True, generate_union=False, cluster_dependencies={}, background_class = 0, tiered_masking = None):
         outUnionFull = None
         combine_classes = False
         if not isinstance(context_name, list):
@@ -392,6 +416,13 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
                 outUnion = None
                 print(gtiff_data[p])
 
+                tiered_masking_masks = None
+                tiered_masking_classes = None
+                if tiered_masking is not None:
+                    tiered_masking_masks = tiered_masking["masks"][p]
+                    tiered_masking_classes = tiered_masking["tiered_classes"][p]
+
+ 
                 dat = gdal.Open(gtiff_data[p])
                 imgData = dat.ReadAsArray().astype(np.float32)
                 if len(imgData.shape) > 2:
@@ -442,6 +473,10 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
                                 if generate_union > 0:
                                     outUnion[ind] = 1
  
+ 
+                            if tiered_masking is not None:
+                                    outDatFull = apply_tiered_masking(tiered_masking_masks, tiered_masking_classes, outDatFull)
+                                    outDatFull2 = apply_tiered_masking(tiered_masking_masks, tiered_masking_classes, outDatFull2)
                             if not combine_classes:
                                 inds = np.where((outDatFull < 0) & (imgData >= 0))
                                 outDatFull[inds] = background_class
@@ -459,6 +494,7 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
                                 out_ds.FlushCache()
                                 out_ds = None
                         
+                                print(os.path.splitext(gtiff_data[p])[0] + file_ext + ".FullColor.tif")
                                 fname = os.path.splitext(gtiff_data[p])[0] + file_ext + ".FullColor.tif"
                                 out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
                                 out_ds.SetGeoTransform(geoTransform)
@@ -574,6 +610,31 @@ def generate_separate_from_full(gtiff_data, apply_context, context_clusters, con
 
 
 
+def apply_tiered_masking(masks, tiered_classes, dbnDat):
+    
+    final_masked_arr = None
+
+    for i in range(len(masks)):
+        current_mask = gdal.Open(masks[i]).ReadAsArray()
+        print(dbnDat.shape, current_mask.shape)
+        if current_mask.shape == dbnDat.shape:
+            print("WARNING: Array and tiered mask  do not have the same shape")
+        mask_classes = tiered_classes[i]
+        tmp = np.zeros(dbnDat.shape, dtype = dbnDat.dtype) -1
+        for clss in mask_classes:
+            inds = np.where(current_mask == clss)
+            tmp[inds] = dbnDat[inds]
+        if final_masked_arr is not None:
+            inds = np.where(final_masked_arr <= 0.0)
+            tmp[inds] = -1
+        final_masked_arr = tmp
+        
+    return final_masked_arr
+
+        
+
+
+
 def apply_dependencies(clust_deps, inds, dbnDat, window = 20): #TODO configurable
 
     final_inds_y = []
@@ -619,6 +680,11 @@ def main(yml_fpath):
     gen_from_gtiffs = yml_conf["gen_from_geotiffs"]
 
     clust_dep = {}
+
+    tiered_masking = None
+    if "tiered_masking"  in yml_conf["context"]:
+        tiered_masking = yml_conf["context"]["tiered_masking"]
+
     if "cluster_dependencies" in yml_conf["context"]:
         clust_dep = yml_conf["context"]["cluster_dependencies"]
 
@@ -630,17 +696,17 @@ def main(yml_fpath):
         if gen_from_gtiffs:
             generate_separate_from_full(gtiff_data = cluster_data, apply_context = apply_context,
                 context_clusters = context_clusters, context_name = context_name, create_separate=create_separate, \
-                generate_union=generate_union, cluster_dependencies=clust_dep, background_class = background_class)
+                generate_union=generate_union, cluster_dependencies=clust_dep, background_class = background_class, tiered_masking = tiered_masking)
         else: 
             generate_cluster_gtiffs(data_reader = reader, data_reader_kwargs = data_reader_kwargs, subset_inds = subset_inds,
                 cluster_data = cluster_data, gtiff_data = gtiff_data, apply_context = apply_context,
                 context_clusters = context_clusters, context_name = context_name, compare = compare, 
-                    create_separate = create_separate, generate_union=generate_union, cluster_dependencies=clust_dep, background_class = background_class)
+                    create_separate = create_separate, generate_union=generate_union, cluster_dependencies=clust_dep, background_class = background_class, tiered_masking = tiered_masking)
     else:
         generate_cluster_masks_no_geo(data_reader = reader, data_reader_kwargs = data_reader_kwargs, subset_inds = subset_inds,
                 cluster_data = cluster_data, apply_context = apply_context, context_clusters = context_clusters, 
                 context_name = context_name, compare = compare, create_separate = create_separate, generate_union=generate_union, \
-                cluster_dependencies=clust_dep, background_class = background_class)
+                cluster_dependencies=clust_dep, background_class = background_class, tiered_masking = tiered_masking)
 
 if __name__ == '__main__':
 

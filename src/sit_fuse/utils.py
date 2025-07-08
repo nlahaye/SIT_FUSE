@@ -422,8 +422,14 @@ def read_viirs_oc(filename, **kwargs):
         vrs = vrs2
 
     data1 = []
+<<<<<<< HEAD
     kwrg = {}
     allow_nrt = kwargs.get("nrt", False)
+=======
+    for i in range(len(vrs)):
+        if 'JPSS' in filename:
+            vrs = vrs2
+>>>>>>> 5a49236b88e17bf2aeb398519ba5e45dbd97a7a7
 
     for i in range(len(vrs)):
         base = filename + vrs[i] + ".4km"
@@ -499,6 +505,7 @@ def read_oc_geo(filename, **kwargs):
 
     vrs = ["lat", "lon"]
     if "PACE" not in filename:
+<<<<<<< HEAD
         stem = "RRS.Rrs_445" if "JPSS" in filename else "RRS.Rrs_443"
         base = f"{filename}{stem}.4km"
     else:  # PACE has its own naming convention
@@ -509,6 +516,17 @@ def read_oc_geo(filename, **kwargs):
         flename = base + ".NRT.nc"
 
     f = Dataset(flename)
+=======
+        if "JPSS" not in filename:
+            f = Dataset(filename + "RRS.Rrs_443.4km.nc")
+        else:
+            f = Dataset(filename + "RRS.Rrs_445.4km.nc")
+    else:
+        if 'nrt'  in kwargs and kwargs['nrt']:
+            f = Dataset(filename + "RRS.V3_0.Rrs.4km.NRT.nc")
+        else:
+            f = Dataset(filename + "RRS.V3_0.Rrs.4km.nc")
+>>>>>>> 5a49236b88e17bf2aeb398519ba5e45dbd97a7a7
     f.set_auto_maskandscale(False)
     data1 = []
     for i in range(len(vrs)):
@@ -1156,6 +1174,29 @@ def read_gtiff_generic(flename, **kwargs):
 	dat = gdal.Open(flename, gdal.GA_ReadOnly).ReadAsArray()
 	print(dat.shape)
 	dat[np.where(dat.max() <= 0.0)] = -9999.0
+
+	tmp1 = None
+	tmp2 = None
+	if "mask_oceans" in kwargs:
+		latlon = read_gtiff_generic_geo(flename, **kwargs)
+		land_temp = ocean_basins_50.mask(latlon[1], latlon[1])
+		land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
+		tmp1 = land_temp.isnull().to_numpy().astype(np.bool_)
+
+		final_mask = None
+		if tmp1 is not None and tmp2 is not None:
+			final_mask = xr.apply_ufunc(np.logical_and, tmp1, tmp2, vectorize=True, dask="parallelized",\
+				input_core_dims=[[],[]], output_core_dims=[[],[]])
+		elif tmp1 is not None:
+			final_mask = tmp1
+		elif tmp2 is not None:
+			final_mask = tmp2
+
+		if final_mask is not None:
+			print(final_mask)
+			dat[:,final_mask] = -9999.0
+ 
+
 	if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
 		if len(dat.shape) == 3:
 			dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]

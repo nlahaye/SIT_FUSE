@@ -20,11 +20,12 @@ import argparse
 import zarr
 import shutil
 import os
+import sys
 import datetime
 import copy
 import dbfread
 import pandas as pd
-import pickle
+import joblib
 from osgeo import gdal
 
 from sit_fuse.utils import numpy_to_torch, read_yaml, get_read_func
@@ -178,8 +179,10 @@ def read_label_counts_pkl(pkl_list):
     new_data_label_counts = {}
     init_data_label_counts = {}
 
+    print(pkl_list.keys())
+    #sys.exit(0)
     for i in pkl_list.keys():
-        if i == 1: 
+        if i < 1: 
             continue
         init_data_label_counts[i] = {'total' : 0} 
 
@@ -240,6 +243,7 @@ def read_label_counts_dbfs(dbf_list):
             for record in itr:
                 if isinstance(record, tuple):
                     record = record[1]
+             
                 for key in record.keys():
                     try:
                         label = float(key)    
@@ -284,7 +288,7 @@ def run_compare_dbf(dbf_list, percent_threshold):
     if '.pkl' in dbf_list[0][0]:
         pkl_list = None
         with open(dbf_list[0][0], 'rb') as handle:
-            pkl_list = pickle.load(handle)
+            pkl_list = joblib.load(handle)
         new_data_label_counts, init_data_label_counts = read_label_counts_pkl(pkl_list)
     else:
         new_data_label_counts, init_data_label_counts = read_label_counts_dbfs(dbf_list)
@@ -319,6 +323,7 @@ def run_compare_dbf(dbf_list, percent_threshold):
     pprint(new_data_label_percentage)
 
 
+    kys = []
 
     assignment = []
     uncertain = []
@@ -340,14 +345,16 @@ def run_compare_dbf(dbf_list, percent_threshold):
         print(percentage, index)
         if percentage >= percent_threshold:
             assignment[index].append(key)
+            kys.append(assign)
         else:
             assignment[-1].append(key)
             tmp = list(new_data_label_percentage[key].items())
             tmp.insert(0, key)
             uncertain.append(tmp)
 
+    print("KYS", kys)
     print("ASSIGNMENT")
-    print(assignment)
+    print(sorted(assignment))
 
     pprint(uncertain)
 

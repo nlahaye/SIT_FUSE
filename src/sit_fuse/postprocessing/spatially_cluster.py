@@ -6,7 +6,7 @@ This software may be subject to U.S. export control laws. By accepting this soft
 applicable U.S. export laws and regulations. User has the responsibility to obtain export licenses, or other export authority as may be 
 required before exporting such information to foreign countries or providing access to foreign persons.
 """
-
+from scipy.spatial.distance import pdist, squareform
 from joblib import Parallel, delayed
 from tqdm_joblib import tqdm_joblib
 import torch
@@ -60,23 +60,67 @@ def convolutional_sliced_wasserstein(X, Y, conv_net, num_projections=50):
         X_features = conv_net(X) #.detach().numpy()
         Y_features = conv_net(Y) #.detach().numpy()
 
-    # Flatten the feature maps
-    X_features_flat = X_features.reshape(X_features.shape[0], -1)
-    Y_features_flat = Y_features.reshape(Y_features.shape[0], -1)
+        print(X_features.shape, Y_features.shape)
 
-    C1 = torch.cdist(X_features_flat, X_features_flat)
-    C2 = torch.cdist(Y_features_flat, Y_features_flat)
+        X_features = torch.squeeze(torch.nn.functional.interpolate(
+            torch.unsqueeze(X_features,0),
+            size=(min(X_features.shape[1:]), min(X_features.shape[1:])),
+            mode="bilinear",
+            align_corners=False,
+        ))  # Resize to match labels size
+
+        Y_features = torch.squeeze(torch.nn.functional.interpolate(
+            torch.unsqueeze(Y_features, 0),
+            size=(min(Y_features.shape[1:]), min(Y_features.shape[1:])),
+            mode="bilinear",
+            align_corners=False,
+        ))  # Resize to match labels size
+
+    # Flatten the feature maps
+    ##X_features_flat = X_features.reshape(X_features.shape[0], -1).ravel()
+    ##Y_features_flat = Y_features.reshape(Y_features.shape[0], -1).ravel()
+
+    print(X_features.shape, Y_features.shape)
+    ind1 = np.indices(X_features.shape, dtype=np.int32)
+    ind2 =  np.indices(Y_features.shape, dtype=np.int32)
+    print(ind1.shape, ind2.shape)
+
+    C1 = torch.from_numpy(np.array(squareform(pdist(ind1.transpose(1,2,0).reshape(-1,2), 'minkowski', p=2))))
+    C2 = torch.from_numpy(np.array(squareform(pdist(ind2.transpose(1,2,0).reshape(-1,2), 'minkowski', p=2))))
+
+
+    #C1 = torch.squeeze(torch.pdist(X_features, 2)) ##.ravel()
+    #C2 = torch.squeeze(torch.pdist(Y_features, 2)) ##.ravel()
  
-    C1 /= C1.max()
-    C2 /= C2.max()
+    print(X_features.shape, Y_features.shape, C1.shape, C2.shape)
+
+    M = torch.zeros((C1.shape[0], C2.shape[0]), dtype=torch.float16)
+
+    alpha = 1e-3
+
     nx = ot.backend.get_backend(C1, C2)
-    p = ot.unif(X_features_flat.shape[0], type_as=C1)
-    q = ot.unif(Y_features_flat.shape[0], type_as=C1)
+    #print(p.shape, q.shape, X_features_flat.shape, Y_features_flat.shape, X_features.shape, Y_features.shape, X.shape, Y.shape)
+    X_features = X_features.ravel()
+    Y_features = Y_features.ravel()
+
+    print(X_features.shape, Y_features.shape, C1.shape, C2.shape, M.shape)
+    distance = ot.fused_gromov_wasserstein2(M, C1, C2, X_features,  Y_features, loss_fun="kl_loss", alpha=alpha, verbose=True, log=False)
+
+
+    #C1 /= C1.max()
+    #C2 /= C2.max()
+
+    #indices = np.indices(X_features_flat.shape).transpose(1,0).reshape(-1,2).astype(np.int32)
+    #C1 = np.array(squareform(pdist(indices.reshape(-1,2), 'minkowski', p=2)))
+ 
+    #indices = np.indices(Y_features_flat.shape).transpose(1,0).reshape(-1,2).astype(np.int32)
+    #C2 = np.array(squareform(pdist(indices.reshape(-1,2), 'minkowski', p=2)))
+
 
     # Conditional Gradient algorithm
-    gw0, log0 = ot.gromov.gromov_wasserstein(
-        C1, C2, p, q, "square_loss", verbose=False, log=True
-    )
+    ##gw0, log0 = ot.gromov.gromov_wasserstein(
+    ##    C1, C2, X_features_flat, Y_features_flat, "square_loss", verbose=False, log=True
+    ##)
  
     ## Generate random projections
     #projections = np.random.randn(num_projections, X_features_flat.shape[1])
@@ -91,13 +135,16 @@ def convolutional_sliced_wasserstein(X, Y, conv_net, num_projections=50):
     #sw_distances = [ot.wasserstein_1d(np.sort(X_projected[:, i]), np.sort(Y_projected[:, i])) for i in range(num_projections)]
     #csw_distance = np.mean(sw_distances)
 
-    return log0["gw_dist"] #csw_distance
+    return distance
 
 def load_image(fname):
     dat = gdal.Open(fname)
     imgData = dat.ReadAsArray()
     arr = imgData
     arr_tensor = arr
+
+    if arr_tensor.shape[0] > arr_tensor.shape[1]:
+        arr_tensor = arr_tensor.transpose(1,0) 
 
     return arr_tensor
 
@@ -115,7 +162,15 @@ def calc_swd(data_fnames, i, batch_size = 1000, im_resize = 128):
     b = torch.ones(batch_size)/100
     filter_size=3
     num_filters=16
-    conv_layer = RandomConv2d(1, num_filters, filter_size).cuda() 
+   
+    dilation = (2,3)
+    stride = (2,3)
+
+    conv_layer = torch.nn.Sequential(RandomConv2d(1, num_filters, filter_size), 
+                    RandomConv2d(num_filters, num_filters*2, 5, dilation=dilation, stride=stride), 
+                    RandomConv2d(num_filters*2, num_filters*4, 5, dilation=stride, stride=stride),
+                    RandomConv2d(num_filters*4, num_filters*4, 5, stride=stride),
+                    RandomConv2d(num_filters*4, 1, 1)).cuda()
  
     for j in range(i, len(data_fnames), batch_size):
         batch_tmp = []
