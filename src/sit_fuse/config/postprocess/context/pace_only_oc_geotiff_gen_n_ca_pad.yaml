@@ -877,7 +877,7 @@ context:
 
 
 
- name: "karenia_brevis_bloom" #i.e. smoke
+ name: "total_phytoplankton" #i.e. smoke
  compare_truth: false
  background_class: 1 
  generate_union: false

@@ -4,7 +4,7 @@ input_paths: ["/data/nlahaye/output/Learnergy/No_Data/",
               "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/PACE_S_CA/"]
 
  
-fname_str: "karenia_brevis_bloom"
+fname_str: "total_phytoplankton"
 out_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/MERGED_HAB/PACE/"
 num_classes: 9
 re_index: 1
