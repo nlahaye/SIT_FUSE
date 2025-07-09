@@ -1403,7 +1403,7 @@ def insitu_hab_to_tif(filename, **kwargs):
     else:
         insitu_df = pd.read_csv(filename)
     # Format Datetime Stamp
-    insitu_df['Datetime'] = pd.to_datetime(insitu_df['time'])
+    insitu_df['Datetime'] = pd.to_datetime(insitu_df['Sample Date'])
     insitu_df.set_index('Datetime')
 
     # Shorten Karenia Column Name
