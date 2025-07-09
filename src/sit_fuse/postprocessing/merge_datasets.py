@@ -19,21 +19,11 @@ import re
 import datetime
 from pprint import pprint
 
-DATE_RE = r".*(\d{8}).*"
-    # ".*(\d{8}).*"
+DATE_RE = ".*(\d{8}).*"
 
 
 
-fname_res = [
-    r"(sif_finalday_\d+).*karenia_brevis_bloom.tif",
-    r".*(\d{8}).*karenia_brevis_bloom.tif",
-    r".*(\d{8}).*no_heir.*karenia_brevis_bloom.tif",
-    r".*(\d{8}).*pseudo_nitzschia_seriata_bloom.tif",
-    r".*(\d{8}).*pseudo_nitzschia_delicatissima_bloom.tif",
-    r".*(\d{8}).*alexandrium_bloom.tif"
-]
-
-    # ["(sif_finalday_\d+).*karenia_brevis_bloom.tif", ".*(\d{8}).*karenia_brevis_bloom.tif", ".*(\d{8}).*no_heir.*karenia_brevis_bloom.tif", ".*(\d{8}).*pseudo_nitzschia_seriata_bloom.tif", ".*(\d{8}).*pseudo_nitzschia_delicatissima_bloom.tif", ".*(\d{8}).*alexandrium_bloom.tif"]
+fname_res = ["(sif_finalday_\d+).*karenia_brevis_bloom.tif", ".*(\d{8}).*karenia_brevis_bloom.tif", ".*(\d{8}).*no_heir.*karenia_brevis_bloom.tif", ".*(\d{8}).*pseudo_nitzschia_seriata_bloom.tif", ".*(\d{8}).*pseudo_nitzschia_delicatissima_bloom.tif", ".*(\d{8}).*alexandrium_bloom.tif"]
  
 def merge_datasets(paths, fname_str, out_dir, re_index = 0, base_index = 0): 
     for root, dirs, files in os.walk(paths[base_index]):
