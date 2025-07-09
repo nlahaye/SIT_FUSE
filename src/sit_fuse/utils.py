@@ -1155,40 +1155,39 @@ def read_burn_severity_stacks(flename, **kwargs):
 
 
 #TODO config for AVIRIS - scale 0.0001 valid_min = 0 and Fill = -9999
-def read_gtiff_generic(flename, **kwargs): 
-	dat = gdal.Open(flename, gdal.GA_ReadOnly).ReadAsArray()
-	print(dat.shape)
-	dat[np.where(dat.max() <= 0.0)] = -9999.0
+def read_gtiff_generic(flename, **kwargs):
+    dat = gdal.Open(flename, gdal.GA_ReadOnly).ReadAsArray()
+    print(dat.shape)
+    dat[np.where(dat.max() <= 0.0)] = -9999.0
 
-	tmp1 = None
-	tmp2 = None
-	if "mask_oceans" in kwargs:
-		latlon = read_gtiff_generic_geo(flename, **kwargs)
-		land_temp = ocean_basins_50.mask(latlon[1], latlon[1])
-		land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
-		tmp1 = land_temp.isnull().to_numpy().astype(np.bool_)
+    tmp1 = None
+    tmp2 = None  # TODO add in generic masking abilities
+    if "mask_oceans" in kwargs:
 
-		final_mask = None
-		if tmp1 is not None and tmp2 is not None:
-			final_mask = xr.apply_ufunc(np.logical_and, tmp1, tmp2, vectorize=True, dask="parallelized",\
-				input_core_dims=[[],[]], output_core_dims=[[],[]])
-		elif tmp1 is not None:
-			final_mask = tmp1
-		elif tmp2 is not None:
-			final_mask = tmp2
+        latlon = read_gtiff_generic_geo(flename, **kwargs)
+        land_temp = ocean_basins_50.mask(latlon[:, :, 1], latlon[:, :, 0])
+        land_temp = land_temp.rename({'lon': 'x', 'lat': 'y'})
+        tmp1 = land_temp.isnull().to_numpy().astype(np.bool_)
 
-		if final_mask is not None:
-			print(final_mask)
-			dat[:,final_mask] = -9999.0
- 
+        final_mask = None
+        if tmp1 is not None and tmp2 is not None:
+            final_mask = xr.apply_ufunc(np.logical_and, tmp1, tmp2, vectorize=True, dask="parallelized", \
+                                        input_core_dims=[[], []], output_core_dims=[[], []])
+        elif tmp1 is not None:
+            final_mask = tmp1
+        elif tmp2 is not None:
+            final_mask = tmp2
 
-	if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
-		if len(dat.shape) == 3:
-			dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
-		else:
-			dat = dat[kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
-	return dat
+        if final_mask is not None:
+            print(final_mask)
+            dat[:, final_mask] = -9999.0
 
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+        if len(dat.shape) == 3:
+            dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+        else:
+            dat = dat[kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+    return dat
 
 
 #TODO generalize pieces for other tasks
