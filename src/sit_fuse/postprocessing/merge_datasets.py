@@ -19,7 +19,8 @@ import re
 import datetime
 from pprint import pprint
 
-DATE_RE = ".*(\d{8}).*"
+DATE_RE = r".*(\d{8}).*"
+    # ".*(\d{8}).*"
 
 
 
