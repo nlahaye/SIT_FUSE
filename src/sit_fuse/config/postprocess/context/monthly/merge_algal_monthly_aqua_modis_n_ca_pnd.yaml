@@ -5,7 +5,7 @@ input_paths: ["/data/nlahaye/output/Learnergy/No_Data/",
 
  
 fname_str: "pseudo_nitzschia_delicatissima_bloom"
-out_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/MERGED_HAB/AQUA_MODIS/"
+out_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/MERGED_HAB/AQUA_MODIS/MONTHLY/"
 num_classes: 9
 re_index: 4
 
