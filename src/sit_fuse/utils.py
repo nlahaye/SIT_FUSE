@@ -1209,7 +1209,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
     else:
         print(insitu_df['time'])
         # Format Datetime Stamp
-        insitu_df['Datetime'] = pd.to_datetime(insitu_df['time'])
+        insitu_df['Datetime'] = pd.to_datetime(insitu_df['time'], utc=True)
         insitu_df.set_index('Datetime')
          
         insitu_df.rename(columns={"latitude": "Latitude"}, inplace=True)
