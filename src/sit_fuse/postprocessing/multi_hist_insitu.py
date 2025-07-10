@@ -49,8 +49,8 @@ def main(yml_fpath):
     #Translate config to dictionary 
     yml_conf = read_yaml(yml_fpath)
     #Run 
-    start_date = datetime.datetime.strptime( yml_conf['start_date'], '%Y-%m-%d').replace(tzinfo=datetime.timezone.utc)#.tz_localize(None)
-    end_date = datetime.datetime.strptime( yml_conf['end_date'], '%Y-%m-%d').replace(tzinfo=datetime.timezone.utc) #.tz_localize(None)
+    start_date = datetime.datetime.strptime( yml_conf['start_date'], '%Y-%m-%d')#.replace(tzinfo=datetime.timezone.utc)#.tz_localize(None)
+    end_date = datetime.datetime.strptime( yml_conf['end_date'], '%Y-%m-%d')#.replace(tzinfo=datetime.timezone.utc) #.tz_localize(None)
 
     #start_date = pytz.utc.localize(start_date)
     #end_date = pytz.utc.localize(end_date)
