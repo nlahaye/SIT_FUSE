@@ -682,6 +682,7 @@ def main(yml_fpath):
     clust_dep = {}
 
     tiered_masking = None
+    background_class = None
     if "tiered_masking"  in yml_conf["context"]:
         tiered_masking = yml_conf["context"]["tiered_masking"]
 
@@ -706,8 +707,8 @@ def main(yml_fpath):
         generate_cluster_masks_no_geo(data_reader = reader, data_reader_kwargs = data_reader_kwargs, subset_inds = subset_inds,
                 cluster_data = cluster_data, apply_context = apply_context, context_clusters = context_clusters, 
                 context_name = context_name, compare = compare, create_separate = create_separate, generate_union=generate_union, \
-                cluster_dependencies=clust_dep, tiered_masking = tiered_masking)
-#background_class = background_class
+                cluster_dependencies=clust_dep, background_class = background_class, tiered_masking = tiered_masking)
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
