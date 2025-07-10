@@ -7,7 +7,7 @@ input_paths: ["/data/nlahaye/output/Learnergy/No_Data/",
 fname_str: "total_phytoplankton"
 out_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/MERGED_HAB/JPSS1_VIIRS/"
 num_classes: 9
-re_index: 1
+re_index: 6
 
 gen_daily: false
 gen_monthly: true
