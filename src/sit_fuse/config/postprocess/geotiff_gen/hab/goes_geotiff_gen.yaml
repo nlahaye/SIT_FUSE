@@ -6,7 +6,7 @@ data:
  reader_kwargs:
    no_arg: "no_arg" 
  subset_inds: []
- create_separate: True
+ create_separate: False
   
  gtiff_data: [
 "/mnt/data/GOES_18_CA_COASTAL_FINAL/OR_ABI-L1b-RadC-M6C01_G18_s20250061601170_e20250061603543_c20250061603589.tif",
