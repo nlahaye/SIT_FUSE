@@ -1242,8 +1242,10 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
                 file_ext = file_ext  + "pseudo_nitzschia_seriata_bloom.tif"
             elif "delicatissima" in input_file_type:
                 file_ext = file_ext  + "pseudo_nitzschia_delicatissima_bloom.tif"
+            elif "karenia_brevis" in input_file_type: # CAN CHANGE BACK
+                file_ext = file_ext + "karenia_brevis_bloom.tif"
             else:
-                file_ext = file_ext  + "karenia_brevis_bloom.tif"
+                file_ext = file_ext + "total_phytoplankton"
             #clust_fname = os.path.join(os.path.join(clusters_dir, "AQUA_MODIS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m." + file_ext))
             clust_fname = os.path.join(os.path.join(clusters_dir, pd.to_datetime(str(date)).strftime("%Y%m%d") +  file_ext))
         elif "alexandrium" in input_file_type:
