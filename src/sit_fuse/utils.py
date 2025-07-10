@@ -1211,7 +1211,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         # Format Datetime Stamp
         insitu_df['Datetime'] = pd.to_datetime(insitu_df['time'], utc=True)
         insitu_df.set_index('Datetime')
-         
+        print(insitu_df['Datetime'])
         insitu_df.rename(columns={"latitude": "Latitude"}, inplace=True)
         insitu_df.rename(columns={"longitude": "Longitude"}, inplace=True)
     
@@ -1277,7 +1277,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
                 clust_fname = os.path.join(os.path.join(clusters_dir, "PACE_OCI." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext))
         ind = ind + 1
 
-        print(clust_fname)
+        #print(clust_fname)
 
         dat_train = False
         dat_test = False
