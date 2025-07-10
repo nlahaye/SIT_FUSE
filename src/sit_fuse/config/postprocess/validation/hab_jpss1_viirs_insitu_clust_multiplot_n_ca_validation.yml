@@ -1,6 +1,6 @@
 xl_fname: '/mnt/data/la_hab_data/combined.csv'
 
-radius_degrees: [0.2]  #0.0225
+radius_degrees: [0.09]  #0.0225
 #0.045 degrees = 5km
 global_max: 10000000
 ranges: [0,1000,10000,100000,1000000,10000000, 100000000]

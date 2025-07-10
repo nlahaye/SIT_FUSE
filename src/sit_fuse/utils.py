@@ -1320,7 +1320,30 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         count = -1
         hist_data = []
         #print("PRE-ITER", len(gdf_insitu))
+
+        ## STASYA DEBUG
+        if len(gdf) == 0:
+            print(f"WARNING: Cluster raster {clust_fname} has no valid pixels.")
+        if len(gdf_insitu) == 0:
+            print(f"WARNING: No in-situ data for date {date}.")
+            ## STASYA DEBUG
+
         for index, poi in gdf_insitu.iterrows():
+
+            ## STASYA DEBUG
+            print(f"\nChecking in-situ point on date {date}: {poi.geometry}")
+            match_found = False
+            match_distances = []
+            for index2, poi2 in gdf.iterrows():
+                d = poi2.geometry.distance(poi.geometry)
+                match_distances.append(d)
+                if d < radius_degrees:
+                    match_found = True
+                    break
+            print(f"  Closest distance: {min(match_distances):.6f} degrees")
+            print(f"  Any match within {radius_degrees} degrees? {match_found}")
+            ## STASYA DEBUG
+
             count = count + 1
             neighbours = []
             for index2, poi2 in gdf.iterrows():
