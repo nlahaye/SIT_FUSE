@@ -11,5 +11,5 @@ start_date: "2024-03-05"
 end_date: "2025-06-04"
 clusters: 6001
  
-clusters_dir: '/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/PACE_S_CA/'
+clusters_dir: '/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/MERGED_HAB/PACE/'
 
