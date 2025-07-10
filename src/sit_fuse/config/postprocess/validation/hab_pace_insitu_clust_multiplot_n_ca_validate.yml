@@ -7,9 +7,9 @@ ranges: [0,1000,10000,100000,1000000,10000000, 100000000]
 input_file_type: 'daily'
 
 
-start_date: "2024-03-01"
-end_date: "2025-03-31"
+start_date: "2024-03-05"
+end_date: "2025-06-11"
 clusters: 6001
  
-clusters_dir: '/data/nlahaye/output/MERGED_HAB_20250225_S_CA/PACE/'
+clusters_dir: '/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/MERGED_HAB/PACE/'
 
