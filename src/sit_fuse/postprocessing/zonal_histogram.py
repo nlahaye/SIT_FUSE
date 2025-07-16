@@ -185,22 +185,11 @@ def main(yml_fpath):
     out_dir = yml_conf["output"]["out_dir"]
     out_tag = yml_conf["output"]["class_name"]
 
-    is_nested = isinstance(label_gtiffs[0], list)
-    if not is_nested:
-        label_gtiffs = [label_gtiffs]
-
-    if isinstance(out_tag, str):
-        out_tag = [out_tag]
-
-    if isinstance(label_gtiffs[0], str):
-        label_gtiffs = [label_gtiffs]
-        out_tag = [out_tag[0]]
-
+    zonal_histogram = None
+    poly_knns = []
     print(len(clust_gtiffs), len(label_gtiffs[0]))
     for j in range(len(label_gtiffs)):
-        zonal_histogram = None
-        poly_knns = []
-        for i in range(len(label_gtiffs[j])):
+        for i in range(len(label_gtiffs[0])):
             zonal_histogram, poly_knns = gen_zonal_histogram(label_gtiffs[j][i], clust_gtiffs[i], zonal_histogram, poly_knns, zone_ind=j+1)
 
         print(len(zonal_histogram.keys()), len(zonal_histogram[list(zonal_histogram.keys())[0]].keys()))

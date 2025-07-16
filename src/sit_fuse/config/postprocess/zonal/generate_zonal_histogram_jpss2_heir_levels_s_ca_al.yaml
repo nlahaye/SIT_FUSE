@@ -452,7 +452,7 @@ data:
 ]
 
 
- label_gtiffs: [
+ label_gtiffs: [[
 "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240305.L3m.DAY.no_heir.alexandrium_bloom.tif",
 "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240307.L3m.DAY.no_heir.alexandrium_bloom.tif",
 "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20240308.L3m.DAY.no_heir.alexandrium_bloom.tif",
@@ -899,11 +899,11 @@ data:
 "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20250606.L3m.DAY.no_heir.alexandrium_bloom.tif",
 "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20250607.L3m.DAY.no_heir.alexandrium_bloom.tif",
 "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20250608.L3m.DAY.no_heir.alexandrium_bloom.tif",
-"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20250611.L3m.DAY.no_heir.alexandrium_bloom.tif",
+"/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS.20250611.L3m.DAY.no_heir.alexandrium_bloom.tif",]
 ]
 
 
 output:
  out_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/"
- class_name: "tiered_hab_al"
+ class_name: ["tiered_hab_al"]
 
