@@ -190,7 +190,7 @@ def main(yml_fpath):
     print(len(clust_gtiffs), len(label_gtiffs[0]))
     for j in range(len(label_gtiffs)):
         for i in range(len(label_gtiffs[0])):
-            zonal_histogram, poly_knns = gen_zonal_histogram(label_gtiffs[j], clust_gtiffs[i], zonal_histogram, poly_knns, zone_ind=j+1)
+            zonal_histogram, poly_knns = gen_zonal_histogram(label_gtiffs[i], clust_gtiffs[i], zonal_histogram, poly_knns, zone_ind=j+1)
 
         print(len(zonal_histogram.keys()), len(zonal_histogram[list(zonal_histogram.keys())[0]].keys()))
 

@@ -905,5 +905,5 @@ data:
 
 output:
  out_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/"
- class_name: "tiered_hab"
+ class_name: ["tiered_hab"]
 
