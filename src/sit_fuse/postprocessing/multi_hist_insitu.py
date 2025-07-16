@@ -45,7 +45,9 @@ def build_final_list(lookup, final_lst):
     
 
 def main(yml_fpath):
-
+    yaml_base = os.path.splitext(os.path.basename(yml_fpath))[0]
+    output_dir = os.path.join("HISTOGRAMS", yaml_base)
+    os.makedirs(output_dir, exist_ok=True)
     #Translate config to dictionary 
     yml_conf = read_yaml(yml_fpath)
     #Run 
@@ -74,7 +76,7 @@ def main(yml_fpath):
         d_lower = (i > 0)
         labels.append(insitu_hab_to_multi_hist(yml_conf['xl_fname'], start_date, end_date,
     		yml_conf['clusters_dir'], yml_conf['clusters'], yml_conf['radius_degrees'][i],
-                    yml_conf['ranges'], yml_conf['global_max'], yml_conf['input_file_type'], karenia, discard_lower = d_lower, use_key = use_key)) #, lookup = lookup))
+                    yml_conf['ranges'], yml_conf['global_max'], yml_conf['input_file_type'], karenia, discard_lower = d_lower, use_key = use_key, output_dir=output_dir)) #, lookup = lookup))
 
         #lookup = build_lookup_dict(labels[-1], lookup)
 

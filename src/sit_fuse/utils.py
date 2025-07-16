@@ -1191,8 +1191,9 @@ def read_gtiff_generic(flename, **kwargs):
 
 
 #TODO generalize pieces for other tasks
-def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n_clusters, radius_degrees, ranges, global_max, input_file_type, karenia, discard_lower=False, use_key='Total_Phytoplankton'): #, lookup = {}):
- 
+def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n_clusters, radius_degrees, ranges, global_max, input_file_type, karenia, discard_lower=False, use_key='Total_Phytoplankton', output_dir="."): #, lookup = {}):
+
+    os.makedirs(output_dir, exist_ok=True)
     print(insitu_fname)
     insitu_df = None
     if 'xlsx' in insitu_fname:
@@ -1393,7 +1394,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         plt.ylim(0, 50)
         plt.bar([k*2 for k in range(len(bins[:-1]))],hist, width=1, linewidth=1, align="center")
         plt.show()
-        plt.savefig("TEST_HIST_" + str(i) + ".png") 
+        plt.savefig(os.path.join(output_dir, "TEST_HIST_" + str(i) + ".png"))
         plt.clf()
     print("HERE FINAL", algal)
     return algal
