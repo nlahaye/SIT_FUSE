@@ -1322,13 +1322,6 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         hist_data = []
         #print("PRE-ITER", len(gdf_insitu))
 
-        ## STASYA DEBUG
-        if len(gdf) == 0:
-            print(f"WARNING: Cluster raster {clust_fname} has no valid pixels.")
-        if len(gdf_insitu) == 0:
-            print(f"WARNING: No in-situ data for date {date}.")
-            ## STASYA DEBUG
-
         for index, poi in gdf_insitu.iterrows():
             count = count + 1
             neighbours = []

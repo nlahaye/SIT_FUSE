@@ -911,7 +911,7 @@ data:
 
 context:
  apply_context: True
- clusters: [[0.027, 0.037, 0.096, 0.163, 0.213, 0.641, 0.791], [], [], [], [], []]
+ clusters: [[0.027, 0.037, 0.096, 0.163, 0.213, 0.641, 0.791], [], [], [], [], []] #why are these the same
  background_class: 1
  name: "alexandrium_bloom" #i.e. smoke
  compare_truth: false
