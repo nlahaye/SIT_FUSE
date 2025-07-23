@@ -8,5 +8,5 @@ clusters_dir: '/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/'
 radius_degrees: [0.09]
 global_max: 10000000
 ranges: [0,1000,10000,100000,1000000,10000000, 100000000]
-input_file_type: 'JPSS2_VIIRS_no_heir'
+input_file_type: ['JPSS2_VIIRS_no_heir']
 
