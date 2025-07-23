@@ -4,10 +4,9 @@ start_date: "2024-03-05"
 end_date: "2025-06-11"
 clusters: 120000
  
-clusters_dir: '/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/'
+clusters_dir: '/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS1_VIIRS/'
 radius_degrees: [0.09]
 global_max: 10000000
 ranges: [0,1000,10000,100000,1000000,10000000, 100000000]
 
-input_file_type: []
-use_keys: [ 'Alexandrium_spp', 'Pseudo_nitzschia_seriata_bloom', 'Pseudo_nitzschia_delicatissima_bloom' ]
+input_file_type: ['JPSS1_VIIRS_no_heir', 'JPSS1_VIIRS_no_heir_al', 'JPSS1_VIIRS_no_heir_pnd', 'JPSS1_VIIRS_no_heir_pns']
