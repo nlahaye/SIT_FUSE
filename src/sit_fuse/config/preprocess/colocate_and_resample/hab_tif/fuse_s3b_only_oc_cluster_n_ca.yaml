@@ -856,6 +856,8 @@ fusion:
  resample_n_procs: 10
  resample_epsilon: 1.6
  use_bilinear: False
+ lon_bounds: [ -128.0, -116.0 ]
+ lat_bounds: [ 30.0, 38.94 ]
 
 
 
