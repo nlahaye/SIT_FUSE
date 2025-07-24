@@ -64,16 +64,16 @@ def main(yml_fpath):
 
     arr_tmp = [[] for x in range(0,(len( yml_conf['ranges'])-1))] 
     labels = []
-    input_file_types = yml_conf['input_file_type']
+    input_file_type = yml_conf['input_file_type']
     raw_use_key = yml_conf['use_key']
+
     # use_key  = 'Total_Phytoplankton'
     # if 'use_key' in yml_conf:
     #     use_key = yml_conf['use_key']
+
     if isinstance(raw_use_key, str):
-        use_keys = [raw_use_key] * len(input_file_types)
+        use_keys = [raw_use_key]
     elif isinstance(raw_use_key, list):
-        if len(raw_use_key) != len(input_file_types):
-            raise ValueError("Length of use_key list must match input_file_type list")
         use_keys = raw_use_key
     else:
         raise TypeError("use_key must be a string or list of strings")
@@ -85,12 +85,11 @@ def main(yml_fpath):
         final_lst.append([])
     for i in range(len(yml_conf['radius_degrees'])):
         d_lower = (i > 0)
-        input_file_types = yml_conf['input_file_type']
 
-        for file, use_key in zip(input_file_types, use_keys):
+        for use_key in use_keys:
             labels.append(insitu_hab_to_multi_hist(yml_conf['xl_fname'], start_date, end_date,
                     yml_conf['clusters_dir'], yml_conf['clusters'], yml_conf['radius_degrees'][i],
-                            yml_conf['ranges'], yml_conf['global_max'], file, karenia, discard_lower = d_lower, use_key = use_key, output_dir=output_dir)) #, lookup = lookup))
+                            yml_conf['ranges'], yml_conf['global_max'], input_file_type, karenia, discard_lower = d_lower, use_key = use_key, output_dir=output_dir)) #, lookup = lookup))
 
         #lookup = build_lookup_dict(labels[-1], lookup)
 
