@@ -1,5 +1,5 @@
 ---
-description: List of valid types for reader and
+description: List of valid types for reader and reader keyword arguments
 ---
 
 # Reader Options
@@ -48,8 +48,28 @@ description: List of valid types for reader and
 * master\_hdf
 * emas\_master\_hdf
 * emas\_master\_hdf\_geo
+* pace\_oc
 
-### Reader keyword arguments
+### Reader keyword arguments:
 
-*
+* no\_arg
+* none
+* start\_lon
+* end\_lon
+* start\_lat
+* end\_lat
+* mask\_shp
+* mask\_oceans
+* fire\_mask
+* bool\_fire
+* grayscale
+* nrt
+* start\_sample
+* end\_sample
+* start\_line
+* end\_line
+* DAPI
+* RIF
+* start\_wl
+* end\_wl
 

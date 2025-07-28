@@ -5,23 +5,11 @@ description: >-
 cover: >-
   ../../../.gitbook/assets/https___cdn.cnn.com_cnnnext_dam_assets_181110074810-15-california-wildfires-1109.jpg
 coverY: 0
-layout:
-  cover:
-    visible: true
-    size: hero
-  title:
-    visible: true
-  description:
-    visible: true
-  tableOfContents:
-    visible: true
-  outline:
-    visible: true
-  pagination:
-    visible: true
 ---
 
-# Data combination, colocation, and resampling
+# Combination, Collocation, and Resampling
+
+<p align="center">These configs are used with <code>colocate_and_resample.py</code></p>
 
 {% content-ref url="config-options/" %}
 [config-options](config-options/)

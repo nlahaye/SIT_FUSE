@@ -1,5 +1,5 @@
 ---
-description: This page describes how to use the Conda virtual environment
+description: How to download the Conda virtual environment
 ---
 
 # Conda Virtual Environment

@@ -1,17 +1,15 @@
 ---
-description: Detailed steps for context assignment of SIT_FUSE output and hand-labeled data
+description: Detailed steps for the context assignment of SIT_FUSE output
 ---
 
 # Post-processing
 
-{% content-ref url="labeling-tutorial/" %}
-[labeling-tutorial](labeling-tutorial/)
+In order to make sense of our trained data, we must assign labels to our output to see how well the model performed. The process is know as context assignment, and differs depending on what data you're working with. Below include examples of the context assignment process for wildfire data and harmful alagal bloom (HAB) data.
+
+{% content-ref url="wildfire-example/" %}
+[wildfire-example](wildfire-example/)
 {% endcontent-ref %}
 
-{% content-ref url="zonal-histogram/" %}
-[zonal-histogram](zonal-histogram/)
-{% endcontent-ref %}
-
-{% content-ref url="context-assignment/" %}
-[context-assignment](context-assignment/)
+{% content-ref url="harmful-algal-bloom-example/" %}
+[harmful-algal-bloom-example](harmful-algal-bloom-example/)
 {% endcontent-ref %}

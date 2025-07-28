@@ -1,8 +1,4 @@
----
-description: Example config files
----
-
-# Example Configs
+# Example Config Files
 
 {% content-ref url="example-dbn-config.md" %}
 [example-dbn-config.md](example-dbn-config.md)
