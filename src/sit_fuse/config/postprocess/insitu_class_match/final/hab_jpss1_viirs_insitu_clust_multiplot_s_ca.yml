@@ -9,5 +9,5 @@ radius_degrees: [0.09]
 global_max: 10000000
 ranges: [0,1000,10000,100000,1000000,10000000, 100000000]
 
-input_file_type: ['JPSS1_VIIRS', 'JPSS1_VIIRS_al', 'JPSS1_VIIRS_pnd', 'JPSS1_VIIRS_pns']
+input_file_type: "JPSS1_VIIRS"
 use_key: ["Total_Phytoplankton", "Alexandrium_spp", "Pseudo_nitzschia_delicatissima_group", "Pseudo_nitzschia_seriata_group"]
