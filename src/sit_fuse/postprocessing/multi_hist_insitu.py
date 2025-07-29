@@ -65,43 +65,42 @@ def main(yml_fpath):
     arr_tmp = [[] for x in range(0,(len( yml_conf['ranges'])-1))] 
     labels = []
     input_file_type = yml_conf['input_file_type']
-    raw_use_key = yml_conf.get('use_key')
+    use_keys  = 'Total_Phytoplankton'
 
-    # use_key  = 'Total_Phytoplankton'
+    if 'use_key' in yml_conf:
+        raw_use_key = yml_conf['use_key']
+
     # if 'use_key' in yml_conf:
     #     use_key = yml_conf['use_key']
 
-    if raw_use_key is None:
-        use_keys = []
-    elif isinstance(raw_use_key, str):
-        use_keys = [raw_use_key]
-    elif isinstance(raw_use_key, list):
-        use_keys = raw_use_key
-    else:
-        raise TypeError("use_key must be a string or list of strings")
+        if isinstance(raw_use_key, str):
+            use_keys = [raw_use_key]
+        elif isinstance(raw_use_key, list):
+            use_keys = raw_use_key
+        else:
+            raise TypeError("use_key must be a string or list of strings")
 
     lookup = {}
     final_lst = []
 
     for i in range(len(yml_conf["ranges"])):
         final_lst.append([])
-    if use_keys:
-        for i in range(len(yml_conf['radius_degrees'])):
-            d_lower = (i > 0)
+    for i in range(len(yml_conf['radius_degrees'])):
+        d_lower = (i > 0)
 
-            for use_key in use_keys:
-                labels.append(insitu_hab_to_multi_hist(yml_conf['xl_fname'], start_date, end_date,
-                        yml_conf['clusters_dir'], yml_conf['clusters'], yml_conf['radius_degrees'][i],
-                                yml_conf['ranges'], yml_conf['global_max'], input_file_type, karenia, discard_lower = d_lower, use_key = use_key, output_dir=output_dir)) #, lookup = lookup))
+        for use_key in use_keys:
+            labels.append(insitu_hab_to_multi_hist(yml_conf['xl_fname'], start_date, end_date,
+                    yml_conf['clusters_dir'], yml_conf['clusters'], yml_conf['radius_degrees'][i],
+                            yml_conf['ranges'], yml_conf['global_max'], input_file_type, karenia, discard_lower = d_lower, use_key = use_key, output_dir=output_dir)) #, lookup = lookup))
 
         #lookup = build_lookup_dict(labels[-1], lookup)
-        arr_tmp = [[] for x in range(0, (len(yml_conf['ranges']) - 1))]
-        arr_init = labels[0]
-    else:
-        arr_init = None
+
+
     #final_lst = build_final_list(lookup, final_lst)
 
 
+    arr_tmp = [[] for x in range(0,(len( yml_conf['ranges'])-1))]
+    arr_init = labels[0]
      
     for n in range(1, len(labels)):
         for i in range(len(arr_init)):
