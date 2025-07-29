@@ -937,10 +937,10 @@ data:
 "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS1_VIIRS_S_CA/JPSS1_VIIRS.20250622.L3m.DAY.",
 "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS1_VIIRS_S_CA/JPSS1_VIIRS.20250623.L3m.DAY.",]
 ]
- name: ["total_phytoplankton", "alexandrium", "pseudo_nitzschia_delicatissima_bloom", "pseudo_nitzschia_seriata_bloom"]
+ name: ["total_phytoplankton", "alexandrium_bloom", "pseudo_nitzschia_delicatissima_bloom", "pseudo_nitzschia_seriata_bloom"]
 
 
 output:
- out_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/"
+ out_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS1_VIIRS_S_CA/"
  class_name: ["tiered_hab", "tiered_hab_al", "tiered_hab_pnd", "tiered_hab_pns"]
 
