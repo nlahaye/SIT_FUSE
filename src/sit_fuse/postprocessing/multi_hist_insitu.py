@@ -65,7 +65,7 @@ def main(yml_fpath):
     arr_tmp = [[] for x in range(0,(len( yml_conf['ranges'])-1))] 
     labels = []
     input_file_type = yml_conf['input_file_type']
-    raw_use_key = yml_conf['use_key']
+    raw_use_key = yml_conf.get('use_key')
 
     # use_key  = 'Total_Phytoplankton'
     # if 'use_key' in yml_conf:
