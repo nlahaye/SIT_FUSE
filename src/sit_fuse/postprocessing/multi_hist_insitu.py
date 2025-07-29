@@ -71,7 +71,9 @@ def main(yml_fpath):
     # if 'use_key' in yml_conf:
     #     use_key = yml_conf['use_key']
 
-    if isinstance(raw_use_key, str):
+    if raw_use_key is None:
+        use_keys = []
+    elif isinstance(raw_use_key, str):
         use_keys = [raw_use_key]
     elif isinstance(raw_use_key, list):
         use_keys = raw_use_key
