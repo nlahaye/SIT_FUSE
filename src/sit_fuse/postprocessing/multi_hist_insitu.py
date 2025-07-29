@@ -85,22 +85,23 @@ def main(yml_fpath):
 
     for i in range(len(yml_conf["ranges"])):
         final_lst.append([])
-    for i in range(len(yml_conf['radius_degrees'])):
-        d_lower = (i > 0)
+    if use_keys:
+        for i in range(len(yml_conf['radius_degrees'])):
+            d_lower = (i > 0)
 
-        for use_key in use_keys:
-            labels.append(insitu_hab_to_multi_hist(yml_conf['xl_fname'], start_date, end_date,
-                    yml_conf['clusters_dir'], yml_conf['clusters'], yml_conf['radius_degrees'][i],
-                            yml_conf['ranges'], yml_conf['global_max'], input_file_type, karenia, discard_lower = d_lower, use_key = use_key, output_dir=output_dir)) #, lookup = lookup))
+            for use_key in use_keys:
+                labels.append(insitu_hab_to_multi_hist(yml_conf['xl_fname'], start_date, end_date,
+                        yml_conf['clusters_dir'], yml_conf['clusters'], yml_conf['radius_degrees'][i],
+                                yml_conf['ranges'], yml_conf['global_max'], input_file_type, karenia, discard_lower = d_lower, use_key = use_key, output_dir=output_dir)) #, lookup = lookup))
 
         #lookup = build_lookup_dict(labels[-1], lookup)
-
-
+        arr_tmp = [[] for x in range(0, (len(yml_conf['ranges']) - 1))]
+        arr_init = labels[0]
+    else:
+        arr_init = None
     #final_lst = build_final_list(lookup, final_lst)
 
 
-    arr_tmp = [[] for x in range(0,(len( yml_conf['ranges'])-1))]
-    arr_init = labels[0]
      
     for n in range(1, len(labels)):
         for i in range(len(arr_init)):
