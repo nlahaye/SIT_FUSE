@@ -65,21 +65,16 @@ def main(yml_fpath):
     arr_tmp = [[] for x in range(0,(len( yml_conf['ranges'])-1))] 
     labels = []
     input_file_type = yml_conf['input_file_type']
-    use_keys  = 'Total_Phytoplankton'
 
     if 'use_key' in yml_conf:
-        raw_use_key = yml_conf['use_key']
-
-    # if 'use_key' in yml_conf:
-    #     use_key = yml_conf['use_key']
-
-        if isinstance(raw_use_key, str):
-            use_keys = [raw_use_key]
-        elif isinstance(raw_use_key, list):
-            use_keys = raw_use_key
+        if isinstance(yml_conf['use_key'], str):
+            use_keys = [yml_conf['use_key']]
+        elif isinstance(yml_conf['use_key'], list):
+            use_keys = yml_conf['use_key']
         else:
             raise TypeError("use_key must be a string or list of strings")
-
+    else:
+        use_keys = ['Total_Phytoplankton']
     lookup = {}
     final_lst = []
 
