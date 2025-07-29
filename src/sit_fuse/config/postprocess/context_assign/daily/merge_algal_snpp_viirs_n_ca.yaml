@@ -6,7 +6,7 @@ input_paths: ["/data/nlahaye/output/Learnergy/No_Data/",
  
  
 fname_str: "DAY.total_phytoplankton.tif"
-out_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/MERGED_HAB/SNPP_VIIRS/"
+out_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/MERGED_HAB/FINAL/SNPP/"
 num_classes: 8
 re_index: 6
 

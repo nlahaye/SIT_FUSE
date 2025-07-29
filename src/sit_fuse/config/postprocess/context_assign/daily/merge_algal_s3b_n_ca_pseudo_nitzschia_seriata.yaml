@@ -6,7 +6,7 @@ input_paths: ["/data/nlahaye/output/Learnergy/No_Data/",
  
  
 fname_str: "DAY.pseudo_nitzschia_seriata_bloom.tif"
-out_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/MERGED_HAB/S3B_OLCI/"
+out_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/MERGED_HAB/FINAL/S3B/"
 num_classes: 9
 re_index: 3
 
