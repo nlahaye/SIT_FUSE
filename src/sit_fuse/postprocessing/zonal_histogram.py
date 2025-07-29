@@ -181,13 +181,12 @@ def main(yml_fpath):
     yml_conf = read_yaml(yml_fpath)
     #Run 
     clust_gtiffs = yml_conf["data"]["clust_gtiffs"]
-    label_prefixes = yml_conf["data"]["label_gtiffs"]
+    label_prefixes = yml_conf["data"]["label_gtiffs"][0]
     bloom_names = yml_conf["data"]["name"]
     out_dir = yml_conf["output"]["out_dir"]
     out_tags = yml_conf["output"]["class_name"]
 
     label_gtiffs = []
-
     for bloom_name in bloom_names:
         full_label_paths = [prefix + bloom_name + ".tif" for prefix in label_prefixes]
         label_gtiffs.append(full_label_paths)
