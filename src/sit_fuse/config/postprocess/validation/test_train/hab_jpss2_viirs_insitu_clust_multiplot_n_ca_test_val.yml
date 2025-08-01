@@ -7,8 +7,8 @@ ranges: [0,1000,10000,100000,1000000,10000000, 100000000]
 input_file_type: 'daily'
 
 # full date
-start_date: "2024-03-05"
-end_date: "2024-10-23"
+start_date: "2024-10-23"
+end_date: "2025-06-04"
 clusters: 6001
 
 clusters_dir: '/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/MERGED_HAB/FINAL/JPSS2/'

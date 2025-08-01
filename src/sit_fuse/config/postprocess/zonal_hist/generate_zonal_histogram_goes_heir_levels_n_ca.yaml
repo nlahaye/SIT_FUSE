@@ -1,0 +1,22 @@
+input_files:
+  [
+    [ "'/Users/stasyaeasley/Desktop/GOES/OR_ABI-L1b-RadC-M6C01_G18_s20250131801181_e20250131803554_c20250131803593.tif'" ],
+    [ "'/Users/stasyaeasley/Desktop/GOES/OR_ABI-L1b-RadC-M6C01_G18_s20250131901181_e20250131903554_c20250131903597.tif'" ],
+    [ "'/Users/stasyaeasley/Desktop/GOES/OR_ABI-L1b-RadC-M6C01_G18_s20250132001182_e20250132003555_c20250132003588.tif'" ],
+    [ "'/Users/stasyaeasley/Desktop/GOES/OR_ABI-L1b-RadC-M6C01_G18_s20250132101182_e20250132103555_c20250132103594.tif'" ],
+    [ "'/Users/stasyaeasley/Desktop/GOES/OR_ABI-L1b-RadC-M6C01_G18_s20250132201182_e20250132203555_c20250132203591.tif'" ],
+    [ "'/Users/stasyaeasley/Desktop/GOES/OR_ABI-L1b-RadC-M6C01_G18_s20250132301182_e20250132303555_c20250132303595.tif'" ]
+  ]
+
+shp_files:
+  [
+    [ '/Users/easley/Desktop/GOES/goes_cloud_mask.shp' ],
+    [ '/Users/easley/Desktop/GOES/goes_cloud_mask_2.shp' ],
+    [ '/Users/easley/Desktop/GOES/goes_cloud_mask_3.shp' ],
+    [ '/Users/easley/Desktop/GOES/goes_cloud_mask_4.shp' ],
+    [ '/Users/easley/Desktop/GOES/goes_cloud_mask_5.shp' ],
+    [ '/Users/easley/Desktop/GOES/goes_cloud_mask_6.shp' ],
+  ]
+
+
+out_file: "GOES_HAB_Cloud_Mask.json"
