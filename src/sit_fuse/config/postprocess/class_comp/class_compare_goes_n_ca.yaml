@@ -1,0 +1,14 @@
+dbf: True
+dbf_percentage_thresh: 0.51
+
+dbf_list: [
+  ["/Users/stasyaeasley/Desktop/GOES/goes_cloud_mask_OUTPUT_0.dbf",
+   "/Users/stasyaeasley/Desktop/GOES/goes_cloud_mask_2_OUTPUT_0.dbf",
+   "/Users/stasyaeasley/Desktop/GOES/goes_cloud_mask_3_OUTPUT_0.dbf",
+   "/Users/stasyaeasley/Desktop/GOES/goes_cloud_mask_4_OUTPUT_0.dbf",
+   "/Users/stasyaeasley/Desktop/GOES/goes_cloud_mask_5_OUTPUT_0.dbf",
+   "/Users/stasyaeasley/Desktop/GOES/goes_cloud_mask_6_OUTPUT_0.dbf"]
+]
+
+
+
