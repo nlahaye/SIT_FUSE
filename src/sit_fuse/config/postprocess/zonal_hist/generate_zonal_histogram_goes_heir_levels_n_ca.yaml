@@ -10,12 +10,12 @@ input_files:
 
 shp_files:
   [
-    [ '/Users/stasyaeasley/Desktop/GOES/goes_cloud_mask.shp' ],
-    [ '/Users/stasyaeasley/Desktop/GOES/goes_cloud_mask_2.shp' ],
-    [ '/Users/stasyaeasley/Desktop/GOES/goes_cloud_mask_3.shp' ],
-    [ '/Users/stasyaeasley/Desktop/GOES/goes_cloud_mask_4.shp' ],
-    [ '/Users/stasyaeasley/Desktop/GOES/goes_cloud_mask_5.shp' ],
-    [ '/Users/stasyaeasley/Desktop/GOES/goes_cloud_mask_6.shp' ],
+    [ '/Users/stasyaeasley/Desktop/GOES/goes_cloud_mask.shp','/Users/stasyaeasley/Desktop/GOES/goes_cloud_background.shp'],
+    [ '/Users/stasyaeasley/Desktop/GOES/goes_cloud_mask_2.shp','/Users/stasyaeasley/Desktop/GOES/goes_cloud_background.shp' ],
+    [ '/Users/stasyaeasley/Desktop/GOES/goes_cloud_mask_3.shp','/Users/stasyaeasley/Desktop/GOES/goes_cloud_background.shp' ],
+    [ '/Users/stasyaeasley/Desktop/GOES/goes_cloud_mask_4.shp','/Users/stasyaeasley/Desktop/GOES/goes_cloud_background.shp' ],
+    [ '/Users/stasyaeasley/Desktop/GOES/goes_cloud_mask_5.shp','/Users/stasyaeasley/Desktop/GOES/goes_cloud_background.shp' ],
+    [ '/Users/stasyaeasley/Desktop/GOES/goes_cloud_mask_6.shp','/Users/stasyaeasley/Desktop/GOES/goes_cloud_background.shp' ],
   ]
 z
 
