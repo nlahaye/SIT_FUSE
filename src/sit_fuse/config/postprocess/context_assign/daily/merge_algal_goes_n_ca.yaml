@@ -5,7 +5,7 @@ input_paths: ["/data/nlahaye/output/Learnergy/No_Data/",
 
  
  
-fname_str: "DAY.total_phytoplankton.tif"
+fname_str: "total_phytoplankton.tif"
 out_dir: "/mnt/data/GOES_18_CA_COASTAL_FINAL/GOES_CLOUD/DAILY/"
 num_classes: 8
 re_index: 6
