@@ -1260,8 +1260,16 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
             year = date_dt.year
             doy = date_dt.timetuple().tm_yday
             goes_tag = f"s{year}{doy:03d}"
-            clust_fname = os.path.join(clusters_dir,
-                                               f"*{goes_tag}*.tif.clust.data_*clusters.zarr.full_geo.background.FullColor.tif")
+            base_prefix = f"OR_ABI-L1b-RadC-M6C01_G18_{goes_tag}"
+
+            fname_71196 = os.path.join(clusters_dir, f"{base_prefix}.tif.clust.data_71196clusters.zarr.full_geo.background.FullColor.tif")
+            fname_71191 = os.path.join(clusters_dir, f"{base_prefix}.tif.clust.data_71191clusters.zarr.full_geo.background.FullColor.tif")
+            if os.path.exists(fname_71196):
+                clust_fname = fname_71196
+            elif os.path.exists(fname_71191):
+                clust_fname = fname_71191
+            else:
+                clust_fname = None
         else:
             file_ext = ".tif"
             if "no_heir" in input_file_type: 
@@ -1290,7 +1298,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         dat_train = False
         dat_test = False
         clust_fname = glob(clust_fname)
-        # print(clust_fname)
+        print(clust_fname)
         
         if len(clust_fname) < 1:
             continue     
