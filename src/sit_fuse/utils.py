@@ -1209,7 +1209,6 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         # Shorten Karenia Column Name
         insitu_df.rename(columns={"Karenia brevis abundance (cells/L)":use_key}, inplace=True)
     else:
-        print(insitu_df['time'])
         # Format Datetime Stamp
         insitu_df['Datetime'] = pd.to_datetime(insitu_df['time'])
         insitu_df.set_index('Datetime')
@@ -1256,6 +1255,16 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
             clust_fname = os.path.join(os.path.join(clusters_dir, pd.to_datetime(str(date)).strftime("%Y%m%d") + "_pseudo_nitzschia_seriata_bloom" + ".tif"))
         elif "pseudo_nitzschia_delicatissima" in input_file_type:
             clust_fname = os.path.join(os.path.join(clusters_dir, pd.to_datetime(str(date)).strftime("%Y%m%d") + "_pseudo_nitzschia_delicatissima_bloom" + ".tif"))
+        elif "GOES" in input_file_type:
+            year = date.year
+            doy = date.timetuple().tm_yday
+            goes_tag = f"s{year}{doy:03d}"
+            pattern = f"*{goes_tag}*.tif.clust.data_*clusters.zarr.full_geo.background.FullColor.tif"
+            matching_files = glob(os.path.join(clusters_dir, pattern))
+            if not matching_files:
+                # no GOES files for this date, skip
+                continue
+            clust_fname = matching_files[0]
         else:
             file_ext = ".tif"
             if "no_heir" in input_file_type: 
@@ -1277,25 +1286,15 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
             elif "PACE_OCI" in input_file_type:
                 file_ext ='.RRS.V3_0.Rrs.4km.tif'
                 clust_fname = os.path.join(os.path.join(clusters_dir, "PACE_OCI." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext))
-            elif "GOES" in input_file_type:
-                date = pd.to_datetime(str(uniques[dateind]))
-                year = date.year
-                doy = date.timetuple().tm_yday
-                goes_tag = f"s{year}{doy:03d}"
-
-                pattern = f"*{goes_tag}*.tif.clust.data_*clusters.zarr.full_geo.background.FullColor.tif"
-                matching_files = glob(os.path.join(clusters_dir, pattern))
-                clust_fname = matching_files[0] if matching_files else None
-
         ind = ind + 1
 
-        #print(clust_fname)
+        print(clust_fname)
 
         dat_train = False
         dat_test = False
-
-        clust_fname = glob(clust_fname)
-        #print(clust_fname)
+        if "GOES" not in input_file_type:
+            clust_fname = glob(clust_fname)
+        print(clust_fname)
         
         if len(clust_fname) < 1:
             continue     
