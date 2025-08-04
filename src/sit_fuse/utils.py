@@ -1290,7 +1290,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         dat_train = False
         dat_test = False
         clust_fname = glob(clust_fname)
-        print(clust_fname)
+        # print(clust_fname)
         
         if len(clust_fname) < 1:
             continue     
