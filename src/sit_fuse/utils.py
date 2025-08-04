@@ -1278,7 +1278,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
                 clust_fname = os.path.join(os.path.join(clusters_dir, "PACE_OCI." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext))
             elif "GOES" in input_file_type:
                 date_str = pd.to_datetime(str(date)).strftime("%Y%j")
-                clust_fname = os.path.join(clusters_dir, f"OR_ABI-L1b-RadC-M6C01_G18_s{date_str}*_clusters.zarr.full_geo.cloud_mask.FullColor.tif")
+                clust_fname = os.path.join(clusters_dir, f"OR_ABI-L1b-RadC-M6C01_G18_s{date_str}*clusters.zarr.full_geo.cloud_mask.FullColor.tif")
         ind = ind + 1
 
         print(clust_fname)
