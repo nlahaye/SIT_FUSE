@@ -29,7 +29,14 @@ def merge_datasets(paths, fname_str, out_dir, re_index = 0, base_index = 0):
     for root, dirs, files in os.walk(paths[base_index]):
         for fle in files:
             if fname_str in fle:
-                new_fname_root = re.search(fname_res[re_index], fle).group(1)
+                if "OR_ABI" in fle or "_G18_" in fle:
+                    goes_match = re.search(r"s(20\d{2})(\d{3})\d{6}", fle)
+                    year = goes_match.group(1)
+                    doy = goes_match.group(2)
+                    date_obj = datetime.datetime.strptime(year + doy, "%Y%j")
+                    new_fname_root = date_obj.strftime("%Y%m%d")
+                else:
+                    new_fname_root = re.search(fname_res[re_index], fle).group(1)
                 fname = os.path.join(out_dir, new_fname_root + "_" + fname_str)
                 dqi_fname = os.path.splitext(fname)[0] + ".DQI.tif"
                 data = None
