@@ -1256,16 +1256,12 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         elif "pseudo_nitzschia_delicatissima" in input_file_type:
             clust_fname = os.path.join(os.path.join(clusters_dir, pd.to_datetime(str(date)).strftime("%Y%m%d") + "_pseudo_nitzschia_delicatissima_bloom" + ".tif"))
         elif "GOES" in input_file_type:
-            date = pd.to_datetime(uniques[dateind])
-            year = date.year
-            doy = date.timetuple().tm_yday
+            date_dt = pd.to_datetime(uniques[dateind])
+            year = date_dt.year
+            doy = date_dt.timetuple().tm_yday
             goes_tag = f"s{year}{doy:03d}"
-            pattern = f"*{goes_tag}*.tif.clust.data_*clusters.zarr.full_geo.background.FullColor.tif"
-            matching_files = glob(os.path.join(clusters_dir, pattern))
-            if not matching_files:
-                # no GOES files for this date, skip
-                continue
-            clust_fname = matching_files[0]
+            clust_fname = os.path.join(clusters_dir,
+                                               f"*{goes_tag}*.tif.clust.data_*clusters.zarr.full_geo.background.FullColor.tif")
         else:
             file_ext = ".tif"
             if "no_heir" in input_file_type: 
@@ -1289,12 +1285,11 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
                 clust_fname = os.path.join(os.path.join(clusters_dir, "PACE_OCI." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext))
         ind = ind + 1
 
-        print(clust_fname)
+        # print(clust_fname)
 
         dat_train = False
         dat_test = False
-        if "GOES" not in input_file_type:
-            clust_fname = glob(clust_fname)
+        clust_fname = glob(clust_fname)
         print(clust_fname)
         
         if len(clust_fname) < 1:
