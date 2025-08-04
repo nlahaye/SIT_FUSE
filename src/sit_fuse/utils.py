@@ -1304,7 +1304,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
             clust_fname = clust_fname + "f"
             if not os.path.exists(clust_fname):
                 continue
-  
+        print("Opening cluster file:", clust_fname)
         clust = gdal.Open(clust_fname)
         latLon = get_lat_lon(clust_fname)
         clust = clust.ReadAsArray()
