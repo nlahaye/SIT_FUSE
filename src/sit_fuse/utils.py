@@ -11,6 +11,7 @@ import yaml
 import cv2
 import os
 import zarr
+import re
 import numpy as np
 import rioxarray
 from shapely.geometry import mapping
@@ -1236,7 +1237,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
             if "no_heir" in input_file_type:
                 file_ext = file_ext  + "no_heir."
             if "PACE" in input_file_type:
-                file_ext = "_RRS.V3_0.Rrs.4km."
+                file_ext = ".RRS.V3_0.Rrs.4km."
             if "alexandrium" in input_file_type:
                 file_ext = file_ext  + "alexandrium_bloom.tif"
             elif "seriata" in input_file_type:
@@ -1274,7 +1275,18 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
             elif "TERRA_MODIS" in input_file_type:
                 clust_fname = os.path.join(os.path.join(clusters_dir, "TERRA_MODIS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext))
             elif "PACE_OCI" in input_file_type:
+                file_ext ='.RRS.V3_0.Rrs.4km.tif'
                 clust_fname = os.path.join(os.path.join(clusters_dir, "PACE_OCI." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext))
+            elif "GOES" in input_file_type:
+                date = pd.to_datetime(str(uniques[dateind]))
+                year = date.year
+                doy = date.timetuple().tm_yday
+                goes_tag = f"s{year}{doy:03d}"
+
+                pattern = f"*{goes_tag}*.tif.clust.data_*clusters.zarr.full_geo.background.FullColor.tif"
+                matching_files = glob(os.path.join(clusters_dir, pattern))
+                clust_fname = matching_files[0] if matching_files else None
+
         ind = ind + 1
 
         #print(clust_fname)
