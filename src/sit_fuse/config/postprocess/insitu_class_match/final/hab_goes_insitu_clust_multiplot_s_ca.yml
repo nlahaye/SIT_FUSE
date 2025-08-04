@@ -1,10 +1,10 @@
 
 xl_fname: '/mnt/data/la_hab_data/combined.csv'
-start_date: "2025-01-13"
+start_date: "2025-01-06"
 end_date: "2025-01-13"
 clusters: 120000
  
-clusters_dir: '/mnt/data/GOES_18_CA_COASTAL_FINAL/'
+clusters_dir: '/mnt/data/GOES_18_CA_COASTAL_FINAL/GOES_CLOUD/'
 radius_degrees: [0.09]
 global_max: 10000000
 ranges: [0,1000,10000,100000,1000000,10000000, 100000000]
