@@ -1256,23 +1256,62 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         elif "pseudo_nitzschia_delicatissima" in input_file_type:
             clust_fname = os.path.join(os.path.join(clusters_dir, pd.to_datetime(str(date)).strftime("%Y%m%d") + "_pseudo_nitzschia_delicatissima_bloom" + ".tif"))
         elif "GOES" in input_file_type:
-            goes_cluster_map = {
-                "2025-01-13": "OR_ABI-L1b-RadC-M6C01_G18_s20250131801181_e20250131803554_c20250131803593.tif.clust.data_71191clusters.zarr.full_geo.background.FullColor.tif",
-                "2025-01-14": "OR_ABI-L1b-RadC-M6C01_G18_s20250131901181_e20250131903554_c20250131903597.tif.clust.data_71191clusters.zarr.full_geo.background.FullColor.tif",
-                "2025-01-15": "OR_ABI-L1b-RadC-M6C01_G18_s20250132001182_e20250132003555_c20250132003588.tif.clust.data_71196clusters.zarr.full_geo.background.FullColor.tif",
-                "2025-01-16": "OR_ABI-L1b-RadC-M6C01_G18_s20250132101182_e20250132103555_c20250132103594.tif.clust.data_71196clusters.zarr.full_geo.background.FullColor.tif",
-                "2025-01-17": "OR_ABI-L1b-RadC-M6C01_G18_s20250132201182_e20250132203555_c20250132203591.tif.clust.data_71196clusters.zarr.full_geo.background.FullColor.tif",
-                "2025-01-18": "OR_ABI-L1b-RadC-M6C01_G18_s20250132301182_e20250132303555_c20250132303595.tif.clust.data_71196clusters.zarr.full_geo.background.FullColor.tif"
-            }
+            date_str = pd.to_datetime(str(date)).strftime("%Y%j")  # YYYY + Julian day, e.g., 2025013
+            pattern = os.path.join(clusters_dir,
+                                   f"*s{date_str}*.tif.clust.data_*clusters.zarr.full_geo.background.FullColor.tif")
+            matched_files = sorted(glob(pattern))
 
-            # Match by date
-            date_str = pd.to_datetime(str(date)).strftime("%Y-%m-%d")
-            cluster_filename = goes_cluster_map.get(date_str, None)
-            if cluster_filename is None:
+            if len(matched_files) == 0:
                 continue
-            clust_fname = os.path.join(clusters_dir, cluster_filename)
-            if not os.path.exists(clust_fname):
-                continue
+
+            for clust_fname in matched_files:
+                if not os.path.exists(clust_fname):
+                    continue
+
+                print("Opening cluster file:", clust_fname)
+                clust = gdal.Open(clust_fname)
+                latLon = get_lat_lon(clust_fname)
+                clust = clust.ReadAsArray()
+                clust = clust * 1000
+                clust = clust.astype(np.int32)
+
+                lat = latLon[:, :, 0].reshape(-1)
+                lon = latLon[:, :, 1].reshape(-1)
+                clust = clust.reshape(-1)
+
+                inds_clust = np.where(clust >= 0)
+                lat = lat[inds_clust]
+                lon = lon[inds_clust]
+                clust = clust[inds_clust]
+
+                gdf = gpd.GeoDataFrame(clust, geometry=gpd.GeoSeries.from_xy(lon, lat), crs=4326)
+                subset = insitu_df[(insitu_df['Datetime'] == date)]
+                gdf_insitu = gpd.GeoDataFrame(subset[use_key],
+                                              geometry=gpd.GeoSeries.from_xy(subset['Longitude'], subset['Latitude']),
+                                              crs=4326)
+
+                for index, poi in gdf_insitu.iterrows():
+                    neighbours = []
+                    for index2, poi2 in gdf.iterrows():
+                        if abs(poi2.geometry.distance(poi.geometry)) < radius_degrees:
+                            clust_val = clust[index2] / 1000.0
+                            neighbours.append(index2)
+
+                    if len(neighbours) < 1:
+                        continue
+
+                    clusters = clust[neighbours]
+                    clusters_index = [np.nan] * n_clusters
+                    clusts = np.unique(clusters).astype(np.int32)
+                    for c in clusts:
+                        clusters_index[c] = (c in clusters)
+
+                    data = np.array(clusters_index)
+                    good_inds = np.where(np.isfinite(clusters_index))
+                    bad_inds = np.where(np.isnan(clusters_index))
+                    data[good_inds] = poi[use_key]
+                    data[bad_inds] = -1
+                    final_hist_data.append(data)
         else:
             file_ext = ".tif"
             if "no_heir" in input_file_type: 
