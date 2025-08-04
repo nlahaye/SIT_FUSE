@@ -1256,19 +1256,22 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         elif "pseudo_nitzschia_delicatissima" in input_file_type:
             clust_fname = os.path.join(os.path.join(clusters_dir, pd.to_datetime(str(date)).strftime("%Y%m%d") + "_pseudo_nitzschia_delicatissima_bloom" + ".tif"))
         elif "GOES" in input_file_type:
-            cand_fnames = [
-                os.path.join(clusters_dir, f"OR_ABI-L1b-RadC-M6C01_G18_s20250131801181_e20250131803554_c20250131803593.tif.clust.data_71191clusters.zarr.full_geo.background.FullColor.tif"),
-                os.path.join(clusters_dir, f"OR_ABI-L1b-RadC-M6C01_G18_s20250131901181_e20250131903554_c20250131903597.tif.clust.data_71191clusters.zarr.full_geo.background.FullColor.tif"),
-                os.path.join(clusters_dir, f"OR_ABI-L1b-RadC-M6C01_G18_s20250132001182_e20250132003555_c20250132003588.tif.clust.data_71196clusters.zarr.full_geo.background.FullColor.tif"),
-                os.path.join(clusters_dir, f"OR_ABI-L1b-RadC-M6C01_G18_s20250132101182_e20250132103555_c20250132103594.tif.clust.data_71196clusters.zarr.full_geo.background.FullColor.tif"),
-                os.path.join(clusters_dir, f"OR_ABI-L1b-RadC-M6C01_G18_s20250132201182_e20250132203555_c20250132203591.tif.clust.data_71196clusters.zarr.full_geo.background.FullColor.tif"),
-                os.path.join(clusters_dir, f"OR_ABI-L1b-RadC-M6C01_G18_s20250132301182_e20250132303555_c20250132303595.tif.clust.data_71196clusters.zarr.full_geo.background.FullColor.tif"),]
-            clust_fname = None
-            for fname in cand_fnames:
-                if os.path.exists(fname):
-                    clust_fname = fname
-                    break
-            if clust_fname is None:
+            goes_cluster_map = {
+                "2025-01-13": "OR_ABI-L1b-RadC-M6C01_G18_s20250131801181_e20250131803554_c20250131803593.tif.clust.data_71191clusters.zarr.full_geo.background.FullColor.tif",
+                "2025-01-14": "OR_ABI-L1b-RadC-M6C01_G18_s20250131901181_e20250131903554_c20250131903597.tif.clust.data_71191clusters.zarr.full_geo.background.FullColor.tif",
+                "2025-01-15": "OR_ABI-L1b-RadC-M6C01_G18_s20250132001182_e20250132003555_c20250132003588.tif.clust.data_71196clusters.zarr.full_geo.background.FullColor.tif",
+                "2025-01-16": "OR_ABI-L1b-RadC-M6C01_G18_s20250132101182_e20250132103555_c20250132103594.tif.clust.data_71196clusters.zarr.full_geo.background.FullColor.tif",
+                "2025-01-17": "OR_ABI-L1b-RadC-M6C01_G18_s20250132201182_e20250132203555_c20250132203591.tif.clust.data_71196clusters.zarr.full_geo.background.FullColor.tif",
+                "2025-01-18": "OR_ABI-L1b-RadC-M6C01_G18_s20250132301182_e20250132303555_c20250132303595.tif.clust.data_71196clusters.zarr.full_geo.background.FullColor.tif"
+            }
+
+            # Match by date
+            date_str = pd.to_datetime(str(date)).strftime("%Y-%m-%d")
+            cluster_filename = goes_cluster_map.get(date_str, None)
+            if cluster_filename is None:
+                continue
+            clust_fname = os.path.join(clusters_dir, cluster_filename)
+            if not os.path.exists(clust_fname):
                 continue
         else:
             file_ext = ".tif"
@@ -1293,12 +1296,12 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
                 clust_fname = os.path.join(os.path.join(clusters_dir, "PACE_OCI." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext))
         ind = ind + 1
 
-        print(clust_fname)
+        # print(clust_fname)
 
         dat_train = False
         dat_test = False
         clust_fname = glob(clust_fname)
-        print(clust_fname)
+        # print(clust_fname)
         
         if len(clust_fname) < 1:
             continue     
