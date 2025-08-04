@@ -1256,6 +1256,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         elif "pseudo_nitzschia_delicatissima" in input_file_type:
             clust_fname = os.path.join(os.path.join(clusters_dir, pd.to_datetime(str(date)).strftime("%Y%m%d") + "_pseudo_nitzschia_delicatissima_bloom" + ".tif"))
         elif "GOES" in input_file_type:
+            date = pd.to_datetime(uniques[dateind])
             year = date.year
             doy = date.timetuple().tm_yday
             goes_tag = f"s{year}{doy:03d}"
