@@ -1256,19 +1256,19 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         elif "pseudo_nitzschia_delicatissima" in input_file_type:
             clust_fname = os.path.join(os.path.join(clusters_dir, pd.to_datetime(str(date)).strftime("%Y%m%d") + "_pseudo_nitzschia_delicatissima_bloom" + ".tif"))
         elif "GOES" in input_file_type:
-            date_dt = pd.to_datetime(uniques[dateind])
-            year = date_dt.year
-            doy = date_dt.timetuple().tm_yday
-            goes_tag = f"s{year}{doy:03d}"
-            base_prefix = f"OR_ABI-L1b-RadC-M6C01_G18_{goes_tag}"
-
-            fname_71196 = os.path.join(clusters_dir, f"{base_prefix}.tif.clust.data_71196clusters.zarr.full_geo.background.FullColor.tif")
-            fname_71191 = os.path.join(clusters_dir, f"{base_prefix}.tif.clust.data_71191clusters.zarr.full_geo.background.FullColor.tif")
-            if os.path.exists(fname_71196):
-                clust_fname = fname_71196
-            elif os.path.exists(fname_71191):
-                clust_fname = fname_71191
-            else:
+            cand_fnames = [
+                os.path.join(clusters_dir, f"OR_ABI-L1b-RadC-M6C01_G18_s20250131801181_e20250131803554_c20250131803593.tif.clust.data_71191clusters.zarr.full_geo.background.FullColor.tif"),
+                os.path.join(clusters_dir, f"OR_ABI-L1b-RadC-M6C01_G18_s20250131901181_e20250131903554_c20250131903597.tif.clust.data_71191clusters.zarr.full_geo.background.FullColor.tif"),
+                os.path.join(clusters_dir, f"OR_ABI-L1b-RadC-M6C01_G18_s20250132001182_e20250132003555_c20250132003588.tif.clust.data_71196clusters.zarr.full_geo.background.FullColor.tif"),
+                os.path.join(clusters_dir, f"OR_ABI-L1b-RadC-M6C01_G18_s20250132101182_e20250132103555_c20250132103594.tif.clust.data_71196clusters.zarr.full_geo.background.FullColor.tif"),
+                os.path.join(clusters_dir, f"OR_ABI-L1b-RadC-M6C01_G18_s20250132201182_e20250132203555_c20250132203591.tif.clust.data_71196clusters.zarr.full_geo.background.FullColor.tif"),
+                os.path.join(clusters_dir, f"OR_ABI-L1b-RadC-M6C01_G18_s20250132301182_e20250132303555_c20250132303595.tif.clust.data_71196clusters.zarr.full_geo.background.FullColor.tif"),]
+            clust_fname = None
+            for fname in cand_fnames:
+                if os.path.exists(fname):
+                    clust_fname = fname
+                    break
+            if clust_fname is None:
                 continue
         else:
             file_ext = ".tif"
