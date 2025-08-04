@@ -1281,12 +1281,12 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
                 clust_fname = os.path.join(clusters_dir, f"OR_ABI-L1b-RadC-M6C01_G18_s{date_str}*clusters.zarr.full_geo.cloud_mask.FullColor.tif")
         ind = ind + 1
 
-        print(clust_fname)
+        # print(clust_fname)
 
         dat_train = False
         dat_test = False
         clust_fname = glob(clust_fname)
-        print(clust_fname)
+        # print(clust_fname)
         
         if len(clust_fname) < 1:
             continue     
@@ -1295,7 +1295,6 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
             clust_fname = clust_fname + "f"
             if not os.path.exists(clust_fname):
                 continue
-        print("Opening cluster file:", clust_fname)
         clust = gdal.Open(clust_fname)
         latLon = get_lat_lon(clust_fname)
         clust = clust.ReadAsArray()
