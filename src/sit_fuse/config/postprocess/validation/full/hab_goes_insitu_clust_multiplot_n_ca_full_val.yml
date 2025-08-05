@@ -1,0 +1,15 @@
+xl_fname: '/mnt/data/la_hab_data/combined.csv'
+
+radius_degrees: [0.09]  #0.0225
+#0.045 degrees = 5km
+global_max: 10000000
+ranges: [0,1000,10000,100000,1000000,10000000, 100000000]
+input_file_type: 'daily'
+
+# full date
+start_date: "2025-01-06"
+end_date: "2025-01-13"
+clusters: 6001
+
+clusters_dir: '/mnt/data/GOES_18_CA_COASTAL_FINAL/GOES_CLOUD/DAILY/'
+

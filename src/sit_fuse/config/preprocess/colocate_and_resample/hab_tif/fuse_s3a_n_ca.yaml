@@ -1,0 +1,120 @@
+
+low_res:
+ data:
+  valid_min: -100.0
+  valid_max: 99999999999
+  reader_type: "s3_netcdf"
+  reader_kwargs:
+   none: "None"
+  geo_reader_type: "s3_netcdf_geo"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: [
+["/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250605.L3m.DAY.RRS.Rrs_400.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250605.L3m.DAY.RRS.Rrs_412.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250605.L3m.DAY.RRS.Rrs_443.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250605.L3m.DAY.RRS.Rrs_490.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250605.L3m.DAY.RRS.Rrs_510.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250605.L3m.DAY.RRS.Rrs_560.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250605.L3m.DAY.RRS.Rrs_620.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250605.L3m.DAY.RRS.Rrs_665.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250605.L3m.DAY.RRS.Rrs_674.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250605.L3m.DAY.RRS.Rrs_681.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250605.L3m.DAY.RRS.Rrs_709.4km.NRT.nc",],
+
+["/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250606.L3m.DAY.RRS.Rrs_400.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250606.L3m.DAY.RRS.Rrs_412.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250606.L3m.DAY.RRS.Rrs_443.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250606.L3m.DAY.RRS.Rrs_490.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250606.L3m.DAY.RRS.Rrs_510.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250606.L3m.DAY.RRS.Rrs_560.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250606.L3m.DAY.RRS.Rrs_620.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250606.L3m.DAY.RRS.Rrs_665.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250606.L3m.DAY.RRS.Rrs_674.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250606.L3m.DAY.RRS.Rrs_681.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250606.L3m.DAY.RRS.Rrs_709.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250607.L3m.DAY.RRS.Rrs_400.4km.NRT.nc",],
+
+["/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250607.L3m.DAY.RRS.Rrs_412.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250607.L3m.DAY.RRS.Rrs_443.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250607.L3m.DAY.RRS.Rrs_490.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250607.L3m.DAY.RRS.Rrs_510.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250607.L3m.DAY.RRS.Rrs_560.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250607.L3m.DAY.RRS.Rrs_620.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250607.L3m.DAY.RRS.Rrs_665.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250607.L3m.DAY.RRS.Rrs_674.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250607.L3m.DAY.RRS.Rrs_681.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250607.L3m.DAY.RRS.Rrs_709.4km.NRT.nc",],
+
+["/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250608.L3m.DAY.RRS.Rrs_400.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250608.L3m.DAY.RRS.Rrs_412.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250608.L3m.DAY.RRS.Rrs_443.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250608.L3m.DAY.RRS.Rrs_490.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250608.L3m.DAY.RRS.Rrs_510.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250608.L3m.DAY.RRS.Rrs_560.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250608.L3m.DAY.RRS.Rrs_620.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250608.L3m.DAY.RRS.Rrs_665.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250608.L3m.DAY.RRS.Rrs_674.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250608.L3m.DAY.RRS.Rrs_681.4km.NRT.nc",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250608.L3m.DAY.RRS.Rrs_709.4km.NRT.nc",]
+]
+
+
+  geo_filenames: [
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+"/mnt/data/cal_coast_geo.zarr",
+]
+
+  chan_dim: 0
+  geo_coord_dim: 0
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+high_res:
+ data:
+  valid_min: 0.0
+  valid_max: 99999999999
+  reader_type: "numpy"
+  reader_kwargs:
+   no_arg: "no_arg"
+  geo_reader_type: "numpy"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: []
+  geo_filenames: []
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+fusion:
+ projection_id: 4326
+ description: "Generating S3A GeoTiffs"
+ area_id: "GERD Dam"
+ projection_proj4:
+  proj: "longlat"
+  datum: "WGS84"
+ final_resolution: 0.003
+ projection_units: "degrees"
+ resample_radius: 5000
+ resample_n_neighbors: 64
+ resample_n_procs: 10
+ resample_epsilon: 1.6
+ use_bilinear: True
+
+
+
+
+output_files: [
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250605.L3m.DAY.tif",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250606.L3m.DAY.tif",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250607.L3m.DAY.tif",
+"/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250608.L3m.DAY.tif",
+]
+
+
+ 
