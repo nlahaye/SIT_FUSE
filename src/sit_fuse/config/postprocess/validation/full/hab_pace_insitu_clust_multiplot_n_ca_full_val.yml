@@ -1,4 +1,4 @@
-xl_fname: '/mnt/data/la_hab_data/combined.csv'
+xl_fname: '/mnt/data/la_hab_data/combined_full.csv' #HAB_S_CA_Combined.csv'
 
 radius_degrees: [0.09]  #0.0225
 #0.045 degrees = 5km
@@ -7,9 +7,9 @@ ranges: [0,1000,10000,100000,1000000,10000000, 100000000]
 input_file_type: 'daily'
 
 # full date
-start_date: "2024-03-05"
+start_date: "2024-01-01"
 end_date: "2025-06-04"
 clusters: 6001
 
-clusters_dir: '/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/MERGED_HAB/PACE/'
+clusters_dir: '/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/MERGED_HAB/old/PACE/'
 

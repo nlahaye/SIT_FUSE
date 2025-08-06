@@ -1274,7 +1274,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
             elif "TERRA_MODIS" in input_file_type:
                 clust_fname = os.path.join(os.path.join(clusters_dir, "TERRA_MODIS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext))
             elif "PACE_OCI" in input_file_type:
-                file_ext ='.RRS.V3_0.Rrs.4km.tif'
+                #file_ext ='.RRS.V3_0.Rrs.4km.tif'
                 clust_fname = os.path.join(os.path.join(clusters_dir, "PACE_OCI." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext))
             elif "GOES" in input_file_type:
                 date_str = pd.to_datetime(str(date)).strftime("%Y%j")

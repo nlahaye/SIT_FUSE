@@ -1,6 +1,6 @@
 
-xl_fname: '/mnt/data/la_hab_data/combined.csv'
-start_date: "2024-03-05"
+xl_fname: '/mnt/data/la_hab_data/combined_full.csv'
+start_date: "2024-01-01"
 end_date: "2025-06-11"
 clusters: 120000
  
