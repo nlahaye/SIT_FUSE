@@ -22,7 +22,7 @@ matplotlib.use('agg')
 import matplotlib.pyplot as plt
  
 def generate_cluster_masks_no_geo(data_reader, data_reader_kwargs, subset_inds, cluster_data, 
-    apply_context, context_clusters, context_name, compare, create_separate, generate_union = False, cluster_dependencies={}, background_class = 0, tiered_masking = None):
+    apply_context, context_clusters, context_name, compare, create_separate, generate_union = False, cluster_dependencies={}, background_class = -1, tiered_masking = None):
 
         read_func = get_read_func(data_reader)
     
@@ -138,7 +138,7 @@ def generate_cluster_masks_no_geo(data_reader, data_reader_kwargs, subset_inds, 
  
 
 def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
-    cluster_data, gtiff_data, apply_context, context_clusters, context_name, compare, create_separate, generate_union = False, cluster_dependencies={}, background_class = 0, tiered_masking = None):
+    cluster_data, gtiff_data, apply_context, context_clusters, context_name, compare, create_separate, generate_union = False, cluster_dependencies={}, background_class = -1, tiered_masking = None):
 
 	read_func = get_read_func(data_reader)
 
@@ -406,7 +406,7 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
  
 
 
-def generate_separate_from_full(gtiff_data, apply_context, context_clusters, context_name, create_separate=True, generate_union=False, cluster_dependencies={}, background_class = 0, tiered_masking = None):
+def generate_separate_from_full(gtiff_data, apply_context, context_clusters, context_name, create_separate=True, generate_union=False, cluster_dependencies={}, background_class = -1, tiered_masking = None):
         outUnionFull = None
         combine_classes = False
         if not isinstance(context_name, list):
