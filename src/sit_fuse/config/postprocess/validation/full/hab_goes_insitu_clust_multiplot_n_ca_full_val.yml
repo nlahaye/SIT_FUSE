@@ -1,4 +1,4 @@
-xl_fname: '/mnt/data/la_hab_data/combined_ful.csv'
+xl_fname: '/mnt/data/la_hab_data/combined_full.csv'
 
 radius_degrees: [0.09]  #0.0225
 #0.045 degrees = 5km
