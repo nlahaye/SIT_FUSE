@@ -57,8 +57,12 @@ def merge_datasets(paths, fname_str, out_dir, re_index = 0, base_index = 0):
                 else:
                     dqi = qual
 
-                inds = np.where((imgData1 < 0) & (tmp >= 0))
-                imgData1[inds] = tmp[inds] 
+                # inds = np.where((imgData1 < 0) & (tmp >= 0))
+                # imgData1[inds] = tmp[inds]
+
+                CLOUD_VAL = -1
+                valid_inds = np.where((imgData1 == CLOUD_VAL) & (tmp != CLOUD_VAL))
+                imgData1[valid_inds] = tmp[valid_inds]
 
                 dqi[inds] = base_index                
                 for j in range(base_index+1, len(paths)):
