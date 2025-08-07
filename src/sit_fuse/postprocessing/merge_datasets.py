@@ -57,18 +57,26 @@ def merge_datasets(paths, fname_str, out_dir, re_index = 0, base_index = 0):
                 else:
                     dqi = qual
 
-                inds = np.where((imgData1 < 0) & (tmp >= 0))
-                imgData1[inds] = tmp[inds]
+                # inds = np.where((imgData1 < 0) & (tmp >= 0))
+                # imgData1[inds] = tmp[inds]
 
-                dqi[inds] = base_index                
+                CLOUD_VAL = -1
+
+                valid_inds = np.where((imgData1 == CLOUD_VAL) & (tmp != CLOUD_VAL))
+                imgData1[valid_inds] = tmp[valid_inds]
+
+                dqi[valid_inds] = base_index
                 for j in range(base_index+1, len(paths)):
                     fle2 = os.path.join(paths[j], fle)
                     if os.path.exists(fle2):
                         dat2 = gdal.Open(fle2)
                         imgData2 = dat2.ReadAsArray()
-                        inds = np.where((imgData1 < 0) & (imgData2 >= 0))
-                        imgData1[inds] = imgData2[inds]
-                        dqi[inds] = j
+                        # inds = np.where((imgData1 < 0) & (imgData2 >= 0))
+                        # imgData1[inds] = imgData2[inds]
+                        # dqi[inds] = j
+                        valid_inds = np.where((imgData1 == CLOUD_VAL) & (imgData2 != CLOUD_VAL))
+                        imgData1[valid_inds] = imgData2[valid_inds]
+                        dqi[valid_inds] = j
                         #imgData1[inds] = 0
                         #dat2.FlushCache()
                         dat2 = None
