@@ -46,7 +46,7 @@ def merge_datasets(paths, fname_str, out_dir, re_index = 0, base_index = 0):
                     qual = gdal.Open(dqi_fname).ReadAsArray()
                 fle1 = os.path.join(root, fle)
                 dat1 = gdal.Open(fle1)
-                tmp = dat1.ReadAsArray()  
+                tmp = dat1.ReadAsArray()
                 if data is None:
                     imgData1 = np.zeros(tmp.shape) - 1
                 else:
@@ -57,26 +57,18 @@ def merge_datasets(paths, fname_str, out_dir, re_index = 0, base_index = 0):
                 else:
                     dqi = qual
 
-                # inds = np.where((imgData1 < 0) & (tmp >= 0))
-                # imgData1[inds] = tmp[inds]
+                inds = np.where((imgData1 < 0) & (tmp >= 0))
+                imgData1[inds] = tmp[inds]
 
-                CLOUD_VAL = -1
-
-                valid_inds = np.where((imgData1 == CLOUD_VAL) & (tmp != CLOUD_VAL))
-                imgData1[valid_inds] = tmp[valid_inds]
-
-                dqi[valid_inds] = base_index
+                dqi[inds] = base_index
                 for j in range(base_index+1, len(paths)):
                     fle2 = os.path.join(paths[j], fle)
                     if os.path.exists(fle2):
                         dat2 = gdal.Open(fle2)
                         imgData2 = dat2.ReadAsArray()
-                        # inds = np.where((imgData1 < 0) & (imgData2 >= 0))
-                        # imgData1[inds] = imgData2[inds]
-                        # dqi[inds] = j
-                        valid_inds = np.where((imgData1 == CLOUD_VAL) & (imgData2 != CLOUD_VAL))
-                        imgData1[valid_inds] = imgData2[valid_inds]
-                        dqi[valid_inds] = j
+                        inds = np.where((imgData1 < 0) & (imgData2 >= 0))
+                        imgData1[inds] = imgData2[inds]
+                        dqi[inds] = j
                         #imgData1[inds] = 0
                         #dat2.FlushCache()
                         dat2 = None
@@ -87,6 +79,20 @@ def merge_datasets(paths, fname_str, out_dir, re_index = 0, base_index = 0):
                 wkt = dat1.GetProjection()
                 dat1.FlushCache()
                 dat1 = None
+
+                out_ds.FlushCache()
+                out_ds = None
+
+                for j in range(base_index, len(paths)):
+                    flej = os.path.join(paths[j], fle)
+                    if os.path.exists(flej):
+                        datj = gdal.Open(flej)
+                        dataj = datj.ReadAsArray()
+                        cloud_inds = np.where(dataj == -1)
+                        imgData1[cloud_inds] = -1
+                        dqi[cloud_inds] = -1
+                        datj = None
+
           
                 out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Int16)
                 out_ds.SetGeoTransform(geoTransform)
@@ -186,7 +192,7 @@ def merge_monthly(dirname, fname_str):
             out_ds.SetProjection(wkt)
             out_ds.GetRasterBand(1).WriteArray(newDqi)
             out_ds.FlushCache()
-            out_ds = None    
+            out_ds = None
 
 
 
