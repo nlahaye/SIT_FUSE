@@ -80,9 +80,6 @@ def merge_datasets(paths, fname_str, out_dir, re_index = 0, base_index = 0):
                 dat1.FlushCache()
                 dat1 = None
 
-                out_ds.FlushCache()
-                out_ds = None
-
                 for j in range(base_index, len(paths)):
                     flej = os.path.join(paths[j], fle)
                     if os.path.exists(flej):
@@ -92,7 +89,6 @@ def merge_datasets(paths, fname_str, out_dir, re_index = 0, base_index = 0):
                         imgData1[cloud_inds] = -1
                         dqi[cloud_inds] = -1
                         datj = None
-
           
                 out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Int16)
                 out_ds.SetGeoTransform(geoTransform)
