@@ -7,6 +7,16 @@ icon: fire
 
 # Wildfire Example
 
+<figure><img src="../../../.gitbook/assets/https___cdn.cnn.com_cnnnext_dam_assets_181110074810-15-california-wildfires-1109.jpg" alt=""><figcaption><p>Credit: NASA Applied Sciences</p></figcaption></figure>
+
+### Over the last few years, there has been a sharp increase in number and length of wildfires. Around the world, they pose a significant threat to ecosystems, public health, and infrastructure.&#x20;
+
+Monitoring these wildfires is critical to minimizing the threats they pose. Accurate and timely detection allows scientists, policymakers, and emergency responders to assess risk, allocate resources, and take action before impacts escalate. SIT-FUSE enables continuous, large-scale monitoring that would be impossible to achieve manually, helping ensure that decision-makers have the best available information to respond quickly and effectively.
+
+Below are steps to assign context to wildfire&#x20;
+
+***
+
 {% content-ref url="labeling-tutorial/" %}
 [labeling-tutorial](labeling-tutorial/)
 {% endcontent-ref %}

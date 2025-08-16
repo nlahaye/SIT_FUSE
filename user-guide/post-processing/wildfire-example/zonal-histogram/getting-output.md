@@ -5,6 +5,16 @@ icon: folder-arrow-down
 
 # Getting output
 
+After the YAML configuration is set up, run:
+
+```
+cd SIT_FUSE/src/sit_fuse/postprocessing && python3 generate_zonal_histogram_batch.py -y ../config/postprocess/generate_zonal_hitogram_batch_planet_firex_aq.yaml
+```
+
+This will output a JSON that we will pass into QGIS' zonal histogram tool in the next step.
+
+***
+
 1. Open QGIS.
 2. From the menu bar at the top, make sure `View -> Panels -> Processing Toolbox` is checked.
 3. From the search bar in the Processing Toolbox, type `zonal histogram` and double click `Zonal histogram`.&#x20;
