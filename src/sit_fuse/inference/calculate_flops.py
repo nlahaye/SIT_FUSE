@@ -3,6 +3,8 @@ import pytorch_lightning as pl
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
+from calflops import calculate_flops
+
 import time
 
 import joblib
@@ -88,27 +90,29 @@ def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled 
         else:
             dat_dev, lab_dev = data[0].cuda(), data[1].cuda()
 
-        with torch.no_grad():
-            start_time = time.time() 
-            if hasattr(mdl, 'clust_tree'):
+        start_time = time.time() 
+        if hasattr(mdl, 'clust_tree'):
 
-                print(dat.data_full.shape)
-                input_shape = (1,dat.data_full.shape[1])
-                if return_embed:
+            print(dat.data_full.shape)
+            input_shape = (1,dat.data_full.shape[1])
+            flops, macs, params = calculate_flops(model=mdl, input_shape=input_shape, output_as_string=True, output_precision=4)
+            print("FLOPs:%s   MACs:%s   Params:%s \n" %(flops, macs, params))
+            if return_embed:
                     _, output, embed, _, output_prob = mdl.forward(dat_dev, return_embed=return_embed)
-                else:
-                    _, output, _, output_prob = mdl.forward(dat_dev, return_embed=return_embed)
             else:
-                if return_embed:
+                    _, output, _, output_prob = mdl.forward(dat_dev, return_embed=return_embed)
+        else:
+            if return_embed:
                     output, embed  = mdl.forward(dat_dev, return_embed=return_embed)
-                else:
+            else:
                     output = mdl.forward(dat_dev)
 
-                output_prob = torch.max(torch.nn.functional.softmax(output, dim=1), dim=1).values 
-                output = torch.argmax(torch.nn.functional.softmax(output, dim=1), dim=1)
-                #print("HERE", output.shape, torch.unique(output))
-            end_time = time.time()
-            inference_times.append(end_time - start_time)
+            output_prob = torch.max(torch.nn.functional.softmax(output, dim=1), dim=1).values 
+            output = torch.argmax(torch.nn.functional.softmax(output, dim=1), dim=1)
+            #print("HERE", output.shape, torch.unique(output))
+        end_time = time.time()
+        inference_times.append(end_time - start_time)
+
 
         if isinstance(output, list) or isinstance(output, tuple):
             output = output[0] #TODO improve usage uf multi-headed output after single-headed approach validated
