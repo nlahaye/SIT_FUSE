@@ -166,6 +166,8 @@ class Heir_DC(pl.LightningModule):
             #print(encoder_output_size, "HERE")
 
             state_dict = torch.load(clust_tree_ckpt)
+            pytorch_total_params = sum(p.numel() for p in self.pretrained_model.pretrained_model.parameters()) + sum(p.numel() for p in self.pretrained_model.mlp_head.parameters())
+            print("PARAMS 1", pytorch_total_params)
             self.clust_tree, self.lab_full = \
                 load_model(self.clust_tree, n_visible, self, state_dict, self.pretrained_model.device, (self.encoder_type == "ijepa"), self.num_classes) 
                 #list(self.pretrained_model.mlp_head.children())[1].num_features, self, state_dict)        
@@ -611,6 +613,7 @@ def get_state_dict(clust_tree, lab_full):
 
 def load_model(clust_tree, n_visible, model, state_dict, device, ijepa=False, num_classes=100):
         lab_full = state_dict["labels"]
+        pytorch_total_params = 0
         for lab1 in clust_tree.keys():
             if lab1 == "0":
                 continue
@@ -624,6 +627,8 @@ def load_model(clust_tree, n_visible, model, state_dict, device, ijepa=False, nu
                     #else:
                     clust_tree[lab1][lab2] = MultiPrototypes(n_visible, model.num_classes, model.number_heads).to(device)
                     clust_tree[lab1][lab2].load_state_dict(state_dict[lab1][lab2]["model"])
+                    pytorch_total_params = pytorch_total_params + sum(p.numel() for p in model.parameters())
+        print("PARAMS 2", pytorch_total_params)
         return clust_tree, lab_full
 
 
