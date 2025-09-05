@@ -1,0 +1,15 @@
+ 
+input_paths: ["/data/nlahaye/output/Learnergy/No_Data/",
+              "/data/nlahaye/output/Learnergy/No_Data/",
+              "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/SNPP_VIIRS_S_CA/"]
+
+ 
+ 
+fname_str: "DAY.alexandrium_bloom.tif"
+out_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/MERGED_HAB/FINAL/SNPP/"
+num_classes: 9
+re_index: 5
+
+gen_daily: true
+gen_monthly: false
+

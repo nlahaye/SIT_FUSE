@@ -1,0 +1,140 @@
+2025-06-25 03:56:48,135 - learnergy.models.deep.dbn — INFO — Overriding class: Model -> DBN.
+2025-06-25 03:56:48,135 - learnergy.core.model — DEBUG — Device: cuda.
+2025-06-25 03:56:48,136 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: GaussianRBM -> GaussianSeluRBM.
+2025-06-25 03:56:48,136 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: RBM -> GaussianRBM.
+2025-06-25 03:56:48,136 - learnergy.models.bernoulli.rbm — INFO — Overriding class: Model -> RBM.
+2025-06-25 03:56:48,136 - learnergy.core.model — DEBUG — Device: cuda.
+2025-06-25 03:56:48,459 - learnergy.models.bernoulli.rbm — INFO — Class overrided.
+2025-06-25 03:56:48,459 - learnergy.models.bernoulli.rbm — DEBUG — Size: (45, 2000) | Learning: CD-1 | Hyperparameters: lr = 1e-05, momentum = 0.95, decay = 0.0001, T = 1.0.
+2025-06-25 03:56:48,460 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-06-25 03:56:48,460 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-06-25 03:56:48,460 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: GaussianRBM -> GaussianSeluRBM.
+2025-06-25 03:56:48,460 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: RBM -> GaussianRBM.
+2025-06-25 03:56:48,460 - learnergy.models.bernoulli.rbm — INFO — Overriding class: Model -> RBM.
+2025-06-25 03:56:48,460 - learnergy.core.model — DEBUG — Device: cuda.
+2025-06-25 03:56:48,477 - learnergy.models.bernoulli.rbm — INFO — Class overrided.
+2025-06-25 03:56:48,477 - learnergy.models.bernoulli.rbm — DEBUG — Size: (2000, 1000) | Learning: CD-1 | Hyperparameters: lr = 1e-05, momentum = 0.95, decay = 0.0001, T = 1.0.
+2025-06-25 03:56:48,477 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-06-25 03:56:48,477 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-06-25 03:56:48,477 - learnergy.models.deep.dbn — INFO — Class overrided.
+2025-06-25 03:56:48,477 - learnergy.models.deep.dbn — DEBUG — Number of layers: 2.
+2025-06-25 04:28:29,711 - learnergy.models.deep.dbn — INFO — Overriding class: Model -> DBN.
+2025-06-25 04:28:29,712 - learnergy.core.model — DEBUG — Device: cuda.
+2025-06-25 04:28:29,712 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: GaussianRBM -> GaussianSeluRBM.
+2025-06-25 04:28:29,712 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: RBM -> GaussianRBM.
+2025-06-25 04:28:29,712 - learnergy.models.bernoulli.rbm — INFO — Overriding class: Model -> RBM.
+2025-06-25 04:28:29,713 - learnergy.core.model — DEBUG — Device: cuda.
+2025-06-25 04:28:30,038 - learnergy.models.bernoulli.rbm — INFO — Class overrided.
+2025-06-25 04:28:30,038 - learnergy.models.bernoulli.rbm — DEBUG — Size: (45, 2000) | Learning: CD-1 | Hyperparameters: lr = 1e-05, momentum = 0.95, decay = 0.0001, T = 1.0.
+2025-06-25 04:28:30,038 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-06-25 04:28:30,039 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-06-25 04:28:30,039 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: GaussianRBM -> GaussianSeluRBM.
+2025-06-25 04:28:30,039 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: RBM -> GaussianRBM.
+2025-06-25 04:28:30,039 - learnergy.models.bernoulli.rbm — INFO — Overriding class: Model -> RBM.
+2025-06-25 04:28:30,039 - learnergy.core.model — DEBUG — Device: cuda.
+2025-06-25 04:28:30,056 - learnergy.models.bernoulli.rbm — INFO — Class overrided.
+2025-06-25 04:28:30,056 - learnergy.models.bernoulli.rbm — DEBUG — Size: (2000, 1000) | Learning: CD-1 | Hyperparameters: lr = 1e-05, momentum = 0.95, decay = 0.0001, T = 1.0.
+2025-06-25 04:28:30,056 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-06-25 04:28:30,056 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-06-25 04:28:30,056 - learnergy.models.deep.dbn — INFO — Class overrided.
+2025-06-25 04:28:30,056 - learnergy.models.deep.dbn — DEBUG — Number of layers: 2.
+2025-06-25 04:29:30,546 - learnergy.models.deep.dbn — INFO — Overriding class: Model -> DBN.
+2025-06-25 04:29:30,546 - learnergy.core.model — DEBUG — Device: cuda.
+2025-06-25 04:29:30,547 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: GaussianRBM -> GaussianSeluRBM.
+2025-06-25 04:29:30,547 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: RBM -> GaussianRBM.
+2025-06-25 04:29:30,547 - learnergy.models.bernoulli.rbm — INFO — Overriding class: Model -> RBM.
+2025-06-25 04:29:30,548 - learnergy.core.model — DEBUG — Device: cuda.
+2025-06-25 04:29:30,772 - learnergy.models.bernoulli.rbm — INFO — Class overrided.
+2025-06-25 04:29:30,772 - learnergy.models.bernoulli.rbm — DEBUG — Size: (99, 2000) | Learning: CD-1 | Hyperparameters: lr = 1e-05, momentum = 0.95, decay = 0.0001, T = 1.0.
+2025-06-25 04:29:30,773 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-06-25 04:29:30,773 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-06-25 04:29:30,773 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: GaussianRBM -> GaussianSeluRBM.
+2025-06-25 04:29:30,773 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: RBM -> GaussianRBM.
+2025-06-25 04:29:30,773 - learnergy.models.bernoulli.rbm — INFO — Overriding class: Model -> RBM.
+2025-06-25 04:29:30,773 - learnergy.core.model — DEBUG — Device: cuda.
+2025-06-25 04:29:30,790 - learnergy.models.bernoulli.rbm — INFO — Class overrided.
+2025-06-25 04:29:30,790 - learnergy.models.bernoulli.rbm — DEBUG — Size: (2000, 1000) | Learning: CD-1 | Hyperparameters: lr = 1e-05, momentum = 0.95, decay = 0.0001, T = 1.0.
+2025-06-25 04:29:30,791 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-06-25 04:29:30,791 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-06-25 04:29:30,791 - learnergy.models.deep.dbn — INFO — Class overrided.
+2025-06-25 04:29:30,791 - learnergy.models.deep.dbn — DEBUG — Number of layers: 2.
+2025-06-25 05:00:31,761 - learnergy.models.deep.dbn — INFO — Overriding class: Model -> DBN.
+2025-06-25 05:00:31,762 - learnergy.core.model — DEBUG — Device: cuda.
+2025-06-25 05:00:31,763 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: GaussianRBM -> GaussianSeluRBM.
+2025-06-25 05:00:31,763 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: RBM -> GaussianRBM.
+2025-06-25 05:00:31,763 - learnergy.models.bernoulli.rbm — INFO — Overriding class: Model -> RBM.
+2025-06-25 05:00:31,763 - learnergy.core.model — DEBUG — Device: cuda.
+2025-06-25 05:00:32,086 - learnergy.models.bernoulli.rbm — INFO — Class overrided.
+2025-06-25 05:00:32,087 - learnergy.models.bernoulli.rbm — DEBUG — Size: (45, 2000) | Learning: CD-1 | Hyperparameters: lr = 1e-05, momentum = 0.95, decay = 0.0001, T = 1.0.
+2025-06-25 05:00:32,087 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-06-25 05:00:32,087 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-06-25 05:00:32,087 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: GaussianRBM -> GaussianSeluRBM.
+2025-06-25 05:00:32,087 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: RBM -> GaussianRBM.
+2025-06-25 05:00:32,087 - learnergy.models.bernoulli.rbm — INFO — Overriding class: Model -> RBM.
+2025-06-25 05:00:32,087 - learnergy.core.model — DEBUG — Device: cuda.
+2025-06-25 05:00:32,103 - learnergy.models.bernoulli.rbm — INFO — Class overrided.
+2025-06-25 05:00:32,104 - learnergy.models.bernoulli.rbm — DEBUG — Size: (2000, 1000) | Learning: CD-1 | Hyperparameters: lr = 1e-05, momentum = 0.95, decay = 0.0001, T = 1.0.
+2025-06-25 05:00:32,104 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-06-25 05:00:32,104 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-06-25 05:00:32,104 - learnergy.models.deep.dbn — INFO — Class overrided.
+2025-06-25 05:00:32,104 - learnergy.models.deep.dbn — DEBUG — Number of layers: 2.
+2025-06-25 17:50:21,201 - learnergy.models.deep.dbn — INFO — Overriding class: Model -> DBN.
+2025-06-25 17:50:21,202 - learnergy.core.model — DEBUG — Device: cuda.
+2025-06-25 17:50:21,203 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: GaussianRBM -> GaussianSeluRBM.
+2025-06-25 17:50:21,203 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: RBM -> GaussianRBM.
+2025-06-25 17:50:21,203 - learnergy.models.bernoulli.rbm — INFO — Overriding class: Model -> RBM.
+2025-06-25 17:50:21,204 - learnergy.core.model — DEBUG — Device: cuda.
+2025-06-25 17:50:21,541 - learnergy.models.bernoulli.rbm — INFO — Class overrided.
+2025-06-25 17:50:21,541 - learnergy.models.bernoulli.rbm — DEBUG — Size: (99, 2000) | Learning: CD-1 | Hyperparameters: lr = 1e-05, momentum = 0.95, decay = 0.0001, T = 1.0.
+2025-06-25 17:50:21,541 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-06-25 17:50:21,541 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-06-25 17:50:21,541 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: GaussianRBM -> GaussianSeluRBM.
+2025-06-25 17:50:21,541 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: RBM -> GaussianRBM.
+2025-06-25 17:50:21,541 - learnergy.models.bernoulli.rbm — INFO — Overriding class: Model -> RBM.
+2025-06-25 17:50:21,541 - learnergy.core.model — DEBUG — Device: cuda.
+2025-06-25 17:50:21,559 - learnergy.models.bernoulli.rbm — INFO — Class overrided.
+2025-06-25 17:50:21,560 - learnergy.models.bernoulli.rbm — DEBUG — Size: (2000, 1000) | Learning: CD-1 | Hyperparameters: lr = 1e-05, momentum = 0.95, decay = 0.0001, T = 1.0.
+2025-06-25 17:50:21,560 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-06-25 17:50:21,560 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-06-25 17:50:21,560 - learnergy.models.deep.dbn — INFO — Class overrided.
+2025-06-25 17:50:21,560 - learnergy.models.deep.dbn — DEBUG — Number of layers: 2.
+2025-06-25 17:51:56,982 - learnergy.models.deep.dbn — INFO — Overriding class: Model -> DBN.
+2025-06-25 17:51:56,983 - learnergy.core.model — DEBUG — Device: cuda.
+2025-06-25 17:51:56,984 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: GaussianRBM -> GaussianSeluRBM.
+2025-06-25 17:51:56,984 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: RBM -> GaussianRBM.
+2025-06-25 17:51:56,984 - learnergy.models.bernoulli.rbm — INFO — Overriding class: Model -> RBM.
+2025-06-25 17:51:56,984 - learnergy.core.model — DEBUG — Device: cuda.
+2025-06-25 17:51:57,206 - learnergy.models.bernoulli.rbm — INFO — Class overrided.
+2025-06-25 17:51:57,206 - learnergy.models.bernoulli.rbm — DEBUG — Size: (45, 2000) | Learning: CD-1 | Hyperparameters: lr = 1e-05, momentum = 0.95, decay = 0.0001, T = 1.0.
+2025-06-25 17:51:57,207 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-06-25 17:51:57,207 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-06-25 17:51:57,207 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: GaussianRBM -> GaussianSeluRBM.
+2025-06-25 17:51:57,207 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: RBM -> GaussianRBM.
+2025-06-25 17:51:57,207 - learnergy.models.bernoulli.rbm — INFO — Overriding class: Model -> RBM.
+2025-06-25 17:51:57,207 - learnergy.core.model — DEBUG — Device: cuda.
+2025-06-25 17:51:57,225 - learnergy.models.bernoulli.rbm — INFO — Class overrided.
+2025-06-25 17:51:57,225 - learnergy.models.bernoulli.rbm — DEBUG — Size: (2000, 1000) | Learning: CD-1 | Hyperparameters: lr = 1e-05, momentum = 0.95, decay = 0.0001, T = 1.0.
+2025-06-25 17:51:57,225 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-06-25 17:51:57,225 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-06-25 17:51:57,226 - learnergy.models.deep.dbn — INFO — Class overrided.
+2025-06-25 17:51:57,226 - learnergy.models.deep.dbn — DEBUG — Number of layers: 2.
+2025-06-25 18:00:42,949 - learnergy.models.deep.dbn — INFO — Overriding class: Model -> DBN.
+2025-06-25 18:00:42,951 - learnergy.core.model — DEBUG — Device: cuda.
+2025-06-25 18:00:42,951 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: GaussianRBM -> GaussianSeluRBM.
+2025-06-25 18:00:42,952 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: RBM -> GaussianRBM.
+2025-06-25 18:00:42,952 - learnergy.models.bernoulli.rbm — INFO — Overriding class: Model -> RBM.
+2025-06-25 18:00:42,952 - learnergy.core.model — DEBUG — Device: cuda.
+2025-06-25 18:00:43,183 - learnergy.models.bernoulli.rbm — INFO — Class overrided.
+2025-06-25 18:00:43,183 - learnergy.models.bernoulli.rbm — DEBUG — Size: (99, 2000) | Learning: CD-1 | Hyperparameters: lr = 1e-05, momentum = 0.95, decay = 0.0001, T = 1.0.
+2025-06-25 18:00:43,183 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-06-25 18:00:43,183 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-06-25 18:00:43,183 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: GaussianRBM -> GaussianSeluRBM.
+2025-06-25 18:00:43,183 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: RBM -> GaussianRBM.
+2025-06-25 18:00:43,183 - learnergy.models.bernoulli.rbm — INFO — Overriding class: Model -> RBM.
+2025-06-25 18:00:43,183 - learnergy.core.model — DEBUG — Device: cuda.
+2025-06-25 18:00:43,202 - learnergy.models.bernoulli.rbm — INFO — Class overrided.
+2025-06-25 18:00:43,202 - learnergy.models.bernoulli.rbm — DEBUG — Size: (2000, 1000) | Learning: CD-1 | Hyperparameters: lr = 1e-05, momentum = 0.95, decay = 0.0001, T = 1.0.
+2025-06-25 18:00:43,202 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-06-25 18:00:43,202 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-06-25 18:00:43,202 - learnergy.models.deep.dbn — INFO — Class overrided.
+2025-06-25 18:00:43,202 - learnergy.models.deep.dbn — DEBUG — Number of layers: 2.

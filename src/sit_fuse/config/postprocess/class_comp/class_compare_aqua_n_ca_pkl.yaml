@@ -1,0 +1,15 @@
+
+
+
+
+
+dbf_list: [[
+'/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS1_VIIRS_S_CA/tiered_hab_hist_dict.pkl'],
+['/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS1_VIIRS_S_CA/tiered_hab_al_hist_dict.pkl'],
+['/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS1_VIIRS_S_CA/tiered_hab_pnd_hist_dict.pkl'],
+['/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS1_VIIRS_S_CA/tiered_hab_pns_hist_dict.pkl']]
+dbf: True
+dbf_percentage_thresh: 0.51
+
+
+

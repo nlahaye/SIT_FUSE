@@ -1,0 +1,20 @@
+2025-07-07 20:51:20,857 - learnergy.models.deep.dbn — INFO — Overriding class: Model -> DBN.
+2025-07-07 20:51:20,858 - learnergy.core.model — DEBUG — Device: cuda.
+2025-07-07 20:51:20,859 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: GaussianRBM -> GaussianSeluRBM.
+2025-07-07 20:51:20,859 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: RBM -> GaussianRBM.
+2025-07-07 20:51:20,859 - learnergy.models.bernoulli.rbm — INFO — Overriding class: Model -> RBM.
+2025-07-07 20:51:20,859 - learnergy.core.model — DEBUG — Device: cuda.
+2025-07-07 20:51:21,192 - learnergy.models.bernoulli.rbm — INFO — Class overrided.
+2025-07-07 20:51:21,192 - learnergy.models.bernoulli.rbm — DEBUG — Size: (144, 2000) | Learning: CD-1 | Hyperparameters: lr = 1e-05, momentum = 0.95, decay = 0.0001, T = 1.0.
+2025-07-07 20:51:21,192 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-07-07 20:51:21,192 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-07-07 20:51:21,192 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: GaussianRBM -> GaussianSeluRBM.
+2025-07-07 20:51:21,193 - learnergy.models.gaussian.gaussian_rbm — INFO — Overriding class: RBM -> GaussianRBM.
+2025-07-07 20:51:21,193 - learnergy.models.bernoulli.rbm — INFO — Overriding class: Model -> RBM.
+2025-07-07 20:51:21,193 - learnergy.core.model — DEBUG — Device: cuda.
+2025-07-07 20:51:21,210 - learnergy.models.bernoulli.rbm — INFO — Class overrided.
+2025-07-07 20:51:21,210 - learnergy.models.bernoulli.rbm — DEBUG — Size: (2000, 1000) | Learning: CD-1 | Hyperparameters: lr = 1e-05, momentum = 0.95, decay = 0.0001, T = 1.0.
+2025-07-07 20:51:21,210 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-07-07 20:51:21,210 - learnergy.models.gaussian.gaussian_rbm — INFO — Class overrided.
+2025-07-07 20:51:21,210 - learnergy.models.deep.dbn — INFO — Class overrided.
+2025-07-07 20:51:21,210 - learnergy.models.deep.dbn — DEBUG — Number of layers: 2.

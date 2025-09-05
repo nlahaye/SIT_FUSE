@@ -29,7 +29,14 @@ def merge_datasets(paths, fname_str, out_dir, re_index = 0, base_index = 0):
     for root, dirs, files in os.walk(paths[base_index]):
         for fle in files:
             if fname_str in fle:
-                new_fname_root = re.search(fname_res[re_index], fle).group(1)
+                if "OR_ABI" in fle or "_G18_" in fle:
+                    goes_match = re.search(r"s(20\d{2})(\d{3})\d{6}", fle)
+                    year = goes_match.group(1)
+                    doy = goes_match.group(2)
+                    date_obj = datetime.datetime.strptime(year + doy, "%Y%j")
+                    new_fname_root = date_obj.strftime("%Y%m%d")
+                else:
+                    new_fname_root = re.search(fname_res[re_index], fle).group(1)
                 fname = os.path.join(out_dir, new_fname_root + "_" + fname_str)
                 dqi_fname = os.path.splitext(fname)[0] + ".DQI.tif"
                 data = None
@@ -39,7 +46,7 @@ def merge_datasets(paths, fname_str, out_dir, re_index = 0, base_index = 0):
                     qual = gdal.Open(dqi_fname).ReadAsArray()
                 fle1 = os.path.join(root, fle)
                 dat1 = gdal.Open(fle1)
-                tmp = dat1.ReadAsArray()  
+                tmp = dat1.ReadAsArray()
                 if data is None:
                     imgData1 = np.zeros(tmp.shape) - 1
                 else:
@@ -51,9 +58,9 @@ def merge_datasets(paths, fname_str, out_dir, re_index = 0, base_index = 0):
                     dqi = qual
 
                 inds = np.where((imgData1 < 0) & (tmp >= 0))
-                imgData1[inds] = tmp[inds] 
+                imgData1[inds] = tmp[inds]
 
-                dqi[inds] = base_index                
+                dqi[inds] = base_index
                 for j in range(base_index+1, len(paths)):
                     fle2 = os.path.join(paths[j], fle)
                     if os.path.exists(fle2):
@@ -72,6 +79,16 @@ def merge_datasets(paths, fname_str, out_dir, re_index = 0, base_index = 0):
                 wkt = dat1.GetProjection()
                 dat1.FlushCache()
                 dat1 = None
+
+                for j in range(base_index, len(paths)):
+                    flej = os.path.join(paths[j], fle)
+                    if os.path.exists(flej):
+                        datj = gdal.Open(flej)
+                        dataj = datj.ReadAsArray()
+                        cloud_inds = np.where(dataj == -1)
+                        imgData1[cloud_inds] = -1
+                        dqi[cloud_inds] = -1
+                        datj = None
           
                 out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Int16)
                 out_ds.SetGeoTransform(geoTransform)
@@ -171,7 +188,7 @@ def merge_monthly(dirname, fname_str):
             out_ds.SetProjection(wkt)
             out_ds.GetRasterBand(1).WriteArray(newDqi)
             out_ds.FlushCache()
-            out_ds = None    
+            out_ds = None
 
 
 

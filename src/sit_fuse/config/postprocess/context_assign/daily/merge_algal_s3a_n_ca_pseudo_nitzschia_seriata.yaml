@@ -1,0 +1,15 @@
+ 
+input_paths: ["/data/nlahaye/output/Learnergy/No_Data/",
+              "/data/nlahaye/output/Learnergy/No_Data/",
+              "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/S3A_OLCI_S_CA/"]
+
+ 
+ 
+fname_str: "DAY.pseudo_nitzschia_seriata_bloom.tif"
+out_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/MERGED_HAB/FINAL/S3A/"
+num_classes: 9
+re_index: 3
+
+gen_daily: true
+gen_monthly: false
+

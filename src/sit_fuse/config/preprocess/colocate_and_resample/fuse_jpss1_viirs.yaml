@@ -1,0 +1,87 @@
+low_res:
+ data:
+  valid_min: -100.0
+  valid_max: 100000000
+  reader_type: "viirs_oc"
+  reader_kwargs:
+   start_lon: -97.8985
+   end_lon: -80.5301
+   start_lat: 18.1599
+   end_lat: 30.4159
+   mask_oceans: True
+  geo_reader_type: "viirs_oc_geo"
+  geo_reader_kwargs:
+    start_lon: -97.8985
+    end_lon: -80.5301
+    start_lat: 18.1599
+    end_lat: 30.4159
+    mask_oceans: True
+  filenames: ["/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250301.L3m.DAY.",
+              "/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250301.L3m.DAY.",
+              "/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250301.L3m.DAY.",
+              "/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250301.L3m.DAY.",
+              "/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250301.L3m.DAY.",
+              "/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250302.L3m.DAY.",
+              "/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250302.L3m.DAY.",
+              "/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250302.L3m.DAY.",
+              "/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250302.L3m.DAY.",
+              "/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250302.L3m.DAY."]
+
+
+
+  geo_filenames: ["/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250301.L3m.DAY.",
+                  "/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250301.L3m.DAY.", 
+                  "/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250301.L3m.DAY.", 
+                  "/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250301.L3m.DAY.", 
+                  "/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250301.L3m.DAY.", 
+                  "/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250302.L3m.DAY.", 
+                  "/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250302.L3m.DAY.", 
+                  "/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250302.L3m.DAY.", 
+                  "/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250302.L3m.DAY.", 
+                  "/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250302.L3m.DAY."]
+
+
+
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+high_res:
+ data:
+  valid_min: 0.0
+  valid_max: 100000000
+  reader_type: "numpy"
+  reader_kwargs:
+   no_arg: "no_arg"
+  geo_reader_type: "numpy"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: []
+  geo_filenames: []
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+fusion:
+ projection_id: 4326
+ description: "Generating JPSS1 VIIRS GeoTiffs"
+ area_id: "GOES"
+ projection_proj4:
+  proj: "longlat"
+  datum: "WGS84" 
+ final_resolution: 0.055
+ projection_units: "degrees"
+ resample_radius: 20000
+ resample_n_neighbors: 64
+ resample_n_procs: 10
+ resample_epsilon: 1.6
+ use_bilinear: False
+ lon_bounds: [ -120.5, -118.0 ]
+ lat_bounds: [ 47.5, 50.0 ]
+
+      
+output_files: ["/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250301.L3m.DAY.RRS.Rrs_411.4km.nc.tif", "/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250301.L3m.DAY.RRS.Rrs_445.4km.nc.tif", "/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250301.L3m.DAY.RRS.Rrs_489.4km.nc.tif", "/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250301.L3m.DAY.RRS.Rrs_556.4km.nc.tif", "/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250301.L3m.DAY.RRS.Rrs_667.4km.nc.tif", "/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250302.L3m.DAY.RRS.Rrs_411.4km.nc.tif", "/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250302.L3m.DAY.RRS.Rrs_445.4km.nc.tif", "/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250302.L3m.DAY.RRS.Rrs_489.4km.nc.tif", "/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250302.L3m.DAY.RRS.Rrs_556.4km.nc.tif", "/Users/stasyaeasley/Desktop/JPSS1/JPSS1_VIIRS.20250302.L3m.DAY.RRS.Rrs_667.4km.nc.tif"]

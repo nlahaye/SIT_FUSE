@@ -1,0 +1,41 @@
+input_files:
+  [
+    ["'/Users/stasyaeasley/Desktop/GOES/full_geo/OR_ABI-L1b-RadC-M6C01_G18_s20250062201170_e20250062203543_c20250062203580.tif.clust.data_71199clusters.zarr.full_geo.tif'"],
+    ["'/Users/stasyaeasley/Desktop/GOES/full_geo/OR_ABI-L1b-RadC-M6C01_G18_s20250072301172_e20250072303545_c20250072303584.tif.clust.data_71199clusters.zarr.full_geo.tif'"],
+    ["'/Users/stasyaeasley/Desktop/GOES/full_geo/OR_ABI-L1b-RadC-M6C01_G18_s20250082201173_e20250082203546_c20250082203585.tif.clust.data_71198clusters.zarr.full_geo.tif'"],
+    ["'/Users/stasyaeasley/Desktop/GOES/full_geo/OR_ABI-L1b-RadC-M6C01_G18_s20250092201175_e20250092203548_c20250092203584.tif.clust.data_71199clusters.zarr.full_geo.tif'"],
+    ["'/Users/stasyaeasley/Desktop/GOES/full_geo/OR_ABI-L1b-RadC-M6C01_G18_s20250101601176_e20250101603549_c20250101603589.tif.clust.data_55296clusters.zarr.full_geo.tif'"],
+    ["'/Users/stasyaeasley/Desktop/GOES/full_geo/OR_ABI-L1b-RadC-M6C01_G18_s20250112301178_e20250112303551_c20250112303597.tif.clust.data_71197clusters.zarr.full_geo.tif'"],
+    ["'/Users/stasyaeasley/Desktop/GOES/full_geo/OR_ABI-L1b-RadC-M6C01_G18_s20250121901180_e20250121903553_c20250121904000.tif.clust.data_71199clusters.zarr.full_geo.tif'"],
+    ["'/Users/stasyaeasley/Desktop/GOES/full_geo/OR_ABI-L1b-RadC-M6C01_G18_s20250131801181_e20250131803554_c20250131803593.tif.clust.data_71191clusters.zarr.full_geo.tif'"]
+  ]
+
+shp_files:
+  [
+    ["/Users/stasyaeasley/Desktop/GOES/labels/goes_background_2025006.shp",
+    "/Users/stasyaeasley/Desktop/GOES/labels/goes_cloud_2025006.shp"],
+
+    ["/Users/stasyaeasley/Desktop/GOES/labels/goes_background_2025007.shp",
+    "/Users/stasyaeasley/Desktop/GOES/labels/goes_cloud_2025007.shp"],
+
+    ["/Users/stasyaeasley/Desktop/GOES/labels/goes_background_2025008.shp",
+    "/Users/stasyaeasley/Desktop/GOES/labels/goes_cloud_2025008.shp"],
+
+    ["/Users/stasyaeasley/Desktop/GOES/labels/goes_background_2025009.shp",
+    "/Users/stasyaeasley/Desktop/GOES/labels/goes_cloud_2025009.shp"],
+
+    ["/Users/stasyaeasley/Desktop/GOES/labels/goes_background_2025010.shp",
+    "/Users/stasyaeasley/Desktop/GOES/labels/goes_cloud_2025010.shp"],
+
+    ["/Users/stasyaeasley/Desktop/GOES/labels/goes_background_2025011.shp",
+    "/Users/stasyaeasley/Desktop/GOES/labels/goes_cloud_2025011.shp"],
+
+    ["/Users/stasyaeasley/Desktop/GOES/labels/goes_background_2025012.shp",
+    "/Users/stasyaeasley/Desktop/GOES/labels/goes_cloud_2025012.shp"],
+
+    ["/Users/stasyaeasley/Desktop/GOES/labels/goes_background_2025013.shp",
+    "/Users/stasyaeasley/Desktop/GOES/labels/goes_cloud_2025013.shp"]
+  ]
+
+
+out_file: "GOES_HAB_Cloud_Mask.json"

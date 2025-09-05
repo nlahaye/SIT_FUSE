@@ -682,6 +682,7 @@ def main(yml_fpath):
     clust_dep = {}
 
     tiered_masking = None
+    background_class = None
     if "tiered_masking"  in yml_conf["context"]:
         tiered_masking = yml_conf["context"]["tiered_masking"]
 

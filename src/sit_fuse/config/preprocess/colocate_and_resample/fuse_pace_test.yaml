@@ -1,0 +1,96 @@
+low_res:
+ data:
+  valid_min: -100.0
+  valid_max: 100000000
+  reader_type: "pace_oc"
+  reader_kwargs:
+   start_lon: -97.8985
+   end_lon: -80.5301
+   start_lat: 18.1599
+   end_lat: 30.4159
+   mask_oceans: True
+  geo_reader_type: "pace_oc_geo"
+  geo_reader_kwargs:
+    start_lon: -97.8985
+    end_lon: -80.5301
+    start_lat: 18.1599
+    end_lat: 30.4159
+    mask_oceans: True
+  filenames:
+   ["/mnt/data/PACE_OCI_REFLECTANCES/PACE_OCI.20240801.L3m.DAY.",
+#    "/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240802.L3m.DAY.",
+#    "/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240803.L3m.DAY.",
+#    "/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240804.L3m.DAY.",
+#    "/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240805.L3m.DAY.",
+#    "/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240806.L3m.DAY.",
+#    "/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240807.L3m.DAY.",
+#    "/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240808.L3m.DAY.",
+#    "/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240809.L3m.DAY.",
+#    "/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240810.L3m.DAY."
+   ]
+
+
+  geo_filenames:
+   ["/mnt/data/PACE_OCI_REFLECTANCES/PACE_OCI.20240801.L3m.DAY.",
+#    "/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240802.L3m.DAY.",
+#    "/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240803.L3m.DAY.",
+#    "/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240804.L3m.DAY.",
+#    "/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240805.L3m.DAY.",
+#    "/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240806.L3m.DAY.",
+#    "/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240807.L3m.DAY.",
+#    "/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240808.L3m.DAY.",
+#    "/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240809.L3m.DAY.",
+#    "/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240810.L3m.DAY."
+   ]
+  chan_dim: 0
+  geo_coord_dim: 0
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+high_res:
+ data:
+  valid_min: 0.0
+  valid_max: 100000000
+  reader_type: "numpy"
+  reader_kwargs:
+   no_arg: "no_arg"
+  geo_reader_type: "numpy"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: []
+  geo_filenames: []
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+fusion:
+ projection_id: 4326
+ description: "Generating PACE OCI GeoTiffs"
+ area_id: "GERD Dam"
+ projection_proj4:
+  proj: "longlat"
+  datum: "WGS84"
+ final_resolution: 0.055
+ projection_units: "degrees"
+ resample_radius: 50000
+ resample_n_neighbors: 128
+ resample_n_procs: 10
+ resample_epsilon: 1.6
+ use_bilinear: True
+
+
+output_files:
+  ["/mnt/data/PACE_OCI_REFLECTANCES/PACE_OCI.20240801.L3m.DAY.RRS.V3_0.Rrs.4km.tif",
+#"/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240802.L3m.DAY.RRS.V3_0.Rrs.4km.tif",
+#"/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240803.L3m.DAY.RRS.V3_0.Rrs.4km.tif",
+#"/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240804.L3m.DAY.RRS.V3_0.Rrs.4km.tif",
+#"/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240805.L3m.DAY.RRS.V3_0.Rrs.4km.tif",
+#"/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240806.L3m.DAY.RRS.V3_0.Rrs.4km.tif",
+#"/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240807.L3m.DAY.RRS.V3_0.Rrs.4km.tif",
+#"/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240808.L3m.DAY.RRS.V3_0.Rrs.4km.tif",
+#"/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240809.L3m.DAY.RRS.V3_0.Rrs.4km.tif",
+#"/Users/stasyaeasley/Desktop/PACE/PACE_OCI.20240810.L3m.DAY.RRS.V3_0.Rrs.4km.tif"
+]

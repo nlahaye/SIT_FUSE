@@ -1194,7 +1194,6 @@ def read_gtiff_generic(flename, **kwargs):
 		dat = dat[kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
 	return dat
 
-
 #TODO generalize pieces for other tasks
 def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n_clusters, radius_degrees, ranges, global_max, input_file_type, karenia, discard_lower=False, use_key='Total_Phytoplankton', output_dir="."): #, lookup = {}):
 
@@ -1253,6 +1252,9 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
                 file_ext = file_ext + "total_phytoplankton.tif"
             #clust_fname = os.path.join(os.path.join(clusters_dir, "AQUA_MODIS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m." + file_ext))
             clust_fname = os.path.join(os.path.join(clusters_dir, pd.to_datetime(str(date)).strftime("%Y%m%d") +  file_ext))
+            if not os.path.exists(clust_fname):
+                # For GOES
+                clust_fname = os.path.join(clusters_dir, pd.to_datetime(str(date)).strftime("%Y%m%d") + "_total_phytoplankton.tif")
         elif "alexandrium" in input_file_type:
             clust_fname = os.path.join(os.path.join(clusters_dir, pd.to_datetime(str(date)).strftime("%Y%m%d") + "_alexandrium_bloom" + ".tif"))
         elif "pseudo_nitzschia_seriata" in input_file_type:

@@ -1,0 +1,16 @@
+
+data:
+ min_thresh: 0.51
+ clust_gtiffs: [
+]
+
+
+ label_gtiffs: [[]
+]
+ name: ["total_phytoplankton", "alexandrium_bloom", "pseudo_nitzschia_delicatissima_bloom", "pseudo_nitzschia_seriata_bloom"]
+
+
+output:
+ out_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/SNPP_VIIRS_S_CA/"
+ class_name: ["tiered_hab", "tiered_hab_al", "tiered_hab_pnd", "tiered_hab_pns"]
+

@@ -1,0 +1,13 @@
+
+xl_fname: '/mnt/data/la_hab_data/combined.csv'
+start_date: "2024-03-05"
+end_date: "2025-06-11"
+clusters: 120000
+ 
+clusters_dir: '/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/'
+radius_degrees: [0.09]
+global_max: 10000000
+ranges: [0,1000,10000,100000,1000000,10000000, 100000000]
+
+input_file_type: []
+use_keys: [ 'Alexandrium_spp', 'Pseudo_nitzschia_seriata_bloom', 'Pseudo_nitzschia_delicatissima_bloom' ]
