@@ -1,0 +1,397 @@
+"""
+Copyright [2022-23], by the California Institute of Technology and Chapman University. 
+ALL RIGHTS RESERVED. United States Government Sponsorship acknowledged. Any commercial use must be negotiated with the 
+Office of Technology Transfer at the California Institute of Technology and Chapman University.
+This software may be subject to U.S. export control laws. By accepting this software, the user agrees to comply with all 
+applicable U.S. export laws and regulations. User has the responsibility to obtain export licenses, or other export authority as may be 
+required before exporting such information to foreign countries or providing access to foreign persons.
+"""
+import matplotlib
+matplotlib.use('agg')
+import matplotlib.pyplot as plt
+
+from sklearn import metrics, manifold
+from sklearn.preprocessing import MinMaxScaler
+from pprint import pprint
+
+#- Scientific stack
+import scipy
+from scipy.spatial.distance import pdist, squareform
+
+#- Graph-stats 
+from graspologic.embed import OmnibusEmbed, ClassicalMDS, AdjacencySpectralEmbed
+from graspologic.simulations import rdpg
+
+import copy
+import gc
+
+from resource import *
+import pytorch_lightning as pl
+import torch
+from torch.utils.data import DataLoader, TensorDataset
+
+import pickle
+import joblib
+
+from learnergy.models.deep import DBN, ConvDBN
+
+from segmentation.models.gcn import GCN
+from segmentation.models.deeplabv3_plus_xception import DeepLab
+from segmentation.models.unet import UNetEncoder, UNetDecoder
+
+import openTSNE
+import umap
+
+from sit_fuse.models.deep_cluster.dc import DeepCluster
+from sit_fuse.models.encoders.cnn_encoder import DeepConvEncoder
+from sit_fuse.models.deep_cluster.ijepa_dc import IJEPA_DC
+from sit_fuse.models.deep_cluster.dbn_dc import DBN_DC
+from sit_fuse.datasets.dataset_utils import get_prediction_dataset
+from sit_fuse.models.deep_cluster.heir_dc import Heir_DC
+from sit_fuse.utils import read_yaml
+from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes
+
+from tqdm import tqdm
+
+import argparse
+import os
+import numpy as np
+import sys
+
+import dask
+import dask.array as da
+
+from osgeo import gdal, osr
+
+from torchinfo import summary
+
+import zarr
+
+import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
+from sit_fuse.viz.CMAP import CMAP, CMAP_COLORS
+
+from sit_fuse.inference.generate_output import run_inference, get_model
+
+sys.setrecursionlimit(4500)
+
+FINAL_DCT = {
+        "proj_y": [],
+        "proj_x": [],
+        "bb_x": [],
+        "bb_y": [],
+        "bb_width": [],
+        "bb_height": [],
+        "heir_label": [],
+        "final_label": [],
+        "no_heir_label": []
+    }
+
+
+def run_reduced_projection(embed, labels, coord, final_labels, out_fname, pca_embed = False, indices = None, \
+    recon_arr = None, recon_lab = None, reducer = None):
+
+
+    coord_coord_1 = 1
+    coord_coord_2 = 2
+    if coord.ndim < 3 and coord.shape[1] < 3:
+        coord_coord_1 = 0
+        coord_coord_2 = 1
+
+    if recon_lab is None or  recon_arr is None:
+        if final_labels is not None:
+            print("HERE ERROR", embed.shape, labels.shape, final_labels.shape, np.unique(labels), len(np.unique(labels)))
+        original_shape = (max(coord[:,coord_coord_1])+1, max(coord[:,coord_coord_2])+1)
+        for i in range(coord.shape[1]):
+            print(max(coord[:,i]), coord.shape, i)
+        if embed.ndim  == 4:
+            embed = np.transpose(embed, axes=(0,2,3,1))
+            reconstructed_arr = np.zeros((original_shape[0], original_shape[1], embed.shape[3]))
+            reconstructed_labels = np.zeros((original_shape[0], original_shape[1])) - 1
+        else:
+            reconstructed_arr = np.zeros((original_shape[0], original_shape[1], embed.shape[1]))
+            reconstructed_labels = np.zeros((original_shape[0], original_shape[1])) - 1
+
+        print(original_shape, coord.shape, reconstructed_arr.shape, reconstructed_labels.shape)
+        print(embed.shape, labels.shape)
+
+        if embed.ndim  == 4:
+            for i in range(embed.shape[0]):
+                print(coord[i], i, embed.shape, reconstructed_arr.shape) 
+                if coord[i,coord_coord_2]+embed.shape[2] > reconstructed_arr.shape[1] or coord[i,coord_coord_1]+embed.shape[1] > reconstructed_arr.shape[0]:
+                    continue
+                reconstructed_arr[coord[i,coord_coord_1]:coord[i,coord_coord_1]+embed.shape[1], coord[i,coord_coord_2]:coord[i,coord_coord_2]+embed.shape[2], :] = embed[i,:,:,:]
+                reconstructed_labels[coord[i,coord_coord_1]:coord[i,coord_coord_1]+labels.shape[1], coord[i,coord_coord_2]:coord[i,coord_coord_2]+labels.shape[2]] = labels[i,:,:]
+                #reconstructed_final_labels[coord[i,0], coord[i,1]] = final_labels[i]
+        else:
+            for i in range(embed.shape[0]):
+                reconstructed_arr[coord[i,coord_coord_1], coord[i,coord_coord_2]] = embed[i]
+                reconstructed_labels[coord[i,coord_coord_1], coord[i,coord_coord_2]] = labels[i]
+                #reconstructed_final_labels[coord[i,0], coord[i,1]] = final_labels[i]
+
+        zarr.save(out_fname + ".embeddings.zarr", reconstructed_arr)
+        zarr.save(out_fname + ".embedding_labels.zarr", reconstructed_labels)
+
+    else:
+        reconstructed_arr = recon_arr
+        reconstructed_labels = recon_lab
+
+    recon_coord = np.indices(reconstructed_arr.shape[0:2])
+    recon_coord = np.moveaxis(recon_coord, 0,2)
+    print(recon_coord.shape, reconstructed_arr.shape, recon_coord.max(), recon_coord[:,0].max(), recon_coord[:,1].max())
+    recon_coord = recon_coord.reshape(-1,2)
+    print(recon_coord.shape, reconstructed_arr.shape, recon_coord.max(), recon_coord[:,0].max(), recon_coord[:,1].max())
+
+ 
+    if final_labels is not None:
+        final_labels = final_labels[:reconstructed_labels.shape[0],:reconstructed_labels.shape[1]]
+        final_labels = final_labels.flatten()
+    #print("INTERMEDIATE RECON SHAPE", reconstructed_arr.shape, reconstructed_labels.reshape, np.unique(final_labels))
+    embed = reconstructed_arr.reshape(-1, reconstructed_arr.shape[-1])
+    labels = reconstructed_labels.reshape(-1, 1)
+    labels = labels.flatten()
+    #print("FLATTENED RECON SHAPE", embed.shape, final_labels.shape, labels.shape, indices)
+    if indices is not None:
+        ind_tmp = zarr.load(indices)
+    elif final_labels is not None:
+        sub_ind_1 = np.where((final_labels == 0) & (labels > 0.0))[0]
+        sub_ind_2 = np.where(final_labels == 1)[0]
+        sub_ind_3 = np.where(final_labels == 2)[0]
+        sub_ind_4 = np.where(final_labels == 3)[0]
+        ind_final = np.concatenate((sub_ind_4, sub_ind_2))
+
+        sub_sub_ind__3 = np.random.choice(sub_ind_3.shape[0], size=min(int(sub_ind_3.shape[0]), 10000), replace=False)
+        sub_sub_ind__1 = np.random.choice(sub_ind_1.shape[0], size=min(int(sub_ind_1.shape[0]), 10000), replace=False)
+        ind_tmp = np.concatenate((ind_final, sub_ind_3[sub_sub_ind__3], sub_ind_1[sub_sub_ind__1]))
+ 
+        print(np.unique(final_labels))
+        zarr.save(out_fname + ".indices.zarr", ind_tmp)
+        print(ind_tmp.shape, out_fname + ".indices.zarr")
+    else:
+        ind_tmp = np.indices(labels.shape)
+    print(ind_tmp)
+    indices = np.unique(ind_tmp)
+    print(indices.shape, "HERE INDICES", np.unique(labels[indices]), len(np.unique(labels[indices])), embed.shape, recon_coord.shape)
+    test_data = embed[indices, :]
+    clust_data = labels[indices]
+    if final_labels is not None:
+        clust_data_2 = final_labels[indices]
+    print("RECON COORD TEST", recon_coord[:,0].max(), recon_coord[:,1].max())
+    recon_coord = recon_coord[indices, :]
+    print("RECON COORD TEST2", recon_coord[:,0].max(), recon_coord[:,1].max())
+
+    if not pca_embed:
+        tsne_data = reducer.transform(test_data)
+    else:
+        tsne_data = test_data
+
+    shift_1 = abs(min(tsne_data[:,0]))
+    shift_2 = abs(min(tsne_data[:,1]))
+
+    tsne_data[:,0] = tsne_data[:,0] + shift_1
+    tsne_data[:,1] = tsne_data[:,1] + shift_2
+
+    #scaler = MinMaxScaler()
+    #tsne_data = scaler.fit_transform(tsne_data)
+
+    tsne_data = (tsne_data*1000).astype(np.int32)
+
+    fnl = max(tsne_data[:,0])
+    fnl2 = max(tsne_data[:,1])
+    final = np.zeros((fnl+1, fnl2+1), dtype=np.float32) - 1.0
+    final2 = np.zeros((fnl+1, fnl2+1), dtype=np.float32) - 1.0
+    print(out_fname + ".TSNE_Clust.tif", np.unique(final), np.unique(final2))
+
+
+    final_dct = copy.deepcopy(FINAL_DCT)
+
+
+    for i in range(recon_coord.shape[0]):
+
+        final_dct["proj_y"].append(tsne_data[i,0])
+        final_dct["proj_x"].append(tsne_data[i,1])
+        final_dct["bb_x"].append(recon_coord[i,1])
+        final_dct["bb_y"].append(recon_coord[i,0])
+        final_dct["bb_width"].append(3) #TODO generalize
+        final_dct["bb_height"].append(3)
+        final_dct["heir_label"].append(clust_data[i] / 100.0)
+        if final_labels is not None:
+            final_dct["final_label"].append(clust_data_2[i])
+        final_dct["no_heir_label"].append(int(clust_data[i] / 100.0))
+
+        final[tsne_data[i,0], tsne_data[i,1]] = clust_data[i] / 100.0
+        if final_labels is not None:
+            final2[tsne_data[i,0], tsne_data[i,1]] = clust_data_2[i]
+
+    np.save(out_fname + ".viz_dict.npy", final_dct)
+
+    out_ds = gdal.GetDriverByName("GTiff").Create(out_fname + ".TSNE_Clust.tif", final.shape[1], final.shape[0], 1, gdal.GDT_Float32)
+    out_ds.GetRasterBand(1).WriteArray(final)
+    out_ds.FlushCache()
+    out_ds = None
+ 
+    if final_labels is not None:
+        out_ds = gdal.GetDriverByName("GTiff").Create(out_fname + ".TSNE_Final.tif", final.shape[1], final.shape[0], 1, gdal.GDT_Float32)
+        out_ds.GetRasterBand(1).WriteArray(final2)
+        out_ds.FlushCache()
+        out_ds = None
+
+
+
+    out_ds = gdal.GetDriverByName("GTiff").Create(out_fname + ".TSNE_Clust_Round.tif", final.shape[1], final.shape[0], 1, gdal.GDT_Int32)
+    out_ds.GetRasterBand(1).WriteArray(final.astype(np.int32))
+    out_ds.FlushCache()
+    out_ds = None
+
+
+def knn_graph(w, k, symmetrize=True, metric='euclidean'):
+    '''
+    :param w: A weighted affinity graph of shape [N, N] or 2-d array 
+    :param k: The number of neighbors to use
+    :param symmetrize: Whether to symmetrize the resulting graph
+    :return: An undirected, binary, KNN graph of shape [N, N]
+    '''
+    w_shape = w.shape
+    if w_shape[0] != w_shape[1]:
+        w = np.array(squareform(pdist(w, metric=metric)))
+            
+    neighborhoods = np.argsort(w, axis=1)[:, -(k+1):-1]
+    A = np.zeros_like(w)
+    for i, neighbors in enumerate(neighborhoods):
+        for j in neighbors:
+            A[i, j] = 1
+            if symmetrize:
+                A[j, i] = 1
+    return A
+
+def build_knn_graph(embed, out_fname):
+    if embed.ndim < 3:
+        k=int(np.log(embed.shape[0]))
+    else:
+        k=int(np.log(embed.shape[0]* embed.shape[1]))
+ 
+    knn_graph_out =  knn_graph(embed, k=k, symmetrize=True, metric='cosine')
+    zarr.save(out_fname, knn_graph_out)
+
+
+def main(yml_fpath):
+
+    yml_conf = read_yaml(yml_fpath)
+
+    test_fnames = yml_conf["data"]["files_test"]
+    train_fnames = yml_conf["data"]["files_train"]
+  
+    data = None
+    cntr = 0
+    while data is None or data.data_full is None:
+        data, _  = get_prediction_dataset(yml_conf, train_fnames[cntr])
+        cntr = cntr + 1
+
+    print(data.data_full.shape)
+
+    model = get_model(yml_conf, data.data_full.shape[1])
+
+    model = model.cuda()
+    model.pretrained_model = model.pretrained_model.cuda()
+    #model.pretrained_model.mlp_head = model.pretrained_model.mlp_head.cuda()
+    if hasattr(model.pretrained_model, "pretrained_model"):
+        model.pretrained_model.pretrained_model = model.pretrained_model.pretrained_model.cuda()
+     
+    for lab1 in model.clust_tree.keys():
+        if lab1 == "0":
+            continue
+        for lab2 in model.lab_full.keys():
+            if lab2 in model.clust_tree[lab1].keys():
+                if model.clust_tree[lab1][lab2] is not None:
+                    model.clust_tree[lab1][lab2] = model.clust_tree[lab1][lab2].cuda() 
+  
+ 
+    out_dir = yml_conf["output"]["out_dir"]
+
+    tiled = yml_conf["data"]["tile"]
+
+    tsne_perplexity = yml_conf["analysis"]["tsne"]["perplexity"]
+    tsne_niter = yml_conf["analysis"]["tsne"]["niter"]
+    tsne_njobs = yml_conf["analysis"]["tsne"]["njobs"]
+    tsne_patience = yml_conf["analysis"]["tsne"]["patience"]
+    tsne_lr = yml_conf["analysis"]["tsne"]["lr"]
+
+    run_projection = yml_conf["analysis"]["run_projection"]
+
+
+    indices = [None]
+    if "indices" in yml_conf["data"].keys():
+        indices = yml_conf["data"]["indices"]
+
+    embed_func = yml_conf["analysis"]["embed_func"]
+    final_labels = yml_conf["data"]["final_labels"]
+
+    knn_graphs = yml_conf["analysis"]["build_knn_graphs"]
+
+    #loop_dict = {"reducer":None, "landmarks":None}
+    loop_dicts = []
+    int_embed = None
+
+    reducer_fname = os.path.join(out_dir, 'umap_model.joblib')
+    if os.path.exists(reducer_fname):
+        reducer = joblib.load(reducer_fname)
+ 
+
+    for i in range(len(test_fnames)):
+        if isinstance(test_fnames[i], list):
+            output_fle = os.path.join(out_dir, os.path.basename(os.path.splitext(test_fnames[i][0])[0]) + "." + embed_func)
+        else:
+            output_fle = os.path.join(out_dir, os.path.basename(os.path.splitext(test_fnames[i])[0]) + "." + embed_func)
+        print(output_fle)
+        data, output_file  = get_prediction_dataset(yml_conf, test_fnames[i])
+        if data.data_full is None:
+            print("SKIPPING", test_fnames[i], " No valid samples")
+            continue
+        context_labels = None
+        if len(final_labels) == len(test_fnames):
+            context_labels = gdal.Open(final_labels[i]).ReadAsArray()
+        print(data.targets_full.shape)
+        #if data.targets_full.ndim > 2:
+        #    context_labels = context_labels[data.targets_full[0,:,1], data.targets_full[0,:,2]].flatten()
+        #else:
+        #    if data.targets_full.shape[1] < 3:
+        #        context_labels = context_labels[data.targets_full[:,0], data.targets_full[:,1]].flatten()
+        #    else:
+        #        print(data.targets_full[:,0].max(), data.targets_full[:,1].max(), data.targets_full[:,2].max())
+        #        context_labels = context_labels[data.targets_full[:,1], data.targets_full[:,2]].flatten()
+        output = None
+        embed = None
+        recon_arr = None
+        recon_lab = None
+        if model.clust_tree_ckpt is not None:
+            if not os.path.exists(output_fle + ".embeddings.zarr") or not os.path.exists(output_fle + ".embedding_labels.zarr"):
+                output, embed = run_inference(data, model, True, out_dir, output_fle + ".clust.data", tiled = tiled, return_embed =  True)
+            else:
+                recon_arr = zarr.load(output_fle + ".embeddings.zarr")
+                recon_lab = zarr.load(output_fle + ".embedding_labels.zarr")
+   
+            is_pca = bool("pca" in embed_func )
+            if run_projection:
+                ind = None
+                if indices[0] is not None:
+                    ind = indices[i]
+              
+                loop_dict = run_reduced_projection(embed, output, data.targets_full, context_labels, \
+                    output_fle, is_pca, ind, recon_arr, recon_lab, reducer)
+                loop_dicts.append(copy.deepcopy(loop_dict))
+                if int_embed is None:
+                    int_embed = loop_dict["test_data"]
+                else:
+                    int_embed = np.concatenate((int_embed, int_embed))
+                print("INTERMEDIATE EMBEDDING SHAPE", int_embed.shape) 
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-y", "--yaml", help="YAML file for DBN and output config.")
+    args = parser.parse_args()
+    main(args.yaml)
+
+    print(getrusage(RUSAGE_SELF))
+
+
