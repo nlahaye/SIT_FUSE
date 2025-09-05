@@ -1145,9 +1145,13 @@ def read_gtiff_generic(flename, **kwargs):
 	tmp2 = None
 	if "mask_oceans" in kwargs:
 		latlon = read_gtiff_generic_geo(flename, **kwargs)
-		land_temp = ocean_basins_50.mask(latlon[1], latlon[1])
+		land_temp = ocean_basins_50.mask(latlon[:,:,1], latlon[:,:,0])
 		land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
 		tmp1 = land_temp.isnull().to_numpy().astype(np.bool_)
+		print(tmp1.shape, latlon.shape)
+
+		if kwargs["mask_oceans"] is False:
+			tmp1 = np.logical_not(tmp1)
 
 		final_mask = None
 		if tmp1 is not None and tmp2 is not None:
@@ -1962,7 +1966,22 @@ def read_emas_master_hdf_geo(fname, **kwargs):
     return dat
 
 
+def read_chesapeake(fname, **kwargs):
 
+    data_fields =['Blue', 'Green', 'NearInfrared', 'Red']
+
+    f = h5py.File(fname, 'r')
+    data = []
+    for i in range(len(data_fields)):
+        dat = f[data_fields[i]][:]
+        data.append(dat)
+
+    data = np.array(data)
+ 
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+            data = data[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+
+    return data
 
 def read_mspi(fname, **kwargs):
 
@@ -2396,6 +2415,8 @@ def get_read_func(data_reader):
         return read_mspi
     if data_reader == "mspi_geo":
         return read_mspi_geo
+    if data_reader == "chesapeake":
+        return read_chesapeake
     if data_reader == "emas_hdf":
         return read_emas_master_hdf
     if data_reader == "master_hdf":
