@@ -46,13 +46,13 @@ scaler:
  name: "standard" 
 
 output:
- out_dir: "/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_WIDE/"
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/"
  generate_intermediate_output: True
  generate_train_output: True
 
 dbn:
  model_type: ["gaussian_selu", "gaussian_selu", "gaussian_selu"]
- dbn_arch: [2000, 1500, 1000] #[250, 500, 2000] #, 2000]
+ dbn_arch: [3000, 2500, 2000] #[250, 500, 2000] #, 2000]
  gibbs_steps: [1,1,1] #, 7, 7] #, 10] #, 25]
  temp: [1.0, 1.0,1.0] #, 1.0, 1.0] ##[0.9, 0.75, 0.5] #, 1.0] #, 0.5] #, 0.5] 
  normalize_learnergy: [False, True, True]
@@ -116,6 +116,11 @@ cluster:
    learning_rate: 0.0001
    batch_size: 1000
    epochs: 5
+
+
+
+
+
 
 
 

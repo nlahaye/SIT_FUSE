@@ -2,7 +2,7 @@
 data:
  tile: True #True
  tile_size: [16,16,25]
- tile_step: [10,10,25]
+ tile_step: [8,8,25]
  val_percent: 0.1
  num_loader_workers: 10
  scale_data: True
@@ -120,11 +120,11 @@ output:
 
 
 byol:
- model_type: "DCE"
- hidden_layer: -1 #"layer4"
- hidden_layer_instance: -1 #"layer4"
- projection_size: 1024
- projection_hidden_size: 2048
+ model_type: "GCN" #"DCE"
+ hidden_layer: "layer4" #-1
+ hidden_layer_instance: "layer4" #-1
+ projection_size: 512
+ projection_hidden_size: 1024
  moving_average_decay: 0.99
  ppm_num_layers: 1
  ppm_gamma: 2
@@ -153,7 +153,7 @@ encoder:
   momentum_start_end: [0.996, 1.0]
   learning_rate: 0.001
   batch_size: 3
-  epochs: 50
+  epochs: 10
   accelerator: "gpu"
   devices: 1
   gradient_clip_val: 0.1
@@ -169,7 +169,7 @@ cluster:
  training:
   learning_rate: 0.0001
   batch_size: 10
-  epochs: 10
+  epochs: 1 #0
   accelerator: "gpu"
   devices: 1
   gradient_clip_val: 0.01
@@ -189,7 +189,7 @@ cluster:
    save_dir: "wandb_byol"
    batch_size: 10
    min_samples: 1000
-   epochs: 30
+   epochs: 1 #30
    lambda: 1.0
 
 

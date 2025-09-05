@@ -1,5 +1,5 @@
 
-gen_from_geotiffs: True
+gen_from_geotiffs: False
 
 data:
  clust_reader_type: "gtiff"
@@ -10,53 +10,50 @@ data:
 
  
  gtiff_data: [
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_0.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_1.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_10.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_11.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_12.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_13.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_14.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_15.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_2.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_3.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_4.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_5.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_6.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_7.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_8.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_9.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/urban_small_road_clipped.tif.clust.data_79199clusters.zarr.full_geo.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_0_s1_s2_ls8.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_10_s1_s2_ls8.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_11_s1_s2_ls8.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_12_s1_s2_ls8.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_13_s1_s2_ls8.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_14_s1_s2_ls8.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_15_s1_s2_ls8.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_1_s1_s2_ls8.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_2_s1_s2_ls8.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_3_s1_s2_ls8.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_4_s1_s2_ls8.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_5_s1_s2_ls8.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_6_s1_s2_ls8.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_7_s1_s2_ls8.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_8_s1_s2_ls8.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_9_s1_s2_ls8.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/urban_small_road_clipped_s1_s2_ls8.tif",
 ]
 
 
 
  cluster_fnames: [
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_0.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_1.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_10.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_11.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_12.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_13.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_14.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_15.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_2.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_3.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_4.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_5.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_6.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_7.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_8.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/large_urban_gambia_clipped_9.tif.clust.data_79199clusters.zarr.full_geo.tif",
-"/mnt/data/PV_WIDE_ROAD_CLIP/urban_small_road_clipped.tif.clust.data_79199clusters.zarr.full_geo.tif",
+"/data/nlahaye/output/Learnergy/DBN_PV_MAPPING_ROAD_CLIP_S1/large_urban_gambia_clipped_0_s1_s2_ls8.tif.clust.data_78994clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_PV_MAPPING_ROAD_CLIP_S1/large_urban_gambia_clipped_10_s1_s2_ls8.tif.clust.data_79799clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_PV_MAPPING_ROAD_CLIP_S1/large_urban_gambia_clipped_11_s1_s2_ls8.tif.clust.data_79799clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_PV_MAPPING_ROAD_CLIP_S1/large_urban_gambia_clipped_12_s1_s2_ls8.tif.clust.data_79799clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_PV_MAPPING_ROAD_CLIP_S1/large_urban_gambia_clipped_13_s1_s2_ls8.tif.clust.data_79799clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_PV_MAPPING_ROAD_CLIP_S1/large_urban_gambia_clipped_14_s1_s2_ls8.tif.clust.data_79799clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_PV_MAPPING_ROAD_CLIP_S1/large_urban_gambia_clipped_15_s1_s2_ls8.tif.clust.data_79799clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_PV_MAPPING_ROAD_CLIP_S1/large_urban_gambia_clipped_1_s1_s2_ls8.tif.clust.data_79799clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_PV_MAPPING_ROAD_CLIP_S1/large_urban_gambia_clipped_2_s1_s2_ls8.tif.clust.data_79799clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_PV_MAPPING_ROAD_CLIP_S1/large_urban_gambia_clipped_3_s1_s2_ls8.tif.clust.data_79799clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_PV_MAPPING_ROAD_CLIP_S1/large_urban_gambia_clipped_4_s1_s2_ls8.tif.clust.data_79799clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_PV_MAPPING_ROAD_CLIP_S1/large_urban_gambia_clipped_5_s1_s2_ls8.tif.clust.data_79799clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_PV_MAPPING_ROAD_CLIP_S1/large_urban_gambia_clipped_6_s1_s2_ls8.tif.clust.data_79799clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_PV_MAPPING_ROAD_CLIP_S1/large_urban_gambia_clipped_7_s1_s2_ls8.tif.clust.data_79799clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_PV_MAPPING_ROAD_CLIP_S1/large_urban_gambia_clipped_8_s1_s2_ls8.tif.clust.data_79799clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_PV_MAPPING_ROAD_CLIP_S1/large_urban_gambia_clipped_9_s1_s2_ls8.tif.clust.data_79799clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_PV_MAPPING_ROAD_CLIP_S1/urban_small_road_clipped_s1_s2_ls8.tif.clust.data_78998clusters.zarr",
 ]
 
 context: 
  apply_context: True
- clusters: [[68.226, 69.204, 69.224, 69.238, 69.248, 69.288, 55.701, 55.716, 55.741, 55.762, 68.223, 68.227, 68.245, 68.255, 68.289, 69.209, 69.218, 69.227, 69.24, 69.245, 69.262, 69.263, 69.266, 69.269, 69.272, 69.274, 69.296, 69.285]]
- #[12.614, 12.644, 12.677, 19.042, 19.044, 19.063, 27.086, 35.504, 39.106, 39.139, 39.14, 39.166, 39.195, 55.703, 55.717, 55.771, 55.789, 66.99, 68.199, 68.226, 68.246, 68.292, 69.2, 69.204, 69.213, 69.217, 69.224, 69.226, 69.238, 69.247, 69.248, 69.288, 69.291, 69.292, 69.297, 2.911, 2.944, 18.908, 18.917, 18.928, 18.934, 18.937, 18.946, 18.95, 18.962, 18.989, 18.998, 19.015, 19.075, 19.079, 27.098, 33.632, 33.65, 33.961, 35.531, 35.598, 39.109, 39.114, 39.153, 41.282, 41.299, 42.414, 42.42, 42.448, 43.403, 43.423, 43.481, 43.483, 55.701, 55.716, 55.741, 55.756, 55.762, 55.78, 55.785, 55.787, 65.625, 66.97, 68.1, 68.105, 68.107, 68.142, 68.143, 68.153, 68.154, 68.164, 68.195, 68.216, 68.223, 68.225, 68.227, 68.232, 68.235, 68.245, 68.249, 68.255, 68.265, 68.271, 68.277, 68.288, 68.289, 68.297, 69.203, 69.206, 69.208, 69.209, 69.21, 69.211, 69.212, 69.215, 69.218, 69.227, 69.231, 69.232, 69.237, 69.239, 69.24, 69.241, 69.245, 69.246, 69.249, 69.251, 69.253, 69.256, 69.258, 69.26, 69.262, 69.263, 69.264, 69.266, 69.267, 69.269, 69.272, 69.273, 69.274, 69.277, 69.278, 69.279, 69.28, 69.281, 69.295, 69.296, 69.298, 78.51, 3.593, 18.926, 18.994, 27.068, 33.975, 39.115, 39.136, 39.149, 39.157, 43.419, 43.43, 55.76, 69.228, 69.252, 69.259, 69.284, 69.285, 78.54, 69.287]]
-         
-#[0.18, 0.181, 0.187, 27.842, 29.462, 39.616, 47.848, 57.302, 57.32]]
+ clusters: [47.761, 30.945, 76.13, 3.688, 3.625, 3.684, 3.614, 3.616, 3.604, 3.608, 3.677, 3.63, 3.642, 68.975, 68.488, 30.958, 10.909, 10.986, 10.947, 10.962, 10.971, 10.917, 10.974, 71.441, 71.406, 71.473, 10.918, 10.961, 10.949, 10.93, 10.933, 10.97, 10.903, 10.913, 10.923, 10.99, 71.439, 71.472, 71.469, 71.492, 3.624, 3.659, 30.965, 40.435, 40.426, 40.464, 40.492, 47.719, 47.799, 47.731, 47.716, 47.739, 74.247, 35.992, 35.949, 64.305, 64.319, 68.44, 68.425, 68.493, 68.498, 68.441] 
          
          
  

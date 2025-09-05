@@ -13,13 +13,13 @@ data:
  output_subset_count: 10
  reader_type: "gtiff"
  reader_kwargs:
-  no_arg: ''
+  mask_oceans: False
   #start_sample: 2800
   #end_sample: 3800
   #start_line: 100 
   #end_line: 1200
  chan_dim: 0
- delete_chans: [0,1,3,4,7,8,9,10,11,12,13,14,15] #[3,7,8,9,10,11,12,15]
+ delete_chans: [] #[0,1,3,4,7,8,9,10,11,12,13,14,15] #[3,7,8,9,10,11,12,15]
  transform_default:
   chans: []
   transform: []
@@ -206,7 +206,6 @@ data:
 
 
  files_test: [
-"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242071401175_e20242071403548_c20242071403590.tif",
 "/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242071406175_e20242071408548_c20242071408582.tif",
 "/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242071411175_e20242071413548_c20242071413589.tif",
 "/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242071416175_e20242071418548_c20242071418579.tif",
@@ -770,7 +769,7 @@ encoder:
   weight_decay: [0.0001, 0.0001]
   nesterov_accel: [True, True]
   batch_size: 128
-  epochs: 30
+  epochs: 60
   accelerator: "gpu"
   devices: 1
   gradient_clip_val: 0.1
@@ -792,7 +791,7 @@ cluster:
  training:
   learning_rate: 0.0001
   batch_size: 1000
-  epochs: 30
+  epochs: 60
   accelerator: "gpu"
   devices: 1
   gradient_clip_val: 0.1
@@ -814,7 +813,7 @@ cluster:
    min_samples: 100
    learning_rate: 0.0001
    batch_size: 1000
-   epochs: 30
+   epochs: 60
 
 
 

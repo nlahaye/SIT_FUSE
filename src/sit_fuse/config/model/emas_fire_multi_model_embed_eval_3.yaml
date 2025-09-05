@@ -1,11 +1,13 @@
 
 analysis:
  knn_graphs:  
-  clay: "/data/nlahaye/output/Learnergy/eMAS_Clay_Small/clay_small.zarr" #"/data/nlahaye/output/Learnergy//NO_ENC_eMAS_FULL_STRAT_MULTI_LAYER_PL_5/no_encoding.zarr"
-  #pca: "/data/nlahaye/output/Learnergy/PCA_eMAS_FULL_STRAT_MULTI_LAYER_PL_5/pca.zarr"
-  jepa: "/data/nlahaye/output/Learnergy/IJEPA_TEST_FULL/ijepa_v5.zarr"  #"/data/nlahaye/output/Learnergy/DBN_eMAS_FULL_STRAT_MULTI_LAYER_PL_4/dbn_2_layer_2000.zarr"
-  pix_contrast: "/data/nlahaye/output/Learnergy/eMAS_BYOL_PL/pix_contrast_cnn.zarr"
- tsne:  
+  clay: "/data/nlahaye/output/Learnergy/eMAS_Clay_Small/clay_init.zarr"
+  no_encoding: "/data/nlahaye/output/Learnergy//NO_ENC_eMAS_FULL_STRAT_MULTI_LAYER_PL_5/no_encoding.zarr"
+  pca: "/data/nlahaye/output/Learnergy/PCA_eMAS_FULL_STRAT_MULTI_LAYER_PL_5/pca.zarr"
+  jepa: "/data/nlahaye/output/Learnergy/IJEPA_TEST_FULL/jepa_v5.zarr"  
+  dbn_2_layer_2000: "/data/nlahaye/output/Learnergy/DBN_eMAS_FULL_STRAT_MULTI_LAYER_PL_4/dbn_2_layer_2000.zarr"
+  pix_contrast: "/data/nlahaye/output/Learnergy/eMAS_BYOL_PL/pixel_wise_contrastive_cnn.zarr"
+ tsne:   
   perplexity: 2200
   niter: 5000
   njobs: 50
@@ -13,7 +15,7 @@ analysis:
   metric: "euclidean"
   patience: 1000
   lr: 200 
- embedding_functions: ["clay", "jepa", "pix_contrast"] #"no_encoding", "dbn_2_layer_1000"] #"pca", "dbn_2_layer_1000"]
+ embedding_functions: ["clay", "jepa", "pix_contrast", "no_encoding", "dbn_2_layer_2000", "pca"]
  build_knn_graphs: True
 
 data:

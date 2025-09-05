@@ -181,10 +181,8 @@ fusion:
  resample_n_procs: 10
  resample_epsilon: 1.6
  use_bilinear: True 
- lon_bounds: [-121.0, -117.0]
- lat_bounds: [32.0, 35.0]
- #lon_bounds: [-130.0, -117.0]
- #lat_bounds: [33.0, 43.0]
+ lon_bounds: [-124.0, -114.0]
+ lat_bounds: [28.0, 38.0]
  
 output_files: [
 "/data/nlahaye/remoteSensing/TEMPO_LA/TEMPO_RAD_L1_V03_20250106T174347Z_S007G09.tif",
