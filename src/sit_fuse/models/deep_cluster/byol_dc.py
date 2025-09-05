@@ -176,6 +176,7 @@ class BYOL_DC(pl.LightningModule):
             x3 = self.pretrained_model.decon3(self.pretrained_model.br5(x3 + x4))
             if x3.size() != x2.size(): x3 = self.pretrained_model._pad(x3, x2)
             x2 = self.pretrained_model.decon2(self.pretrained_model.br6(x2 + x3))
+            if x2.size() != x1.size(): x2 = self.pretrained_model._pad(x2, x1)
             x1 = self.pretrained_model.decon1(self.pretrained_model.br7(x1 + x2))
 
             x = self.pretrained_model.br9(self.pretrained_model.decon5(self.pretrained_model.br8(x1)))
@@ -186,6 +187,7 @@ class BYOL_DC(pl.LightningModule):
             x3_2 = self.pretrained_model.decon3(self.pretrained_model.br5(x3_2 + x4_2))
             if x3_2.size() != x2_2.size(): x3_2 = self.pretrained_model._pad(x3_2, x2_2)
             x2_2 = self.pretrained_model.decon2(self.pretrained_model.br6(x2_2 + x3_2))
+            if x2_2.size() != x1_2.size(): x2_2 = self.pretrained_model._pad(x2_2, x1_2)
             x1_2 = self.pretrained_model.decon1(self.pretrained_model.br7(x1_2 + x2_2))
 
             x_2 = self.pretrained_model.br9(self.pretrained_model.decon5(self.pretrained_model.br8(x1_2)))
