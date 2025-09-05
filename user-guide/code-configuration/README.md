@@ -1,8 +1,10 @@
 ---
-description: Detailed description of configuration options
+description: >-
+  Detailed description of configuration options for all YAML files. More
+  specific config options located within tutorials
 ---
 
-# Code Configuration
+# Code Configuration Guide
 
 {% content-ref url="code-configuration/" %}
 [code-configuration](code-configuration/)

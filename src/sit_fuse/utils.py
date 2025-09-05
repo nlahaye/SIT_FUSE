@@ -11,6 +11,7 @@ import yaml
 import cv2
 import os
 import zarr
+import re
 import numpy as np
 import rioxarray
 from shapely.geometry import mapping
@@ -329,13 +330,18 @@ def read_pace_oc(filename, **kwargs):
 
 
 def read_s3_oc(filename, **kwargs):
+    vrs = ["RRS.Rrs_400","RRS.Rrs_412","RRS.Rrs_443","RRS.Rrs_490","RRS.Rrs_510","RRS.Rrs_560","RRS.Rrs_620","RRS.Rrs_665","RRS.Rrs_674","RRS.Rrs_681", "RRS.Rrs_709"]
 
     #vrs = ["CHL.chlor_a", "KD.Kd_490", "RRS.aot_865", "RRS.angstrom"]
-    vrs = ["RRS.Rrs_400","RRS.Rrs_412","RRS.Rrs_443","RRS.Rrs_490","RRS.Rrs_510","RRS.Rrs_560","RRS.Rrs_620","RRS.Rrs_665","RRS.Rrs_674","RRS.Rrs_681", "RRS.Rrs_709"]
- 
+    kwrg = {}
     data1 = None
     for i in range(len(vrs)):
-        flename = filename + vrs[i] + ".4km.nc"
+        if "nrt" in kwargs and kwargs["nrt"]:
+            kwrg['nrt'] = kwargs["nrt"]
+            flename = filename + vrs[i] + ".4km.NRT.nc"
+        else:
+            flename = filename + vrs[i] + ".4km.nc"
+        # flename = filename + vrs[i] + ".4km.nc"
         print(flename)
         f = Dataset(flename)
         f.set_auto_maskandscale(False)
@@ -365,7 +371,7 @@ def read_s3_oc(filename, **kwargs):
     dat = data1.astype(np.float32)
 
     if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs:
-        loc = read_oc_geo(filename)
+        loc = read_oc_geo(filename, **kwrg)
         lat = loc[0]
         lon = loc[1]
         print(lat.shape, lon.shape, dat.shape)
@@ -406,7 +412,6 @@ def read_s3_oc(filename, **kwargs):
 
 
 def read_viirs_oc(filename, **kwargs):
-
     #vrs = ["CHL.chlor_a", "KD.Kd_490", "PAR.par", "PIC.pic", "POC.poc", "RRS.aot_862", "RRS.angstrom"]
     #vrs2 = ["CHL.chlor_a", "KD.Kd_490", "PAR.par", "PIC.pic", "POC.poc", "RRS.aot_868", "RRS.angstrom"]
 
@@ -414,13 +419,22 @@ def read_viirs_oc(filename, **kwargs):
     vrs2 = ["RRS.Rrs_411", "RRS.Rrs_445", "RRS.Rrs_489", "RRS.Rrs_556", "RRS.Rrs_667"]
 
     #"RRS.aot_862", "RRS.Rrs_410", "RRS.Rrs_443", "RRS.Rrs_486", "RRS.Rrs_551", "RRS.Rrs_671"]
+    if 'JPSS' in filename:
+        vrs = vrs2
 
     data1 = []
+    kwrg = {}
+    allow_nrt = kwargs.get("nrt", False)
     for i in range(len(vrs)):
         if 'JPSS' in filename:
             vrs = vrs2
 
-        flename = filename + vrs[i] + ".4km.nc"
+    for i in range(len(vrs)):
+        base = filename + vrs[i] + ".4km"
+        flename = base + ".nc"
+        if not os.path.exists(flename) and allow_nrt:
+            flename = base + ".NRT.nc"
+            kwrg["nrt"] = True
         f = Dataset(flename)
         f.set_auto_maskandscale(False)
         start_ind = 4
@@ -446,7 +460,7 @@ def read_viirs_oc(filename, **kwargs):
     dat = np.array(data1).astype(np.float32)
 
     if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs: 
-        loc = read_oc_geo(filename)
+        loc = read_oc_geo(filename, **kwrg)
         lat = loc[0]
         lon = loc[1]
         print(lat.shape, lon.shape, dat.shape)
@@ -488,17 +502,17 @@ def read_viirs_oc(filename, **kwargs):
 def read_oc_geo(filename, **kwargs):
 
     vrs = ["lat", "lon"]
-
     if "PACE" not in filename:
-        if "JPSS" not in filename:
-            f = Dataset(filename + "RRS.Rrs_443.4km.nc")
-        else:
-            f = Dataset(filename + "RRS.Rrs_445.4km.nc")
-    else:
-        if 'nrt'  in kwargs and kwargs['nrt']:
-            f = Dataset(filename + "RRS.V3_0.Rrs.4km.NRT.nc")
-        else:
-            f = Dataset(filename + "RRS.V3_0.Rrs.4km.nc")
+        stem = "RRS.Rrs_445" if "JPSS" in filename else "RRS.Rrs_443"
+        base = f"{filename}{stem}.4km"
+    else:  # PACE has its own naming convention
+        base = f"{filename}RRS.V3_0.Rrs.4km"
+
+    flename = base + ".nc"
+    if not os.path.exists(flename) and kwargs.get("nrt", False):
+        flename = base + ".NRT.nc"
+
+    f = Dataset(flename)
     f.set_auto_maskandscale(False)
     data1 = []
     for i in range(len(vrs)):
@@ -538,9 +552,15 @@ def read_modis_oc(filename, **kwargs):
     #vrs = ["CHL.chlor_a", "FLH.ipar", "FLH.nflh", "KD.Kd_490", "PAR.par", "PIC.pic", "POC.poc", "RRS.aot_869", "RRS.angstrom"]
     vrs = ["RRS.Rrs_412", "RRS.Rrs_443", "RRS.Rrs_469", "RRS.Rrs_488", "RRS.Rrs_531", "RRS.Rrs_547", "RRS.Rrs_555", "RRS.Rrs_645", "RRS.Rrs_667", "RRS.Rrs_678"]
 
+    kwrg = {}
     data1 = []
     for i in range(len(vrs)):
-        flename = filename + vrs[i] + ".4km.nc"
+        if "nrt" in kwargs and kwargs["nrt"]:
+            kwrg['nrt'] = kwargs["nrt"]
+            flename = filename + vrs[i] + ".4km.NRT.nc"
+        else:
+            flename = filename + vrs[i] + ".4km.nc"
+        # flename = filename + vrs[i] + ".4km.nc"
         print(flename)
         f = Dataset(flename)
         f.set_auto_maskandscale(False)
@@ -569,7 +589,7 @@ def read_modis_oc(filename, **kwargs):
         #    plt.savefig(filename + "CHLOR_FULL.png")
     dat = np.array(data1).astype(np.float32)
 
-    loc = read_oc_geo(filename)
+    loc = read_oc_geo(filename, **kwrg)
     lat = loc[0]
     lon = loc[1]
     print(lat.shape, lon.shape, dat.shape)
@@ -1170,15 +1190,15 @@ def read_gtiff_generic(flename, **kwargs):
 	if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
 		if len(dat.shape) == 3:
 			dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
-		else:
-			dat = dat[kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+	else:
+		dat = dat[kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
 	return dat
 
 
-
 #TODO generalize pieces for other tasks
-def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n_clusters, radius_degrees, ranges, global_max, input_file_type, karenia, discard_lower=False, use_key='Total_Phytoplankton'): #, lookup = {}):
- 
+def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n_clusters, radius_degrees, ranges, global_max, input_file_type, karenia, discard_lower=False, use_key='Total_Phytoplankton', output_dir="."): #, lookup = {}):
+
+    os.makedirs(output_dir, exist_ok=True)
     print(insitu_fname)
     insitu_df = None
     if 'xlsx' in insitu_fname:
@@ -1193,11 +1213,9 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         # Shorten Karenia Column Name
         insitu_df.rename(columns={"Karenia brevis abundance (cells/L)":use_key}, inplace=True)
     else:
-        print(insitu_df['time'])
         # Format Datetime Stamp
         insitu_df['Datetime'] = pd.to_datetime(insitu_df['time'])
         insitu_df.set_index('Datetime')
-         
         insitu_df.rename(columns={"latitude": "Latitude"}, inplace=True)
         insitu_df.rename(columns={"longitude": "Longitude"}, inplace=True)
     
@@ -1221,15 +1239,18 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
             file_ext = "_DAY." #"DAY." #"_DAY." TODO HERE
             if "no_heir" in input_file_type:
                 file_ext = file_ext  + "no_heir."
-
+            if "PACE" in input_file_type:
+                file_ext = ".RRS.V3_0.Rrs.4km."
             if "alexandrium" in input_file_type:
                 file_ext = file_ext  + "alexandrium_bloom.tif"
             elif "seriata" in input_file_type:
                 file_ext = file_ext  + "pseudo_nitzschia_seriata_bloom.tif"
             elif "delicatissima" in input_file_type:
                 file_ext = file_ext  + "pseudo_nitzschia_delicatissima_bloom.tif"
+            elif "karenia_brevis" in input_file_type: # CAN CHANGE BACK
+                file_ext = file_ext + "karenia_brevis_bloom.tif"
             else:
-                file_ext = file_ext  + "karenia_brevis_bloom.tif"
+                file_ext = file_ext + "total_phytoplankton.tif"
             #clust_fname = os.path.join(os.path.join(clusters_dir, "AQUA_MODIS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m." + file_ext))
             clust_fname = os.path.join(os.path.join(clusters_dir, pd.to_datetime(str(date)).strftime("%Y%m%d") +  file_ext))
         elif "alexandrium" in input_file_type:
@@ -1257,16 +1278,19 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
             elif "TERRA_MODIS" in input_file_type:
                 clust_fname = os.path.join(os.path.join(clusters_dir, "TERRA_MODIS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext))
             elif "PACE_OCI" in input_file_type:
+                #file_ext ='.RRS.V3_0.Rrs.4km.tif'
                 clust_fname = os.path.join(os.path.join(clusters_dir, "PACE_OCI." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext))
+            elif "GOES" in input_file_type:
+                date_str = pd.to_datetime(str(date)).strftime("%Y%j")
+                clust_fname = os.path.join(clusters_dir, f"OR_ABI-L1b-RadC-M6C01_G18_s{date_str}*clusters.zarr.full_geo.cloud_mask.FullColor.tif")
         ind = ind + 1
 
-        #print(clust_fname)
+        # print(clust_fname)
 
         dat_train = False
         dat_test = False
-
         clust_fname = glob(clust_fname)
-        #print(clust_fname)
+        # print(clust_fname)
         
         if len(clust_fname) < 1:
             continue     
@@ -1275,7 +1299,6 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
             clust_fname = clust_fname + "f"
             if not os.path.exists(clust_fname):
                 continue
-  
         clust = gdal.Open(clust_fname)
         latLon = get_lat_lon(clust_fname)
         clust = clust.ReadAsArray()
@@ -1304,6 +1327,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         count = -1
         hist_data = []
         #print("PRE-ITER", len(gdf_insitu))
+
         for index, poi in gdf_insitu.iterrows():
             count = count + 1
             neighbours = []
@@ -1369,7 +1393,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         plt.ylim(0, 50)
         plt.bar([k*2 for k in range(len(bins[:-1]))],hist, width=1, linewidth=1, align="center")
         plt.show()
-        plt.savefig("TEST_HIST_" + str(i) + ".png") 
+        plt.savefig(os.path.join(output_dir, "TEST_HIST_" + str(i) + ".png"))
         plt.clf()
     print("HERE FINAL", algal)
     return algal

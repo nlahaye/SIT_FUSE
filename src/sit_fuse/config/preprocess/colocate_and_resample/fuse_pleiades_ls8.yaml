@@ -1,0 +1,208 @@
+
+high_res:
+ data:
+  fill_value: -999999.0
+  valid_min: -900.0 #0.0000001
+  valid_max: 100000000
+  reader_type: "gtiff_multifile"
+  reader_kwargs:
+   no_arg: ''
+  geo_reader_type: "gtiff_geo"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: [
+["/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B07.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B10.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B11.tiff"],
+["/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B07.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B10.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B11.tiff"],
+["/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B07.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B10.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B11.tiff"],
+["/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B07.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B10.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B11.tiff"],
+["/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B07.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B10.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B11.tiff"],
+["/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B07.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B10.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B11.tiff"],
+["/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B07.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B10.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B11.tiff"],
+["/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B07.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B10.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B11.tiff"],
+["/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B07.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B10.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B11.tiff"],
+["/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B07.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B10.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B11.tiff"],
+["/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B07.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B10.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B11.tiff"],
+["/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B07.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B10.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B11.tiff"],
+["/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B07.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B10.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B11.tiff"],
+["/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B07.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B10.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B11.tiff"],
+["/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B07.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B10.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B11.tiff"],
+["/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B07.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B10.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B11.tiff"],
+["/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B07.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B10.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B11.tiff"],
+["/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B07.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B10.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B11.tiff"]
+]
+
+  geo_filenames: [
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+"/mnt/data/PV_Mapping/HLS.L30.T28PCV.2024041T112810.v2.0.B06.tiff",
+]
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+low_res:
+ data:
+  valid_min: 0.0
+  valid_max: 100000000
+  reader_type: "gtiff"
+  reader_kwargs:
+   no_arg: "no_arg"
+  geo_reader_type: "gtiff_geo"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: [
+ #"/mnt/data/PV_Mapping/large_urban_gambia_clipped.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_0.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_1.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_10.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_11.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_12.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_13.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_14.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_15.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_2.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_3.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_4.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_5.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_6.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_7.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_8.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_9.tif",
+"/mnt/data/PV_Mapping/urban_small_road_clipped.tif",
+]
+  geo_filenames: [
+ #"/mnt/data/PV_Mapping/large_urban_gambia_clipped.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_0.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_1.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_10.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_11.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_12.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_13.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_14.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_15.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_2.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_3.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_4.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_5.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_6.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_7.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_8.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_9.tif",
+"/mnt/data/PV_Mapping/urban_small_road_clipped.tif",
+]
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 0
+  geo_lon_index: 1
+
+
+fusion:
+ projection_id: 4326
+ description: "Pleiades Gambia"
+ area_id: "Gambia"
+ projection_proj4:
+  #proj: "utm"
+  #zone: 11
+  proj: "longlat"
+  datum: "WGS84" 
+ final_resolution: 0.000002700000000 
+ projection_units: "degrees"
+ resample_radius: 5000
+ resample_n_neighbors: 64
+ resample_n_procs: 10
+ resample_epsilon: 1.6
+ use_bilinear: False 
+       
+output_files: [
+#"/mnt/data/PV_Mapping/large_urban_gambia_clipped_ls8.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_0_ls8.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_1_ls8.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_10_ls8.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_11_ls8.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_12_ls8.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_13_ls8.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_14_ls8.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_15_ls8.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_2_ls8.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_3_ls8.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_4_ls8.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_5_ls8.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_6_ls8.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_7_ls8.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_8_ls8.tif",
+"/mnt/data/PV_Mapping/large_urban_gambia_clipped_9_ls8.tif",
+"/mnt/data/PV_Mapping/urban_small_road_clipped_ls8.tif"
+]
+
+
+

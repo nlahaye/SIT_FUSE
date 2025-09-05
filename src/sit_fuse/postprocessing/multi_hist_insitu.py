@@ -45,12 +45,14 @@ def build_final_list(lookup, final_lst):
     
 
 def main(yml_fpath):
-
+    yaml_base = os.path.splitext(os.path.basename(yml_fpath))[0]
+    output_dir = os.path.join("HISTOGRAMS", yaml_base)
+    os.makedirs(output_dir, exist_ok=True)
     #Translate config to dictionary 
     yml_conf = read_yaml(yml_fpath)
     #Run 
-    start_date = datetime.datetime.strptime( yml_conf['start_date'], '%Y-%m-%d') #.replace(tzinfo=datetime.timezone.utc)#.tz_localize(None)
-    end_date = datetime.datetime.strptime( yml_conf['end_date'], '%Y-%m-%d') #.replace(tzinfo=datetime.timezone.utc) #.tz_localize(None)
+    start_date = datetime.datetime.strptime( yml_conf['start_date'], '%Y-%m-%d')#.replace(tzinfo=datetime.timezone.utc)#.tz_localize(None)
+    end_date = datetime.datetime.strptime( yml_conf['end_date'], '%Y-%m-%d')#.replace(tzinfo=datetime.timezone.utc) #.tz_localize(None)
 
     #start_date = pytz.utc.localize(start_date)
     #end_date = pytz.utc.localize(end_date)
@@ -62,19 +64,29 @@ def main(yml_fpath):
 
     arr_tmp = [[] for x in range(0,(len( yml_conf['ranges'])-1))] 
     labels = []
- 
-    use_key  = 'Total_Phytoplankton'
+    input_file_type = yml_conf['input_file_type']
+
     if 'use_key' in yml_conf:
-        use_key = yml_conf['use_key']
+        if isinstance(yml_conf['use_key'], str):
+            use_keys = [yml_conf['use_key']]
+        elif isinstance(yml_conf['use_key'], list):
+            use_keys = yml_conf['use_key']
+        else:
+            raise TypeError("use_key must be a string or list of strings")
+    else:
+        use_keys = ['Total_Phytoplankton']
     lookup = {}
     final_lst = []
+
     for i in range(len(yml_conf["ranges"])):
         final_lst.append([])
     for i in range(len(yml_conf['radius_degrees'])):
         d_lower = (i > 0)
-        labels.append(insitu_hab_to_multi_hist(yml_conf['xl_fname'], start_date, end_date,
-    		yml_conf['clusters_dir'], yml_conf['clusters'], yml_conf['radius_degrees'][i],
-                    yml_conf['ranges'], yml_conf['global_max'], yml_conf['input_file_type'], karenia, discard_lower = d_lower, use_key = use_key)) #, lookup = lookup))
+
+        for use_key in use_keys:
+            labels.append(insitu_hab_to_multi_hist(yml_conf['xl_fname'], start_date, end_date,
+                    yml_conf['clusters_dir'], yml_conf['clusters'], yml_conf['radius_degrees'][i],
+                            yml_conf['ranges'], yml_conf['global_max'], input_file_type, karenia, discard_lower = d_lower, use_key = use_key, output_dir=output_dir)) #, lookup = lookup))
 
         #lookup = build_lookup_dict(labels[-1], lookup)
 

@@ -333,7 +333,7 @@ def run_compare_dbf(dbf_list, percent_threshold):
     for iasn in range(int(max_key)):
         assignment.append([])
     assignment.append([])
-    for key in new_data_label_percentage.keys():
+    for key in sorted(new_data_label_percentage.keys()):
         if key < 0.0:
             continue
         #skip total
@@ -353,8 +353,14 @@ def run_compare_dbf(dbf_list, percent_threshold):
             uncertain.append(tmp)
 
     print("KYS", kys)
-    print("ASSIGNMENT")
+    print("\n\n\nASSIGNMENT")
     print(sorted(assignment))
+    asn1 = []
+    for i in range(len(assignment[1])):
+        if assignment[1][i] not in assignment[0]:
+            asn1.append(assignment[1][i])
+    assignment[1] = asn1
+    print(assignment)
 
     pprint(uncertain)
 

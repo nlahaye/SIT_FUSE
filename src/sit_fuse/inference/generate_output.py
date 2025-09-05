@@ -3,6 +3,8 @@ import pytorch_lightning as pl
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
+import time
+
 import joblib
 
 import pickle
@@ -78,6 +80,7 @@ def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled 
     ind = 0
     ind2 = 0
     cntr = 0
+    inference_times = []
     for data in tqdm(test_loader):
         embed = None
         cntr = cntr + 1
@@ -87,7 +90,11 @@ def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled 
             dat_dev, lab_dev = data[0].cuda(), data[1].cuda()
 
         with torch.no_grad():
+            start_time = time.time() 
             if hasattr(mdl, 'clust_tree'):
+
+                print(dat.data_full.shape)
+                input_shape = (1,dat.data_full.shape[1])
                 if return_embed:
                     _, output, embed, _, output_prob = mdl.forward(dat_dev, return_embed=return_embed)
                 else:
@@ -101,6 +108,9 @@ def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled 
                 output_prob = torch.max(torch.nn.functional.softmax(output, dim=1), dim=1).values 
                 output = torch.argmax(torch.nn.functional.softmax(output, dim=1), dim=1)
                 #print("HERE", output.shape, torch.unique(output))
+            end_time = time.time()
+            inference_times.append(end_time - start_time)
+
         if isinstance(output, list) or isinstance(output, tuple):
             output = output[0] #TODO improve usage uf multi-headed output after single-headed approach validated
             if output_prob is not None:
@@ -181,7 +191,7 @@ def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled 
         del output_prob
         count = count + 1
 
-
+    print("AVERAGE INFERENCE", np.mean(inference_times))
     return output_full, embed_full, output_prob_full
 
 

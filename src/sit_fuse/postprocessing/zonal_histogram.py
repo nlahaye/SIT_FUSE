@@ -11,13 +11,15 @@ from sit_fuse.utils import numpy_to_torch, read_yaml, get_read_func
 from sit_fuse.postprocessing.contour_and_fill import write_geotiff
 from scipy.spatial import distance_matrix
 import scipy.sparse as sp
-from pynndescent import NNDescent
+#from pynndescent import NNDescent
 import scipy.sparse
-
+import rasterio
+import geopandas
 from scipy.spatial.distance import pdist, squareform
 
 from pyresample import area_config, bilinear, geometry, data_reduce, create_area_def, kd_tree
 from pyresample.utils.rasterio import get_area_def_from_raster
+from rasterstats import zonal_stats
 
 from joblib import dump, load
 
@@ -79,6 +81,29 @@ class PolygonAreaKNNGraph(object):
             self.values_final = self.knn_values.flatten()
 
 
+def gen_zonal_histogram_vector(zone_vector_path, value_raster_path, zonal_histogram = None, poly_knns = None):
+
+
+    default_crs = 'EPSG:4326'
+
+    dataset = rasterio.open(value_raster_path)
+    arr = dataset.read(1)
+    affine=dataset.transform
+ 
+    zone = geopandas.read_file(zone_vector_path)
+    # Set CRS to the default if needed. This does not
+    # transform the shapefile to a difference CRS.
+    if zone.crs is None:
+        zone = zone.set_crs(default_crs)
+ 
+    # Transform to a difference CRS.
+    zone = zone.to_crs(dataset.crs)
+    stats = zonal_stats(zone, arr, affine=affine)
+
+    print("HERE", stats)
+
+
+
 
 def gen_zonal_histogram(zone_raster_path, value_raster_path, zonal_histogram = None, poly_knns = None, zone_ind = 1, regrid = False):
     """
@@ -120,10 +145,11 @@ def gen_zonal_histogram(zone_raster_path, value_raster_path, zonal_histogram = N
     zone_array[np.where(zone_array > 0)] = zone_ind
 
     unique_zones = np.unique(zone_array)
+    print(zone_raster_path, value_raster_path)
     if poly_knns is None:
-        poly_knns = []
+            poly_knns = []
     if zonal_histogram is None:
-        zonal_histograms = {}
+            zonal_histograms = {}
     else:
         zonal_histograms = zonal_histogram 
 
@@ -158,6 +184,7 @@ def gen_zonal_histogram(zone_raster_path, value_raster_path, zonal_histogram = N
             else:
                 zonal_histograms[zone][k] = zonal_histograms[zone][k] + int(v)
 
+
     return zonal_histograms, poly_knns
 
 
@@ -188,7 +215,12 @@ def main(yml_fpath):
     print(len(clust_gtiffs), len(label_gtiffs[0]))
     for j in range(len(label_gtiffs)):
         for i in range(len(label_gtiffs[0])):
-            zonal_histogram, poly_knns = gen_zonal_histogram(label_gtiffs[j][i], clust_gtiffs[i], zonal_histogram, poly_knns, zone_ind=j+1, regrid=regrid)
+            
+            if ".shp" not in label_gtiffs[j][i]:
+             
+                zonal_histogram, poly_knns = gen_zonal_histogram(label_gtiffs[j][i], clust_gtiffs[i], zonal_histogram, poly_knns, zone_ind=j+1, regrid=regrid)
+            else:
+                zonal_histogram, poly_knns = gen_zonal_histogram_vector(label_gtiffs[j][i], clust_gtiffs[i], zonal_histogram, poly_knns)
 
         print(len(zonal_histogram.keys()), len(zonal_histogram[list(zonal_histogram.keys())[0]].keys()))
 

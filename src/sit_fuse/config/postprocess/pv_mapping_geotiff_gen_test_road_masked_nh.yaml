@@ -1,0 +1,65 @@
+
+gen_from_geotiffs: True
+
+data:
+ clust_reader_type: "gtiff"
+ reader_kwargs:
+   no_arg: "no_arg" 
+ subset_inds: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[], [],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
+ create_separate: False
+
+ 
+ gtiff_data: [
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_0_s1_s2_ls8.tif.clust.data_78994clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_10_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_11_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_12_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_13_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_14_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_15_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_1_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_2_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_3_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_4_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_5_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_6_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_7_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_8_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_9_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/urban_small_road_clipped_s1_s2_ls8.tif.clust.data_78998clusters.zarr.full_geo.tif",
+]
+
+
+
+ cluster_fnames: [
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_0_s1_s2_ls8.tif.clust.data_78994clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_10_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_11_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_12_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_13_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_14_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_15_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_1_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_2_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_3_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_4_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_5_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_6_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_7_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_8_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/large_urban_gambia_clipped_9_s1_s2_ls8.tif.clust.data_79799clusters.zarr.full_geo.tif",
+"/mnt/data/DBN_PV_MAPPING_WIDE_ROAD_CLIP_NH/urban_small_road_clipped_s1_s2_ls8.tif.clust.data_78998clusters.zarr.full_geo.tif",
+]
+
+
+context: 
+ apply_context: True
+ clusters: [
+[3.604,  3.608,  3.614,  3.616,  3.624,  3.625,  3.63,  3.642,  3.659,  3.677,  3.684,  10.903,  10.917,  10.923,  10.933,  10.945,  10.949,  10.961,  10.962,  10.97,  10.971,  10.974,  10.99,  22.105,  22.155,  30.918,  30.921,  30.945,  30.953,  30.957,  30.958,  30.96,  30.963,  30.965,  30.981,  30.986,  30.987,  30.995,  32.47,  32.48,  32.483,  40.426,  40.435,  40.454,  40.464,  40.492,  47.716,  47.719,  47.76,  47.761,  47.799,  71.406,  71.439,  71.441,  71.444,  71.464,  71.469,  71.472,  71.473,  71.476,  71.492,  71.493,  72.015,  74.247,  76.118,  76.13,  76.178,  76.179,  3.62,  3.689,  30.944,  35.922,  35.939,  35.947,  35.949,  35.992,  35.997,  62.761,  62.769,  64.305,  64.319,  64.36,  64.388,  64.956,  76.61,  0.543,  0.545,  0.546,  0.557,  0.579,  0.582,  0.585,  0.59,  0.591,  0.595,  40.429,  40.457,  40.486,  40.499,  68.409,  68.425,  68.493,  68.498,  4.709, 72.033]
+]
+
+ background_class: 2
+ name: "PV_Map"
+ compare_truth: false
+ generate_union: False
+
