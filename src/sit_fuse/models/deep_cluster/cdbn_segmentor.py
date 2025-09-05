@@ -35,8 +35,8 @@ class CDBNSegmentEncoder(nn.Module):
         self.feature_maps = feature_maps
         self.cdbn_encoder = cdbn_encoder
   
-        filters = self.cdbn_encoder.model.feature_maps
- 
+        filters = self.cdbn_encoder.n_filters 
+
 
         # Define Feature Pyramid Network (FPN) layers
         self.fpn1 = nn.Sequential(
