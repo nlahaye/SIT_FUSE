@@ -65,6 +65,8 @@ class MAE_DC(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         y = batch
 
+        tile_size = y.shape
+
         y = self.segmentor.encoder(y)
 
         y2 = []
@@ -94,14 +96,14 @@ class MAE_DC(pl.LightningModule):
 
         y = F.interpolate(
             y,
-            size=(4, 4),
+            size=(tile_size[-2], tile_size[-1]),
             mode="bilinear",
             align_corners=False,
         )  # Resize to match labels size
 
         y2 = F.interpolate(
             y2,
-            size=(4, 4),
+            size=(tile_size[-2], tile_size[-1]),
             mode="bilinear",
             align_corners=False,
         )  # Resize to match labels size
@@ -136,7 +138,9 @@ class MAE_DC(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         y = batch
-    
+        tile_size = y.shape   
+
+ 
         y = self.segmentor.encoder(y)
 
         y2 = []
@@ -162,14 +166,14 @@ class MAE_DC(pl.LightningModule):
 
         y = F.interpolate(
             y,
-            size=(4, 4),
+            size=(tile_size[-2], tile_size[-1]),
             mode="bilinear",
             align_corners=False,
         )  # Resize to match labels size
 
         y2 = F.interpolate(
             y2,
-            size=(4, 4),
+            size=(tile_size[-2], tile_size[-1]),
             mode="bilinear",
             align_corners=False,
         )  # Resize to match labels size
