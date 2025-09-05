@@ -284,6 +284,9 @@ def heir_dc(yml_conf, dataset, ckpt_path):
             )
 
 
+
+        state_dict = get_state_dict(model.clust_tree, model.lab_full)
+        torch.save(state_dict, os.path.join(save_dir, "heir_fc.ckpt"))
         trainer.fit(model, final_dataset)
 
         if use_wandb_logger:
