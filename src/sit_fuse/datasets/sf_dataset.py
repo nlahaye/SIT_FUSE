@@ -242,10 +242,8 @@ class SFDataset(torch.utils.data.Dataset):
 
 		#del dat
 		self.chan_dim = 2+self.increment
-		print("HERE TRAINING ISSUE0", self.scale, (self.scaler is None), self.train_scaler)
 		if self.scale:
 			#Train scaler if applicable
-			print("HERE TRAINING ISSUE", (self.scaler is None), self.train_scaler, ((self.scaler is None) or self.train_scaler))
 			if self.scaler is None or self.train_scaler:
 				self.training = True
 				self.__train_scaler__(data_local)
@@ -548,7 +546,6 @@ def main(yml_fpath):
 	else:
 		scaler, scaler_train = get_scaler(scaler_type)
  
-	print("HERE", scaler, scaler_train)
 	subset_training = yml_conf["encoder"]["subset_training"]
  
 	read_func = get_read_func(data_reader)
