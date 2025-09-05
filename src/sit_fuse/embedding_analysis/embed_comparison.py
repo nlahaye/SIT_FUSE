@@ -106,30 +106,8 @@ def bootstrap_null(graph, number_of_bootstraps=25, n_components=None, umap_n_nei
         graph_b = rdpg(ase_latents, directed=False)
 
         bootstrap_latents = OmnibusEmbed(n_components=n_components).fit_transform([graph, graph_b])
-        #scaler = RobustScaler(quantile_range=(10.0,90.0))
-        #data = copy.deepcopy(bootstrap_latents[0])
-        #for k in range(1, len(bootstrap_latents)):
-        #    data = np.concatenate((data, bootstrap_latents[k]))
-        #scaler.fit(data)
-        #del data 
-        #for k in range(bootstrap_latents.shape[0]):
-        #    bootstrap_latents[k] = scaler.transform(bootstrap_latents[k])
-        #distances[i] = np.linalg.norm(bootstrap_latents[0] - bootstrap_latents[1], axis=1)
+        distances[i] = np.linalg.norm(bootstrap_latents[0] - bootstrap_latents[1], axis=1)
         print("HERE", n, n_components, distances[i], bootstrap_latents.shape, distances[i].shape)
-        #fig = plt.figure()
-        #ax = fig.add_subplot(projection='3d')
-        #ct = ax.scatter(bootstrap_latents[0,:,0], bootstrap_latents[0,:,1], bootstrap_latents[0,:,2], marker='s', c="blue",
-        #    label="INIT", s=100)
-        #ax.scatter(bootstrap_latents[1,:,0], bootstrap_latents[1,:,1], bootstrap_latents[1,:,2], marker='.', c="red",
-        #    label="AdjSpectral", s=100)
-        #plt.legend(fontsize=20)
-     
-        #for j in range(200):
-        #    idx = np.random.randint(n, size=1)
-        #    ax.plot([bootstrap_latents[0,idx,0], bootstrap_latents[0,idx,1], bootstrap_latents[0,idx,2]], [bootstrap_latents[1,idx,0], bootstrap_latents[1,idx,1], bootstrap_latents[1,idx,2]])
-        #plt.tight_layout()
-        #plt.savefig("Bootstrap_Mapping_" + str(i) + fname_uid)
-        #plt.clf()
     return distances.transpose((1, 0)) , n_components
 
 
@@ -294,7 +272,7 @@ def run_nomic_analysis(embedding_functions, knn_graphs, out_dir):
 def main(yml_fpath):
 
     yml_conf = read_yaml(yml_fpath)
-
+    
     knn_graphs = yml_conf["analysis"]["knn_graphs"]
     embedding_functions = yml_conf["analysis"]["embedding_functions"]
 
@@ -302,21 +280,14 @@ def main(yml_fpath):
     final_labels = yml_conf["data"]["final_labels"]
 
     for key in knn_graphs.keys():
-        knn_graphs[key] = zarr.load(knn_graphs[key]).astype(np.float32)
-        print(knn_graphs[key].min(), knn_graphs[key].max(), np.unique(knn_graphs[key]))    
-        knn_graphs[key] = knn_graphs[key].astype(np.int8)
+            knn_graphs[key] = zarr.load(knn_graphs[key]).astype(np.float32)
+            print(knn_graphs[key].min(), knn_graphs[key].max(), np.unique(knn_graphs[key]))    
+            knn_graphs[key] = knn_graphs[key].astype(np.int8)
 
-        #print(knn_graphs[key].shape)
-        #knn_graphs[key] = np.array(knn_graphs[key])
-        ##middle = int(knn_graphs[key].shape[0]/2)
-        ##ind1 = middle - 5000
-        ##ind2 = middle + 5000
-        #already randomized
-        ##knn_graphs[key] = knn_graphs[key][ind1:ind2,ind1:ind2]
-        print(knn_graphs[key].shape)
+            print(knn_graphs[key].shape)
 
  
-    run_nomic_analysis(embedding_functions, knn_graphs, out_dir)
+    un_nomic_analysis(embedding_functions, knn_graphs, out_dir)
 
 				                
 
