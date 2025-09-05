@@ -7,6 +7,7 @@ import joblib
 
 import pickle
 
+import sys
 from learnergy.models.deep import DBN, ConvDBN
 
 from segmentation.models.gcn import GCN
@@ -71,7 +72,7 @@ def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled 
 
     output = None
     output_prob = None
-    print(output_batch_size)
+    #print(output_batch_size)
     test_loader = DataLoader(dat, batch_size=output_batch_size, shuffle=False, \
     num_workers = 0, drop_last = False, pin_memory = pin_mem)
     ind = 0
@@ -115,7 +116,6 @@ def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled 
 
 
         #output = torch.squeeze(output)
-        print("HERE OUTPUT_FULL", dat.data_full.ndim, dat.data_full.shape, output.shape)
 
         if output.ndim == 1:
             output = torch.unsqueeze(output, dim=1)
@@ -134,7 +134,6 @@ def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled 
                 output_full = torch.zeros(dat.data_full.shape[0], output.shape[1], dtype=torch.float32)
                 output_prob_full = torch.zeros(dat.data_full.shape[0], output.shape[1], dtype=torch.float32)
         ind1 = ind2
-        print("HERE", output.shape, output_full.shape, dat.data_full.shape, "HERE")
         if dat_dev.ndim > 2:
             ind2 += dat_dev.shape[0]
             if ind2 > output_full.shape[0]:
@@ -156,12 +155,13 @@ def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled 
             if embed.ndim == 1:
                 embed = torch.unsqueeze(embed, dim=1)
             if embed_full is None:
+                #print(dat.data_full.shape,  embed.shape)
                 if dat.data_full.ndim > 2:
+                    #print(dat.data_full.shape[0], embed.shape[1], embed.shape[2], embed.shape[3], embed.shape)
                     embed_full = torch.zeros((dat.data_full.shape[0], embed.shape[1], embed.shape[2], embed.shape[3]), dtype=torch.float32)
                     #pri    nt("INIT DATA FULL", dat.init_data_shape, dat.init_data_shape[2:], output_full.shape)
                 else:
                     embed_full = torch.zeros(dat.data_full.shape[0], embed.shape[1], dtype=torch.float32)
-            print("HERE", embed.shape, embed_full.shape)
             if dat_dev.ndim > 2:
                 embed_full[ind1:ind2,:,:,:] = torch.squeeze(embed)
             else:
@@ -229,7 +229,7 @@ def plot_clusters(coord, output_data, output_basename, output_prob = None, pixel
             prob_data =  np.zeros((((int)(max_dim1)+1+pixel_padding), ((int)(max_dim2)+pixel_padding+1)))
             labels = np.array(labels)
             print("ASSIGNING LABELS", min_cluster, max_cluster)
-            print(data.shape, labels.shape, coord.shape)
+            #print(data.shape, labels.shape, coord.shape)
             for i in range(labels.shape[0]):
                 if prob is not None:
                     prob_data[coord[i,line_ind], coord[i,samp_ind]] = prob[i]
@@ -244,8 +244,8 @@ def plot_clusters(coord, output_data, output_basename, output_prob = None, pixel
             #print(data.shape, labels.shape, coord.shape)
             #print(data.shape, labels.shape, coord.shape)
             for i in range(labels.shape[0]):
-                print(coord[i,line_ind], coord[i,samp_ind], data.shape, labels.shape)
-                print(coord[i,line_ind], coord[i,samp_ind], coord[i], labels[i].shape, labels.shape)
+                #print(coord[i,line_ind], coord[i,samp_ind], data.shape, labels.shape)
+                #print(coord[i,line_ind], coord[i,samp_ind], coord[i], labels[i].shape, labels.shape)
 
                 max_line = min(data.shape[0],   coord[i,line_ind]+labels[i].shape[0])
                 max_samp = min(data.shape[1],   coord[i,samp_ind]+labels[i].shape[1])
@@ -391,7 +391,7 @@ def get_model(yml_conf, n_visible):
 
         model_type = cutout_ratio_range = yml_conf["byol"]["model_type"]
         if model_type == "GCN":
-            encoder = GCN(num_classes, in_chans)
+            encoder = GCN(num_classes, in_chans, pretrained = False, use_deconv=True, use_resnet_gcn=True)
             encoder.load_state_dict(torch.load(encoder_ckpt_path))
         elif model_type == "DeepLab":
             encoder = DeepLab(num_classes, in_chans, backbone='resnet', pretrained=True, checkpoint_path=encoder_dir)
@@ -455,7 +455,7 @@ def main(yml_fpath):
         data, _  = get_prediction_dataset(yml_conf, train_fnames[cntr])
         cntr = cntr + 1
 
-    print(data.data_full.shape)
+    #print(data.data_full.shape)
 
     model = get_model(yml_conf, data.data_full.shape[1])
 
@@ -478,6 +478,7 @@ def main(yml_fpath):
  
     out_dir = yml_conf["output"]["out_dir"]
     generate_intermediate_output = yml_conf["output"]["generate_intermediate_output"]
+    generate_train_output =  yml_conf["output"]["generate_train_output"]
 
     tiled = yml_conf["data"]["tile"]
 
@@ -495,19 +496,21 @@ def main(yml_fpath):
             generate_output(data, model, True, out_dir, output_fle + ".clust.data", tiled = tiled)
         if generate_intermediate_output:
             generate_output(data, model.pretrained_model, True, out_dir, output_fle + ".no_heir.clust.data", tiled = tiled)
-    for i in range(len(train_fnames)):
-        data, output_file = get_prediction_dataset(yml_conf, train_fnames[i])
-        if data.data_full is None:
-            print("SKIPPING", train_fnames[i], " No valid samples")
-            continue
-        if isinstance(train_fnames[i], list):
-            output_fle = os.path.basename(train_fnames[i][0])
-        else:
-            output_fle = os.path.basename(train_fnames[i])
-        if model.clust_tree_ckpt is not None:
-            generate_output(data, model, True, out_dir, output_fle + ".clust.data", tiled = tiled)
-        if generate_intermediate_output:
-            generate_output(data, model.pretrained_model, True, out_dir, output_fle + ".no_heir.clust.data", tiled = tiled)
+ 
+    if generate_train_output:
+        for i in range(len(train_fnames)):
+            data, output_file = get_prediction_dataset(yml_conf, train_fnames[i])
+            if data.data_full is None:
+                print("SKIPPING", train_fnames[i], " No valid samples")
+                continue
+            if isinstance(train_fnames[i], list):
+                output_fle = os.path.basename(train_fnames[i][0])
+            else:
+                output_fle = os.path.basename(train_fnames[i])
+            if model.clust_tree_ckpt is not None:
+                generate_output(data, model, True, out_dir, output_fle + ".clust.data", tiled = tiled)
+            if generate_intermediate_output:
+                generate_output(data, model.pretrained_model, True, out_dir, output_fle + ".no_heir.clust.data", tiled = tiled)
  
 
 if __name__ == '__main__':
