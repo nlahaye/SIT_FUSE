@@ -34,7 +34,7 @@ class CDBN_DC(pl.LightningModule):
         #define model layers
         self.pretrained_model = pretrained_model
 
-        feature_maps = [i for i in range(len(pretrained_model.model.feature_maps)) + 1
+        feature_maps = [i for i in range(len(pretrained_model.n_filters)+ 1)]
         self.segmentor = CDBNSegmentor(num_classes, feature_maps, self.pretrained_model)
         self.mlp_head = self.segmentor.seg_head
   
@@ -59,10 +59,11 @@ class CDBN_DC(pl.LightningModule):
         self.rng = np.random.default_rng(None)
  
     def forward(self, x):
-        self.segmentor(x)
+        tile_size = x.shape
+        x = self.segmentor(x)
         x = F.interpolate(
             x,
-            size=(15, 15),
+            size=(tile_size[-2], tile_size[-1]),
             mode="bilinear",
             align_corners=False,
         )  # Resize to match labels size
@@ -72,6 +73,7 @@ class CDBN_DC(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         y = batch
 
+        tile_size = y.shape
         y = self.segmentor.encoder(y)
 
         y2 = []
@@ -101,14 +103,14 @@ class CDBN_DC(pl.LightningModule):
 
         y = F.interpolate(
             y,
-            size=(15, 15),
+            size=(tile_size[-2], tile_size[-1]),
             mode="bilinear",
             align_corners=False,
         )  # Resize to match labels size
 
         y2 = F.interpolate(
             y2,
-            size=(15, 15),
+            size=(tile_size[-2], tile_size[-1]),
             mode="bilinear",
             align_corners=False,
         )  # Resize to match labels size
@@ -143,7 +145,8 @@ class CDBN_DC(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         y = batch
-    
+
+        tile_size = y.shape    
         y = self.segmentor.encoder(y)
 
         y2 = []
@@ -169,14 +172,14 @@ class CDBN_DC(pl.LightningModule):
 
         y = F.interpolate(
             y,
-            size=(15, 15),
+            size=(tile_size[-2], tile_size[-1]),
             mode="bilinear",
             align_corners=False,
         )  # Resize to match labels size
 
         y2 = F.interpolate(
             y2,
-            size=(15, 15),
+            size=(tile_size[-2], tile_size[-1]),
             mode="bilinear",
             align_corners=False,
         )  # Resize to match labels size
