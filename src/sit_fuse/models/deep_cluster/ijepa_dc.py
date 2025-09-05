@@ -36,7 +36,7 @@ class IJEPA_DC(pl.LightningModule):
         self.pretrained_model.model.layer_dropout = 0.0
   
         feature_maps = [0,1,2]
-        self.segmentor = JEPASegmentor(num_classes, feature_maps, self.pretrained_model.model)
+        self.segmentor = JEPASegmentor(num_classes, feature_maps, self.pretrained_model.model, self.pretrained_model.patch_size)
         self.mlp_head = self.segmentor.seg_head
   
         #self.average_pool = nn.AvgPool1d((self.pretrained_model.embed_dim), stride=1)
@@ -65,6 +65,7 @@ class IJEPA_DC(pl.LightningModule):
     
     def training_step(self, batch, batch_idx):
         y = batch
+        tile_size = y.shape
 
         y = self.segmentor.encoder(y)
 
@@ -95,14 +96,14 @@ class IJEPA_DC(pl.LightningModule):
 
         y = F.interpolate(
             y,
-            size=(16, 16),
+            size=(tile_size[-2], tile_size[-1]),
             mode="bilinear",
             align_corners=False,
         )  # Resize to match labels size
 
         y2 = F.interpolate(
             y2,
-            size=(16, 16),
+            size=(tile_size[-2], tile_size[-1]),
             mode="bilinear",
             align_corners=False,
         )  # Resize to match labels size
@@ -137,8 +138,11 @@ class IJEPA_DC(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         y = batch
+
+        tile_size = y.shape
     
         y = self.segmentor.encoder(y)
+
 
         y2 = []
         for i in range(len(y)):
@@ -163,14 +167,14 @@ class IJEPA_DC(pl.LightningModule):
 
         y = F.interpolate(
             y,
-            size=(16, 16),
+            size=(tile_size[-2], tile_size[-1]),
             mode="bilinear",
             align_corners=False,
         )  # Resize to match labels size
 
         y2 = F.interpolate(
             y2,
-            size=(16, 16),
+            size=(tile_size[-2], tile_size[-1]),
             mode="bilinear",
             align_corners=False,
         )  # Resize to match labels size
