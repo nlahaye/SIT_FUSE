@@ -1,10 +1,19 @@
 ---
+description: >-
+  Steps to assigning context to harmful algal bloom ocean imagery. Make sure to
+  train SIT-FUSE with desired data before continuing onto this step.
 icon: whale
 ---
 
 # Harmful Algal Bloom Example
 
-Harmful Algal Blooms (HABs)
+<figure><img src="../../../.gitbook/assets/20181011_nu4-1.png" alt=""><figcaption><p>Figure 2. A hazardous algal bloom containing the toxin microcystis covered large portions of western Lake Erie in September 2017.Credit: USGS EROS</p></figcaption></figure>
+
+### Harmful Algal Blooms (HABs) are large outbreaks of algae in oceans and lakes that harm coastal ecosystems, fisheries, and public health.&#x20;
+
+#### Monitoring has been expensive and difficult historically – algal blooms change rapidly and tracking requires instrument-specific retrieval algorithms, which can be difficult and expensive to develop.
+
+SIT-FUSE&#x20;
 
 include pic of output and assignment
 

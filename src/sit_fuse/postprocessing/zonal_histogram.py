@@ -11,11 +11,13 @@ from sit_fuse.utils import numpy_to_torch, read_yaml, get_read_func
 from sit_fuse.postprocessing.contour_and_fill import write_geotiff
 from scipy.spatial import distance_matrix
 import scipy.sparse as sp
-from pynndescent import NNDescent
+#from pynndescent import NNDescent
 import scipy.sparse
-
+import rasterio
+import geopandas
 from scipy.spatial.distance import pdist, squareform
 
+from rasterstats import zonal_stats
 
 from joblib import dump, load
 
@@ -77,6 +79,29 @@ class PolygonAreaKNNGraph(object):
             self.values_final = self.knn_values.flatten()
 
 
+def gen_zonal_histogram_vector(zone_vector_path, value_raster_path, zonal_histogram = None, poly_knns = None):
+
+
+    default_crs = 'EPSG:4326'
+
+    dataset = rasterio.open(value_raster_path)
+    arr = dataset.read(1)
+    affine=dataset.transform
+ 
+    zone = geopandas.read_file(zone_vector_path)
+    # Set CRS to the default if needed. This does not
+    # transform the shapefile to a difference CRS.
+    if zone.crs is None:
+        zone = zone.set_crs(default_crs)
+ 
+    # Transform to a difference CRS.
+    zone = zone.to_crs(dataset.crs)
+    stats = zonal_stats(zone, arr, affine=affine)
+
+    print("HERE", stats)
+
+
+
 
 def gen_zonal_histogram(zone_raster_path, value_raster_path, zonal_histogram = None, poly_knns = None, zone_ind = 1):
     """
@@ -95,82 +120,101 @@ def gen_zonal_histogram(zone_raster_path, value_raster_path, zonal_histogram = N
 
     print(zone_raster_path)
 
+    print(zone_raster_path, value_raster_path)
     zone_array_0 = gdal.Open(zone_raster_path).ReadAsArray()
-    zone_array_1 = zone_array_0
-    zone_array_1[np.where(zone_array_1 > 0)] = 255
-    zone_array_1 = zone_array_1.astype(np.uint8)
+    unique_zones = np.unique(zone_array_0)
 
-    value_array = gdal.Open(value_raster_path).ReadAsArray()
-    print(value_array.shape)
-    zeros = np.zeros((value_array.shape[0],value_array.shape[1]))
-    inds = [1,0]
- 
-    zone_array_2 = cv2.resize(zone_array_0, (value_array.shape[1],value_array.shape[0]), interpolation=cv2.INTER_NEAREST)
-    zone_array = cv2.resize(zone_array_1, (value_array.shape[1],value_array.shape[0]), interpolation=cv2.INTER_NEAREST)
-
-    zone_array[np.where(zone_array > 0)] = zone_ind
-
-    unique_zones = np.unique(zone_array)
     if poly_knns is None:
-        poly_knns = []
+            poly_knns = []
     if zonal_histogram is None:
-        zonal_histograms = {}
+            zonal_histograms = {}
     else:
-        zonal_histograms = zonal_histogram 
+            zonal_histograms = zonal_histogram
 
-    print("UNIQUE ZONES", unique_zones, zone_ind)
-    for zone in unique_zones:
-      if zone is not None:
-        contours, hierarchy = cv2.findContours(zone_array_1,
-            cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    for zone_ind in unique_zones:
 
-        if len(contours) < 1:
-            continue
+        zone_array_1 = zone_array_0
+        if zone_ind == 0:
+            ind_neg = np.where((zone_array_1 > 0) | (zone_array_1 < 0))
+            ind = np.where(zone_array_1 == 0)
+            zone_array_1[ind_neg] = 0
+            zone_array_1[np.where(zone_array_1 == 41.622)] = 0
+            zone_array_1[ind] = 255
+        else:
+            zone_array_1[np.where(zone_array_1 == 41.622)] = 0
+            zone_array_1[np.where(zone_array_1 > 0)] = 255
+        #zone_array_1[np.where(zone_array_1 > 0)] = 255
+        zone_array_1 = zone_array_1.astype(np.uint8)
 
-        print(len(contours))    
-
-        mask = zone_array #== zone
-        masked_values = np.zeros(value_array.shape)-1
-        inds = np.where(mask > 0)
-        print(masked_values.shape, value_array.shape, mask.shape)
-        masked_values[inds] = value_array[inds]
-
-        tuple_arr = tuple(map(tuple, masked_values))
-        print(masked_values.shape, masked_values.dtype, mask.dtype, value_array.dtype)
-        c = Counter(tuple_arr)
-        """
-        for cnt in contours:
-
-            x,y,w,h = cv2.boundingRect(cnt)
-            poly_knn = PolygonAreaKNNGraph() 
-
-            print("HERE PRE", len(contours), x, y, w, h)
+        value_array = gdal.Open(value_raster_path).ReadAsArray()
+        print(value_array.shape)
  
-            ul_y = y+h
-            ul_x = x
-            lr_y = y
-            lr_x = x+w
-            poly_knn.set_bb(ul_x, ul_y, lr_x, lr_y)
-            poly_knn.build_knn_graph(masked_values)
-            if poly_knn.knn_values is not None:
-                poly_knns.append(poly_knn)
+        zone_array_2 = cv2.resize(zone_array_0, (value_array.shape[1],value_array.shape[0]), interpolation=cv2.INTER_NEAREST)
+        zone_array = cv2.resize(zone_array_1, (value_array.shape[1],value_array.shape[0]), interpolation=cv2.INTER_NEAREST)
 
+        if zone_ind != 0:
+            zone_array[np.where(zone_array > 0)] = zone_ind
+        else:
+            inds = np.where(zone_array > 0)
+            neg_inds = np.where(zone_array == 0)
+            zone_array[inds] = 1
+            zone_array[neg_inds] = 0
 
+        print("UNIQUE ZONES", unique_zones, zone_ind)
+        for zone in [zone_ind]:
+
+            #if zone is not None:
+            #  contours, hierarchy = cv2.findContours(zone_array_1,
+            #      cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+
+            #  if len(contours) < 1:
+            #      continue
+
+            #  print(len(contours))    
+
+            mask = zone_array #== zone
+            masked_values = np.zeros(value_array.shape)-1
+            inds = np.where(mask == zone)
+            print(masked_values.shape, value_array.shape, mask.shape)
+            masked_values[inds] = value_array[inds]
+
+            tuple_arr = tuple(map(tuple, masked_values))
+            print(masked_values.shape, masked_values.dtype, mask.dtype, value_array.dtype)
+            c = Counter(tuple_arr)
+            """
+            for cnt in contours:
+    
+                x,y,w,h = cv2.boundingRect(cnt)
+                poly_knn = PolygonAreaKNNGraph() 
+
+                print("HERE PRE", len(contours), x, y, w, h)
  
-            cv2.drawContours(zeros, cnt, -1, 1, thickness=cv2.FILLED)
-        write_geotiff(gdal.Open(value_raster_path), zeros, value_raster_path + ".Polygons_Prelim.tif")
-        """
-        #hist, bins = np.histogram(masked_values, bins=sorted(np.unique(masked_values)))
-        if zone not in zonal_histograms.keys():
-            zonal_histograms[zone] = {} 
-        #for b in range(len(bins)):
-        for k1, v in c.items():
-            for k in k1:
-                k = round(float(k), 3)
-                if k not in zonal_histograms[zone].keys():
-                    zonal_histograms[zone][k] = int(v)
-                else:
-                    zonal_histograms[zone][k] = zonal_histograms[zone][k] + int(v)
+                ul_y = y+h
+                ul_x = x
+                lr_y = y
+                lr_x = x+w
+                poly_knn.set_bb(ul_x, ul_y, lr_x, lr_y)
+                poly_knn.build_knn_graph(masked_values)
+                if poly_knn.knn_values is not None:
+                    poly_knns.append(poly_knn)
+
+
+     
+                cv2.drawContours(zeros, cnt, -1, 1, thickness=cv2.FILLED)
+            write_geotiff(gdal.Open(value_raster_path), zeros, value_raster_path + ".Polygons_Prelim.tif")
+            """
+            #hist, bins = np.histogram(masked_values, bins=sorted(np.unique(masked_values)))
+            if zone not in zonal_histograms.keys():
+                zonal_histograms[zone] = {} 
+            print(zonal_histograms)
+            #for b in range(len(bins)):
+            for k1, v in c.items():
+                for k in k1:
+                    k = round(float(k), 3)
+                    if k not in zonal_histograms[zone].keys():
+                        zonal_histograms[zone][k] = int(v)
+                    else:
+                        zonal_histograms[zone][k] = zonal_histograms[zone][k] + int(v)
 
     return zonal_histograms, poly_knns
 
@@ -190,7 +234,12 @@ def main(yml_fpath):
     print(len(clust_gtiffs), len(label_gtiffs[0]))
     for j in range(len(label_gtiffs)):
         for i in range(len(label_gtiffs[0])):
-            zonal_histogram, poly_knns = gen_zonal_histogram(label_gtiffs[j][i], clust_gtiffs[i], zonal_histogram, poly_knns, zone_ind=j+1)
+            
+            if ".shp" not in label_gtiffs[j][i]:
+             
+                zonal_histogram, poly_knns = gen_zonal_histogram(label_gtiffs[j][i], clust_gtiffs[i], zonal_histogram, poly_knns, zone_ind=j)
+            else:
+                zonal_histogram, poly_knns = gen_zonal_histogram_vector(label_gtiffs[j][i], clust_gtiffs[i], zonal_histogram, poly_knns)
 
         print(len(zonal_histogram.keys()), len(zonal_histogram[list(zonal_histogram.keys())[0]].keys()))
 

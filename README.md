@@ -32,6 +32,8 @@ Figure 1 depicts the full flow of SIT-FUSE and figures 2 and 3 show segmentation
 
 Recent Talks:
 
+{% embed url="https://www.youtube.com/watch?v=vn0Knpces9Q" %}
+
 {% embed url="https://vimeo.com/771105424/c1379bc387" %}
 2022 ECMWF–ESA Workshop on Machine Learning for Earth Observation and Prediction
 {% endembed %}
