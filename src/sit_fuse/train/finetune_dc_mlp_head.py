@@ -241,7 +241,7 @@ def dc_DBN(yml_conf, dataset, conv=False):
         model = DBN_DC(dbn, num_classes=num_classes, conv=conv)
     else:
         lr = yml_conf["cluster"]["training"]["learning_rate"]
-        model = CDBN_DC(dbn, num_classes=num_classes, weight_decay=0.95, lr = lr, out_num_filters = dbn_arch[0][-1])
+        model = CDBN_DC(dbn, num_classes=num_classes, weight_decay=0.95, lr = lr)
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
@@ -357,7 +357,7 @@ def dc_Clay(yml_conf, dataset):
             gradient_clip_val=gradient_clip_val
         )
 
-
+    #trainer.save_checkpoint(os.path.join(save_dir, "deep_cluster.ckpt"))
     trainer.fit(model, dataset)
 
 
