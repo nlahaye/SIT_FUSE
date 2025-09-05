@@ -1,0 +1,9 @@
+
+
+#thresh: 0.5
+n_sq_tiles: 12
+fnames: [
+#"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pv_polygons.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/dice_lr1e-5.tif.masked.tif" 
+]

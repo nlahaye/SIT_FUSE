@@ -1,0 +1,29 @@
+
+
+vector_fn: ["/data/nlahaye/remoteSensing/PV_Mapping/background.shp"]
+nodata: -9999
+
+pixel_size: 0.000002699596126
+ 
+#raster_extent_fns: [
+#[
+#"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_0_s1_s2_ls8.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_10_s1_s2_ls8.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_11_s1_s2_ls8.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_12_s1_s2_ls8.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_13_s1_s2_ls8.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_14_s1_s2_ls8.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_15_s1_s2_ls8.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_1_s1_s2_ls8.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_2_s1_s2_ls8.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_3_s1_s2_ls8.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_4_s1_s2_ls8.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_5_s1_s2_ls8.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_6_s1_s2_ls8.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_7_s1_s2_ls8.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_8_s1_s2_ls8.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_9_s1_s2_ls8.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/urban_small_road_clipped_s1_s2_ls8.tif",
+#]
+#]
+

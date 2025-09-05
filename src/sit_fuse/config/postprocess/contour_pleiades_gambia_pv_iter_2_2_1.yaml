@@ -1,0 +1,31 @@
+
+
+data:
+ filename: [
+"/data/nlahaye/output/Learnergy/DBN_PV_MAPPING_WIDE_ROAD_CLIP/pleides_RGBNED_94.tif.clust.data_79199clusters.zarr.full_geo.tif.PV_Map_Tiered_Mask.tif.Contours.tif.masked.tif.FullColorContour.tif.PV_Map_Tiered_Mask_Tight.tif",
+"/data/nlahaye/output/Learnergy/DBN_PV_MAPPING_WIDE_ROAD_CLIP/pleides_RGBNED_96.tif.clust.data_79199clusters.zarr.full_geo.tif.PV_Map_Tiered_Mask.tif.Contours.tif.masked.tif.FullColorContour.tif.PV_Map_Tiered_Mask_Tight.tif",
+"/data/nlahaye/output/Learnergy/DBN_PV_MAPPING_WIDE_ROAD_CLIP/pleides_RGBNED_97.tif.clust.data_79199clusters.zarr.full_geo.tif.PV_Map_Tiered_Mask.tif.Contours.tif.masked.tif.FullColorContour.tif.PV_Map_Tiered_Mask_Tight.tif",
+"/data/nlahaye/output/Learnergy/DBN_PV_MAPPING_WIDE_ROAD_CLIP/pleides_RGBNED_98.tif.clust.data_79199clusters.zarr.full_geo.tif.PV_Map_Tiered_Mask.tif.Contours.tif.masked.tif.FullColorContour.tif.PV_Map_Tiered_Mask_Tight.tif",
+"/data/nlahaye/output/Learnergy/DBN_PV_MAPPING_WIDE_ROAD_CLIP/pleides_RGBNED_99.tif.clust.data_79199clusters.zarr.full_geo.tif.PV_Map_Tiered_Mask.tif.Contours.tif.masked.tif.FullColorContour.tif.PV_Map_Tiered_Mask_Tight.tif",
+"/data/nlahaye/output/Learnergy/DBN_PV_MAPPING_WIDE_ROAD_CLIP/pleides_RGBNED_9.tif.clust.data_79199clusters.zarr.full_geo.tif.PV_Map_Tiered_Mask.tif.Contours.tif.masked.tif.FullColorContour.tif.PV_Map_Tiered_Mask_Tight.tif",
+]
+
+ reader_type: "gtiff"
+ reader_kwargs:
+  None:
+
+remove_singles: True
+remove_singles_2: True
+write_geotiff: True
+contour_min_size: 5
+
+
+dilations: 0
+erosions: 0
+
+
+
+
+
+
+

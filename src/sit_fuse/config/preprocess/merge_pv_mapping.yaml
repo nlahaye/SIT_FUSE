@@ -1,0 +1,13 @@
+
+
+
+fname: "/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/gambia_pv_sf_v1.tif"
+n_sq_tiles: 12
+extent_gtiff: "/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED.tif"
+tile_basename: "/data/nlahaye/output/Learnergy/DBN_PV_MAPPING_WIDE_ROAD_CLIP/pleides_RGBNED_"
+
+tile_ext: ".tif.clust.data_*clusters.zarr.full_geo.tif.masked.tif.PV_Map_Tiered_Mask.tif.Contours.tif.FullColorContour.tif.PV_Map_Tiered_Mask.tif.Contours.tif"
+
+#.tif.clust.data_*clusters.zarr.full_geo.tif.PV_Map_Tiered_Mask.tif.Contours.tif.masked.tif.FullColorContour.tif.PV_Map_Tiered_Mask.tif.Contours.tif"
+
+

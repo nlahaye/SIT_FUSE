@@ -1,0 +1,11 @@
+
+dbf: True
+dbf_percentage_thresh: 1.0
+dbf_list: [[ 
+"/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/OIL_PALM_512_hist_dict.pkl"
+]
+]
+
+
+
+
