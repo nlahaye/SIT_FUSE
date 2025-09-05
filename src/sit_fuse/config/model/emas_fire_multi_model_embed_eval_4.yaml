@@ -4,7 +4,7 @@ analysis:
   no_encoding: "/data/nlahaye/output/Learnergy//NO_ENC_eMAS_FULL_STRAT_MULTI_LAYER_PL_5/no_encoding.zarr"
   pca: "/data/nlahaye/output/Learnergy/PCA_eMAS_FULL_STRAT_MULTI_LAYER_PL_5/pca.zarr"
   dbn:  "/data/nlahaye/output/Learnergy/DBN_eMAS_FULL_STRAT_MULTI_LAYER_PL_4/dbn_2_layer_2000.zarr"
-  clay: "/data/nlahaye/output/Learnergy/eMAS_Clay_Small/clay_small.zarr"
+  #clay: "/data/nlahaye/output/Learnergy/eMAS_Clay_Small/clay_small.zarr"
   #vit: "/data/nlahaye/output/Learnergy/IJEPA_TEST_FULL/ijepa_v5.zarr"
   #cnn: "/data/nlahaye/output/Learnergy/eMAS_BYOL_PL/pix_contrast_cnn.zarr"
  tsne:
@@ -15,7 +15,7 @@ analysis:
   metric: "euclidean"
   patience: 1000
   lr: 200
- embedding_functions: ["dbn", "clay", "pca", "no_encoding"] # ["dbn", "vit", "cnn", "clay", "pca", "no_encoding"]
+ embedding_functions: ["dbn", "pca", "pca", "no_encoding"] # ["dbn", "vit", "cnn", "clay", "pca", "no_encoding"]
  build_knn_graphs: True
 
 data:

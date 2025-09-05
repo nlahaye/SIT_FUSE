@@ -63,6 +63,7 @@ class DeepCluster(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         x = batch
+        #print(x.shape)
         if self.conv:
             x2 = x.clone() + torch.from_numpy(self.rng.normal(0.0, 0.01, \
                                 x.shape[3]*x.shape[2]).reshape(x.shape[2],\

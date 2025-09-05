@@ -1,0 +1,33 @@
+
+gen_from_geotiffs: False
+
+data:
+ clust_reader_type: "gtiff"
+ reader_kwargs:
+   no_arg: "no_arg" 
+ subset_inds: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[], [],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
+ create_separate: False
+
+ 
+ gtiff_data: [
+"/data/nlahaye/output/Learnergy/DBN_PV_MAPPING_WIDE_ROAD_CLIP/pleides_RGBNED_6.tif.clust.data_79199clusters.zarr.full_geo.tif.masked.tif.PV_Map_Tiered_Mask.tif.Contours.tif.FullColorContour.tif.tile_cluster.128.tif"
+]
+
+
+
+ cluster_fnames: [
+"/data/nlahaye/output/Learnergy/DBN_PV_MAPPING_WIDE_ROAD_CLIP/pleides_RGBNED_6.tif.clust.data_79199clusters.zarr.full_geo.tif.masked.tif.PV_Map_Tiered_Mask.tif.Contours.tif.FullColorContour.tif.tile_cluster.128.tif"
+]
+  
+context: 
+ apply_context: True
+ clusters: [776.0, 1912.0, 1434.0, 992.0, 1087.0, 1844.0, 683.0, 1719.0, 2076.0, 1121.0, 2120.0, 2306.0, 312.0, 409.0, 486.0, 171.0, 2318.0, 1232.0, 396.0, 1119.0, 917.0, 217.0, 340.0, 301.0, 2664.0, 580.0, 355.0, 1191.0, 1992.0, 1365.0, 674.0, 333.0, 129.0, 1382.0, 1553.0, 1635.0, 603.0, 967.0, 1926.0, 202.0, 249.0, 1821.0, 604.0, 2394.0, 1489.0, 2205.0, 1637.0, 2360.0, 1611.0, 872.0, 2537.0, 1639.0, 978.0, 2248.0, 2124.0, 1629.0, 1809.0, 2025.0, 1899.0, 1148.0, 2691.0, 751.0, 453.0, 1756.0, 932.0, 797.0, 1973.0, 1485.0, 1582.0, 2768.0, 2767.0, 2443.0, 2478.0, 87.0, 481.0, 2764.0, 1073.0, 1092.0, 1953.0, 1757.0, 571.0, 212.0, 2629.0, 294.0, 574.0, 1195.0, 1619.0, 877.0, 1857.0, 1287.0, 233.0, 1233.0, 710.0, 1296.0, 1016.0, 1128, 959, 1033,1034, 227, 1178, 1254, 1763, 2632, 2733, 1129, 12, 1368, 1410, 1332, 1408, 1410, 1368, 1254, 993]
+
+         
+         
+ 
+ background_class: 2
+ name: "PV_Map_TILE"
+ compare_truth: false
+ generate_union: False
+

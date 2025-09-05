@@ -1,0 +1,12 @@
+
+dbf: True
+dbf_percentage_thresh: 0.50001
+dbf_list: [[
+"/data/nlahaye/output/Learnergy/DBN_PV_MAPPING_WIDE_ROAD_CLIP/PV_PANEL_PXL_BCKGRND_iter2_hist_dict.pkl"
+
+],
+]
+
+
+
+

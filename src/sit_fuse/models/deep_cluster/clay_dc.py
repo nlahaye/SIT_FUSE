@@ -43,29 +43,47 @@ class Clay_DC(pl.LightningModule):
 
         waves = self.waves
         gsd = self.gsd
+        tile_size = x.shape
 
         #print(x.shape, "HERE Clay")
         dat_final = {
             "pixels": x,
-            "latlon": torch.zeros((x.shape[0],4)),
-            "time": torch.zeros((x.shape[0],4)),
+            "latlon": torch.zeros((x.shape[0], 4)),
+            "time": torch.zeros((x.shape[0], 4)),
             "gsd": self.gsd,
             "waves": self.waves}
             
 
         y = self.pretrained_model.encoder(dat_final)
         y2 = []
+
         #print(len(y), len(self.pretrained_model.upsamples), x.shape)
+        mn_tile_size = 99999
+        mx_tile_size = -1
         for i in range(len(y)):
             #print(y[i].shape)
             y2.append(self.pretrained_model.upsamples[i](y[i]))
+            mn_tile_size = min(mn_tile_size, y2[i].shape[-1])
+            mx_tile_size = max(mx_tile_size, y2[i].shape[-1])
+
+        if mx_tile_size > mn_tile_size:
+            for i in range(len(y)):
+
+                    y2[i] = F.interpolate(
+                        y2[i],
+                        size=(mx_tile_size, mx_tile_size),
+                        mode="bilinear",
+                        align_corners=False,
+                    )
+
+
 
         y2 = torch.cat(y2, dim=1)
         y2 = self.pretrained_model.fusion(y2)
          
         y2 = F.interpolate(
             y2,
-            size=(16, 16),
+            size=(tile_size[-2], tile_size[-1]),
             mode="bilinear",
             align_corners=False,
         )  # Resize to match labels size
@@ -76,30 +94,49 @@ class Clay_DC(pl.LightningModule):
     
     def training_step(self, batch, batch_idx):
         y = batch
+        tile_size = y.shape
 
         #print(y[0].shape, "HERE Clay")
         dat_final = {
             "pixels": y, #[0],
             #"indices": y[1],
-            "latlon": torch.zeros((y.shape[0],4)),
-            "time": torch.zeros((y.shape[0],4)),
+            "latlon": torch.zeros((y.shape[0], 4)),
+            "time": torch.zeros((y.shape[0], 4)),
             "gsd": self.gsd,
             "waves": self.waves}
         y = self.pretrained_model.encoder(dat_final)
 
         y2 = []
+        mn_tile_size = 99999
+        mx_tile_size = -1
         for i in range(len(y)):
 
             y2.append(y[i].clone())
             y2[i] = y2[i] + torch.from_numpy(self.rng.normal(0.0, 0.01, \
                                 (y[i].shape))).type(y[i].dtype).to(y[i].device)
- 
-            print("INITIAL SIZES", y[i].shape, y2[i].shape, i)
+            print("INITIAL SIZES", y[i].shape, i)
             y[i] = self.pretrained_model.upsamples[i](y[i])
             y2[i] = self.pretrained_model.upsamples[i](y2[i])
-            
             print("UPSAMPLE SIZES", y[i].shape, y2[i].shape, i)
+            mn_tile_size = min(mn_tile_size, y[i].shape[-1])
+            mx_tile_size = max(mx_tile_size, y[i].shape[-1])
 
+        if mx_tile_size > mn_tile_size:
+            for i in range(len(y)):
+                if y[i].shape[-1] < mx_tile_size:
+                    y[i] = F.interpolate(
+                        y[i],
+                        size=(mx_tile_size, mx_tile_size),
+                        mode="bilinear",
+                        align_corners=False,
+                    )
+
+                    y2[i] = F.interpolate(
+                        y2[i],
+                        size=(mx_tile_size, mx_tile_size),
+                        mode="bilinear",
+                        align_corners=False,
+                    )
 
         y = torch.cat(y, dim=1)
         y2 = torch.cat(y2, dim=1)
@@ -109,14 +146,14 @@ class Clay_DC(pl.LightningModule):
 
         y = F.interpolate(
             y,
-            size=(16, 16),
+            size=(tile_size[-2], tile_size[-1]),
             mode="bilinear",
             align_corners=False,
         )  # Resize to match labels size
 
         y2 = F.interpolate(
             y2,
-            size=(16, 16),
+            size=(tile_size[-2], tile_size[-1]),
             mode="bilinear",
             align_corners=False,
         )  # Resize to match labels size
@@ -145,6 +182,8 @@ class Clay_DC(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         y = batch
 
+        tile_size = y.shape
+
         print(y[0].shape, "HERE Clay")
         dat_final = {
             "pixels": y, #[0],
@@ -157,6 +196,8 @@ class Clay_DC(pl.LightningModule):
         y = self.pretrained_model.encoder(dat_final)
 
         y2 = [] 
+        mn_tile_size = 99999
+        mx_tile_size = -1
         for i in range(len(y)):
 
             y2.append(y[i].clone())
@@ -166,6 +207,26 @@ class Clay_DC(pl.LightningModule):
             y[i] = self.pretrained_model.upsamples[i](y[i])
             y2[i] = self.pretrained_model.upsamples[i](y2[i])
             print("UPSAMPLE SIZES", y[i].shape, y2[i].shape, i)
+            mn_tile_size = min(mn_tile_size, y[i].shape[-1])
+            mx_tile_size = max(mx_tile_size, y[i].shape[-1])
+
+        if mx_tile_size > mn_tile_size:
+            for i in range(len(y)):
+                if y[i].shape[-1] < mx_tile_size:
+                    y[i] = F.interpolate(
+                        y[i],
+                        size=(mx_tile_size, mx_tile_size),
+                        mode="bilinear",
+                        align_corners=False,
+                    )
+                    
+                    y2[i] = F.interpolate(
+                        y2[i],
+                        size=(mx_tile_size, mx_tile_size),
+                        mode="bilinear",
+                        align_corners=False,
+                    )
+
 
         y = torch.cat(y, dim=1)
         y2 = torch.cat(y2, dim=1)
@@ -179,14 +240,14 @@ class Clay_DC(pl.LightningModule):
 
         y = F.interpolate(
             y,
-            size=(16, 16),
+            size=(tile_size[-2], tile_size[-1]),
             mode="bilinear",
             align_corners=False,
         )  # Resize to match labels size
 
         y2 = F.interpolate(
             y2,
-            size=(16, 16),
+            size=(tile_size[-2], tile_size[-1]),
             mode="bilinear",
             align_corners=False,
         )  # Resize to match labels size

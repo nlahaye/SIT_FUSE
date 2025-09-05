@@ -244,7 +244,6 @@ output:
 
 dbn:
  conv: False
- subset_training: 30000
  heir_tiers: 1
  overwrite_model: False
  tune_clust: False
@@ -261,7 +260,7 @@ encoder_type: "dbn"
 encoder:
  tiled: False
  tune_scaler: False
- subset_training: 10000
+ subset_training: 1500000
  overwrite_model: False
  training:
   learning_rate: [0.00001, 0.00001]
@@ -269,7 +268,7 @@ encoder:
   weight_decay: [0.0001, 0.0001]
   nesterov_accel: [True, True]
   batch_size: 128
-  epochs: 1000
+  epochs: 100
   accelerator: "gpu"
   devices: 1
   gradient_clip_val: 0.1
@@ -291,7 +290,7 @@ cluster:
  training:
   learning_rate: 0.0001
   batch_size: 1000
-  epochs: 1000
+  epochs: 100
   accelerator: "gpu"
   devices: 1
   gradient_clip_val: 0.1
@@ -313,7 +312,7 @@ cluster:
    min_samples: 100
    learning_rate: 0.0001
    batch_size: 1000
-   epochs: 1000
+   epochs: 100
 
 
 

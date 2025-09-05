@@ -1,0 +1,52 @@
+
+gen_from_geotiffs: True
+
+data:
+ clust_reader_type: "gtiff"
+ reader_kwargs:
+   no_arg: "no_arg" 
+ subset_inds: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
+ create_separate: False
+  
+ gtiff_data: [
+"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h0v1.tif",
+"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h0v2.tif",
+"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h1v0.tif",
+"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h1v1.tif",
+"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h1v2.tif",
+"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h1v3.tif",
+"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h2v0.tif",
+"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h2v1.tif",
+"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h2v2.tif",
+"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h2v3.tif",
+"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h4v2.tif",
+"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h4v3.tif",
+]
+ cluster_fnames: [
+"/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h0v1.tif.clust.data_79299clusters.zarr.full_geo.tif",
+"/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h0v2.tif.clust.data_79299clusters.zarr.full_geo.tif",
+"/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h1v0.tif.clust.data_79299clusters.zarr.full_geo.tif",
+"/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h1v1.tif.clust.data_79299clusters.zarr.full_geo.tif",
+"/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h1v2.tif.clust.data_79299clusters.zarr.full_geo.tif",
+"/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h1v3.tif.clust.data_79299clusters.zarr.full_geo.tif",
+"/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h2v0.tif.clust.data_79299clusters.zarr.full_geo.tif",
+"/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h2v1.tif.clust.data_79299clusters.zarr.full_geo.tif",
+"/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h2v2.tif.clust.data_79299clusters.zarr.full_geo.tif",
+"/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h2v3.tif.clust.data_79299clusters.zarr.full_geo.tif",
+"/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h4v2.tif.clust.data_79299clusters.zarr.full_geo.tif",
+"/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h4v3.tif.clust.data_79299clusters.zarr.full_geo.tif",
+]
+ 
+context: 
+ apply_context: True
+ background_class: 0
+ clusters: [45.647, 37.499, 37.465, 37.467, 37.411, 37.4, 45.634, 45.973, 45.995, 51.434, 45.901, 51.497, 51.494, 51.467, 51.476, 51.495, 51.453, 45.97, 51.405, 52.103, 51.443, 51.478, 51.48, 52.133, 52.154, 33.917, 51.415, 51.406, 45.944, 51.471, 51.465, 63.419, 52.104, 45.983, 45.905, 36.594, 36.501, 36.561, 37.419, 45.686, 51.454, 51.437, 51.446, 51.411, 36.585, 37.405, 51.422, 63.42, 36.527, 37.486, 63.434, 37.451, 63.426, 37.461, 36.506, 63.48, 36.576, 63.449, 26.212, 36.588, 37.45, 63.44, 37.473, 26.251, 37.485, 37.456, 37.403, 37.478, 37.493, 33.261, 33.216, 37.495, 37.441, 33.284, 37.449, 33.256, 33.297, 37.445, 37.494, 50.962, 50.981, 50.96, 37.459, 37.407, 33.285, 37.418, 37.43, 33.287, 26.224, 33.227, 65.533, 9.783, 9.772]
+ 
+
+ background_class: 0
+ name: "palm_oil_no_tier" #i.e. smoke
+ compare_truth: false
+ generate_union: false
+ cluster_dependencies:
+
+

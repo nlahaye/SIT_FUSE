@@ -22,6 +22,8 @@ from scipy.spatial.distance import pdist, squareform
 from graspologic.embed import OmnibusEmbed, ClassicalMDS, AdjacencySpectralEmbed
 from graspologic.simulations import rdpg
 
+import h5py
+
 import copy
 import gc
 
@@ -88,7 +90,7 @@ FINAL_DCT = {
     }
 
 
-def prep_tsne(embed, labels, coord, final_labels, out_fname, pca_embed = False, indices = None, recon_arr = None, recon_lab = None):
+def prep_projection(embed, labels, coord, final_labels, out_fname, pca_embed = False, indices = None, recon_arr = None, recon_lab = None, init_shape = [], final_labels_func = None):
 
 
     coord_coord_1 = 1
@@ -97,12 +99,16 @@ def prep_tsne(embed, labels, coord, final_labels, out_fname, pca_embed = False, 
         coord_coord_1 = 0
         coord_coord_2 = 1
 
+    print("HERE INIT SHAPE", init_shape)
     if recon_lab is None or  recon_arr is None:
         if final_labels is not None:
             print("HERE ERROR", embed.shape, labels.shape, final_labels.shape, np.unique(labels), len(np.unique(labels)))
-        original_shape = (max(coord[:,coord_coord_1])+1, max(coord[:,coord_coord_2])+1)
-        for i in range(coord.shape[1]):
-            print(max(coord[:,i]), coord.shape, i)
+        if len(init_shape) > 0:
+            original_shape = init_shape[0]
+        else:
+            original_shape = (max(coord[:,coord_coord_1])+1, max(coord[:,coord_coord_2])+1)
+        #for i in range(coord.shape[1]):
+        #    print(max(coord[:,i]), coord.shape, i)
         if embed.ndim  == 4:
             embed = np.transpose(embed, axes=(0,2,3,1))
             reconstructed_arr = np.zeros((original_shape[0], original_shape[1], embed.shape[3]), dtype=np.float32)
@@ -145,38 +151,29 @@ def prep_tsne(embed, labels, coord, final_labels, out_fname, pca_embed = False, 
     if final_labels is not None:
         final_labels = final_labels[:reconstructed_labels.shape[0],:reconstructed_labels.shape[1]]
         final_labels = final_labels.flatten()
-    print("INTERMEDIATE RECON SHAPE", reconstructed_arr.shape, reconstructed_labels.reshape, np.unique(final_labels))
+    print("INTERMEDIATE RECON SHAPE", reconstructed_arr.shape, reconstructed_labels.shape, np.unique(final_labels))
     embed = reconstructed_arr.reshape(-1, reconstructed_arr.shape[-1])
     labels = reconstructed_labels.reshape(-1, 1)
     labels = labels.flatten()
     #print("FLATTENED RECON SHAPE", embed.shape, final_labels.shape, labels.shape, indices)
     if indices is not None:
         ind_tmp = zarr.load(indices)
-    else:
-        ind_tmp = np.where((final_labels > 0.0)) #TODO configurable #np.indices(labels.shape)
+    elif final_labels is not None:
+        #sub_inds = []
+        #for label in np.unique(final_labels):
+        #    if label > 0.0:
+        #        sub_ind = np.where(final_labels == label)[0]
+        
+        ind_tmp = final_labels_func(final_labels)
+  
+        print(np.unique(final_labels))
+        print(ind_tmp)
+        print(out_fname + ".indices.zarr")
         zarr.save(out_fname + ".indices.zarr", ind_tmp)
-    #elif final_labels is not None:
-    #    #sub_inds = []
-    #    #for label in np.unique(final_labels):
-    #    #    if label > 0.0:
-    #    #        sub_ind = np.where((final_labels == label)[0]
-    #      
-    #    #sub_ind_1 = np.where((final_labels == 0) & (labels > 0.0))[0]
-    #    #sub_ind_2 = np.where(final_labels == 1)[0]
-    #    #sub_ind_3 = np.where(final_labels == 2)[0]
-    #    #sub_ind_4 = np.where(final_labels == 3)[0]
-    #    #ind_final = np.concatenate((sub_ind_4, sub_ind_2))
-    #
-    #    #sub_sub_ind__3 = np.random.choice(sub_ind_3.shape[0], size=min(int(sub_ind_3.shape[0]), 100), replace=False)
-    #    #sub_sub_ind__1 = np.random.choice(sub_ind_1.shape[0], size=min(int(sub_ind_1.shape[0]), 100), replace=False)
-    #    #ind_tmp = np.concatenate((ind_final, sub_ind_3[sub_sub_ind__3], sub_ind_1[sub_sub_ind__1]))
-    # 
-    #    print(np.unique(final_labels))
-    #    zarr.save(out_fname + ".indices.zarr", ind_tmp)
-    #    print(ind_tmp.shape, out_fname + ".indices.zarr")
-    #else:
-    #    ind_tmp = np.indices(labels.shape)
-    #print(ind_tmp)
+        print(ind_tmp.shape, out_fname + ".indices.zarr")
+    else:
+        ind_tmp = np.where((labels > 0.0)) #TODO configurable #np.indices(labels.shape)
+        zarr.save(out_fname + ".indices.zarr", ind_tmp)
     indices = np.unique(ind_tmp)
     print(indices.shape, "HERE INDICES", np.unique(labels[indices]), len(np.unique(labels[indices])), embed.shape, recon_coord.shape)
     test_data = embed[indices, :]
@@ -193,12 +190,11 @@ def prep_tsne(embed, labels, coord, final_labels, out_fname, pca_embed = False, 
     return {"test_data":test_data, "recon_coord":recon_coord, "clust_data":clust_data, "clust_data_2":clust_data_2, "out_fname":out_fname}
 
 
-def run_tsne(full_embed, is_pca):
+def run_proj(full_embed, is_pca, n_neighbors=20, min_dist=0.1, spread = 1, n_components=2):
 
     if is_pca:
         return None
-    n_components = 10
-    reducer = umap.UMAP(metric="cosine", n_neighbors=20, min_dist=0.5, n_components=n_components)
+    reducer = umap.UMAP(metric="cosine", n_neighbors=n_neighbors, min_dist=min_dist, spread = spread, n_components=n_components)
     reducer.fit(full_embed)
     return reducer
   
@@ -230,27 +226,27 @@ def run_tsne(full_embed, is_pca):
 def transform_and_save(recon_coord, test_data, pca_embed, out_fname, clust_data, clust_data_2, reducer = None, scaler = None):
 
     if not pca_embed:
-        tsne_data = reducer.transform(test_data)
+        projection_data = reducer.transform(test_data)
     else:
-        tsne_data = test_data
+        projection_data = test_data
 
-    if scaler is not None:
-        tsne_data = scaler.transform(tsne_data)
+    #if scaler is not None:
+    #    projection_data = scaler.transform(projection_data)
  
 
-    shift_1 = abs(min(tsne_data[:,0]))
-    shift_2 = abs(min(tsne_data[:,1]))
+    shift_1 = abs(min(projection_data[:,0]))
+    shift_2 = abs(min(projection_data[:,1]))
 
-    tsne_data[:,0] = tsne_data[:,0] + shift_1
-    tsne_data[:,1] = tsne_data[:,1] + shift_2
+    projection_data[:,0] = projection_data[:,0] + shift_1
+    projection_data[:,1] = projection_data[:,1] + shift_2
+ 
+    projection_data = (projection_data*10).astype(np.int32)
 
-    tsne_data = (tsne_data*1000).astype(np.int32)
-
-    fnl = max(tsne_data[:,0])
-    fnl2 = max(tsne_data[:,1])
+    fnl = int(max(projection_data[:,0]))
+    fnl2 = int(max(projection_data[:,1]))
     final = np.zeros((fnl+1, fnl2+1), dtype=np.float32) - 1.0
     final2 = np.zeros((fnl+1, fnl2+1), dtype=np.float32) - 1.0
-    print(out_fname + ".TSNE_Clust.tif", np.unique(final), np.unique(final2))
+    print(out_fname + ".UMAP_Clust.tif", np.unique(final), np.unique(final2))
 
 
     final_dct = copy.deepcopy(FINAL_DCT)
@@ -258,8 +254,8 @@ def transform_and_save(recon_coord, test_data, pca_embed, out_fname, clust_data,
 
     for i in range(recon_coord.shape[0]):
 
-        final_dct["proj_y"].append(tsne_data[i,0])
-        final_dct["proj_x"].append(tsne_data[i,1])
+        final_dct["proj_y"].append(int(projection_data[i,0]))
+        final_dct["proj_x"].append(int(projection_data[i,1]))
         final_dct["bb_x"].append(recon_coord[i,1])
         final_dct["bb_y"].append(recon_coord[i,0])
         final_dct["bb_width"].append(3) #TODO generalize
@@ -269,31 +265,31 @@ def transform_and_save(recon_coord, test_data, pca_embed, out_fname, clust_data,
             final_dct["final_label"].append(clust_data_2[i])
         final_dct["no_heir_label"].append(int(clust_data[i] / 100.0))
 
-        final[tsne_data[i,0], tsne_data[i,1]] = clust_data[i] / 100.0
+        final[int(projection_data[i,0]), int(projection_data[i,1])] = clust_data[i] / 100.0
         if clust_data_2 is not None:
-            final2[tsne_data[i,0], tsne_data[i,1]] = clust_data_2[i]
+            final2[int(projection_data[i,0]), int(projection_data[i,1])] = clust_data_2[i]
 
     np.save(out_fname + ".viz_dict.npy", final_dct)
 
 
-    out_ds = gdal.GetDriverByName("GTiff").Create(out_fname + ".TSNE_Clust.tif", final.shape[1], final.shape[0], 1, gdal.GDT_Float32)
+    out_ds = gdal.GetDriverByName("GTiff").Create(out_fname + ".UMAP_Clust.tif", final.shape[1], final.shape[0], 1, gdal.GDT_Float32)
     out_ds.GetRasterBand(1).WriteArray(final)
     out_ds.FlushCache()
     out_ds = None
  
     if clust_data_2 is not None:
-        out_ds = gdal.GetDriverByName("GTiff").Create(out_fname + ".TSNE_Final.tif", final.shape[1], final.shape[0], 1, gdal.GDT_Int16)
+        out_ds = gdal.GetDriverByName("GTiff").Create(out_fname + ".UMAP_Final.tif", final.shape[1], final.shape[0], 1, gdal.GDT_Int16)
         out_ds.GetRasterBand(1).WriteArray(final2)
         out_ds.FlushCache()
         out_ds = None
 
 
-    out_ds = gdal.GetDriverByName("GTiff").Create(out_fname + ".TSNE_Clust_Round.tif", final.shape[1], final.shape[0], 1, gdal.GDT_Int32)
+    out_ds = gdal.GetDriverByName("GTiff").Create(out_fname + ".UMAP_Clust_Round.tif", final.shape[1], final.shape[0], 1, gdal.GDT_Int32)
     out_ds.GetRasterBand(1).WriteArray(final.astype(np.int32))
     out_ds.FlushCache()
     out_ds = None
 
-    return tsne_data
+    return projection_data
 
 
 def knn_graph(w, k, symmetrize=True, metric='cosine'):
@@ -326,6 +322,111 @@ def build_knn_graph(embed, out_fname):
     zarr.save(out_fname, knn_graph_out)
 
 
+
+def emas_final_label_func(final_labels, labels):
+    sub_ind_1 = np.where((final_labels == 0) & (labels > 0.0))[0]
+    sub_ind_2 = np.where(final_labels == 1)[0]
+    sub_ind_3 = np.where(final_labels == 2)[0]
+    sub_ind_4 = np.where(final_labels == 3)[0]
+    ind_final = np.concatenate((sub_ind_4, sub_ind_2))
+
+    sub_sub_ind__3 = np.random.choice(sub_ind_3.shape[0], size=min(int(sub_ind_3.shape[0]), 5000), replace=False)
+    sub_sub_ind__1 = np.random.choice(sub_ind_1.shape[0], size=min(int(sub_ind_1.shape[0]), 10000), replace=False)
+    ind_tmp = np.concatenate((ind_final, sub_ind_3[sub_sub_ind__3], sub_ind_1[sub_sub_ind__1]))
+
+    return ind_tmp
+ 
+
+def chesapeake_final_label_func(final_labels):
+
+    sub_inds = []
+    final_inds = None
+
+    for i in range(1, 13):
+        sub_inds = np.where(final_labels == i)[0]
+        print(len(sub_inds))
+        if len(sub_inds) < 1:
+            continue
+        if len(sub_inds)  > 1000:
+            sub_sub_inds  = np.random.choice(len(sub_inds), size=10, replace=False)
+            sub_inds = sub_inds[sub_sub_inds]
+        if final_inds is None:
+            final_inds = np.array(sub_inds)
+        else:
+            print(final_inds.shape, sub_inds.shape)
+            final_inds = np.concatenate((final_inds, sub_inds), axis=0)
+
+    return final_inds
+
+
+
+    
+def mados_final_label_func(final_labels):
+
+    sub_inds = []
+    final_inds = None
+    
+    for i in range(1, 16):
+        sub_inds = np.where(final_labels == i)[0]
+        print(len(sub_inds))
+        if len(sub_inds) < 1:
+            continue
+        if len(sub_inds)  > 1000:
+            sub_sub_inds  = np.random.choice(len(sub_inds), size=1000, replace=False)
+            sub_inds = sub_inds[sub_sub_inds]
+        if final_inds is None:
+            final_inds = np.array(sub_inds)
+        else:
+            print(final_inds.shape, sub_inds.shape)
+            final_inds = np.concatenate((final_inds, sub_inds), axis=0)
+
+    return final_inds
+
+def hab_severity_final_labels_func(final_labels):
+    sub_inds = []
+    final_inds = None
+
+    for i in range(0, 7):
+        sub_inds = np.where(final_labels == i)[0]
+        print(len(sub_inds))
+        if len(sub_inds) < 1:
+            continue
+        if len(sub_inds)  > 1000:
+            sub_sub_inds  = np.random.choice(len(sub_inds), size=1000, replace=False)
+            sub_inds = sub_inds[sub_sub_inds]
+        if final_inds is None:
+            final_inds = np.array(sub_inds)
+        else:
+            print(final_inds.shape, sub_inds.shape)
+            final_inds = np.concatenate((final_inds, sub_inds), axis=0)
+
+
+    return final_inds
+
+
+def binary_final_labels_func(final_labels):
+
+    sub_inds = []
+    final_inds = None
+
+    for i in range(0, 2):
+        sub_inds = np.where(final_labels == i)[0]
+        print(len(sub_inds))
+        if len(sub_inds) < 1:
+            continue
+        if len(sub_inds)  > 100:
+            sub_sub_inds  = np.random.choice(len(sub_inds), size=100, replace=False)
+            sub_inds = sub_inds[sub_sub_inds]
+        if final_inds is None:
+            final_inds = np.array(sub_inds)
+        else:
+            print(final_inds.shape, sub_inds.shape)
+            final_inds = np.concatenate((final_inds, sub_inds), axis=0)
+
+    return final_inds
+
+
+
 def main(yml_fpath):
 
     yml_conf = read_yaml(yml_fpath)
@@ -342,6 +443,8 @@ def main(yml_fpath):
     print(data.data_full.shape)
 
     model = get_model(yml_conf, data.data_full.shape[1])
+
+    del data
 
     model = model.cuda()
     model.pretrained_model = model.pretrained_model.cuda()
@@ -362,11 +465,11 @@ def main(yml_fpath):
 
     tiled = yml_conf["data"]["tile"]
 
-    tsne_perplexity = yml_conf["analysis"]["tsne"]["perplexity"]
-    tsne_niter = yml_conf["analysis"]["tsne"]["niter"]
-    tsne_njobs = yml_conf["analysis"]["tsne"]["njobs"]
-    tsne_patience = yml_conf["analysis"]["tsne"]["patience"]
-    tsne_lr = yml_conf["analysis"]["tsne"]["lr"]
+    n_components = yml_conf["analysis"]["projection"]["n_components"]
+    spread = yml_conf["analysis"]["projection"]["spread"]
+    min_dist = yml_conf["analysis"]["projection"]["min_dist"]
+    n_neighbors =  yml_conf["analysis"]["projection"]["n_neighbors"]
+    
 
     run_projection = yml_conf["analysis"]["run_projection"]
 
@@ -378,6 +481,19 @@ def main(yml_fpath):
     embed_func = yml_conf["analysis"]["embed_func"]
     final_labels = yml_conf["data"]["final_labels"]
 
+    final_labels_func = None
+    if final_labels is not None:
+        if "eMAS" in final_labels[0]:
+            final_labels_func = emas_final_label_func 
+        elif "MADOS" in final_labels[0]:
+            final_labels_func = mados_final_label_func
+        elif "hdf5" in final_labels[0]:
+            final_labels_func = chesapeake_final_label_func
+        elif "DAY" in final_labels[0]:
+            final_labels_func = hab_severity_final_labels_func
+        else:
+            final_labels_func = binary_final_labels_func
+ 
     knn_graphs = yml_conf["analysis"]["build_knn_graphs"]
 
     #loop_dict = {"reducer":None, "landmarks":None}
@@ -395,8 +511,11 @@ def main(yml_fpath):
             continue
         context_labels = None
         if len(final_labels) == len(test_fnames):
-            context_labels = gdal.Open(final_labels[i]).ReadAsArray()
-        print(data.targets_full.shape)
+            if ".tif" in final_labels[i]:
+                context_labels = gdal.Open(final_labels[i]).ReadAsArray()
+            elif ".hdf5" in final_labels[i]:
+                context_labels = (h5py.File(final_labels[i], 'r'))["label"][:]
+        print(data.targets_full.shape, data.init_shape)
         #if data.targets_full.ndim > 2:
         #    context_labels = context_labels[data.targets_full[0,:,1], data.targets_full[0,:,2]].flatten()
         #else:
@@ -409,7 +528,8 @@ def main(yml_fpath):
         embed = None
         recon_arr = None
         recon_lab = None
-        if model.clust_tree_ckpt is not None:
+        if model.pretrained_model is not None:
+            print("GENERATING EMBEDDING")
             if not os.path.exists(output_fle + ".embeddings.zarr") or not os.path.exists(output_fle + ".embedding_labels.zarr"):
                 output, embed, _ = run_inference(data, model, True, out_dir, output_fle + ".clust.data", tiled = tiled, return_embed =  True)
             else:
@@ -421,7 +541,7 @@ def main(yml_fpath):
                 ind = None
                 if indices[0] is not None:
                     ind = indices[i]
-                loop_dict = prep_tsne(embed, output, data.targets_full, context_labels, output_fle, is_pca, ind, recon_arr, recon_lab)
+                loop_dict = prep_projection(embed, output, data.targets_full, context_labels, output_fle, is_pca, ind, recon_arr, recon_lab, data.init_shape, final_labels_func)
                 loop_dicts.append(loop_dict)
                 if int_embed is None:
                     int_embed = loop_dict["test_data"]
@@ -436,25 +556,26 @@ def main(yml_fpath):
         scaler2 = None
         scaler1 = None
         reducer_fname = os.path.join(out_dir, 'umap_model.joblib')
-        scaler1_fname = os.path.join(out_dir, 'umap_pre_scaler.joblib')
-        scaler2_fname = os.path.join(out_dir, 'umap_post_scaler.joblib') 
+        #scaler1_fname = os.path.join(out_dir, 'umap_pre_scaler.joblib')
+        #scaler2_fname = os.path.join(out_dir, 'umap_post_scaler.joblib') 
 
-        if not os.path.exists(scaler1_fname) and not is_pca:
-            print("FITTING SCALER 1")
-            scaler1 = MinMaxScaler()
-            scaler1.fit(int_embed) #loop_dicts[1]["test_data"])
-            joblib.dump(scaler1, scaler1_fname)
-        elif not is_pca:
-            scaler1 = joblib.load(scaler1_fname)
+        print(int_embed.min(), int_embed.max(), int_embed.mean())
+
+        #if not os.path.exists(scaler1_fname) and not is_pca:
+        #    print("FITTING SCALER 1")
+        #    scaler1 = MinMaxScaler()
+        #    scaler1.fit(int_embed) #loop_dicts[1]["test_data"])
+        #    joblib.dump(scaler1, scaler1_fname)
+        #elif not is_pca:
+        #    scaler1 = joblib.load(scaler1_fname)
  
         #if not is_pca: 
         #    int_embed = scaler1.transform(int_embed)
-
-        if not is_pca: 
-            int_embed = scaler1.transform(int_embed)
+        print(np.nanmin(int_embed), np.nanmax(int_embed), np.nanmean(int_embed), np.count_nonzero(np.isnan(int_embed)), np.count_nonzero(~np.isnan(int_embed)))
+        print(int_embed.min(), int_embed.max(), int_embed.mean())
         if not os.path.exists(reducer_fname) and not is_pca:
             print("TRAINING UMAP")
-            reducer = run_tsne(int_embed, is_pca) #loop_dicts[1]["test_data"]), is_pca)
+            reducer = run_proj(int_embed, is_pca, n_neighbors=n_neighbors, min_dist=min_dist, spread = spread, n_components=n_components) #loop_dicts[1]["test_data"]), is_pca)
             joblib.dump(reducer, reducer_fname)
         elif not is_pca:
             reducer = joblib.load(reducer_fname)
@@ -462,33 +583,33 @@ def main(yml_fpath):
         if reducer is not None:
             int_embed = reducer.transform(int_embed)
 
-        if not os.path.exists(scaler2_fname):
-            print("FITTING SCALER 2")
-            scaler2 = MinMaxScaler()
-            if reducer is not None and scaler1 is not None:
-                scaler2.fit(int_embed) #loop_dicts[1]["test_data"])))
-            else:
-                scaler2.fit(int_embed)
-            joblib.dump(scaler2, scaler2_fname)
-        else:
-            scaler2 = joblib.load(scaler2_fname)
+        #if not os.path.exists(scaler2_fname):
+        #    print("FITTING SCALER 2")
+        #    scaler2 = MinMaxScaler()
+        #    if reducer is not None and scaler1 is not None:
+        #        scaler2.fit(int_embed) #loop_dicts[1]["test_data"])))
+        #    else:
+        #        scaler2.fit(int_embed)
+        #    joblib.dump(scaler2, scaler2_fname)
+        #else:
+        #    scaler2 = joblib.load(scaler2_fname)
 
         del int_embed 
 
         final_embed = None
         for i in range(len(test_fnames)):
             inp = loop_dicts[i]["test_data"]
-            if not is_pca:
-                inp = scaler1.transform(inp)
+            #if not is_pca:
+            #    inp = scaler1.transform(inp)
             print("Generating UMAP for", loop_dicts[i]["out_fname"])
-            tsne_data = transform_and_save(loop_dicts[i]["recon_coord"], inp, \
+            projection_data = transform_and_save(loop_dicts[i]["recon_coord"], inp, \
                 is_pca, loop_dicts[i]["out_fname"], loop_dicts[i]["clust_data"], loop_dicts[i]["clust_data_2"], \
                 reducer = reducer, scaler=scaler2)
             if i % 2 > 0:
                 if final_embed is None:
-                    final_embed = tsne_data
+                    final_embed = projection_data
                 else:
-                    final_embed = np.concatenate((final_embed, tsne_data))
+                    final_embed = np.concatenate((final_embed, projection_data))
 
         del reducer
         del loop_dicts
@@ -497,12 +618,22 @@ def main(yml_fpath):
             build_knn_graph(final_embed, os.path.join(out_dir, embed_func + ".zarr"))
 
 
+def loop_main(meta_yml_fpath):
+ 
+ meta_yml_conf = read_yaml(meta_yml_fpath)
+
+ for m in range(len(meta_yml_conf["models"])):
+     yml_conf = read_yaml(meta_yml_conf["models"][m])
+     main(yml_conf)
+
+
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-y", "--yaml", help="YAML file for DBN and output config.")
     args = parser.parse_args()
+    #loop_main(args.yaml)
     main(args.yaml)
 
     print(getrusage(RUSAGE_SELF))

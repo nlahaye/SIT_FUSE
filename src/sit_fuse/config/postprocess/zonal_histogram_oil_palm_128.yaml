@@ -1,0 +1,30 @@
+output:
+ out_dir: '/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/'
+ class_name: ['BACKGROUND_128', 'OIL_PALM_128']
+
+data:
+ min_thresh: 0
+ label_gtiffs: [
+[
+'/data/nlahaye/remoteSensing/Palm_Oil/Dataset_Ucayali_Palm_V2.tif',
+'/data/nlahaye/remoteSensing/Palm_Oil/Dataset_Ucayali_Palm_V2.tif',
+'/data/nlahaye/remoteSensing/Palm_Oil/Dataset_Ucayali_Palm_V2.tif'
+],
+[
+'/data/nlahaye/remoteSensing/Palm_Oil/Dataset_Ucayali_Palm_V2.tif',
+'/data/nlahaye/remoteSensing/Palm_Oil/Dataset_Ucayali_Palm_V2.tif',
+'/data/nlahaye/remoteSensing/Palm_Oil/Dataset_Ucayali_Palm_V2.tif'
+],
+]
+
+
+
+ clust_gtiffs: [
+"/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h1v1.tif.clust.data_79299clusters.zarr.full_geo.tif.tile_cluster.128.tif",
+"/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h0v1.tif.clust.data_79299clusters.zarr.full_geo.tif.tile_cluster.128.tif",
+"/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h0v2.tif.clust.data_79299clusters.zarr.full_geo.tif.tile_cluster.128.tif"
+]
+
+
+regrid: True
+

@@ -30,12 +30,14 @@ class JEPASegmentEncoder(nn.Module):
         self,
         vit_encoder, 
         feature_maps,
+        patch_size = 3
     ):
         super().__init__()
 
         self.feature_maps = feature_maps
         self.vit_encoder = vit_encoder
-   
+        self.patch_size = patch_size   
+
 
         # Define Feature Pyramid Network (FPN) layers
         self.fpn1 = nn.Sequential(
@@ -94,7 +96,7 @@ class JEPASegmentEncoder(nn.Module):
         for idx in range(len(_cube)):
             if idx in self.feature_maps:
                 tmp_cube = rearrange(
-                    _cube[idx], "B (H W) D -> B D H W", H=H // self.vit_encoder.patch_size , W=W // self.vit_encoder.patch_size    #division by patch size here
+                    _cube[idx], "B (H W) D -> B D H W", H=H // self.patch_size , W=W // self.patch_size    #division by patch size here
                 )
                 features.append(tmp_cube)
         # Apply FPN layers
@@ -115,12 +117,14 @@ class JEPASegmentor(nn.Module):
         feature_maps (list): Indices of layers to be used for generating feature maps.
     """
 
-    def __init__(self, num_classes, feature_maps, vit_encoder):
+    def __init__(self, num_classes, feature_maps, vit_encoder, patch_size=3):
         super().__init__()
+        self.patch_size = patch_size
         # Default values are for the clay mae base model.
         self.encoder = JEPASegmentEncoder(
             vit_encoder,
             feature_maps=feature_maps,
+            patch_size = self.patch_size
         )
         self.upsamples = [nn.Upsample(scale_factor=2**i) for i in range(4)] + [
             nn.Upsample(scale_factor=4),

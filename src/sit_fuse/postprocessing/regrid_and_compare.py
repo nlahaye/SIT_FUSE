@@ -6,6 +6,8 @@ from pyresample.utils.rasterio import get_area_def_from_raster
 
 import skill_metrics as sm
 
+from scipy.spatial import distance
+
 from skimage.metrics import structural_similarity, variation_of_information, adapted_rand_error, contingency_table
  
 from osgeo import gdal, osr
@@ -62,6 +64,11 @@ def f1_score(tp, tn, fp, fn):
         f1 = (2*precision*recall) / (precision + recall)
 
     return precision, recall, f1
+
+def dice_sim(labels, truth):
+ 
+    dice = distance.dice(labels, truth)
+    return dice
 
 def diff_map(tmp2, tmp, sfmd, fle_ext):
         out_dat = np.squeeze(tmp - tmp2)
@@ -153,6 +160,8 @@ def regrid_and_compare(config):
     mergess = []
     ssims = []
     ssims2 = []
+    dices = []
+    dices2 = []
     pix_cnts = []
     bsss = []
 
@@ -193,20 +202,24 @@ def regrid_and_compare(config):
 
         area_def = get_area_def_from_raster(map_fle)
         final_area_def = get_area_def_from_raster(sfmd)
-        print(area_def, final_area_def)
-        gm_on_sfm = np.squeeze(kd_tree.resample_nearest(area_def, gm, final_area_def, radius_of_influence=50, fill_value = -2))
-        gm_on_sfm[np.where(gm_on_sfm  > 1)] = 0
+        print(area_def, final_area_def, gm.min(), gm.max(), gm.mean(), "HERE")
+        gm_on_sfm = np.squeeze(kd_tree.resample_nearest(area_def, gm, final_area_def, radius_of_influence=500, fill_value = 0))
+        print(gm_on_sfm.min(), gm_on_sfm.max(), gm_on_sfm.mean(), "HERE")
+        #gm_on_sfm[np.where(gm_on_sfm  > 1)] = 0
         gm_on_sfm[np.where(gm_on_sfm  > 0)] = 1
         gm_on_sfm[np.where(gm_on_sfm  < 0)] = 0
- 
+
+        print(gm_on_sfm.min(), gm_on_sfm.max(), gm_on_sfm.mean(), "HERE")
+
 
         oth_on_sfm = None
         if other is not None:
             oth = gdal.Open(other).ReadAsArray()
             area_def = get_area_def_from_raster(other)
-            print(area_def, final_area_def)
-            oth_on_sfm = np.squeeze(kd_tree.resample_nearest(area_def, oth, final_area_def, radius_of_influence=50, fill_value = -2))
-            oth_on_sfm[np.where(oth_on_sfm  > 1)] = 0
+            print(area_def, final_area_def, oth.min(), oth.max(), oth.mean(), "HERE")
+            oth_on_sfm = np.squeeze(kd_tree.resample_nearest(area_def, oth, final_area_def, radius_of_influence=500, fill_value = 0))
+            print(oth_on_sfm.min(), oth_on_sfm.max(), oth_on_sfm.mean(), "HERE")
+            #oth_on_sfm[np.where(oth_on_sfm  > 1)] = 0
             oth_on_sfm[np.where(oth_on_sfm  > 0)] = 1
             oth_on_sfm[np.where(oth_on_sfm  < 0)] = 0
 
@@ -254,14 +267,18 @@ def regrid_and_compare(config):
         #ssim_b2 = structural_similarity(tmp2.astype(np.int32), baseline2.astype(np.int32))
 
         win_size = min(tmp2.shape[0], tmp2.shape[1])
+        dice = np.nan
         if win_size % 2 == 0:
             win_size = win_size -1
+        dice = dice_sim(tmp2.flatten(), tmp.flatten())
         ssim = structural_similarity(tmp2.astype(np.float32), tmp.astype(np.float32), data_range=1, gaussian_weights=False, win_size=win_size)
         pix_cnt = np.prod(tmp2.shape)
 
         ssim2 = np.nan
+        dice2 = np.nan
         if tmp3 is not None:
             ssim2 = structural_similarity(tmp2.astype(np.float32), tmp3.astype(np.float32), data_range=1, gaussian_weights=False, win_size=win_size)
+            dice2 = dice_sim(tmp2.flatten(), tmp3.flatten())
         print("SSIM", ssim)
         print("Pixel Count", pix_cnt)
 
@@ -307,6 +324,8 @@ def regrid_and_compare(config):
         ssims.append(ssim)
         pix_cnts.append(pix_cnt)
         ssims2.append(ssim2)
+        dices.append(dice)
+        dices2.append(dice2)
         #bsss.append(bss)
      
         #errors_b1.append(error_b1)
@@ -393,6 +412,12 @@ def regrid_and_compare(config):
     print("SSIM Full Weighted", weighted_mean(ssims, pix_cnts))
     print("SSIM2 Full Weighted", weighted_mean(ssims2, pix_cnts))
 
+    print("Dice", np.nanmean(dice))
+    print("Dice_2", np.nanmean(dice2))
+
+    print("Dice Weighted", weighted_mean(dices, pix_cnts))
+    print("Dice_2 Weighted", weighted_mean(dices2, pix_cnts))
+ 
     print("N Pixels", sum(pix_cnts))
 
 

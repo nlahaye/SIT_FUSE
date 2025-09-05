@@ -5,24 +5,16 @@ description: >-
   and dataset generation.
 cover: ../../../.gitbook/assets/The_Blue_Marble_(remastered).jpg
 coverY: 185.55839454341867
-layout:
-  cover:
-    visible: true
-    size: hero
-  title:
-    visible: true
-  description:
-    visible: true
-  tableOfContents:
-    visible: true
-  outline:
-    visible: true
-  pagination:
-    visible: true
 ---
 
-# Geolocation Application
+# Geolocation
+
+<p align="center">These configs are used with <code>generate_cluster_geotiffs.py</code></p>
 
 {% content-ref url="config-options/" %}
 [config-options](config-options/)
+{% endcontent-ref %}
+
+{% content-ref url="example-config.md" %}
+[example-config.md](example-config.md)
 {% endcontent-ref %}

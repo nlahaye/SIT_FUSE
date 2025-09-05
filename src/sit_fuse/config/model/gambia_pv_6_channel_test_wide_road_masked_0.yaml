@@ -1,0 +1,253 @@
+
+data:
+ tile: False
+ val_percent: 0.1
+ num_loader_workers: 10
+ scale_data: True
+ pixel_padding: 2
+ number_channels: 6
+ fill_value: 0.0
+ valid_min: 0.0000001
+ valid_max: 100000000
+ subset_count: 1
+ output_subset_count: 1
+ reader_type: "gtiff"
+ reader_kwargs:
+  no_arg: ''
+ chan_dim: 0
+ delete_chans: []
+ transform_default:
+  chans: []
+  transform: []
+ files_train: [
+"/data/nlahaye/remoteSensing/PV_Mapping/urban_small_road_clipped.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_4.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/large_urban_gambia_clipped_5.tif",
+]
+
+
+ files_test: [
+#"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_0.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_100.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_101.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_102.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_103.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_104.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_105.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_106.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_107.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_108.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_109.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_10.tif",
+#"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_110.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_111.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_112.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_113.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_114.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_115.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_116.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_117.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_118.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_119.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_11.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_120.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_121.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_122.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_123.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_124.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_125.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_126.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_127.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_128.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_129.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_12.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_130.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_131.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_132.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_133.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_134.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_135.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_136.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_137.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_138.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_139.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_13.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_140.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_141.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_142.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_143.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_14.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_15.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_16.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_17.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_18.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_19.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_1.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_20.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_21.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_22.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_23.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_24.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_25.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_26.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_27.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_28.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_29.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_2.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_30.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_31.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_32.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_33.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_34.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_35.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_36.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_37.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_38.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_39.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_3.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_40.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_41.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_42.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_43.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_44.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_45.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_46.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_47.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_48.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_49.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_4.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_50.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_51.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_52.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_53.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_54.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_55.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_56.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_57.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_58.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_59.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_5.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_60.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_61.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_62.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_63.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_64.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_65.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_66.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_67.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_68.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_69.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_6.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_70.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_71.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_72.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_73.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_74.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_75.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_76.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_77.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_78.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_79.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_7.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_80.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_81.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_82.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_83.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_84.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_85.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_86.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_87.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_88.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_89.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_8.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_90.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_91.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_92.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_93.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_94.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_95.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_96.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_97.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_98.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_99.tif",
+"/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/pleides_RGBNED_9.tif",
+]
+
+
+scaler:
+ name: "standard" 
+
+output:
+ out_dir: "/data/nlahaye/output/Learnergy/DBN_PV_MAPPING_WIDE_ROAD_CLIP/"
+ generate_intermediate_output: False #True
+
+
+dbn:
+ model_type: ["gaussian_selu", "gaussian_selu", "gaussian_selu"]
+ dbn_arch: [3000, 2500, 2000] #[250, 500, 2000] #, 2000]
+ gibbs_steps: [1,1, 1] #, 7, 7] #, 10] #, 25]
+ temp: [1.0, 1.0, 1.0] #, 1.0, 1.0] ##[0.9, 0.75, 0.5] #, 1.0] #, 0.5] #, 0.5] 
+ normalize_learnergy: [False, True, True]
+ batch_normalize: [False, False, False]
+
+encoder_type: "dbn"
+encoder:
+ tiled: False
+ tune_scaler: False
+ subset_training: 2000000
+ overwrite_model: False
+ training:
+  learning_rate: [0.00001, 0.00001, 0.00001]
+  momentum: [0.95,0.95, 0.95]
+  weight_decay: [0.0001, 0.0001,  0.0001]
+  nesterov_accel: [True, True, True]
+  batch_size: 128
+  epochs: 100
+  accelerator: "gpu"
+  devices: 1
+  gradient_clip_val: 0.1
+  precision: "16-mixed"
+  save_dir: "wandb_encoder"
+  stratify_data:
+   kmeans: True
+
+
+logger:
+ use_wandb: True
+ log_model: True
+ log_out_dir: "wandb_dbn"
+ project: "SIT-FUSE"
+
+cluster:
+ gauss_noise_stdev:  [0.01]
+ lambda: 1.0
+ num_classes: 800
+ training:
+  learning_rate: 0.0001
+  batch_size: 1000
+  epochs: 100
+  accelerator: "gpu"
+  devices: 1
+  gradient_clip_val: 0.1
+  precision: "16-mixed"
+  save_dir: "wandb_full_model"
+
+ heir:
+  tiers: 1
+  gauss_noise_stdev:  [0.01]
+  lambda: 1.0
+  num_classes: 100
+  training:
+   accelerator: "gpu"
+   devices: 1
+   gradient_clip_val: 0.1
+   precision: "16-mixed"
+   save_dir: "wandb_dbn_full_model_heir"
+   batch_size: 100
+   min_samples: 1000
+   learning_rate: 0.0001
+   batch_size: 1000
+   epochs: 100
+
+
+

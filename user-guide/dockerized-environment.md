@@ -41,11 +41,4 @@ docker run -it -v /data/:/data/ \
 ```
 {% endcode %}
 
-{% code fullWidth="false" %}
-```
-docker run -it -v /data/:/data/ \
---runtime=nvidia -e NVIDIA_VISIBLE_DEVICES=nvidia.com/gpu=all sit_fuse
-```
-{% endcode %}
-
 **The image has SIT\_FUSE installed in the /app director**
