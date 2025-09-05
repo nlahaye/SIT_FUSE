@@ -182,8 +182,8 @@ def read_label_counts_pkl(pkl_list):
     print(pkl_list.keys())
     #sys.exit(0)
     for i in pkl_list.keys():
-        if i < 1: 
-            continue
+        #if i < 1: 
+        #    continue
         init_data_label_counts[i] = {'total' : 0} 
 
         itr = pkl_list[i]
