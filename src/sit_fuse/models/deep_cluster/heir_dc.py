@@ -219,7 +219,9 @@ class Heir_DC(pl.LightningModule):
     def forward(self, x, perturb = False, train=False, return_embed=False):
         #TODO fix for multi-head
 
-        tile_size = x.shape[1]
+        tile_size = x.shape[0]
+        if x.ndim > 2:
+            tile_size = x.shape[2]
 
         dt = x.dtype
         y = self.pretrained_model.forward(x)
@@ -259,6 +261,7 @@ class Heir_DC(pl.LightningModule):
                     x3 = self.encoder.decon3(self.encoder.br5(x3 + x4))
                     if x3.size() != x2.size(): x3 = self.encoder._pad(x3, x2)
                     x2 = self.encoder.decon2(self.encoder.br6(x2 + x3))
+                    if x2.size() != x1.size(): x2 = self.encoder._pad(x2, x1)
                     x1 = self.encoder.decon1(self.encoder.br7(x1 + x2))
  
                     x = self.encoder.br9(self.encoder.decon5(self.encoder.br8(x1)))
@@ -307,12 +310,28 @@ class Heir_DC(pl.LightningModule):
                         "gsd": self.pretrained_model.gsd,
                         "waves": self.pretrained_model.waves}
                 x = self.encoder(dat_final)
+
+                mn_tile_size = 99999
+                mx_tile_size = -1
                 for i in range(len(x)):
                 
                     if perturb:
                         x[i] = x[i] + torch.from_numpy(self.rng.normal(0.0, 0.01, \
                                 (x[i].shape))).type(x[i].dtype).to(x[i].device)
                     x[i] = self.pretrained_model.pretrained_model.upsamples[i](x[i])
+                    mn_tile_size = min(mn_tile_size, x[i].shape[-1])
+                    mx_tile_size = max(mx_tile_size, x[i].shape[-1])
+ 
+                if mx_tile_size > mn_tile_size:
+                    for i in range(len(x)):
+                        if x[i].shape[-1] < mx_tile_size:
+                            x[i] = F.interpolate(
+                                       x[i],
+                                       size=(mx_tile_size, mx_tile_size),
+                                       mode="bilinear",
+                                       align_corners=False,
+                                   )
+
  
                 x = torch.cat(x, dim=1)
                 x = self.pretrained_model.pretrained_model.fusion(x)
@@ -466,7 +485,7 @@ class Heir_DC(pl.LightningModule):
                 #input_tmp = torch_flatten(input_tmp, start_dim=0, end_dim=1)
               
             #print(input_tmp.shape, x.shape, tmp2_2.shape, tmp2.shape)
-            print(min(inds2), max(inds2), input_tmp.shape, "HERE", tmp2.shape, tmp2_2.shape, tmp4.shape, tmp.shape, tmp3.shape, x.shape)
+            #print(min(inds2), max(inds2), input_tmp.shape, "HERE", tmp2.shape, tmp2_2.shape, tmp4.shape, tmp.shape, tmp3.shape, x.shape)
             input_tmp = input_tmp[inds2,:] 
 
 
