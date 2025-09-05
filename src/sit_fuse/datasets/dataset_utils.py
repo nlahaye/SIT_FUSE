@@ -53,7 +53,7 @@ def get_train_dataset_sf(yml_conf):
 
 
     tiled = yml_conf["data"]["tile"]
-    print("TILED", tiled)
+    #print("TILED", tiled)
 
     tiled = yml_conf["data"]["tile"]
     tile_size = None
@@ -133,7 +133,7 @@ def get_train_dataset_sf(yml_conf):
            data = SFDatasetConv()
            data.read_data_preprocessed(data_fname, targets_fname, transform=transform, subset_training = subset_training, stratify_data=stratify_data)
 
-    print(data.data_full.shape)
+    #print(data.data_full.shape)
     #if data.train_indices is not None:
     #    np.save(os.path.join(out_dir, "train_indices"), data.train_indices)
 
