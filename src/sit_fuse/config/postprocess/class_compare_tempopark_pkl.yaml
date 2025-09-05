@@ -1,0 +1,14 @@
+
+dbf: True
+dbf_percentage_thresh: 0.8
+
+dbf_list: [[
+ '/data/nlahaye/output/GOES_TEMPO/smoke_hist_dict.pkl'
+ 
+
+]]
+
+
+
+
+
