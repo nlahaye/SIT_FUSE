@@ -1380,6 +1380,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
     #print(fnl.shape, fnl.max())
     ranges[-1] = max(ranges[-1], global_max)
     algal = [[] for _ in range(len(ranges)-1)]
+    final_hist = []
     for i in range(fnl.shape[0]):
         hist, bins = np.histogram(fnl[i], bins=ranges, density=False)
         if max(hist) < 1:
@@ -1397,8 +1398,9 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         plt.show()
         plt.savefig(os.path.join(output_dir, "TEST_HIST_" + str(i) + ".png"))
         plt.clf()
+        final_hist.append((hist, bins,i))
     print("HERE FINAL", algal)
-    return algal
+    return algal, final_hist
     
 
 

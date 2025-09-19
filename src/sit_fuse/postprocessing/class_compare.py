@@ -363,6 +363,7 @@ def run_compare_dbf(dbf_list, percent_threshold):
     print(assignment)
 
     pprint(uncertain)
+    return assignment, uncertain
 
 def compare_label_sets(new_data, init_data, mask_name, map_vals, no_retrieval_init=-1, 
     no_retrieval_new=-1, new_data_label_counts = None, init_data_label_counts  = None, glint = None):
@@ -685,15 +686,20 @@ def run_compare(init_input, new_input, class_order, log_fname, out_ext, clust_ex
                         print("N =", np.count_nonzero(np.array(lbls) > -1))
 
 
-def main(yml_fpath):
+def run_class_compare_outside(yml_fpath):
 
     #Translate config to dictionary 
     yml_conf = read_yaml(yml_fpath)
+
+    run_class_compare(yml_conf)
+
+def run_class_compare(yml_conf):
     #Run 
 
     if yml_conf["dbf"]:
-        run_compare_dbf(yml_conf["dbf_list"], yml_conf["dbf_percentage_thresh"])
- 
+        assignments, uncertain = run_compare_dbf(yml_conf["dbf_list"], yml_conf["dbf_percentage_thresh"])
+     
+        return assignments, uncertain
     else:
         init_data = yml_conf["init_data"]
         new_data = yml_conf["new_data"]
@@ -714,13 +720,14 @@ def main(yml_fpath):
         run_compare(init_data, new_data, class_order, log_fname, out_ext, clust_ext, no_retrieval_init, \
             no_retrieval_new, good_vals, map_vals, labels, gradient, grad_increase, class_mask_gen_func)
 
+    return None, None
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-y", "--yaml", help="YAML file for fusion info.")
     args = parser.parse_args()
-    main(args.yaml)
+    run_class_compare_outside(args.yaml)
 
 
 

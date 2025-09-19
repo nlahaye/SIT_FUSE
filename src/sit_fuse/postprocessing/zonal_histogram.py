@@ -103,6 +103,13 @@ def gen_zonal_histogram_vector(zone_vector_path, value_raster_path, zonal_histog
     print("HERE", stats)
 
 
+def gen_zonal_histogram_multiclass(zone_raster_path, value_raster_path, \
+    zonal_histogram = None, poly_knns = None, regrid = False, zone_min=0, zone_max=10):
+
+    for i in range(zone_min+1, zone_max+2):
+        zonal_histograms, poly_knns = gen_zonal_histogram(zone_raster_path, value_raster_path, zonal_histogram, poly_knns, i, regrid)
+    
+    return zonal_histograms, poly_knns
 
 
 def gen_zonal_histogram(zone_raster_path, value_raster_path, zonal_histogram = None, poly_knns = None, zone_ind = 1, regrid = False):
@@ -199,31 +206,41 @@ def regrid_map(label_gtiff, clust_gtiff):
     reprojected_labels = reprojected_labels.astype(np.int32)
     return reprojected_labels
 
-def main(yml_fpath):
+def run_zonal_hist_outside(yml_fpath):
 
     #Translate config to dictionary 
     yml_conf = read_yaml(yml_fpath)
+
+    run_zonal_hist(yml_conf)
+
+def run_zonal_hist(yml_conf):
     #Run 
     clust_gtiffs = yml_conf["data"]["clust_gtiffs"]
-    label_prefixes = yml_conf["data"]["label_gtiffs"][0]
-    out_tag = yml_conf["data"]["name"]
+    label_gtiffs = yml_conf["data"]["label_gtiffs"]
     out_dir = yml_conf["output"]["out_dir"]
     out_tags = yml_conf["output"]["class_name"]
+    regrid = yml_conf["data"]["regrid"]
+    multiclass = yml_conf["data"]["multiclass"]
+    zone_min = yml_conf["data"]["zone_min"]
+    zone_max = yml_conf["data"]["zone_max"]
 
-    label_gtiffs = []
-    for bloom_name in out_tag:
-        full_label_paths = [prefix + bloom_name + ".tif" for prefix in label_prefixes]
-        label_gtiffs.append(full_label_paths)
 
     zonal_histogram = None
     poly_knns = []
     print(len(clust_gtiffs), len(label_gtiffs[0]))
+
+    #Assuming number of desired classes == number of sublists in label_gtiffs
     for j in range(len(label_gtiffs)):
         for i in range(len(label_gtiffs[0])):
             
             if ".shp" not in label_gtiffs[j][i]:
              
-                zonal_histogram, poly_knns = gen_zonal_histogram(label_gtiffs[j][i], clust_gtiffs[i], zonal_histogram, poly_knns, zone_ind=j+1, regrid=regrid)
+                if not multiclass:
+                    zonal_histogram, poly_knns = gen_zonal_histogram(label_gtiffs[j][i], clust_gtiffs[i], \
+                        zonal_histogram, poly_knns, zone_ind=j+1, regrid=regrid)
+                else:
+                    zonal_histogram, poly_knns = gen_zonal_histogram_multiclass(label_gtiffs[j][i], clust_gtiffs[i], \
+                        zonal_histogram, poly_knns, regrid=regrid, zone_min=zone_min, zone_max=zone_max)
             else:
                 zonal_histogram, poly_knns = gen_zonal_histogram_vector(label_gtiffs[j][i], clust_gtiffs[i], zonal_histogram, poly_knns)
 
@@ -242,15 +259,15 @@ def main(yml_fpath):
 
         print(zonal_histogram.keys(), len(zonal_histogram[list(zonal_histogram.keys())[0]].keys()))
 
-        print("SAVING", os.path.join(out_dir, out_tag[j] + "_hist_dict.pkl"))
+    print("SAVING", os.path.join(out_dir, out_tags[j] + "_hist_dict.pkl"))
 
-        with open(os.path.join(out_dir, out_tags[j] + "_hist_dict.pkl"), 'wb') as handle:
-                dump(zonal_histogram, handle, True, pickle.HIGHEST_PROTOCOL)
+    with open(os.path.join(out_dir, out_tags[j] + "_hist_dict.pkl"), 'wb') as handle:
+            dump(zonal_histogram, handle, True, pickle.HIGHEST_PROTOCOL)
 
 
-        print("SAVING", os.path.join(out_dir, out_tag[j] + "_base_cluster_polygon_knn_graphs.pkl"))
-        with open(os.path.join(out_dir, out_tag[j] + "_base_cluster_polygon_knn_graphs.pkl"), 'wb') as handle:
-                dump(poly_knns, handle, True, pickle.HIGHEST_PROTOCOL)
+    print("SAVING", os.path.join(out_dir, out_tags[j] + "_base_cluster_polygon_knn_graphs.pkl"))
+    with open(os.path.join(out_dir, out_tags[j] + "_base_cluster_polygon_knn_graphs.pkl"), 'wb') as handle:
+            dump(poly_knns, handle, True, pickle.HIGHEST_PROTOCOL)
 
         #numpy.save(os.path.join(out_dir, out_tag[j] + "_base_cluster_polygon_knn_graphs.npz"), poly_knns, allow_pickle=True)
 
@@ -260,7 +277,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-y", "--yaml", help="YAML file for DBN and output config.")
     args = parser.parse_args()
-    main(args.yaml)
+    run_zonal_hist_outside(args.yaml)
 
 
 

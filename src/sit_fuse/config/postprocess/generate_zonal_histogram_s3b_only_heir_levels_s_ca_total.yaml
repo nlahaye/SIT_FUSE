@@ -1,5 +1,10 @@
 
 data:
+ regrid: False
+ min_thresh: 0
+ multiclass: True
+ zone_min: 0
+ zone_max: 6
 
  clust_gtiffs: [
 "/data/nlahaye/output/Learnergy/S3B_Only_S_CA/S3B_OLCI_ERRNT.20180601.L3m.DAY.tif",
@@ -521,6 +526,7 @@ data:
 
 
  label_gtiffs: [
+[
 "/data/nlahaye/output/Learnergy/S3B_Only_S_CA/S3B_OLCI_ERRNT.20180601.L3m.DAY.no_heir.karenia_brevis_bloom.tif",
 "/data/nlahaye/output/Learnergy/S3B_Only_S_CA/S3B_OLCI_ERRNT.20180602.L3m.DAY.no_heir.karenia_brevis_bloom.tif",
 "/data/nlahaye/output/Learnergy/S3B_Only_S_CA/S3B_OLCI_ERRNT.20180603.L3m.DAY.no_heir.karenia_brevis_bloom.tif",
@@ -1037,9 +1043,10 @@ data:
 "/data/nlahaye/output/Learnergy/S3B_Only_S_CA/S3B_OLCI_ERRNT.20191230.L3m.DAY.no_heir.karenia_brevis_bloom.tif",
 "/data/nlahaye/output/Learnergy/S3B_Only_S_CA/S3B_OLCI_ERRNT.20191231.L3m.DAY.no_heir.karenia_brevis_bloom.tif",
 ]
+]
 
 
 output:
  out_dir: "/data/nlahaye/output/Learnergy/S3B_Only_S_CA/" 
- class_name: "tiered_hab"
+ class_name: ["tiered_hab"]
 
