@@ -44,7 +44,17 @@ def write_geotiff(dat, imgData, fname):
     out_ds = None
 
 
+def load_model(model_fpath):
 
+    # Step 1: Initialize model with the best available weights
+    model = resnet152(weights=None)
+    model.conv1 = torch.nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False) #here 4 indicates 4-channel input
+    model.load_state_dict(torch.load(model_fpath))
+
+    model.eval()
+    return_nodes = {'flatten': 'flatten'}
+    feature_extractor = create_feature_extractor(model, return_nodes=return_nodes)
+    return model, feature_extractor
 
 def get_model():
 
@@ -217,6 +227,40 @@ def cluster_and_output(output, clust, tgts2, img_data_shape, fname, img_test, ti
     write_geotiff(img_test, outp, fname + ".tile_cluster." + str(tile) + ".tif")
 
 
+def pretrained_conv_and_cluster(clust, model, test_fnames, tile):
+
+    stride = int(tile*0.6)
+
+    for i in range(len(test_fnames)):
+        loader, tmp, tgts2, img_data_shape, img_test = get_data(test_fnames[i], tile, stride)
+        loader_edge, tgts2_edge = get_edge_tiles(test_fnames[i], tile, stride)
+
+        with torch.no_grad():
+            dat_full = generate_features(model, feature_extractor, loader)
+            dat_full_edge = generate_features(model, feature_extractor, loader_edge)
+
+            if dat_full is None:
+                if dat_full_edge is None:
+                    continue
+                dat_full = dat_full_edge
+                tgts2 = tgts2_edge
+            elif dat_full_edge is not None:
+                if dat_full.ndim == 1:
+                    dat_full = np.expand_dims(dat_full, 0)
+                if dat_full_edge.ndim == 1:
+                    dat_full_edge = np.expand_dims(dat_full_edge, 0)
+                dat_full = np.concatenate((dat_full, dat_full_edge), axis=0)
+                tgts2 = np.concatenate((tgts2, tgts2_edge), axis=0)
+            else:
+                continue
+
+
+
+            print(dat_full.shape)
+            output = clust.predict(dat_full)
+            cluster_and_output(output, clust, tgts2, img_data_shape, test_fnames[i], img_test, tile)
+
+
 
  
 def run_conv_and_cluster(train_fname, test_fnames, tiles): 
@@ -296,19 +340,37 @@ def run_conv_and_cluster(train_fname, test_fnames, tiles):
         joblib.dump(clust, os.path.dirname(test_fnames[0]) + "/clust_" + str(tiles[tle]) + ".joblib") 
 
 
+def run_pretrained_conv_and_cluster(test_fnames, tiles):
 
+    for tle in range(len(tiles)):
+  
+        model_fpath = os.path.dirname(test_fnames[0]) + "/model_" + str(tiles[tle]) + ".ckpt")
+        model, feature_extractor = load_model(model_fpath)
 
-def main(yml_fpath):
+        clust = joblib.load(os.path.dirname(test_fnames[0]) + "/clust_" + str(tiles[tle]) + ".joblib")
+
+        pretrained_conv_and_cluster(clust, model, test_fnames, tiles[tle])
+ 
+
+def conv_and_cluster_outside(yml_fpath):
 
     #Translate config to dictionary 
     yml_conf = read_yaml(yml_fpath)
+    conv_and_cluster(yml_conf)
+
+def conv_and_cluster(yml_conf):
+
     #Run 
     train_fname = yml_conf["train_fname"]
     test_fnames = yml_conf["test_fnames"]
     tiles = yml_conf["tile_size"]
 
-    run_conv_and_cluster(train_fname, test_fnames, tiles)
 
+    if os.path.exists(os.path.dirname(test_fnames[0]) + "/clust_" + str(tiles[tle]) + ".joblib"):
+        run_pretrained_conv_and_cluster(test_fnames, tiles)
+    else:
+        run_conv_and_cluster(train_fname, test_fnames, tiles)
+ 
 
 
 

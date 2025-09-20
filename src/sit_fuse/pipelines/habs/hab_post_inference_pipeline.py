@@ -1,4 +1,6 @@
 
+from sit_fuse.utils import read_yaml
+
 from sit_fuse.preprocessing.colocate_and_resample import resample_or_fuse_data
 
 from sit_fuse.postprocessing.multi_hist_insitu import run_multi_hist
@@ -14,10 +16,8 @@ import os
 import yaml
 
 
-def run_hab_post_inference_pipeline(yml_fpath):
+def run_hab_post_inference_pipeline(yml_conf):
 
-    #Translate config to dictionary 
-    yml_conf = read_yaml(yml_fpath)
     #Run 
     roi = yml_conf["roi"]
     species_runs = HAB_USE_KEYS[roi]
@@ -92,7 +92,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-y", "--yaml", help="YAML file for fusion info.")
     args = parser.parse_args()
-    run_hab_post_inference_pipeline(args.yaml)
+
+    #Translate config to dictionary 
+    yml_conf = read_yaml(args.yaml)
+
+    run_hab_post_inference_pipeline(yml_conf)
 
 
 

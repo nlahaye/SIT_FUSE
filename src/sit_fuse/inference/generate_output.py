@@ -452,9 +452,13 @@ def get_model(yml_conf, n_visible):
 
 
 
-def main(yml_fpath):
+def predict_outside(yml_fpath):
 
     yml_conf = read_yaml(yml_fpath)
+
+    predict(yml_conf)
+
+def predict(yml_conf):
 
     test_fnames = yml_conf["data"]["files_test"]
     train_fnames = yml_conf["data"]["files_train"]
@@ -527,7 +531,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-y", "--yaml", help="YAML file for DBN and output config.")
     args = parser.parse_args()
-    main(args.yaml)
+    predict_outside(args.yaml)
 
     print(getrusage(RUSAGE_SELF))
 
