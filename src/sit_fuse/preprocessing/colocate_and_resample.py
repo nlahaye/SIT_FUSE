@@ -17,7 +17,7 @@ from osgeo import gdal, osr
 import argparse
 import os
 
-def fuse_data(yml_conf):
+def resample_or_fuse_data(yml_conf):
 
     data_reader_hi =  yml_conf["high_res"]["data"]["reader_type"]
     data_reader_kwargs_hi = yml_conf["high_res"]["data"]["reader_kwargs"]
@@ -277,7 +277,7 @@ def main(yml_fpath):
     #Translate config to dictionary 
     yml_conf = read_yaml(yml_fpath)
     #Run 
-    fuse_data(yml_conf)
+    resample_or_fuse_data(yml_conf)
 
 
 if __name__ == '__main__':

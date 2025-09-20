@@ -23,9 +23,13 @@ DATE_RE = ".*(\d{8}).*"
 
 
 
-fname_res = ["(sif_finalday_\d+).*karenia_brevis_bloom.tif", ".*(\d{8}).*karenia_brevis_bloom.tif", ".*(\d{8}).*no_heir.*karenia_brevis_bloom.tif", ".*(\d{8}).*pseudo_nitzschia_seriata_bloom.tif", ".*(\d{8}).*pseudo_nitzschia_delicatissima_bloom.tif", ".*(\d{8}).*alexandrium_bloom.tif", ".*(\d{8}).*total_phytoplankton.tif"]
+fname_res = ["(sif_finalday_\d+).*karenia_brevis_bloom.tif", ".*(\d{8}).*karenia_brevis_bloom.tif", ".*(\d{8}).*no_heir.*karenia_brevis_bloom.tif", ".*(\d{8}).*pseudo_nitzschia_seriata_bloom.tif", ".*(\d{8}).*pseudo_nitzschia_delicatissima_bloom.tif", ".*(\d{8}).*alexandrium_bloom.tif", ".*(\d{8}).*total_phytoplankton.tif",".*(\d{8}).*no_heir.*pseudo_nitzschia_seriata_bloom.tif", ".*(\d{8}).*no_heir.*pseudo_nitzschia_delicatissima_bloom.tif", ".*(\d{8}).*no_heir.*alexandrium_bloom.tif", ".*(\d{8}).*no_heir.*total_phytoplankton.tif"]
  
 def merge_datasets(paths, fname_str, out_dir, re_index = 0, base_index = 0): 
+
+    dqi = []
+    products = []
+
     for root, dirs, files in os.walk(paths[base_index]):
         for fle in files:
             if fname_str in fle:
@@ -104,13 +108,19 @@ def merge_datasets(paths, fname_str, out_dir, re_index = 0, base_index = 0):
                 out_ds.FlushCache()
                 out_ds = None
 
+                products.append(fname)
+                dqi.append(dqi_fname)
 
+    return products, dqi
 
 
 #assumes rename to having date in filename
 def merge_monthly(dirname, fname_str):
 
     monthlies = {}
+
+    products = []
+    dqi = []
 
     for root, dirs, files in os.walk(dirname):
         for fle in files:
@@ -190,27 +200,35 @@ def merge_monthly(dirname, fname_str):
             out_ds.FlushCache()
             out_ds = None
 
+            products.append(os.path.join(dirname, monthlies[yr][mnth][0][0].strftime("%Y%m") + "_" + fname_str + ".Monthly.tif"))
+            dqi.append(os.path.join(dirname, monthlies[yr][mnth][0][0].strftime("%Y%m") + "_" + fname_str + ".Monthly.DQI.tif"))
+
+    return products, dqi
 
 
-def main(yml_fpath):
+def run_merge(yml_fpath):
 
     #Translate config to dictionary 
     yml_conf = read_yaml(yml_fpath)
     #Run 
     data = None
     qual = None
+
+    products = None
+    dqi = None
  
     if yml_conf["gen_daily"]:
         for i in range(len(yml_conf['input_paths'])):
-            merge_datasets(yml_conf['input_paths'], 
+            products, dqi = merge_datasets(yml_conf['input_paths'], 
                 yml_conf['fname_str'], yml_conf['out_dir'], yml_conf['re_index'], i) 
     if yml_conf["gen_monthly"]:
-        merge_monthly(yml_conf['dirname'], yml_conf['fname_str'])  
+        products, dqi = merge_monthly(yml_conf['dirname'], yml_conf['fname_str'])  
  
+    return products, dqi
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-y", "--yaml", help="YAML file for fusion info.")
     args = parser.parse_args()
-    main(args.yaml)
+    run_merge(args.yaml)

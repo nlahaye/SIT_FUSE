@@ -656,10 +656,15 @@ def apply_dependencies(clust_deps, inds, dbnDat, window = 20): #TODO configurabl
 
     return final_inds_y,final_inds_x
 
-def main(yml_fpath):
+def run_geotiff_gen_outside(yml_fpath):
 
     #Translate config to dictionary 
     yml_conf = read_yaml(yml_fpath)
+
+    run_geotiff_gen(yml_conf)
+
+def run_geotiff_gen(yml_conf):
+
     #Run 
     reader = yml_conf["data"]["clust_reader_type"]
     data_reader_kwargs = yml_conf["data"]["reader_kwargs"]
@@ -714,4 +719,4 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-y", "--yaml", help="YAML file for DBN and output config.")
     args = parser.parse_args()
-    main(args.yaml)
+    run_geotiff_gen_outside(args.yaml)

@@ -44,7 +44,7 @@ def build_final_list(lookup, final_lst):
     return final_lst
     
 
-def main(yml_fpath):
+def run_multi_hist(yml_fpath):
     yaml_base = os.path.splitext(os.path.basename(yml_fpath))[0]
     output_dir = os.path.join("HISTOGRAMS", yaml_base)
     os.makedirs(output_dir, exist_ok=True)
@@ -64,6 +64,7 @@ def main(yml_fpath):
 
     arr_tmp = [[] for x in range(0,(len( yml_conf['ranges'])-1))] 
     labels = []
+    hists = []
     input_file_type = yml_conf['input_file_type']
 
     if 'use_key' in yml_conf:
@@ -84,14 +85,11 @@ def main(yml_fpath):
         d_lower = (i > 0)
 
         for use_key in use_keys:
-            labels.append(insitu_hab_to_multi_hist(yml_conf['xl_fname'], start_date, end_date,
+            lbls, hst = insitu_hab_to_multi_hist(yml_conf['xl_fname'], start_date, end_date,
                     yml_conf['clusters_dir'], yml_conf['clusters'], yml_conf['radius_degrees'][i],
-                            yml_conf['ranges'], yml_conf['global_max'], input_file_type, karenia, discard_lower = d_lower, use_key = use_key, output_dir=output_dir)) #, lookup = lookup))
-
-        #lookup = build_lookup_dict(labels[-1], lookup)
-
-
-    #final_lst = build_final_list(lookup, final_lst)
+                            yml_conf['ranges'], yml_conf['global_max'], input_file_type, karenia, discard_lower = d_lower, use_key = use_key, output_dir=output_dir))
+            labels.append(lbls)
+            hists.append(hst)
 
 
     arr_tmp = [[] for x in range(0,(len( yml_conf['ranges'])-1))]
@@ -123,16 +121,18 @@ def main(yml_fpath):
     for i in range(len(arr_init)):
         arr_init[i] = sorted(arr_init[i])  
     print(arr_init)
+
+    pprint(hists)
     #print(labels)
     #print(final_lst)
-
+    return arr_init, hists
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-y", "--yaml", help="YAML file for fusion info.")
     args = parser.parse_args()
-    main(args.yaml)
+    run_multi_hist(args.yaml)
 
 
 
