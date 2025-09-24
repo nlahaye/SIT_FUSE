@@ -421,9 +421,13 @@ def pretrain_BYOL(yml_conf, dataset):
     torch.save(model.state_dict(), os.path.join(save_dir, "byol.ckpt"))
 
 
-def main(yml_fpath):
+def run_pretraining_outside(yml_fpath):
 
     yml_conf = read_yaml(yml_fpath)
+
+    run_pretraining(yml_conf)
+
+def run_pretraining(yml_conf):
 
     num_loader_workers = int(yml_conf["data"]["num_loader_workers"])
     val_percent = float(yml_conf["data"]["val_percent"])
@@ -448,7 +452,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-y", "--yaml", help="YAML file for DBN and output config.")
     args = parser.parse_args()
-    main(args.yaml)
-
+    run_pretraining_outside(args.yaml)
+ 
     print(getrusage(RUSAGE_SELF))
 

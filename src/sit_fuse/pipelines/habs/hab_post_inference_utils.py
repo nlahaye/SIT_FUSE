@@ -290,6 +290,9 @@ def update_config_data_stream_merge(yml_conf, config_dict, out_dir, species_run,
 def run_data_stream_merge(yml_conf, out_dir, species_run, no_heir = False):
 
 
+    instrument_dict = yml_conf["instruments"]
+    config_dir = yml_conf["config_dir"]
+
     for instrument in instrument_dict:
         if instrument == "troposif":
             continue
@@ -566,6 +569,10 @@ def run_validation(yml_conf, species_run):
             if key not in classes[instrument]:
                 classes[instrument][key] = {}
 
+            trop = True
+            if "no" in key: #Key is trop no_trop
+                trop = False
+
             #Generate config
             config_dict = copy.deepcopy(YAML_TEMPLATE_MULTI_HIST)
             out_dir = yml_conf["final_product_dir"]
@@ -591,6 +598,7 @@ def run_validation(yml_conf, species_run):
 
 def merge_class_sets(yml_conf, species_run, classes, iter2_classes):
 
+    instrument_dict = yml_conf["instruments"]
     config_dir = yml_conf["config_dir"]
  
     final_class_set = {}
@@ -638,13 +646,15 @@ def merge_class_sets(yml_conf, species_run, classes, iter2_classes):
 
     full_class_set = {"init_classes" : classes, "iter2_classes" : iter2_classes, "final_classes" : final_class_set}
 
-    with open(os.path.join(config_dir, "class_set_dict.pkl"), 'w') as fle:
+    with open(os.path.join(config_dir, "class_set_dict.yaml"), 'w') as fle:
         yaml.dump(full_class_set, fle)
 
     return final_class_set
 
              
-def class_dict_from_confs(conf_dict):
+def class_dict_from_confs(yml_conf, conf_dict):
+
+    instrument_dict = yml_conf["instruments"]
 
     classes = {}
     for instrument in instrument_dict:

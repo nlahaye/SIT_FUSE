@@ -303,9 +303,12 @@ def heir_dc(yml_conf, dataset, ckpt_path):
         #model.clust_tree["1"][key].eval()
         #model.module_list[-1] = model.clust_tree["1"][key]
 
-def main(yml_fpath):
+def run_heir_training_outside(yml_fpath):
 
     yml_conf = read_yaml(yml_fpath)
+    run_heir_training(yml_conf)
+
+def run_heir_training(yml_conf):
 
     dataset = get_train_dataset_sf(yml_conf)
 
@@ -324,5 +327,5 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-y", "--yaml", help="YAML file for DBN and output config.")
     args = parser.parse_args()
-    main(args.yaml)
+    run_heir_training_outside(args.yaml)
 

@@ -485,7 +485,7 @@ class SFDataset(torch.utils.data.Dataset):
 
 
 
-def main(yml_fpath):
+def data_prep_outside(yml_fpath):
 	"""
 	Function used if code is called as executable. Generates data and indices in preprocessed format and 
 	saves to files. Can be reaccessed via read_data_preprocessed.
@@ -512,6 +512,9 @@ def main(yml_fpath):
 	#Translate config to dictionary 
 	yml_conf = read_yaml(yml_fpath)
 
+	run_data_prep(yml_conf)        
+ 
+def run_data_prep(yml_conf):
 	#Get config values 
 	data_train = yml_conf["data"]["files_train"]
 
@@ -584,7 +587,7 @@ if __name__ == '__main__':
 	args = parser.parse_args()
 	from timeit import default_timer as timer
 	start = timer()
-	main(args.yaml)
+	data_prep_outside(args.yaml)	
 	end = timer()
 	print(end - start) # Time in seconds, e.g. 5.38091952400282
 

@@ -6,37 +6,20 @@ data:
  reader_kwargs:
    no_arg: "no_arg" 
 
- subset_inds: [[3170,11352,2059,10280]]
-#[5523,13543,9602,11602],[5523,13543,7602,9602],[5523,13543,5602,7602],[5523,13543,3602,5602],[5523,13543,1602,3602],[5523,13543,0,1602]]
+
+
+ subset_inds: [[],[]]
  create_separate: false
 
-
  gtiff_data: [
-#"/data/nlahaye/remoteSensing/S1/S1A_IW_GRDH_1SDV_20230920T060120_20230920T060145_050407_0611D3_B141.SAFE/measurement/s1a-iw-grd-vh-20230920t060120-20230920t060145-050407-0611d3-002.tiff",
-#"/data/nlahaye/remoteSensing/S1/S1A_IW_GRDH_1SDV_20230925T060930_20230925T060955_050480_06145D_B0CD.SAFE/measurement/s1a-iw-grd-vv-20230925t060930-20230925t060955-050480-06145d-001.tiff",
-##"/data/nlahaye/remoteSensing/S1/S1A_IW_GRDH_1SDV_20230925T060905_20230925T060930_050480_06145D_7720.SAFE/measurement/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff",
-##"/data/nlahaye/remoteSensing/S1/S1A_IW_GRDH_1SDV_20230925T060905_20230925T060930_050480_06145D_7720.SAFE/measurement/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff",
-##"/data/nlahaye/remoteSensing/S1/S1A_IW_GRDH_1SDV_20230925T060905_20230925T060930_050480_06145D_7720.SAFE/measurement/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff",
-##"/data/nlahaye/remoteSensing/S1/S1A_IW_GRDH_1SDV_20230925T060905_20230925T060930_050480_06145D_7720.SAFE/measurement/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff",
-"/data/nlahaye/remoteSensing/S1/S1A_IW_GRDH_1SDV_20230925T060905_20230925T060930_050480_06145D_7720.SAFE/measurement/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff"
-#"/data/nlahaye/remoteSensing/S1/S1A_IW_GRDH_1SDV_20230925T060905_20230925T060930_050480_06145D_7720.SAFE/measurement/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff",
-#"/data/nlahaye/remoteSensing/S1/S1A_IW_GRDH_1SDV_20230920T060055_20230920T060120_050407_0611D3_BA0D.SAFE/measurement/s1a-iw-grd-vv-20230920t060055-20230920t060120-050407-0611d3-001.tiff"
+"/data/nlahaye/remoteSensing/S1/S1A_IW_GRDH_1SDV_20230925T060930_20230925T060955_050480_06145D_B0CD.SAFE/measurement/s1a-iw-grd-vv-20230925t060930-20230925t060955-050480-06145d-001.tiff",
+"/data/nlahaye/remoteSensing/S1/S1A_IW_GRDH_1SDV_20230925T060905_20230925T060930_050480_06145D_7720.SAFE/measurement/s1a-iw-grd-vv-20230925t060905-20230925t060930-050480-06145d-001.tiff"
 ]
 
+
  cluster_fnames: [
-#"/data/nlahaye/output/Learnergy/DBN_S1/s1a-iw-grd-vh-20230920t060120-20230920t060145-050407-0611d3-002.tiff.heir_clust1output_test.data_79696clusters.zarr",
-#"/data/nlahaye/output/Learnergy/DBN_S1/s1a-iw-grd-vv-20230925t060930-20230925t060955-050480-06145d-001.tiff.heir_clust1output_test.data_79698clusters.zarr",
-#"/data/nlahaye/output/Learnergy/DBN_S1/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff.heir_clust1output_test.data_79694clusters.zarr" #,
-#"/data/nlahaye/output/Learnergy/DBN_S1/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff.heir_clust1output_test.data_79696clusters.zarr" #,
-#"/data/nlahaye/output/Learnergy/DBN_S1/s1a-iw-grd-vv-20230920t060055-20230920t060120-050407-0611d3-001.tiff.heir_clust1output_test.data_79698clusters.zarr"
-##"/data/nlahaye/output/Learnergy/DBN_S1_2_2/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff.heir_clust1output_test.data_79698clusters.zarr",
-##"/data/nlahaye/output/Learnergy/DBN_S1_3_2/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff.heir_clust1output_test.data_79698clusters.zarr",
-##"/data/nlahaye/output/Learnergy/DBN_S1_4_2/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff.heir_clust1output_test.data_79698clusters.zarr",
-##"/data/nlahaye/output/Learnergy/DBN_S1_5_2/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff.heir_clust1output_test.data_79698clusters.zarr",
-##"/data/nlahaye/output/Learnergy/DBN_S1_6_2/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff.heir_clust1output_test.data_79698clusters.zarr",
-##"/data/nlahaye/output/Learnergy/DBN_S1_7_2/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff.heir_clust1output_test.data_79698clusters.zarr"
-#"/data/nlahaye/output/Learnergy/DBN_S1_8/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff.heir_clust1output_test.data_78129clusters.zarr"
-"/data/nlahaye/output/Learnergy/DBN_S1_3_LAYER/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff.heir_clust1output_test.data_78793clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_S1_GARONNE/s1a-iw-grd-vv-20230925t060930-20230925t060955-050480-06145d-001.tiff.clust.data_79399clusters.zarr",
+"/data/nlahaye/output/Learnergy/DBN_S1_GARONNE/s1a-iw-grd-vh-20230925t060905-20230925t060930-050480-06145d-002.tiff.clust.data_75399clusters.zarr"
 ]
 
 context:

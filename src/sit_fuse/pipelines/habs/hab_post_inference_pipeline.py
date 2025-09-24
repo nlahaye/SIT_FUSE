@@ -9,7 +9,7 @@ from sit_fuse.postprocessing.zonal_histogram import run_zonal_hist
 from sit_fuse.postprocessing.class_compare import run_class_compare
 
 from sit_fuse.pipelines.habs.hab_post_inference_constants import *
-from sit_fuse.pipelines.habs.hab_utils import run_context_free_geotiff_generation, run_conext_assignment, run_geotiff_generation,\
+from sit_fuse.pipelines.habs.hab_post_inference_utils import run_context_free_geotiff_generation, run_conext_assignment, run_geotiff_generation,\
 run_multi_tier_zonal_histogram, run_multi_tier_class_compare, merge_class_sets, class_dict_from_conf, run_data_stream_merge, run_validation
    
 import os
@@ -64,7 +64,7 @@ def run_hab_post_inference_pipeline(yml_conf):
             print("Generating products for", run)
 
             conf_dict = yml_conf["reuse_configs"]
-            classes = class_dict_from_confs(conf_dict)
+            classes = class_dict_from_confs(yml_conf, conf_dict)
  
             yml_conf["no_heir"] = False
             print("Running Context-Assigned Geotiff Generation")
@@ -85,7 +85,7 @@ def run_hab_post_inference_pipeline(yml_conf):
 
 
 
-run_data_stream_merge(yml_conf, out_dir, species_run, no_heir = False)
+#run_data_stream_merge(yml_conf, out_dir, species_run, no_heir = False)
 
 if __name__ == '__main__':
 

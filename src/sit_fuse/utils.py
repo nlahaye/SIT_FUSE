@@ -259,11 +259,12 @@ def read_pace_oc(filename, **kwargs):
     vrs = ["RRS.V3_0.Rrs"]
     kwrg = {}
     data = None
-    if "nrt"  in kwargs and  kwargs["nrt"]:
-        kwrg['nrt'] = kwargs["nrt"]
-        flename = filename + vrs[0] + ".4km.NRT.nc"
-    else:
-        flename = filename + vrs[0] + ".4km.nc"
+
+    base = filename + vrs[i] + ".4km"
+    flename = base + ".nc"
+    if not os.path.exists(flename) and kwargs.get("nrt", False):
+        flename = base + ".NRT.nc"
+
     start_ind = 9
     print(flename, vrs[0][start_ind:])
     f = Dataset(flename)
@@ -336,11 +337,12 @@ def read_s3_oc(filename, **kwargs):
     kwrg = {}
     data1 = None
     for i in range(len(vrs)):
-        if "nrt" in kwargs and kwargs["nrt"]:
-            kwrg['nrt'] = kwargs["nrt"]
-            flename = filename + vrs[i] + ".4km.NRT.nc"
-        else:
-            flename = filename + vrs[i] + ".4km.nc"
+
+        base = filename + vrs[i] + ".4km"
+        flename = base + ".nc"
+        if not os.path.exists(flename) and kwargs.get("nrt", False):
+            flename = base + ".NRT.nc"
+ 
         # flename = filename + vrs[i] + ".4km.nc"
         print(flename)
         f = Dataset(flename)
@@ -555,11 +557,10 @@ def read_modis_oc(filename, **kwargs):
     kwrg = {}
     data1 = []
     for i in range(len(vrs)):
-        if "nrt" in kwargs and kwargs["nrt"]:
-            kwrg['nrt'] = kwargs["nrt"]
-            flename = filename + vrs[i] + ".4km.NRT.nc"
-        else:
-            flename = filename + vrs[i] + ".4km.nc"
+        base = filename + vrs[i] + ".4km"
+        flename = base + ".nc"
+        if not os.path.exists(flename) and kwargs.get("nrt", False):
+            flename = base + ".NRT.nc"
         # flename = filename + vrs[i] + ".4km.nc"
         print(flename)
         f = Dataset(flename)
