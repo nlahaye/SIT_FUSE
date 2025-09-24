@@ -1239,8 +1239,6 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
             file_ext = "_DAY." #"DAY." #"_DAY." TODO HERE
             if "no_heir" in input_file_type:
                 file_ext = file_ext  + "no_heir."
-            if "PACE" in input_file_type:
-                file_ext = ".RRS.V3_0.Rrs.4km."
             if "alexandrium" in input_file_type:
                 file_ext = file_ext  + "alexandrium_bloom.tif"
             elif "seriata" in input_file_type:
@@ -1288,7 +1286,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
                 clust_fname = os.path.join(clusters_dir, f"OR_ABI-L1b-RadC-M6C01_G18_s{date_str}*clusters.zarr.full_geo.cloud_mask.FullColor.tif")
         ind = ind + 1
 
-        # print(clust_fname)
+        print(clust_fname)
 
         dat_train = False
         dat_test = False
