@@ -1,0 +1,51 @@
+
+
+geo_zarr: 
+ start_lon: 32.0
+ end_lon: 44.0
+ start_lat: 12.0
+ end_lat: 29.0
+ oc_geo_fpattern: "/mnt/data/REFLECTANCES/" #TODO
+
+
+sif_dir: "/mnt/data/TROPOSIF/"
+train_min_date: 20240305
+train_max_date: 20241023
+
+roi: "red_sea"
+output: "/mnt/data/OC_RED_SEA/"
+
+config_dir: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/"
+
+instruments:
+ PACE_OCI:
+  input_oc_dir:
+  input_oc_re:
+
+ S3A_OLCI:
+  input_oc_dir:
+  input_oc_re:
+
+ S3B_OLCI:
+  input_oc_dir:
+  input_oc_re:
+
+ AQUA_MODIS:
+  input_oc_dir:
+  input_oc_re:
+
+ JPSS1_VIIRS:
+  input_oc_dir:
+  input_oc_re:
+
+ JPSS2_VIIRS:
+  input_oc_dir:
+  input_oc_re:
+
+ SNPP_VIIRS:
+  input_oc_dir:
+  input_oc_re:
+
+
+
+
