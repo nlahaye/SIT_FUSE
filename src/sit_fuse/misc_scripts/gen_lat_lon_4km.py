@@ -9,12 +9,18 @@ from sit_fuse.utils import read_oc_geo
 #start_lat = 18.1599
 #end_lat = 30.4159
  
-start_lon = -128.00
-end_lon = -116.00
-start_lat = 30.00
-end_lat = 38.94
+#start_lon = -128.00
+#end_lon = -116.00
+#start_lat = 30.00
+#end_lat = 38.94
 
-tmp = read_oc_geo("/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20241204.L3m.DAY.")
+
+start_lon = 32.0
+end_lon = 44.0
+start_lat = 12.0
+end_lat = 29.0
+
+tmp = read_oc_geo("/mnt/data/REFLECTANCES/S3A_OLCI/S3A_OLCI_ERRNT.20250112.L3m.DAY.")
 
 
 print(tmp[0].shape)
@@ -45,6 +51,6 @@ print(min(lat), min(lon), max(lat), max(lon))
 
 data2 = da.from_array(loc)
 #da.to_zarr(data2, "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/gulf_of_mex_geo.zarr")
-da.to_zarr(data2, "/mnt/data/cal_coast_geo.zarr")
+da.to_zarr(data2, "/mnt/data/red_sea.zarr")
 
 
