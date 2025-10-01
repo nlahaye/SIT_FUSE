@@ -260,7 +260,7 @@ def read_pace_oc(filename, **kwargs):
     kwrg = {}
     data = None
 
-    base = filename + vrs[i] + ".4km"
+    base = filename + vrs[0] + ".4km"
     flename = base + ".nc"
     if not os.path.exists(flename) and kwargs.get("nrt", False):
         flename = base + ".NRT.nc"
@@ -470,7 +470,7 @@ def read_viirs_oc(filename, **kwargs):
         inds2 = np.where((lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
         lat = lat[inds1]
         lon = lon[inds2]
-        nind1, nind2 = np.meshgrid(inds2, inds1)
+        nind2, nind1 = np.meshgrid(inds2, inds1)
         dat = dat[:, nind1,nind2]
 
 
@@ -599,7 +599,7 @@ def read_modis_oc(filename, **kwargs):
         inds2 = np.where((lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
         lat = lat[inds1]
         lon = lon[inds2]
-        nind1, nind2 = np.meshgrid(inds2, inds1)
+        nind2, nind1 = np.meshgrid(inds2, inds1)
         dat = dat[:, nind1,nind2]
 
     #TODO Mask via shapefile
@@ -1224,14 +1224,17 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
 
     uniques = sorted(np.unique(insitu_df['Datetime'].values))
 
+
     #TODO
     #subset by date - start and end day of SIF 
     #tie date to cluster dat
 
     final_hist_data = []
     ind = 1
+    clust_fname = None
     for dateind in range(len(uniques)):
         date = uniques[dateind]
+        print(date, input_file_type)
         #    find associated cluster
         if "sif" in input_file_type:
             clust_fname = os.path.join(os.path.join(clusters_dir, "sif_finalday_" + str(ind) + ".tif"))
