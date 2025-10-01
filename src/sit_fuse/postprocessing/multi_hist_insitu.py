@@ -20,7 +20,7 @@ from pandas import DataFrame as df
 from skimage.util import view_as_windows
 from copy import deepcopy
 import datetime
-
+from pprint import pprint
 
 
 
@@ -87,7 +87,7 @@ def run_multi_hist(yml_fpath):
         for use_key in use_keys:
             lbls, hst = insitu_hab_to_multi_hist(yml_conf['xl_fname'], start_date, end_date,
                     yml_conf['clusters_dir'], yml_conf['clusters'], yml_conf['radius_degrees'][i],
-                            yml_conf['ranges'], yml_conf['global_max'], input_file_type, karenia, discard_lower = d_lower, use_key = use_key, output_dir=output_dir))
+                            yml_conf['ranges'], yml_conf['global_max'], input_file_type, karenia, discard_lower = d_lower, use_key = use_key, output_dir=output_dir)
             labels.append(lbls)
             hists.append(hst)
 

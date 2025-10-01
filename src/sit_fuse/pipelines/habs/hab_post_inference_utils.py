@@ -652,7 +652,7 @@ def merge_class_sets(yml_conf, species_run, classes, iter2_classes):
     return final_class_set
 
              
-def class_dict_from_confs(yml_conf, conf_dict):
+def class_dict_from_confs(yml_conf):
 
     instrument_dict = yml_conf["instruments"]
 

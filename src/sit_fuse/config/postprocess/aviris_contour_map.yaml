@@ -1,0 +1,12 @@
+
+
+data:
+ contour_fnames: [
+"/data/nlahaye/FIREX_AQ_DATA/AVIRIS/contoured_binary_segmentation/aviris_20190821_p00r23.smoke.tif",
+"/data/nlahaye/FIREX_AQ_DATA/AVIRIS/contoured_binary_segmentation/aviris_20190821_p00r27.smoke.tif",
+]
+
+ clust_fnames: [
+"/data/nlahaye/FIREX_AQ_DATA/AVIRIS/context_free_segmentation/aviris_20190821_p00r23.context_free_seg.tif",
+"/data/nlahaye/FIREX_AQ_DATA/AVIRIS/context_free_segmentation/aviris_20190821_p00r27.context_free_seg.tif",
+]

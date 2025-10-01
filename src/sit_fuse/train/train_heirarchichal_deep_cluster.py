@@ -312,8 +312,6 @@ def run_heir_training(yml_conf):
 
     dataset = get_train_dataset_sf(yml_conf)
 
-    yml_conf = read_yaml(yml_fpath)
-
     save_dir = yml_conf["output"]["out_dir"]
     use_wandb_logger = yml_conf["logger"]["use_wandb"]
     if use_wandb_logger:

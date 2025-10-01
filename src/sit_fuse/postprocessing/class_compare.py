@@ -354,14 +354,19 @@ def run_compare_dbf(dbf_list, percent_threshold):
 
     print("KYS", kys)
     print("\n\n\nASSIGNMENT")
-    print(sorted(assignment))
-    asn1 = []
-    for i in range(len(assignment[1])):
-        if assignment[1][i] not in assignment[0]:
-            asn1.append(assignment[1][i])
-    assignment[1] = asn1
+
+    #print(assignment)
+    for i in range(len(assignment)):
+        assignment[i] = sorted(assignment[i])
+
+    #asn1 = []
+    #for i in range(len(assignment[-1])):
+    #    if assignment[1][i] not in assignment[0]:
+    #        asn1.append(assignment[1][i])
+    #assignment[1] = asn1
     print(assignment)
 
+    print("\n\n\nUNCERTAIN")
     pprint(uncertain)
     return assignment, uncertain
 

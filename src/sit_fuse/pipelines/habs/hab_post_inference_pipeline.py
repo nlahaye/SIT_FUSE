@@ -64,7 +64,7 @@ def run_hab_post_inference_pipeline(yml_conf):
             print("Generating products for", run)
 
             conf_dict = yml_conf["reuse_configs"]
-            classes = class_dict_from_confs(yml_conf, conf_dict)
+            classes = class_dict_from_confs(conf_dict)
  
             yml_conf["no_heir"] = False
             print("Running Context-Assigned Geotiff Generation")

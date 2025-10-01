@@ -1,7 +1,23 @@
  
 reuse_context: True
-reuse_configs: - TODO
- 
+
+reuse_configs:
+ instruments:
+  pace:
+   total: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/postprocess/pace_only_oc_geotiff_gen_s_ca_pad.yaml"
+  s3a:
+   total: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/s3a_only_oc_geotiff_gen_pad_s_ca.yaml"
+  s3b:
+   total: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/postprocess/s3_only_oc__geotiff_gen_pad_s_ca.yaml"
+  jpss1:
+   total: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/postprocess/jpss1_viirs_only_oc_geotiff_gen.yaml"
+  snpp:
+   total: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/postprocess/viirs_only_oc_geotiff_gen_s_ca.yaml"
+  jpss1:
+   total: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/postprocess/zonal/generate_zonal_histogram_jpss2_heir_levels_s_ca_total.yaml"
+
+
+
 
 prob: False
 no_heir: True
@@ -31,16 +47,16 @@ instruments:
  jpss1:
   no_trop:  
       "out_dir": "/data/nlahaye/output/Learnergy/JPSS1_VIIRS_ONLY_S_CA/"
- jpss2:
-  no_trop:  
-      "out_dir": "/data/nlahaye/output/Learnergy/JPSS2_VIIRS_ONLY_S_CA/"
+ #jpss2:
+ # no_trop:  
+ #     "out_dir": "/data/nlahaye/output/Learnergy/JPSS2_VIIRS_ONLY_S_CA/"
  snpp:
   no_trop:  
       "out_dir": "/data/nlahaye/output/Learnergy/SNPP_VIIRS_ONLY_S_CA/"
  #troposif: No SIF data for 2024-2025 cases
- goes18:  
-  no_trop: 
-      "out_dir": "/data/nlahaye/output/Learnergy/GOES18_ABI_ONLY_S_CA/"
+ #goes18:  
+ # no_trop: 
+ #     "out_dir": "/data/nlahaye/output/Learnergy/GOES18_ABI_ONLY_S_CA/"
 
 
 
