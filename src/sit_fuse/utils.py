@@ -195,14 +195,14 @@ def read_emit_l2(filename, **kwargs):
 
     if "mask_shp" in kwargs:
 
-        loc = read_zarr_geo(filename[2], **kwargs)
+        loc = read_emit_geo(filename, **kwargs)
 
         print(loc[0,:,0].shape, loc[:,0,1].shape, dat.shape)
         print(loc[:,0,0], loc[0,:,1])
 
 
-        emit_xr = xr.Dataset(coords=dict(bands=(["band"],np.linspace(0,dat.shape[0],dat.shape[0])), lon=(["x"],loc[0,:,1]),\
-        lat=(["y"],loc[:,0,0])))
+        emit_xr = xr.Dataset(coords=dict(bands=(["band"],np.linspace(0,dat.shape[0],dat.shape[0])), lon=(["x"],loc[0,:,0]),\
+        lat=(["y"],loc[:,0,1])))
 
        
 
@@ -222,15 +222,33 @@ def read_emit_l2(filename, **kwargs):
         
         geometries = mask.geometry.apply(mapping)
 
-        emit_xr = xr.open_dataset(filename[1], engine='rasterio')
-        print(emit_xr.rio)
-        print(emit_xr["spatial_ref"])
+        #emit_xr = xr.open_dataset(filename[1], engine='rasterio')
+        #print(emit_xr.rio)
+        #print(emit_xr["spatial_ref"])
         emit_temp = emit_xr.rio.clip(geometries, drop=False)
-        print(np.unique(emit_temp["band_data"]))
+        #print(np.unique(emit_temp["band_data"]))
         tmp2 = emit_temp["band_data"].isnull().to_numpy().astype(np.bool_)
         print(np.unique(tmp2))
         dat[tmp2] = -999999       
         print(np.unique(dat))
+
+    if "mask_oceans" in kwargs:
+
+        loc = read_emit_geo(filename, **kwargs)
+        print(loc.shape)
+        lon = loc[0]
+        lat = loc[1]
+
+        print(lon.shape, lat.shape)
+
+        land_temp = ocean_basins_50.mask(lon, lat)
+        land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
+        tmp1 = land_temp.isnull().to_numpy().astype(np.bool_)
+        print(tmp1.shape, dat.shape)
+        dat[tmp1,:] = -999999 
+
+        print(dat.min(), dat.max())
+
 
     return dat
 
@@ -260,7 +278,7 @@ def read_pace_oc(filename, **kwargs):
     kwrg = {}
     data = None
 
-    base = filename + vrs[i] + ".4km"
+    base = filename + vrs[0] + ".4km"
     flename = base + ".nc"
     if not os.path.exists(flename) and kwargs.get("nrt", False):
         flename = base + ".NRT.nc"
@@ -471,6 +489,7 @@ def read_viirs_oc(filename, **kwargs):
         lat = lat[inds1]
         lon = lon[inds2]
         nind1, nind2 = np.meshgrid(inds2, inds1)
+        print(nind1.shape, nind2.shape, dat.shape, lat.shape, lon.shape, max(max(inds2)), nind1.max(), max(max(inds1)), nind2.max())
         dat = dat[:, nind1,nind2]
 
 
