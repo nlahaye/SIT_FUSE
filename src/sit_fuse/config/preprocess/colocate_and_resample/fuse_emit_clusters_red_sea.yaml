@@ -1,0 +1,76 @@
+
+low_res:
+ data:
+  fill_value: -999999.0
+  valid_min: -900.0 #0.0000001
+  valid_max: 100000000
+  reader_type: "zarr_to_numpy"
+  reader_kwargs:
+   start_line: 0
+   start_sample: 0
+   end_line: -1
+   end_sample: -1
+  geo_reader_type: "emit_geo"
+  geo_reader_kwargs:
+   no_arg: ''
+  filenames: [
+"/data/nlahaye/output/Learnergy/EMIT_WQ_REDUCED/EMIT_L2A_RFL_001_20250127T085626_2502706_018.nc.clust.data_62698clusters.zarr",
+"/data/nlahaye/output/Learnergy/EMIT_WQ_REDUCED/EMIT_L2A_RFL_001_20250127T085637_2502706_019.nc.clust.data_62699clusters.zarr",
+"/data/nlahaye/output/Learnergy/EMIT_WQ_REDUCED/EMIT_L2A_RFL_001_20250127T085614_2502706_017.nc.clust.data_62698clusters.zarr"
+]
+
+  geo_filenames: [
+"/data/nlahaye/remoteSensing/EMIT_RED_SEA/EMIT_L2A_RFL_001_20250127T085626_2502706_018.nc",
+"/data/nlahaye/remoteSensing/EMIT_RED_SEA/EMIT_L2A_RFL_001_20250127T085637_2502706_019.nc",
+"/data/nlahaye/remoteSensing/EMIT_RED_SEA/EMIT_L2A_RFL_001_20250127T085614_2502706_017.nc",
+]
+
+  chan_dim: 2
+  geo_coord_dim: 0
+  geo_lat_index: 1
+  geo_lon_index: 0
+
+
+high_res:
+ data:
+  valid_min: 0.0
+  valid_max: 100000000
+  reader_type: "numpy"
+  reader_kwargs:
+   no_arg: "no_arg"
+  geo_reader_type: "numpy"
+  geo_reader_kwargs:
+   no_arg: "no_arg"
+  filenames: []
+  geo_filenames: []
+  chan_dim: 0
+  geo_coord_dim: 2
+  geo_lat_index: 1
+  geo_lon_index: 0
+
+
+fusion:
+ projection_id: 4326
+ description: "Generating EMIT GeoTiffs"
+ area_id: "EMIT"
+ projection_proj4:
+  #proj: "utm"
+  #zone: 11
+  proj: "longlat"
+  datum: "WGS84" 
+ final_resolution: 0.00054 #0.00225 #0.000225
+ projection_units: "degrees"
+ resample_radius: 50
+ resample_n_neighbors: 8
+ resample_n_procs: 10
+ resample_epsilon: 1.6
+ use_bilinear: False      
+ 
+output_files: [
+"/data/nlahaye/output/Learnergy/EMIT_WQ_REDUCED/EMIT_L2A_RFL_001_20250127T085626_2502706_018.nc.clust.data_62698clusters.full_geo.tif",
+"/data/nlahaye/output/Learnergy/EMIT_WQ_REDUCED/EMIT_L2A_RFL_001_20250127T085637_2502706_019.nc.clust.data_62699clusters.full_geo.tif",
+"/data/nlahaye/output/Learnergy/EMIT_WQ_REDUCED/EMIT_L2A_RFL_001_20250127T085614_2502706_017.nc.clust.data_62698clusters.full_geo.tif"
+]
+
+
+

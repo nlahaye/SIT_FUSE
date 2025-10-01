@@ -1,0 +1,86 @@
+
+
+training_configs:
+ pace:
+  no_trop:
+      "out_dir": "/data/nlahaye/output/Learnergy/PACE_Only_S_CA/"
+ s3a:
+  no_trop:
+      "out_dir": "/data/nlahaye/output/Learnergy/S3A_Only_S_CA/"
+ s3b:
+  no_trop:
+      "out_dir": "/data/nlahaye/output/Learnergy/S3B_Only_S_CA/"
+ jpss1:
+  no_trop:
+      "out_dir": "/data/nlahaye/output/Learnergy/JPSS1_VIIRS_ONLY_S_CA/"
+ jpss2:
+  no_trop:
+      "out_dir": "/data/nlahaye/output/Learnergy/JPSS2_VIIRS_ONLY_S_CA/"
+ snpp:
+  no_trop:
+      "out_dir": "/data/nlahaye/output/Learnergy/SNPP_VIIRS_ONLY_S_CA/"
+ #troposif: No SIF data for 2024-2025 cases
+  goes18:
+    no_trop:
+      "out_dir": "/data/nlahaye/output/Learnergy/GOES18_ABI_ONLY_S_CA/"
+ 
+
+context_configs:
+ pace:
+  no_trop:
+      "out_dir": "/data/nlahaye/output/Learnergy/PACE_Only_S_CA/"
+ s3a:
+  no_trop:
+      "out_dir": "/data/nlahaye/output/Learnergy/S3A_Only_S_CA/"
+ s3b:
+  no_trop:
+      "out_dir": "/data/nlahaye/output/Learnergy/S3B_Only_S_CA/"
+ jpss1:
+  no_trop:
+      "out_dir": "/data/nlahaye/output/Learnergy/JPSS1_VIIRS_ONLY_S_CA/"
+ jpss2:
+  no_trop:
+      "out_dir": "/data/nlahaye/output/Learnergy/JPSS2_VIIRS_ONLY_S_CA/"
+ snpp:
+  no_trop:
+      "out_dir": "/data/nlahaye/output/Learnergy/SNPP_VIIRS_ONLY_S_CA/"
+ #troposif: No SIF data for 2024-2025 cases
+  goes18:
+    no_trop:
+      "out_dir": "/data/nlahaye/output/Learnergy/GOES18_ABI_ONLY_S_CA/"
+
+input_dirs:
+ pace:
+  no_trop:
+      "out_dir": "/data/nlahaye/output/Learnergy/PACE_Only_S_CA/"
+ s3a:
+  no_trop:
+      "out_dir": "/data/nlahaye/output/Learnergy/S3A_Only_S_CA/"
+ s3b:
+  no_trop:
+      "out_dir": "/data/nlahaye/output/Learnergy/S3B_Only_S_CA/"
+ jpss1:
+  no_trop:
+      "out_dir": "/data/nlahaye/output/Learnergy/JPSS1_VIIRS_ONLY_S_CA/"
+ jpss2:
+  no_trop: 
+      "out_dir": "/data/nlahaye/output/Learnergy/JPSS2_VIIRS_ONLY_S_CA/"
+ snpp:
+  no_trop:
+      "out_dir": "/data/nlahaye/output/Learnergy/SNPP_VIIRS_ONLY_S_CA/"
+ #troposif: No SIF data for 2024-2025 cases
+  goes18:
+    no_trop:
+      "out_dir": "/data/nlahaye/output/Learnergy/GOES18_ABI_ONLY_S_CA/"
+
+
+post_inference_config: "../../config/piplines/habs/hab_reflectance_geotiff_gen_s_ca_2024.yaml"
+ 
+run_uid: "palm_oil_tiered_v3"
+
+config_dir: "../../config/"
+
+reuse_gtiffs: True
+
+input_pattern: "ucayali_stacks_2020_.*tif"
+
