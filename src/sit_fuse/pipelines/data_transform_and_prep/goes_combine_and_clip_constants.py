@@ -19,7 +19,7 @@ YAML_TEMPLATE_GOES_NCDF_TO_GTFF = {
  },
 },
 
-"high_res:" : {
+"high_res" : {
  "data" : {
   "valid_min" : 0.0,
   "valid_max" : 99999999999,
@@ -64,7 +64,7 @@ YAML_TEMPLATE_GOES_NCDF_TO_GTFF = {
 
 GOES_BASIC_RE = "OR_ABI.*\.nc"
 GOES_NCHAN = 16
-GOES_CHAN_RE = "C([0-1]\d_)"
+GOES_CHAN_RE = "C([0-1]\\d)_"
 
 
 

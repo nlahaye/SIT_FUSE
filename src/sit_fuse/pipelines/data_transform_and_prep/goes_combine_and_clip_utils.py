@@ -1,4 +1,7 @@
 import os
+import copy
+import re
+import numpy as np
 
 from sit_fuse.utils import read_yaml
 from sit_fuse.preprocessing.colocate_and_resample import resample_or_fuse_data
@@ -41,13 +44,13 @@ def update_config_goes_netcdf_to_gtiff(yml_conf, config):
         mtch = re.search(GOES_CHAN_RE, fnames[i])
         if mtch:
             chan = int(mtch.group(1))
-            if channels[chan] > 0 or last_chan > chan:
+            if channels[(chan-1)] > 0 or last_chan > chan:
                 if np.sum(channels) == GOES_NCHAN:
                     fname_sets.append(copy.deepcopy(scene_files))
                     out_files.append(scene_files[0].replace(".nc", ".tif"))
                 scene_files = []
                 channels = np.zeros(GOES_NCHAN, dtype=np.int8)
-            channels[chan] = 1
+            channels[(chan-1)] = 1
             scene_files.append(os.path.join(fdir, fnames[i]))
             last_chan = chan
     config["low_res"]["data"]["filenames"] = fname_sets
@@ -61,6 +64,7 @@ def run_goes_combine_and_clip(yml_conf):
 
     config_dict = copy.deepcopy(YAML_TEMPLATE_GOES_NCDF_TO_GTFF)
     config_dict = update_config_goes_netcdf_to_gtiff(yml_conf, config_dict)
+    print(config_dict.keys())
     resample_or_fuse_data(config_dict)
 
     return config_dict
