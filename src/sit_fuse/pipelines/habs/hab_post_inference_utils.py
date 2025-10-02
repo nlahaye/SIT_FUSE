@@ -27,7 +27,7 @@ def build_res(instrument):
 
 def build_config_fname_cf_gtiff_gen(config_dir, instrument, proba = False, no_heir = True, with_trop = False):
 
-    config_fname = os.path.join(config_dir, "preprocessing", "collocate_and_resample", "fuse_" + instrument + "_oc")
+    config_fname = os.path.join(config_dir, "preprocessing", "colocate_and_resample", "fuse_" + instrument + "_oc")
     if with_trop:
         config_fname = config_fname + "_trop"
     if proba:
@@ -133,8 +133,9 @@ def update_config_cf_gtiff_gen(fdir, config, instrument, geo_zarr_path, proba = 
                     config["low_res"]["data"]["geo_filenames"].append(geo_zarr_path)
                     out_path = os.path.join(root, mtch_no_heir.group(1)) + ".proba.tif"
                     config["output_files"].append(out_path)
-            
-    config["output_files"] = sorted(config["output_files"])
+
+    #config["low_res"]["data"]["filenames"] = sorted(config["low_res"]["data"]["filenames"]) 
+    #config["output_files"] = sorted(config["output_files"])
 
     return config
 
@@ -286,6 +287,7 @@ def update_config_data_stream_merge(yml_conf, config_dict, out_dir, species_run,
 
     config_dict["re_index"] = USE_KEY_RE_INDEX[species_run]
 
+    return config_dict
  
 def run_data_stream_merge(yml_conf, out_dir, species_run, no_heir = False):
 

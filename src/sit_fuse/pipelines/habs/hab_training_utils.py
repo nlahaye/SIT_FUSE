@@ -1,11 +1,16 @@
 import numpy as np
 import dask
 import dask.array as da
-import datetime
+from  datetime import datetime
+import copy
+import os 
+import re
+import yaml
 
 from sit_fuse.utils import read_oc_geo
 
 from sit_fuse.pipelines.habs.hab_training_constants import *
+from sit_fuse.pipelines.data_transform_and_prep.goes_combine_and_clip_pipeline import goes_combine_and_clip_pipeline
 
 from sit_fuse.datasets.sf_dataset import run_data_prep
 from sit_fuse.train.pretrain_encoder import run_pretraining
@@ -24,10 +29,10 @@ def build_config_fname_cf_gtiff_gen(config_dir, instrument, with_trop = False):
 
 def gen_geo_zarr_oc_daily(yml_conf):
  
-    start_lon = yml_conf["geo_zarr"]["start_lon"]
-    end_lon = yml_conf["geo_zarr"]["end_lon"]
-    start_lat = yml_conf["geo_zarr"]["start_lat"]
-    end_lat = yml_conf["geo_zarr"]["end_lat"]
+    start_lon = yml_conf["start_lon"]
+    end_lon = yml_conf["end_lon"]
+    start_lat = yml_conf["start_lat"]
+    end_lat = yml_conf["end_lat"]
     
     fglob = glob.glob(yml_conf["geo_zarr"]["oc_geo_fpattern"])
     loc = read_oc_geo(fglob[0])
@@ -65,15 +70,17 @@ def find_train_test_fpaths(yml_conf, config_dict, instrument, key):
     train_fnames = []
     test_fnames = []
 
-    for root, dirs, files in os.walk(yml_conf["instruments"][instrument]["input_oc_dir"]):
+    for root, dirs, files in os.walk(yml_conf["instruments"][instrument][key]["input_oc_dir"]):
          
         for fle in files:
 
-            mtch = re.search(fle, yml_conf["instruments"][instrument]["input_oc_re"])
+            mtch = re.search(str(yml_conf["instruments"][instrument][key]["input_oc_re"]), fle)
             if mtch:
-                dte_str = mtch.group(1)
-                dt = datetime.strptime(mtch.group(1), "%Y%m%d")
-                lst_entry = os.path.join(root, fle)
+                if "GOES" in instrument:
+                    dt = datetime.strptime(mtch.group(2), "%Y%j%H%M%S")
+                else:
+                    dt = datetime.strptime(mtch.group(2), "%Y%m%d")
+                lst_entry = os.path.join(root, mtch.group(1))
                 #trop/no_trop
                 if "troposif" == instrument or "no" not in key:
                     trop_fname = build_trop_fname(yml_conf, dt)
@@ -84,7 +91,6 @@ def find_train_test_fpaths(yml_conf, config_dict, instrument, key):
                     train_fnames.append(lst_entry)
                 else:
                     test_fnames.append(lst_entry)
-
 
 
     config_dict["data"]["files_train"] = train_fnames
@@ -123,13 +129,14 @@ def update_training_config(yml_conf, config_dict, instrument, key):
 
     config_dict["output"]["out_dir"] = os.path.join(yml_conf["output"], instrument + "_" + key)
 
-    os.makedirs(config_dict["output"]["out_dir"], exists_ok=True)
+    os.makedirs(config_dict["output"]["out_dir"], exist_ok=True)
 
     return config_dict
 
 
 def run_data_preprocessing(yml_conf):
 
+    instrument_dict = yml_conf["instruments"]
     config_dir = yml_conf["config_dir"]
 
     configs = {}
@@ -144,13 +151,16 @@ def run_data_preprocessing(yml_conf):
             trop = True
             if "no" in key: #Key is trop no_trop
                 trop = False
-
               
             config_dict = copy.deepcopy(YAML_TEMPLATE_HAB_TRAIN)
  
             config_dict = update_training_config(yml_conf, config_dict, instrument, key)
 
-            run_data_prep(yml_conf)             
+            if "GOES" in instrument:
+                yml_conf["input_dir"] = instrument_dict[instrument][key]["input_oc_dir"]
+                goes_combine_and_clip_pipeline(yml_conf)                
+
+            run_data_prep(config_dict)             
 
             configs[instrument][key] = config_dict
 

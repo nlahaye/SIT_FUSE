@@ -102,8 +102,7 @@ YAML_TEMPLATE_HAB_TRAIN = {
   "gradient_clip_val" : 0.1,
   "precision" : "16-mixed",
   "save_dir" : "wandb_full_model"
-}
-},
+ },
 
  "heir" : {
   "tiers" : 1,
@@ -121,6 +120,7 @@ YAML_TEMPLATE_HAB_TRAIN = {
    "learning_rate" : 0.0001,
    "batch_size" : 1000,
    "epochs" : 30,
+  }
  }
 }
 

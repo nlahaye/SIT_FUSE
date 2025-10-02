@@ -1,6 +1,6 @@
 
 
-
+import os
 import argparse
 
 from sit_fuse.utils import read_yaml
@@ -14,7 +14,7 @@ def run_hab_training_pipeline(yml_conf):
     if not os.path.exists(zarr_fname):
         gen_geo_zarr_oc_daily(yml_conf)
  
-    run_data_preprocessing(yml_conf)
+    configs = run_data_preprocessing(yml_conf)
 
     run_model_training(yml_conf, configs)
 
