@@ -169,7 +169,8 @@ READER_TYPE_MAP = {
     "JPSS2_VIIRS" : "viirs_oc",
     "SNPP_VIIRS" : "viirs_oc",
     "AQUA_MODIS" : "modis_oc",
-    "PACE_OCI" : "pace_oc"
+    "PACE_OCI" : "pace_oc",
+    "GOES_18_ABI": "gtiff" 
 }
 
 

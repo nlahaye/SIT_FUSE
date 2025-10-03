@@ -67,6 +67,8 @@ def find_train_test_fpaths(yml_conf, config_dict, instrument, key):
     train_min = datetime.strptime(yml_conf["train_min_date"], "%Y%m%d")
     train_max = datetime.strptime(yml_conf["train_max_date"], "%Y%m%d")
 
+    print(train_min, train_max)
+
     train_fnames = []
     test_fnames = []
 
@@ -86,9 +88,11 @@ def find_train_test_fpaths(yml_conf, config_dict, instrument, key):
                     trop_fname = build_trop_fname(yml_conf, dt)
                      
                     lst_entry = [lst_entry, trop_fname]
-                                          
+
+                print(train_max > train_min, train_max, train_min, dt, dt >= train_min, dt <= train_max)    
                 if dt >= train_min and dt <= train_max:
                     train_fnames.append(lst_entry)
+                    print(dt, mtch.group(2))  
                 else:
                     test_fnames.append(lst_entry)
 
@@ -119,7 +123,9 @@ def update_training_config(yml_conf, config_dict, instrument, key):
             if instrument in rt_key:
                 config_dict["data"]["reader_type"] = READER_TYPE_MAP[rt_key] 
 
- 
+
+    print(config_dict["data"]["reader_type"], config_dict["data"]["files_train"])
+
     dbn_arch = DBN_ARCH_MAP["DEFAULT"] 
     for arch_key in DBN_ARCH_MAP:
         if instrument in arch_key:
@@ -156,7 +162,7 @@ def run_data_preprocessing(yml_conf):
  
             config_dict = update_training_config(yml_conf, config_dict, instrument, key)
 
-            if "GOES" in instrument:
+            if "GOES" in instrument and instrument_dict[instrument][key]["run_preprocess"]:
                 yml_conf["input_dir"] = instrument_dict[instrument][key]["input_oc_dir"]
                 goes_combine_and_clip_pipeline(yml_conf)                
 
