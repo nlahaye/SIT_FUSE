@@ -269,8 +269,11 @@ def run_conv_and_cluster(train_fname, test_fnames, tiles):
         tile = tiles[tle]
 
         stride = int(tile*0.6)
+ 
+        model_fpath = os.path.dirname(test_fnames[0]) + "/model_" + str(tiles[tle]) + ".ckpt"
+        model, feature_extractor = load_model(model_fpath)
 
-        model, feature_extractor = get_model()
+        #model, feature_extractor = get_model()
         loader, tmp, tgts2, img_data_shape, img_test = get_data(train_fname, tile, stride)
         loader_edge, tgts2_edge = get_edge_tiles(train_fname, tile, stride)
  
@@ -344,7 +347,7 @@ def run_pretrained_conv_and_cluster(test_fnames, tiles):
 
     for tle in range(len(tiles)):
   
-        model_fpath = os.path.dirname(test_fnames[0]) + "/model_" + str(tiles[tle]) + ".ckpt")
+        model_fpath = os.path.dirname(test_fnames[0]) + "/model_" + str(tiles[tle]) + ".ckpt"
         model, feature_extractor = load_model(model_fpath)
 
         clust = joblib.load(os.path.dirname(test_fnames[0]) + "/clust_" + str(tiles[tle]) + ".joblib")
@@ -366,7 +369,7 @@ def conv_and_cluster(yml_conf):
     tiles = yml_conf["tile_size"]
 
 
-    if os.path.exists(os.path.dirname(test_fnames[0]) + "/clust_" + str(tiles[tle]) + ".joblib"):
+    if os.path.exists(os.path.dirname(test_fnames[0]) + "/clust_" + str(tiles[0]) + ".joblib"):
         run_pretrained_conv_and_cluster(test_fnames, tiles)
     else:
         run_conv_and_cluster(train_fname, test_fnames, tiles)
@@ -379,4 +382,5 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-y", "--yaml", help="YAML file for DBN and output config.")
     args = parser.parse_args()
-    main(args.yaml)
+    conv_and_cluster_outside(args.yaml)
+
