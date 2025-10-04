@@ -17,28 +17,28 @@ roi: "california"
 final_product_dir: "/data/nlahaye/output/MERGED_HAB_20250918/"
  
 instruments: 
- pace:
-  no_trop: 
-      "out_dir": "/data/nlahaye/output/Learnergy/PACE_Only_S_CA/"
- s3a: 
-  no_trop:  
-      "out_dir": "/data/nlahaye/output/Learnergy/S3A_Only_S_CA/"
- s3b:
-  no_trop:  
-      "out_dir": "/data/nlahaye/output/Learnergy/S3B_Only_S_CA/"
- jpss1:
-  no_trop:  
-      "out_dir": "/data/nlahaye/output/Learnergy/JPSS1_VIIRS_ONLY_S_CA/"
+ #pace:
+ #  no_trop: 
+ #     "out_dir": "/data/nlahaye/output/Learnergy/PACE_Only_S_CA/"
+ #s3a: 
+ # no_trop:  
+ #     "out_dir": "/data/nlahaye/output/Learnergy/S3A_Only_S_CA/"
+ #s3b:
+ # no_trop:  
+ #     "out_dir": "/data/nlahaye/output/Learnergy/S3B_Only_S_CA/"
+ #jpss1:
+ # no_trop:  
+ #     "out_dir": "/data/nlahaye/output/Learnergy/JPSS1_VIIRS_ONLY_S_CA/"
  jpss2:
   no_trop:  
       "out_dir": "/data/nlahaye/output/Learnergy/JPSS2_VIIRS_ONLY_S_CA/"
- snpp:
-  no_trop:  
-      "out_dir": "/data/nlahaye/output/Learnergy/SNPP_VIIRS_ONLY_S_CA/"
+ #snpp:
+ # no_trop:  
+ #     "out_dir": "/data/nlahaye/output/Learnergy/SNPP_VIIRS_ONLY_S_CA/"
  #troposif: No SIF data for 2024-2025 cases
- goes18:  
-  no_trop: 
-      "out_dir": "/data/nlahaye/output/Learnergy/GOES18_ABI_ONLY_S_CA/"
+ #goes18:  
+ # no_trop: 
+ #'     "out_dir": "/data/nlahaye/output/Learnergy/GOES18_ABI_ONLY_S_CA/"
 
 
 

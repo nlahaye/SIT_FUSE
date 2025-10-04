@@ -9,8 +9,8 @@ from sit_fuse.postprocessing.zonal_histogram import run_zonal_hist
 from sit_fuse.postprocessing.class_compare import run_class_compare
 
 from sit_fuse.pipelines.habs.hab_post_inference_constants import *
-from sit_fuse.pipelines.habs.hab_post_inference_utils import run_context_free_geotiff_generation, run_conext_assignment, run_geotiff_generation,\
-run_multi_tier_zonal_histogram, run_multi_tier_class_compare, merge_class_sets, class_dict_from_conf, run_data_stream_merge, run_validation
+from sit_fuse.pipelines.habs.hab_post_inference_utils import run_context_free_geotiff_generation, run_context_assignment, run_geotiff_generation,\
+run_multi_tier_zonal_histogram, run_multi_tier_class_compare, merge_class_sets, class_dict_from_confs, run_data_stream_merge, run_validation
    
 import os
 import yaml
@@ -20,7 +20,7 @@ def run_hab_post_inference_pipeline(yml_conf):
 
     #Run 
     roi = yml_conf["roi"]
-    species_runs = HAB_USE_KEYS[roi]
+    species_run = HAB_USE_KEYS[roi]
 
     no_heir = True
     if "no_heir" in yml_conf:
@@ -34,7 +34,7 @@ def run_hab_post_inference_pipeline(yml_conf):
             print("Generating products for", run)
 
             print("Running Context Assignment")
-            classes = run_conext_assignment(yml_conf, run)
+            classes = run_context_assignment(yml_conf, run)
 
             print("Running Context-Assigned Geotiff Generation")
             run_geotiff_generation(yml_conf, classes, run, is_final = False)    
@@ -63,7 +63,7 @@ def run_hab_post_inference_pipeline(yml_conf):
         for run in species_run:
             print("Generating products for", run)
 
-            conf_dict = yml_conf["reuse_configs"]
+            conf_dict = yml_conf["reuse_configs"][run]
             classes = class_dict_from_confs(conf_dict)
  
             yml_conf["no_heir"] = False

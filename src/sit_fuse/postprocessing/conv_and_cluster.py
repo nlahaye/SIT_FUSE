@@ -344,7 +344,7 @@ def run_pretrained_conv_and_cluster(test_fnames, tiles):
 
     for tle in range(len(tiles)):
   
-        model_fpath = os.path.dirname(test_fnames[0]) + "/model_" + str(tiles[tle]) + ".ckpt")
+        model_fpath = os.path.dirname(test_fnames[0]) + "/model_" + str(tiles[tle]) + ".ckpt"
         model, feature_extractor = load_model(model_fpath)
 
         clust = joblib.load(os.path.dirname(test_fnames[0]) + "/clust_" + str(tiles[tle]) + ".joblib")
