@@ -1,0 +1,41 @@
+
+
+start_lon: -128.00
+end_lon: -116.00
+start_lat: 30.00
+end_lat: 38.94
+
+geo_zarr:
+ oc_geo_fpattern: "/mnt/data/cal_coast_geo.zarr" #TODO
+ out_dir: "/mnt/data/"
+ out_uid: "cal_coast_geo"
+
+sif_dir: "/mnt/data/TROPOSIF/"
+train_min_date: "20250110"
+train_max_date: "20250220"
+
+roi: "ca"
+output: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/GOES_18/"
+
+config_dir: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/"
+
+
+instruments:
+ #PACE_OCI:
+ # input_oc_dir:
+ # input_oc_re:
+
+ #S3A_OLCI:
+ # input_oc_dir:
+ # input_oc_re:
+
+ GOES_18_ABI:
+  no_trop: 
+   input_oc_dir: "/mnt/data/GOES_18_COASTAL/"
+   input_oc_re:  '(OR_ABI.*G18_s(\d{13}).*tif)'
+   run_preprocess: False  
+ 
+
+
+
+

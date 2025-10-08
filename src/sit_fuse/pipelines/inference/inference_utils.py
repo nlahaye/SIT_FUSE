@@ -6,7 +6,7 @@ import glob
 from sit_fuse.utils import read_yaml
 
 from sit_fuse.postprocessing.generate_cluster_geotiffs import run_geotiff_gen
-from sit_fuse.postprocessing.postprocessing.conv_and_cluster import conv_and_cluster
+from sit_fuse.postprocessing.conv_and_cluster import conv_and_cluster
 
 
 from sit_fuse.inference.generate_output import predict
@@ -40,6 +40,8 @@ def cluster_fname_builder(out_dir, gtiff_data, prob = True, no_heir = True):
 
 def input_fname_builder(yml_conf):
 
+    #TODO - make this more multi-sensor / HAB friendly
+
     input_data = []
 
     input_dir = yml_conf["input_dir"]
@@ -55,11 +57,9 @@ def build_config_fname_gtiff_gen(config_dir, run_uid):
     config_fname = os.path.join(config_dir, "postprocessing", "geotiff_gen_" + run_uid + ".yaml") 
     return config_fname
 
-def update_config_inference(yml_conf, training_conf, config_dict):
-
-    reuse_gtiffs = yml_conf["reuse_gtiffs"]
-
-    if not reuse_gtiffs:
+def update_config_inference(yml_conf, config_dict):
+ 
+    if yml_conf["update_inputs"]:
         gtiff_data = input_fname_builder(yml_conf)
         config_dict["data"]["files_test"] = gtiff_data
 
@@ -126,14 +126,14 @@ def run_prediction(yml_conf):
     predict(yml_conf)
      
 
-def run_inferece_only(yml_conf):
+def run_inferece_only(yml_conf, config_dict):
 
     #Assumes initial context asignment has been done - other pipelines automate that process
 
     print("Generating scnene-wide pixel-level predictions")
-    training_conf = read_yaml(yml_conf["training_config"])
-    config_dict = copy.deepcopy(training_conf)
-    config_dict = update_config_inference(yml_conf, training_conf, config_dict)
+    #training_conf = read_yaml(yml_conf["training_config"])
+    #config_dict = copy.deepcopy(training_conf)
+    config_dict = update_config_inference(yml_conf, config_dict)
     run_prediction(config_dict)
 
     #Dump to file
@@ -143,10 +143,10 @@ def run_inferece_only(yml_conf):
 
 
 
-def run_basic_inference_geolocation(yml_conf):
+def run_basic_inference_geolocation(yml_conf, config_dict):
    
     #Assumes initial context asignment has been done - other pipelines automate that process
-    run_inferece_only(yml_conf)
+    run_inferece_only(yml_conf, config_dict)
 
     context_conf = read_yaml(yml_conf["context_config"])
     config_dict = copy.deepcopy(context_conf)

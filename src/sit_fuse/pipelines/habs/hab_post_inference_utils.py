@@ -5,7 +5,7 @@ from sit_fuse.postprocessing.multi_hist_insitu import run_multi_hist
 from sit_fuse.postprocessing.generate_cluster_geotiffs import run_geotiff_gen
 from sit_fuse.postprocessing.zonal_histogram import run_zonal_hist
 from sit_fuse.postprocessing.class_compare import run_class_compare
-from sit_fuse.postprocessing.postprocessing.merge_datasets import run_merge
+from sit_fuse.postprocessing.merge_datasets import run_merge
  
 from sit_fuse.pipelines.habs.hab_post_inference_constants import *
 

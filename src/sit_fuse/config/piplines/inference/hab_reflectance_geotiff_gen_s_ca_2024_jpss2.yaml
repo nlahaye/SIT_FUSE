@@ -1,0 +1,51 @@
+
+
+instruments:
+ #pace:
+ # no_trop:
+ #  training_config: ""
+ #  context_config: ""
+ #  input_dir: ""
+ #s3a:
+ # no_trop:
+ #     training_config: ""
+ #     context_config: ""
+ #     input_dir: ""
+ #s3b:
+ # no_trop:
+ #     training_config: ""
+ #     context_config: ""
+ #     input_dir: ""
+ #jpss1:
+ # no_trop:
+ #     training_config: ""
+ #     context_config: ""
+ #     input_dir: ""
+ jpss2:
+  no_trop:
+      training_config: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/train_model_JPSS2_VIIRS.yaml"
+      input_dir: "/mnt/data/REFLECTANCES/JPSS2_VIIRS/"
+ #snpp:
+ # no_trop:
+ #     training_config: ""
+ #     context_config: ""
+ #     input_dir: ""
+ #troposif: No SIF data for 2024-2025 cases
+ # goes18:
+ #   no_trop:
+ #     training_config: ""
+ #     context_config: ""     
+ #     input_dir: ""
+ 
+
+post_inference_config: "/home/nlahaye/SIT_FUSE/src/sit_fuse//config/piplines/habs/hab_reflectance_geotiff_gen_s_ca_2024.yaml"
+ 
+run_uid: "jpss2_test"
+
+config_dir: "../../config/"
+
+reuse_gtiffs: False
+update_inputs: False
+
+input_pattern: "ucayali_stacks_2020_.*tif"
+

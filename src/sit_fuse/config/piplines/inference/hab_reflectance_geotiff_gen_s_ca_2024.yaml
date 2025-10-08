@@ -80,7 +80,7 @@ run_uid: "palm_oil_tiered_v3"
 
 config_dir: "../../config/"
 
-reuse_gtiffs: True
+reuse_gtiffs: False
 
 input_pattern: "ucayali_stacks_2020_.*tif"
 
