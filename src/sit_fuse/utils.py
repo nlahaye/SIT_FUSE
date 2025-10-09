@@ -1395,7 +1395,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
     fnl = np.array(final_hist_data, dtype=np.float32)
     #print(fnl.shape)
     if  fnl.ndim < 2:
-        return [[] for _ in range(len(ranges)-1)]
+        return [[] for _ in range(len(ranges)-1)], []
     fnl = np.swapaxes(fnl, 0,1)
     #print(fnl.shape, fnl.max())
     ranges[-1] = max(ranges[-1], global_max)
