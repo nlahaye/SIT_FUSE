@@ -14,7 +14,7 @@ sif_dir: "/mnt/data/TROPOSIF/"
 train_min_date: "20240305"
 train_max_date: "20241023"
 
-roi: "red_sea"
+roi: "ca"
 output: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/"
 
 config_dir: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/"
