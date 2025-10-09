@@ -5,10 +5,11 @@ from sit_fuse.utils import read_yaml
 
 from sit_fuse.pipelines.habs.hab_post_inference_pipeline import run_hab_post_inference_pipeline
  
-from sit_fuse.pipelines.inference.inference_utils import run_inferece_only, update_config_inference, run_prediction
+from sit_fuse.pipelines.inference.inference_utils import run_inferece_only, update_config_inference, run_prediction, build_config_fname_inference
 
+import yaml
 
-def run_multi_sensor_hab_inference(yml_fpath):
+def run_multi_sensor_hab_inference(yml_conf):
 
     for instrument in yml_conf["instruments"]:
         for key in yml_conf["instruments"][instrument]:
@@ -21,7 +22,8 @@ def run_multi_sensor_hab_inference(yml_fpath):
             run_prediction(config_dict)
 
             #Dump to file
-            config_fname = build_config_fname_gtiff_gen(config_dir, "model", yml_conf["run_uid"] + "_" + instrument + "_" + key + "_inference.yaml")
+            config_fname = build_config_fname_inference(yml_conf["config_dir"], "model_" + \
+                    yml_conf["run_uid"] + "_" + instrument + "_" + key + "_inference")
             with open(config_fname, 'w') as fle:
                 yaml.dump(config_dict, fle)
 
