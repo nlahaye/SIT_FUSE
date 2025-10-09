@@ -44,12 +44,11 @@ def build_final_list(lookup, final_lst):
     return final_lst
     
 
-def run_multi_hist(yml_fpath):
-    yaml_base = os.path.splitext(os.path.basename(yml_fpath))[0]
-    output_dir = os.path.join("HISTOGRAMS", yaml_base)
+def run_multi_hist(yml_conf, output_dir):
+
+    output_dir = os.path.join("HISTOGRAMS", output_dir)
     os.makedirs(output_dir, exist_ok=True)
-    #Translate config to dictionary 
-    yml_conf = read_yaml(yml_fpath)
+
     #Run 
     start_date = datetime.datetime.strptime( yml_conf['start_date'], '%Y-%m-%d')#.replace(tzinfo=datetime.timezone.utc)#.tz_localize(None)
     end_date = datetime.datetime.strptime( yml_conf['end_date'], '%Y-%m-%d')#.replace(tzinfo=datetime.timezone.utc) #.tz_localize(None)
@@ -127,12 +126,21 @@ def run_multi_hist(yml_fpath):
     #print(final_lst)
     return arr_init, hists
 
+ 
+def run_multi_hist_outside(yml_fpath):
+    yaml_base = os.path.splitext(os.path.basename(yml_fpath))[0]
+
+    #Translate config to dictionary 
+    yml_conf = read_yaml(yml_fpath)
+
+    run_multi_hist(yml_conf, yaml_base)
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-y", "--yaml", help="YAML file for fusion info.")
     args = parser.parse_args()
-    run_multi_hist(args.yaml)
+    run_multi_hist_outside(args.yaml)
 
 
 
