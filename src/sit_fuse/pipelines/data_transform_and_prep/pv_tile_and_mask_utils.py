@@ -25,6 +25,19 @@ def find_init_files(yml_conf):
                 fnames.append(os.path.join(root, fle))
     return fnames
 
+def find_gridded_files(yml_conf):
+
+    fnames = []
+    fdir = yml_conf["input_dir"]
+    #Find all files
+    for root, dirs, files in os.walk(fdir):
+        for fle in files:
+            mtch = re.search(yml_conf["gridded_file_re"], fle)
+            if mtch:
+                fnames.append(os.path.join(root, fle))
+    return fnames
+
+
 def grid_data(fnames, yml_conf):
     
     new_conf = {"n_tiles" : yml_conf["n_tiles"], "fnames": fnames}
@@ -102,18 +115,20 @@ def mask_tiles(gridded_fnames, yml_conf):
 
 
 
-        inds = np.where(((savi_data > -100) & (savi_data < yml_conf["savi_min"]))) #Account for lower bound, but don't filter areas with no data (fill == -19999)
+        inds = np.where(((savi_data > -1) & (savi_data < yml_conf["savi_min"]))) #Account for lower bound, but don't filter areas with no data (fill == -19999)
         savi_data[inds] = 0.0
         inds = np.where(((savi_data > yml_conf["savi_max"])))
         savi_data[inds] = 0.0
-        inds = np.where((savi_data >= yml_conf["savi_min"]))
+        inds = np.where(((savi_data >= yml_conf["savi_min"]) | (savi_data < -1)))
         savi_data[inds] = 1.0
         savi_data = savi_data.astype(np.bool)
 
         # Apply the mask
         inds = np.where(savi_data == False)
         raster_data[:,inds[0], inds[1]] = 0.0
+
  
+        """ SAVI masking effectively provides a less-coarse coastline mask
         # Use a predefined landmask like 'natural_earth_v5_0_0.land_110'
         land_mask = regionmask.defined_regions.natural_earth_v5_0_0.land_10.mask(lon, lat)
  
@@ -129,11 +144,13 @@ def mask_tiles(gridded_fnames, yml_conf):
         max_y = raster_data.shape[-2]
         max_x = raster_data.shape[-1]
         land_mask_reshaped = land_mask_reshaped[:max_y, :max_x]
- 
+
+         
         inds = np.where(land_mask_reshaped == True)
         for c in range(raster_data.shape[0]):
             raster_data[c,inds[0], inds[1]] = 0.0
- 
+        """ 
+
         raster_meta.update({
             "driver": "GTiff",
             "height": raster_data.shape[1],
@@ -152,11 +169,12 @@ def mask_tiles(gridded_fnames, yml_conf):
 
 def run_pv_grid_and_mask(yml_conf):
 
-    fnames = find_init_files(yml_conf)
-    gridded_fnames = grid_data(fnames, yml_conf)
-    mask_tiles(gridded_fnames, yml_conf)
-  
-    #gridded_fnames = find_init_files(yml_conf)
+    if yml_conf["run_tiling"]:
+        fnames = find_init_files(yml_conf)
+        gridded_fnames = grid_data(fnames, yml_conf)
+        mask_tiles(gridded_fnames, yml_conf)
+    else:
+        gridded_fnames = find_gridded_files(yml_conf)
 
     return gridded_fnames
 
