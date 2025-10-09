@@ -1,5 +1,5 @@
 
-YAML_TEMPLATE_CF_GTFF = {
+YAML_TEMPLATE_CF_GTIFF = {
 "low_res" : {
  "data" : {
   "valid_min" : -100.0,
@@ -18,7 +18,7 @@ YAML_TEMPLATE_CF_GTFF = {
  },
 },
 
-"high_res:" : {
+"high_res" : {
  "data" : {
   "valid_min" : 0.0,
   "valid_max" : 99999999999,
@@ -73,7 +73,7 @@ YAML_TEMPLATE_MULTI_HIST = {
 }
 
 
-INSTRUMENT_PREFIX : {
+INSTRUMENT_PREFIX = {
 "pace" : "PACE_OCI",
 "s3a" : "S3A_OLCI",
 "s3b" : "S3B_OLCI",
@@ -95,7 +95,7 @@ RE_STR_2_PROBA = "data_proba.zarr"
 RE_STR_DATE = ".*(\d{8}).*"
 
 
-HAB_USE_KEYS: {
+HAB_USE_KEYS =  {
 
 "gulf_of_mexico": ['Karenia_Brevis'],
 "california": ['Alexandrium_spp',
@@ -104,7 +104,7 @@ HAB_USE_KEYS: {
 'Total_Phytoplankton']
 }
 
-USE_KEY_FNAME_MAP: {
+USE_KEY_FNAME_MAP = {
 
 "Karenia_Brevis" : "karenia_brevis_bloom", 
 "Pseudo_nitzschia_seriata_group" : "pseudo_nitzschia_seriata_bloom",
@@ -177,7 +177,7 @@ YAML_TEMPLATE_DAILY_MERGE = {
 }
 
 
-USE_KEY_RE_INDEX: {
+USE_KEY_RE_INDEX = {
 "Karenia_Brevis_SIF" : 0,
 "Karenia_Brevis" : 1,
 "Karenia_Brevis_no_heir": 2,
