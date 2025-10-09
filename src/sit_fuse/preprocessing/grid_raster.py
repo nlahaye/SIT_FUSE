@@ -1,5 +1,6 @@
 
-from osgeo import gdal
+from osgeo import gdal, osr
+import os
 import numpy as np
 
 from utils import read_yaml
@@ -88,12 +89,8 @@ def split(file_name, n):
 
         data = dataset.ReadAsArray(xoff=i1, yoff=j1, xsize=new_cols, ysize=new_rows)
 
-        #print data
-
         new_x = xOrigin + i1*pixelWidth
         new_y = yOrigin - j1*pixelHeight
-
-        print new_x, new_y
 
         new_transform = (new_x, transform[1], transform[2], new_y, transform[4], transform[5])
 
@@ -103,7 +100,7 @@ def split(file_name, n):
 
         nchan = 1
         if data.ndim > 2:
-            ncham = data.shape[0]
+            nchan = data.shape[0]
 
         dst_ds = driver.Create(output_file,
                                new_cols,
@@ -111,12 +108,16 @@ def split(file_name, n):
                                data.shape[0],
                                gdal.GDT_Float32)
 
+
+        for c in range(0,nchan):
+            print(data.shape, data[c].min(), data[c].max(), data[c].mean(), c)
+
         #writting output raster
         if data.ndim < 3:
             dst_ds.GetRasterBand(1).WriteArray( data )
         else:
-            for c in range(len(nchan)):
-                dst_ds.GetRasterBand(c).WriteArray( data[c,:,:] )
+            for c in range(1,nchan+1):
+                dst_ds.GetRasterBand(c).WriteArray( data[(c-1),:,:] )
 
         tif_metadata = {
             "minX": str(minx), "maxX": str(maxx),
@@ -155,7 +156,7 @@ def run_split(yml_conf):
     for fname in fnames:
         total_outputs.extend(split(fname, n_tiles))
 
-    return sorted(total_outputs)
+    return total_outputs
 
  
 def run_split_outside(yml_fpath):
