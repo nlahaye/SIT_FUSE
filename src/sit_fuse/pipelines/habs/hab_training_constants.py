@@ -142,6 +142,14 @@ REGION_BBS =  {
  "end_lat" : 38.94,
 },
 
+
+"w_us_coast": {
+ "start_lon" : -135.00,
+ "end_lon" : -116.00,
+ "start_lat" : 30.00,
+ "end_lat" : 49.0,
+},
+
 "gulf_of_mexico" : {
  "start_lon" : -97.8985,
  "end_lon" : -80.5301,
