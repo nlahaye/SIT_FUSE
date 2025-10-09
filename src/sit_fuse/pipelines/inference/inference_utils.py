@@ -3,6 +3,8 @@ import os
 import numpy as np
 import glob
 
+import yaml
+
 from sit_fuse.utils import read_yaml
 
 from sit_fuse.postprocessing.generate_cluster_geotiffs import run_geotiff_gen
@@ -51,6 +53,11 @@ def input_fname_builder(yml_conf):
     fglob = sorted(fglob)
 
     return fglob
+
+def build_config_fname_inference(config_dir, run_uid):
+
+        config_fname = os.path.join(config_dir, "model", "inference_" + run_uid + ".yaml") 
+        return config_fname
 
 def build_config_fname_gtiff_gen(config_dir, run_uid):
 
