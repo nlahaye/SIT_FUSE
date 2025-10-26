@@ -15,7 +15,7 @@ from sit_fuse.utils import read_yaml
  
 def initialize_weights(model):
     for layer in model.children():
-        if isinstance(layer, torch.nn.Linear):
+        if isinstance(layer, torch.nn.Linear) or isinstance(layer, torch.nn.Conv2d):
             torch.nn.init.xavier_uniform_(layer.weight)
             layer.bias.data.fill_(0.01)
 
