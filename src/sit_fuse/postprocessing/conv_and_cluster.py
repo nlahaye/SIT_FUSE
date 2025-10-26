@@ -202,7 +202,7 @@ def train_cluster(dat_full):
 
 
 def cluster_and_output(output, clust, tgts2, img_data_shape, fname, img_test, tile):
-    print(np.unique(output))
+    #print(np.unique(output))
  
     line_ind = 0
     samp_ind = 1
@@ -285,7 +285,7 @@ def run_conv_and_cluster(train_fname, test_fnames, tiles):
         with torch.no_grad():
             model = model.cuda()
             feature_extractor = feature_extractor.cuda()
-            print(summary(model, (1,tile,tile)))  
+            #print(summary(model, (1,tile,tile)))  
 
             dat_full = generate_features(model, feature_extractor, loader)
             dat_full_edge = generate_features(model, feature_extractor, loader_edge)
@@ -367,6 +367,8 @@ def conv_and_cluster(yml_conf):
     train_fname = yml_conf["train_fname"]
     test_fnames = yml_conf["test_fnames"]
     tiles = yml_conf["tile_size"]
+
+    print(yml_conf["test_fnames"][0])
 
 
     if os.path.exists(os.path.dirname(test_fnames[0]) + "/clust_" + str(tiles[0]) + ".joblib"):
