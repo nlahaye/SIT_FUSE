@@ -4,6 +4,7 @@ import numpy as np
 import glob
 
 import yaml
+import copy
 
 from sit_fuse.utils import read_yaml
 
@@ -14,6 +15,8 @@ from sit_fuse.postprocessing.conv_and_cluster import conv_and_cluster
 from sit_fuse.inference.generate_output import predict
 
 
+import sys
+
 def cluster_fname_builder(out_dir, gtiff_data, prob = True, no_heir = True):
 
     final_gtiff_data = []
@@ -22,6 +25,7 @@ def cluster_fname_builder(out_dir, gtiff_data, prob = True, no_heir = True):
     out_fname_base = out_dir
     for i in range(len(gtiff_data)):
         file_pattern = os.path.join(out_fname_base, os.path.basename(os.path.splitext(gtiff_data)[0]) + ".*clust.data.*zarr")
+        print(file_pattern)
         fglob = glob.glob(file_pattern)
 
         fglob = sorted(fglob)
@@ -61,7 +65,7 @@ def build_config_fname_inference(config_dir, run_uid):
 
 def build_config_fname_gtiff_gen(config_dir, run_uid):
 
-    config_fname = os.path.join(config_dir, "postprocessing", "geotiff_gen_" + run_uid + ".yaml") 
+    config_fname = os.path.join(config_dir, "postprocess", "geotiff_gen_" + run_uid + ".yaml") 
     return config_fname
 
 def update_config_inference(yml_conf, config_dict):
@@ -69,6 +73,8 @@ def update_config_inference(yml_conf, config_dict):
     if yml_conf["update_inputs"]:
         gtiff_data = input_fname_builder(yml_conf)
         config_dict["data"]["files_test"] = gtiff_data
+
+    print(config_dict["output"]["out_dir"])
 
     return config_dict
 
@@ -107,20 +113,26 @@ def update_config_tiered_gtiff_gen(yml_conf, context_conf, config_dict):
         
         tiered_masks.append(tiered_masks_sub)
 
-        tiered_classes.append(context_conf["tiered_masking:"]["tiered_classes"])
+        tiered_classes.append(context_conf["context"]["tiered_masking"]["tiered_classes"])
 
-    config_dict["tiered_masking:"]["tiered_classes"] = tiered_classes
-    tiered_masks["tiered_masking:"]["masks"] = tiered_masks
+    config_dict["context"]["tiered_masking"]["tiered_classes"] = tiered_classes
+    config_dict["context"]["tiered_masking"]["masks"] = tiered_masks
 
     return config_dict
 
 
-def update_config_conv_and_cluster(yml_conf):
+def update_config_conv_and_cluster(yml_conf, out_dir):
 
     tiled_features_conf = {}
     tiled_features_conf["tile_size"] = yml_conf["tile_tiers"]
 
+    gtiff_data = input_fname_builder(yml_conf)
     clust_fnames = cluster_fname_builder(out_dir, gtiff_data, prob = False, no_heir = False)
+
+    #print(gtiff_data)
+    #print(clust_fnames)
+    #print(out_dir) 
+    #sys.exit(0)
  
     tiled_features_conf["train_fname"] = clust_fnames[0] #Arbitrary as assumption here is that training is completed already
     tiled_features_conf["test_fnames"] =  clust_fnames
@@ -144,35 +156,39 @@ def run_inferece_only(yml_conf, config_dict):
     run_prediction(config_dict)
 
     #Dump to file
-    config_fname = build_config_fname_gtiff_gen(config_dir, "model", yml_conf["run_uid"] + "_inference.yaml")
+    config_fname = build_config_fname_inference(yml_conf["config_dir"], yml_conf["run_uid"] + "_inference.yaml")
     with open(config_fname, 'w') as fle:
         yaml.dump(config_dict, fle)
 
 
 
-def run_basic_inference_geolocation(yml_conf, config_dict):
+def run_basic_inference_geolocation(yml_conf):
    
     #Assumes initial context asignment has been done - other pipelines automate that process
+    training_conf = read_yaml(yml_conf["training_config"])
+    config_dict = copy.deepcopy(training_conf)
+    print(config_dict["output"]["out_dir"])
     run_inferece_only(yml_conf, config_dict)
 
     context_conf = read_yaml(yml_conf["context_config"])
     config_dict = copy.deepcopy(context_conf)
 
+    print("tiered_masking" in context_conf["context"], context_conf)
     #Generate config
     if "tiered_masking" in context_conf["context"]:
-        tiled_features_conf = update_config_conv_and_cluster(yml_conf)
+        tiled_features_conf = update_config_conv_and_cluster(yml_conf, training_conf["output"]["out_dir"])
         config_dict = update_config_tiered_gtiff_gen(yml_conf, context_conf, config_dict)
     else:
         config_dict = update_config_gtiff_gen(yml_conf, context_conf, config_dict)
  
     #Dump to file
-    config_fname = build_config_fname_gtiff_gen(config_dir, "postprocessing", yml_conf["run_uid"] + "_geolocated_clusters.yaml")
+    config_fname = build_config_fname_gtiff_gen(yml_conf["config_dir"],  yml_conf["run_uid"] + "_geolocated_clusters")
     with open(config_fname, 'w') as fle:
         yaml.dump(config_dict, fle)
  
     if "tiered_masking" in context_conf["context"]:
 
-        config_fname = build_config_fname_gtiff_gen(config_dir, "postprocessing", yml_conf["run_uid"] + "_conv_and_cluster.yaml")
+        config_fname = build_config_fname_gtiff_gen(yml_conf["config_dir"], yml_conf["run_uid"] + "_conv_and_cluster")
         with open(config_fname, 'w') as fle:
             yaml.dump(config_dict, fle)
 
@@ -180,7 +196,7 @@ def run_basic_inference_geolocation(yml_conf, config_dict):
         conv_and_cluster(tiled_features_conf)
 
     print("Generating geolocated products")
-    run_geotiff_gen(config_dict)
+    run_geotiff_gen(config_dict) 
 
  
 

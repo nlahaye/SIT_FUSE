@@ -64,6 +64,9 @@ def run_data_preprocessing(yml_conf):
  
     gridded_fnames = pv_grid_and_mask(yml_conf)
     config_dict = update_training_config(yml_conf, gridded_fnames, yml_conf["config_dir"])
+ 
+    #pre-generate and store training subset and scaler
+    run_data_prep(config_dict)
     return config_dict
 
 def run_model_training(config_dict):

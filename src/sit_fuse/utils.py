@@ -37,7 +37,7 @@ from collections import OrderedDict
 ocean_basins_50 =  regionmask.defined_regions.natural_earth_v5_1_2.ocean_basins_50 
 
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
-from dask_ml.preprocessing import StandardScaler as DaskStandardScaler
+#from dask_ml.preprocessing import StandardScaler as DaskStandardScaler
 
 from sit_fuse.preprocessing.misc_utils import lee_filter
 
@@ -1875,14 +1875,14 @@ def read_geo_nc_ungridded(fname, **kwargs):
 def get_scaler(scaler_name, cuda=True):
 	if scaler_name == "standard":
 		return StandardScaler(), True
-	elif scaler_name == "standard_dask":
-		return DaskStandardScaler(), True
+	#elif scaler_name == "standard_dask":
+	#	return DaskStandardScaler(), True
 	elif scaler_name == "maxabs":
 		return MaxAbsScaler(), True
 	elif scaler_name == "sparse_standard":
 		return StandardScaler(with_mean=False), True
-	elif scaler_name == "sparse_standard_dask":
-		return DaskStandardScaler(with_mean=False), True
+	#elif scaler_name == "sparse_standard_dask":
+	#	return DaskStandardScaler(with_mean=False), True
 	else:
 		return None, True
 
