@@ -2,6 +2,7 @@ import os
 import argparse
 
 from sit_fuse.pipelines.data_transform_and_prep.goes_combine_and_clip_utils import run_goes_combine_and_clip
+from sit_fuse.utils import read_yaml
 
 def goes_combine_and_clip_pipeline(yml_conf):
 

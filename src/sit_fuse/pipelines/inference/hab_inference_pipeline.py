@@ -11,21 +11,21 @@ import yaml
 
 def run_multi_sensor_hab_inference(yml_conf):
 
-    for instrument in yml_conf["instruments"]:
-        for key in yml_conf["instruments"][instrument]:
-            training_config  = yml_conf["instruments"][instrument][key]["training_config"]
-
-            print(instrument, key)
-
-            config_dict = read_yaml(training_config)
-            config_dict = update_config_inference(yml_conf, config_dict)
-            run_prediction(config_dict)
-
-            #Dump to file
-            config_fname = build_config_fname_inference(yml_conf["config_dir"], "model_" + \
-                    yml_conf["run_uid"] + "_" + instrument + "_" + key + "_inference")
-            with open(config_fname, 'w') as fle:
-                yaml.dump(config_dict, fle)
+    #for instrument in yml_conf["instruments"]:
+    #    for key in yml_conf["instruments"][instrument]:
+    #        training_config  = yml_conf["instruments"][instrument][key]["training_config"]
+    #
+    #        print(instrument, key)
+    #
+    #        config_dict = read_yaml(training_config)
+    #        config_dict = update_config_inference(yml_conf, config_dict)
+    #        run_prediction(config_dict)
+    #
+    #        #Dump to file
+    #        config_fname = build_config_fname_inference(yml_conf["config_dir"], "model_" + \
+    #                yml_conf["run_uid"] + "_" + instrument + "_" + key + "_inference")
+    #        with open(config_fname, 'w') as fle:
+    #            yaml.dump(config_dict, fle)
 
 
     post_inference_conf = read_yaml(yml_conf["post_inference_config"])

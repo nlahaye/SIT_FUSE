@@ -1217,7 +1217,7 @@ def read_gtiff_generic(flename, **kwargs):
 def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n_clusters, radius_degrees, ranges, global_max, input_file_type, karenia, discard_lower=False, use_key='Total_Phytoplankton', output_dir="."): #, lookup = {}):
 
     os.makedirs(output_dir, exist_ok=True)
-    print(insitu_fname)
+    #print(insitu_fname)
     insitu_df = None
     if 'xlsx' in insitu_fname:
         insitu_df = pd.read_excel(insitu_fname)
@@ -1252,7 +1252,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
     clust_fname = None
     for dateind in range(len(uniques)):
         date = uniques[dateind]
-        print(date, input_file_type)
+        #print(date, input_file_type)
         #    find associated cluster
         if "sif" in input_file_type:
             clust_fname = os.path.join(os.path.join(clusters_dir, "sif_finalday_" + str(ind) + ".tif"))
@@ -1307,7 +1307,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
                 clust_fname = os.path.join(clusters_dir, f"OR_ABI-L1b-RadC-M6C01_G18_s{date_str}*clusters.zarr.full_geo.cloud_mask.FullColor.tif")
         ind = ind + 1
 
-        print(clust_fname)
+        #print(clust_fname)
 
         dat_train = False
         dat_test = False
@@ -1412,14 +1412,14 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
             if sm >= hist[0]:
                 mx1 = np.argmax(hist[1:])
         algal[mx1].append(i / 1000.0)
-        print(bins, hist,i)
+        #print(bins, hist,i)
         plt.ylim(0, 50)
         plt.bar([k*2 for k in range(len(bins[:-1]))],hist, width=1, linewidth=1, align="center")
         plt.show()
         plt.savefig(os.path.join(output_dir, "TEST_HIST_" + str(i) + ".png"))
         plt.clf()
         final_hist.append((hist, bins,i))
-    print("HERE FINAL", algal)
+    #print("HERE FINAL", algal)
     return algal, final_hist
     
 

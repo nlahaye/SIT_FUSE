@@ -1,5 +1,7 @@
 
 
+output: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
+
 instruments:
  #pace:
  # no_trop:
@@ -25,6 +27,7 @@ instruments:
   no_trop:
       training_config: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/train_model_JPSS2_VIIRS.yaml"
       input_dir: "/mnt/data/REFLECTANCES/JPSS2_VIIRS/"
+      output_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
  #snpp:
  # no_trop:
  #     training_config: ""

@@ -1,13 +1,15 @@
 
 
-training_config: "../../config/model/gambia_pv_6_channel_test_wide_road_masked_0.yaml"
+training_config: "../../config/model/train_model_PV_Gambia.yaml"
 context_config: "../../config/postprocess/pv_mapping_geotiff_gen_test_road_masked_full_iter2.yaml"
 
 run_uid: "PV_Map_Tiered_Mask"
 
 config_dir: "../../config/"
 
-reuse_gtiffs: True
+reuse_gtiffs: False
+
+update_inputs: False
  
 input_dir: "/data/nlahaye/remoteSensing/PV_Mapping/Full_Area/"
 input_pattern: "pleides_RGBNED_*tif"

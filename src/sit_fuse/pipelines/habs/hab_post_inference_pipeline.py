@@ -26,6 +26,8 @@ def run_hab_post_inference_pipeline(yml_conf):
     if "no_heir" in yml_conf:
         no_heir = yml_conf["no_heir"]
 
+    #no_heir = False
+
     print("Running Context-Free Geotiff Generation")
     yml_conf = run_context_free_geotiff_generation(yml_conf) 
 
@@ -74,10 +76,12 @@ def run_hab_post_inference_pipeline(yml_conf):
     
     for run in species_run:
         validation_output = run_validation(yml_conf, run)
+        if "validation" not in yml_conf:
+            yml_conf["validation"] = {}
         yml_conf["validation"][run] = validation_output
 
     out_fname = os.path.join(yml_conf["final_product_dir"], "final_output")
-    os.makedirs(out_fname, exists_ok=True)
+    os.makedirs(out_fname, exist_ok=True)
 
     out_fname = os.path.join(out_fname, "output_vals.yaml")
     with open(out_fname, 'w') as fle:

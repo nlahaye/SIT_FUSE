@@ -20,9 +20,11 @@ import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
-def main(yml_fpath):
-
+def contour_and_fill_outside(yml_fpath):
     yml_conf = read_yaml(yml_fpath)
+    contour_and_fill(yml_conf)
+
+def contour_and_fill(yml_conf):
     #Assume GeoTiff only for the time being - geolocation info
     contour_min_size = yml_conf["contour_min_size"]
     data_fnames = yml_conf["data"]["filename"]
@@ -197,7 +199,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-y", "--yaml", help="YAML file for DBN and output config.")
     args = parser.parse_args()
-    main(args.yaml)
+    contour_and_fill_outside(args.yaml)
 
 
 

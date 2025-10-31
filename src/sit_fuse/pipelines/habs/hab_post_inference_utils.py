@@ -106,6 +106,8 @@ def update_config_cf_gtiff_gen(fdir, config, instrument, geo_zarr_path, proba = 
 
     re_heir, re_no_heir, re_prob, re_prob_no_heir = build_res(instrument)
 
+    #print(re_heir, re_no_heir, re_prob, re_prob_no_heir)
+
     for root, dirs, files in os.walk(fdir):
         files.extend(dirs) #Account for zarr files
         for fle in files:
@@ -114,7 +116,7 @@ def update_config_cf_gtiff_gen(fdir, config, instrument, geo_zarr_path, proba = 
             if mtch_no_heir and no_heir:
                 config["low_res"]["data"]["filenames"].append(os.path.join(root, fle))
                 config["low_res"]["data"]["geo_filenames"].append(geo_zarr_path) 
-                out_path = os.path.join(root, mtch_no_heir.group(1)) + "no_heir.tif"
+                out_path = os.path.join(root, mtch_no_heir.group(1)) + ".no_heir.tif"
                 config["output_files"].append(out_path)
                 #This is the same file every time, can make this more configurable if needed
             elif mtch_no_heir is None and mtch:
@@ -129,7 +131,7 @@ def update_config_cf_gtiff_gen(fdir, config, instrument, geo_zarr_path, proba = 
                 if mtch_prob_no_heir and no_heir:
                     config["low_res"]["data"]["filenames"].append(os.path.join(root, fle))
                     config["low_res"]["data"]["geo_filenames"].append(geo_zarr_path) 
-                    out_path = os.path.join(root, mtch_prob_no_heir.group(1)) + "no_heir.proba.tif"
+                    out_path = os.path.join(root, mtch_prob_no_heir.group(1)) + ".no_heir.proba.tif"
                     config["output_files"].append(out_path)
                 elif mtch_prob_no_heir is None and mtch_prob:
                     config["low_res"]["data"]["filenames"].append(os.path.join(root, fle))
@@ -178,7 +180,8 @@ def update_config_gtiff_gen(config_dict, gtiff_list, classes, species_run, no_he
         elif "prob" in full_file_list[i]:
             del_inds.append(i)
 
-    full_file_list = np.delete(full_file_list, del_inds)
+    full_file_list = np.delete(full_file_list, del_inds).tolist()
+        
 
     config_dict["data"]["gtiff_data"] = full_file_list
     config_dict["data"]["cluster_fnames"] = full_file_list
@@ -189,30 +192,32 @@ def update_config_gtiff_gen(config_dict, gtiff_list, classes, species_run, no_he
     return config_dict
 
 
-def update_config_zonal_hist(config_dict, gtiff_list, species_run, no_heir = True):
+def update_config_zonal_hist(config_dict, yml_conf, gtiff_list, instrument, species_run, no_heir = True):
 
     full_file_list = np.array(copy.deepcopy(gtiff_list))
     del_inds = []
     for i in range(len(full_file_list)):
         if "no_heir" in full_file_list[i] or "prob" in full_file_list[i]:
             del_inds.append(i)
-    full_file_list = np.delete(full_file_list, del_inds)
+    full_file_list = np.delete(full_file_list, del_inds).tolist()
 
     clust_gtiffs = []
     label_gtiffs = []
     for i in range(len(full_file_list)):
-        mtch = re.search(full_file_list[i])
+        mtch = re.search(RE_STR_DATE, full_file_list[i])
         if mtch is None:
             continue
  
         dtestr = mtch.group(1)
+        dtestr = dtestr + "_DAY."
         if no_heir:
-            dtestr = dtestr + "_no_heir."
-        else:
-            dtestr = dtestr + "_DAY."
+            dtestr = dtestr + "no_heir."
 
+        key = "no_heir"
+        if not no_heir:
+            key = "heir"
         dtestr = dtestr + USE_KEY_FNAME_MAP[species_run] + ".tif"
-        drpth = os.path.dirname(yml_conf["instruments"][instrument]["merged_products"]) 
+        drpth = os.path.dirname(yml_conf["instruments"][instrument]["merged_products"][key][0]) 
         label_pth = os.path.join(drpth, dtestr)
  
 
@@ -222,17 +227,25 @@ def update_config_zonal_hist(config_dict, gtiff_list, species_run, no_heir = Tru
     for i in range(len(YAML_TEMPLATE_MULTI_HIST["ranges"])):
         label_gtiff_final.append(label_gtiffs) 
 
+    
     config_dict["data"]["clust_gtiffs"] = full_file_list
     config_dict["data"]["label_gtiffs"] = label_gtiff_final
     
     config_dict["output"]["out_dir"] = os.path.dirname(full_file_list[0])
     config_dict["output"]["class_name"] = "tiered_hab_" + USE_KEY_FNAME_MAP[species_run]
- 
+
+    if no_heir:
+        config_dict["output"]["class_name"] = config_dict["output"]["class_name"] + "_no_heir"
+
     return config_dict
 
-def update_config_class_compare(config_dict, out_dir, species_run):
+def update_config_class_compare(config_dict, out_dir, species_run, no_heir = False):
 
-    config_dict["dbf_list"] = [[os.path.join(out_dir, "tiered_hab_" +  USE_KEY_FNAME_MAP[species_run] + "_hist_dict.pkl")]]
+    fname_str = os.path.join(out_dir, "tiered_hab_" +  USE_KEY_FNAME_MAP[species_run])
+    if no_heir:
+        fname_str = fname_str + "_no_heir"
+    fname_str = fname_str + "_hist_dict.pkl"
+    config_dict["dbf_list"] = [[fname_str]]
     
     return config_dict
 
@@ -254,21 +267,25 @@ def update_config_data_stream_merge(yml_conf, config_dict, out_dir, species_run,
     os.makedirs(dr, exist_ok = True) 
 
     if "trop" in yml_conf["instruments"][instrument]:
-        input_paths.append(os.path.dirname(yml_conf["instruments"][instrument]["trop"][0]))
+        input_paths.append(os.path.dirname(yml_conf["instruments"][instrument]["trop"]["cf_gtiffs"][0]))
     else:
         input_paths.append("")
 
-    if "troposif" in yml_conf:
-        input_paths.append(os.path.dirname(yml_conf["troposif"]["trop"][0]))
+    if "troposif" in yml_conf["instruments"]:
+        input_paths.append(os.path.dirname(yml_conf["instruments"]["troposif"]["trop"]["cf_gtiffs"][0]))
     else:
         input_paths.append("")
  
-    input_paths.append(os.path.dirname(yml_conf["instruments"][instrument]["no_trop"][0]))
+    input_paths.append(os.path.dirname(yml_conf["instruments"][instrument]["no_trop"]["cf_gtiffs"][0]))
 
     config_dict["input_paths"] = input_paths
  
     if daily:
-        config_dict["fname_str"] = "DAY." + USE_KEY_FNAME_MAP[species_run] + ".tif"
+        config_dict["fname_str"] = "DAY."
+        if no_heir:
+            config_dict["fname_str"] = config_dict["fname_str"] + "no_heir."
+        config_dict["fname_str"] = config_dict["fname_str"] + USE_KEY_FNAME_MAP[species_run] + ".tif"
+
         config_dict["gen_monthly"] = False
         config_dict["gen_daily"] = True
     else:
@@ -279,13 +296,13 @@ def update_config_data_stream_merge(yml_conf, config_dict, out_dir, species_run,
         config_dict["dirname"] = config_dict["out_dir"]
         config_dict["max_class"] = config_dict["num_classes"] -1
 
-    config_dict["out_dir"] = out_dir
-    config_dict["num_classes"] = len( yml_conf['ranges'])-1 
+    #config_dict["out_dir"] = out_dir
+    config_dict["num_classes"] = len(YAML_TEMPLATE_MULTI_HIST['ranges'])-1 
 
     if no_heir:
         species_run = species_run + "_no_heir"
 
-    if "sif_finalday" in yml_conf["troposif"]["trop"][0]:
+    if "troposif" in yml_conf["instruments"] and "sif_finalday" in yml_conf["instruments"]["troposif"]["trop"]["cf_gtiffs"][0]:
         species_run = species_run + "_SIF"
 
     config_dict["re_index"] = USE_KEY_RE_INDEX[species_run]
@@ -309,7 +326,9 @@ def run_data_stream_merge(yml_conf, out_dir, species_run, no_heir = False):
  
         #Dump to file
         config_fname = build_config_fname_data_stream_merge(config_dir, instrument, daily = True)
-
+        with open(config_fname, 'w') as fle:
+            yaml.dump(config_dict, fle) 
+ 
         products, dqi = run_merge(config_fname)
         products = sorted(products)
         dqi = sorted(dqi)
@@ -321,6 +340,8 @@ def run_data_stream_merge(yml_conf, out_dir, species_run, no_heir = False):
 
         #Dump to file
         config_fname = build_config_fname_data_stream_merge(config_dir, instrument, daily = False)
+        with open(config_fname, 'w') as fle:
+            yaml.dump(config_dict, fle)
  
         monthly_products, monthly_dqi = run_merge(config_fname)
         monthly_products = sorted(monthly_products)
@@ -330,6 +351,7 @@ def run_data_stream_merge(yml_conf, out_dir, species_run, no_heir = False):
         if no_heir:
             key = "no_" + key
 
+        #print(products)
         if "merged_products" not in yml_conf["instruments"][instrument]:
             yml_conf["instruments"][instrument]["merged_products"] = {}
 
@@ -362,6 +384,8 @@ def run_multi_tier_class_compare(yml_conf, species_run):
         if instrument not in iter2_classes:
             iter2_classes[instrument] = {}
         for key in instrument_dict[instrument]:
+            if "merged" in key:
+                continue
             if key not in iter2_classes[instrument]:
                 iter2_classes[instrument][key] = {}
 
@@ -374,10 +398,10 @@ def run_multi_tier_class_compare(yml_conf, species_run):
 
             #Generate config
             config_dict = copy.deepcopy(YAML_TEMPLATE_HEIR_CLASS_COMPARE)
-            config_dict = update_config_class_compare(config_dict, out_dir, species_run)
+            config_dict = update_config_class_compare(config_dict, out_dir, species_run, no_heir = True)
 
             #Dump to file
-            config_fname = build_config_fname_class_comp(config_dir, instrument, with_trop)
+            config_fname = build_config_fname_class_comp(config_dir, instrument, with_trop = trop)
             with open(config_fname, 'w') as fle:
                 yaml.dump(config_dict, fle)
 
@@ -396,6 +420,8 @@ def run_multi_tier_zonal_histogram(yml_conf, species_run):
 
     for instrument in instrument_dict:
         for key in instrument_dict[instrument]:
+            if "merged" in key:
+                continue
 
             trop = True
             if "no" in key: #Key is trop no_trop
@@ -404,14 +430,15 @@ def run_multi_tier_zonal_histogram(yml_conf, species_run):
             config_dict = copy.deepcopy(YAML_TEMPLATE_ZONAL_HIST)
 
             #Generate config
-            config_dict = update_config_zonal_hist(config_dict, yml_conf["instruments"][instrument][key]["cf_gtiffs"], species_run, no_heir=True)
+            #print(instrument, key, yml_conf["instruments"][instrument][key].keys())
+            config_dict = update_config_zonal_hist(config_dict, yml_conf, yml_conf["instruments"][instrument][key]["cf_gtiffs"], instrument, species_run, no_heir=True)
 
             #Dump to file
             config_fname = build_config_fname_zonal_hist(config_dir, instrument, with_trop = trop)
             with open(config_fname, 'w') as fle:
                 yaml.dump(config_dict, fle)
 
-            run_zonal_hist(yml_conf)
+            run_zonal_hist(config_dict) #yml_conf)
 
 
  
@@ -423,20 +450,29 @@ def run_geotiff_generation(yml_conf, classes, species_run, is_final = False):
     no_heir = True
     prob = False
 
-    if "no_heir" in yml_conf:
+    if "no_heir" in yml_conf and not is_final:
         no_heir = yml_conf["no_heir"]
-
+    elif is_final:
+        no_heir = False
 
     for instrument in instrument_dict:
         for key in instrument_dict[instrument]:
+            if "merged" in key:
+                continue
             trop = True
             if "no" in key: #Key is trop no_trop
                 trop = False
 
             config_dict = copy.deepcopy(YAML_TEMPLATE_GTIFF)
-            
+           
+            print(instrument, key, classes[instrument][key].keys(), yml_conf["instruments"][instrument][key].keys())
             #Generate config
-            config_dict = update_config_gtiff_gen(config_dict, yml_conf["instruments"][instrument][key]["cf_gtiffs"], classes[instrument][key]["heir"]["classes"], species_run, no_heir = False)
+            if is_final:
+                cls = classes[instrument][key]["classes"]
+            else:
+                cls = classes[instrument][key]["heir"]["classes"]
+
+            config_dict = update_config_gtiff_gen(config_dict, yml_conf["instruments"][instrument][key]["cf_gtiffs"], cls, species_run, no_heir = False)
             
             #Dump to file
             config_fname = build_config_fname_gtiff_gen(config_dir, instrument, no_heir = False, with_trop = trop, is_final = is_final) 
@@ -449,7 +485,8 @@ def run_geotiff_generation(yml_conf, classes, species_run, is_final = False):
                 config_dict = copy.deepcopy(YAML_TEMPLATE_GTIFF)
 
                 #Generate config
-                config_dict = update_config_gtiff_gen(config_dict, yml_conf["instruments"][instrument][key]["cf_gtiffs"], classes[instrument][key]["no_heir"]["classes"], species_run, no_heir = True)
+                config_dict = update_config_gtiff_gen(config_dict, yml_conf["instruments"][instrument][key]["cf_gtiffs"], \
+                        classes[instrument][key]["no_heir"]["classes"], species_run, no_heir = True)
   
                 #Dump to file
                 config_fname = build_config_fname_gtiff_gen(config_dir, instrument, no_heir = True, with_trop = trop, is_final = is_final)
@@ -529,6 +566,11 @@ def run_context_assignment(yml_conf, species_run):
         if instrument not in classes:
             classes[instrument] = {}
         for key in instrument_dict[instrument]:
+
+            if "merged" in key:
+                continue
+
+
             if key not in classes[instrument]:
                 classes[instrument][key] = {}
                 classes[instrument][key]["heir"] = {}
@@ -537,6 +579,8 @@ def run_context_assignment(yml_conf, species_run):
             trop = True
             if "no" in key: #Key is trop no_trop
                 trop = False
+
+            #print(instrument, key, instrument_dict[instrument][key].keys())
 
             #Generate config
             config_dict = copy.deepcopy(YAML_TEMPLATE_MULTI_HIST)       
@@ -574,6 +618,10 @@ def run_validation(yml_conf, species_run):
         if instrument not in classes:
             classes[instrument] = {}
         for key in instrument_dict[instrument]:
+
+            if "merged" in key:
+                continue
+
             if key not in classes[instrument]:
                 classes[instrument][key] = {}
 
@@ -592,7 +640,7 @@ def run_validation(yml_conf, species_run):
                  no_heir = False, validation = True)
 
             config_fname = build_config_fname_multi_hist(config_dir, instrument, species_run, no_heir = False, with_trop = trop, validation=True)
-            hists, _ = run_multi_hist(config_dict)
+            hists, _ = run_multi_hist(config_dict, instrument_dict[instrument][key]["out_dir"])
             classes[instrument][key]["validation"] = hists
 
             with open(config_fname, 'w') as fle:
@@ -608,16 +656,23 @@ def merge_class_sets(yml_conf, species_run, classes, iter2_classes):
 
     instrument_dict = yml_conf["instruments"]
     config_dir = yml_conf["config_dir"]
- 
+
+    #classes[instrument][key]["classes"]    
+    #return classes
+
     final_class_set = {}
     for instrument in instrument_dict:
         if instrument not in final_class_set:
             final_class_set[instrument] = {}
         for key in instrument_dict[instrument]:
+
+            if "merged" in key:
+                continue
+
             if key not in final_class_set[instrument]:
                 final_class_set[instrument][key] = {}
  
-            arr_tmp = [[] for x in range(0,(len( yml_conf['ranges'])-1))]
+            arr_tmp = [[] for x in range(0,(len(YAML_TEMPLATE_MULTI_HIST['ranges'])-1))]
             arr_init = classes[instrument][key]["heir"]["classes"]
             arr_merge = iter2_classes[instrument][key]["classes"] 
  
@@ -633,8 +688,10 @@ def merge_class_sets(yml_conf, species_run, classes, iter2_classes):
                     for k in range(len(arr_init)):
                         if arr_merge[i][j] in arr_init[k]:
                             ind = k
-                    if ind < i:
-                        arr_tmp[i].append(labels[n][i][j])
+                    if ind == -1: ##ind < i:
+                        arr_tmp[i].append(arr_merge[i][j])
+                    elif ind > -1:
+                        arr_tmp[ind].append(arr_merge[i][j])
 
             for i in range(len(arr_init)):
                 for j in range(len(arr_init[i])):

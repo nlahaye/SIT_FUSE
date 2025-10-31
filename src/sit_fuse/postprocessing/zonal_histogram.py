@@ -218,7 +218,7 @@ def run_zonal_hist(yml_conf):
     clust_gtiffs = yml_conf["data"]["clust_gtiffs"]
     label_gtiffs = yml_conf["data"]["label_gtiffs"]
     out_dir = yml_conf["output"]["out_dir"]
-    out_tags = yml_conf["output"]["class_name"]
+    out_tag = yml_conf["output"]["class_name"]
     regrid = yml_conf["data"]["regrid"]
     multiclass = yml_conf["data"]["multiclass"]
     zone_min = yml_conf["data"]["zone_min"]
@@ -259,14 +259,14 @@ def run_zonal_hist(yml_conf):
 
         print(zonal_histogram.keys(), len(zonal_histogram[list(zonal_histogram.keys())[0]].keys()))
 
-    print("SAVING", os.path.join(out_dir, out_tags[j] + "_hist_dict.pkl"))
+    print("SAVING", os.path.join(out_dir, out_tag + "_hist_dict.pkl"))
 
-    with open(os.path.join(out_dir, out_tags[j] + "_hist_dict.pkl"), 'wb') as handle:
+    with open(os.path.join(out_dir, out_tag + "_hist_dict.pkl"), 'wb') as handle:
             dump(zonal_histogram, handle, True, pickle.HIGHEST_PROTOCOL)
 
 
-    print("SAVING", os.path.join(out_dir, out_tags[j] + "_base_cluster_polygon_knn_graphs.pkl"))
-    with open(os.path.join(out_dir, out_tags[j] + "_base_cluster_polygon_knn_graphs.pkl"), 'wb') as handle:
+    print("SAVING", os.path.join(out_dir, out_tag + "_base_cluster_polygon_knn_graphs.pkl"))
+    with open(os.path.join(out_dir, out_tag + "_base_cluster_polygon_knn_graphs.pkl"), 'wb') as handle:
             dump(poly_knns, handle, True, pickle.HIGHEST_PROTOCOL)
 
         #numpy.save(os.path.join(out_dir, out_tag[j] + "_base_cluster_polygon_knn_graphs.npz"), poly_knns, allow_pickle=True)
