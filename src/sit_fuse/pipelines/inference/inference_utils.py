@@ -143,7 +143,11 @@ def update_config_conv_and_cluster(yml_conf, out_dir):
 def run_prediction(yml_conf):
 
     predict(yml_conf)
-     
+
+def run_embed_gen(yml_conf, fname, gen_image_shaped = True):
+
+    embed, labels = gen_embeddings(yml_conf, fname, gen_image_shaped) 
+    return embed, labels
 
 def run_inferece_only(yml_conf, config_dict):
 
@@ -159,7 +163,6 @@ def run_inferece_only(yml_conf, config_dict):
     config_fname = build_config_fname_inference(yml_conf["config_dir"], yml_conf["run_uid"] + "_inference.yaml")
     with open(config_fname, 'w') as fle:
         yaml.dump(config_dict, fle)
-
 
 
 def run_basic_inference_geolocation(yml_conf):
