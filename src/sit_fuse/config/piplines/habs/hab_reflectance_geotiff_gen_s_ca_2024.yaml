@@ -6,7 +6,7 @@ no_heir: True
 config_dir: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/"
 geo_zarr: "/mnt/data/cal_coast_geo.zarr"
  
-insitu_file: "/mnt/data/la_hab_data/combined_full.csv"
+insitu_file: "/mnt/data/la_hab_data/combined_full_init.csv"
 insitu_matchup_circle_max_radius: [0.09]
 start_date: "2024-01-01"
 end_date: "2025-08-01"

@@ -186,7 +186,11 @@ def update_config_conv_and_cluster(yml_conf, out_dir):
 def run_prediction(yml_conf):
 
     predict(yml_conf)
-     
+
+def run_embed_gen(yml_conf, fname, gen_image_shaped = True):
+
+    embed, labels = gen_embeddings(yml_conf, fname, gen_image_shaped) 
+    return embed, labels
 
 def run_inference_only(yml_conf, config_dict):
 

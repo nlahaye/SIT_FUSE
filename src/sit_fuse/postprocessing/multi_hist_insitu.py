@@ -31,7 +31,7 @@ def build_lookup_dict(labels, lookup):
         for j in range(len(labels[i])):
             if (str(labels[i][j]) not in lookup) or (lookup[str(labels[i][j])] < i):
                 lookup[str(labels[i][j])] = i
-    print(lookup)
+    #print(lookup)
     return lookup
 
 def build_final_list(lookup, final_lst):
@@ -119,9 +119,9 @@ def run_multi_hist(yml_conf, output_dir):
 
     for i in range(len(arr_init)):
         arr_init[i] = sorted(arr_init[i])  
-    print(arr_init)
+    #print(arr_init)
 
-    pprint(hists)
+    #pprint(hists)
     #print(labels)
     #print(final_lst)
     return arr_init, hists

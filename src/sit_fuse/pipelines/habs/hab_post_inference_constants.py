@@ -85,9 +85,9 @@ INSTRUMENT_PREFIX = {
 "troposif" : "SNPP_VIIRS",
 }
 
-NO_HEIR_ADD = "no_heir.*"
+NO_HEIR_ADD = "\.no_heir.*"
 
-RE_STR = "\.\d{8}\.L3m\.DAY\.).*"
+RE_STR = "\.\d{8}\.L3m\.DAY).*"
 RE_STR_2 = "data_\d+clusters\.zarr"
 RE_STR_2_PROBA = "data_proba.zarr"
 
@@ -110,6 +110,7 @@ USE_KEY_FNAME_MAP = {
 "Pseudo_nitzschia_seriata_group" : "pseudo_nitzschia_seriata_bloom",
 "Pseudo_nitzschia_delicatissima_group" : "pseudo_nitzschia_delicatissima_bloom",
 "Alexandrium_spp" : "alexandrium_bloom",
+"Total_Phytoplankton" : "total_phytoplankton"
 }
 
 
@@ -143,6 +144,10 @@ YAML_TEMPLATE_GTIFF = {
 YAML_TEMPLATE_ZONAL_HIST = {
 "data" : {
  "min_thresh": 0.0,
+ "regrid": True,
+ "zone_min": 0,
+ "zone_max": 6,
+ "multiclass": True,
  "clust_gtiffs" : [],
  "label_gtiffs" : [],
 },

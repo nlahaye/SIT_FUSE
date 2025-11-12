@@ -458,37 +458,45 @@ def predict_outside(yml_fpath):
 
     predict(yml_conf)
 
-def predict(yml_conf):
 
+def prep_model(yml_conf):
     test_fnames = yml_conf["data"]["files_test"]
     train_fnames = yml_conf["data"]["files_train"]
-  
+
     data = None
     cntr = 0
     while data is None or data.data_full is None:
         data, _  = get_prediction_dataset(yml_conf, train_fnames[cntr])
         cntr = cntr + 1
 
-    #print(data.data_full.shape)
 
     model = get_model(yml_conf, data.data_full.shape[1])
 
-    model = model.cuda()
+    if torch.cuda.is_available():
+ 
+        model = model.cuda()
 
-    model.pretrained_model = model.pretrained_model.cuda()
-    if hasattr(model.pretrained_model, "pretrained_model"):
-        #model.pretrained_model.mlp_head = model.pretrained_model.mlp_head.cuda()
-        model.pretrained_model.pretrained_model = model.pretrained_model.pretrained_model.cuda()
-    
-    for lab1 in model.clust_tree.keys():
-        if lab1 == "0":
-            continue
-        for lab2 in model.lab_full.keys():
-            if lab2 in model.clust_tree[lab1].keys():
-                if model.clust_tree[lab1][lab2] is not None:
-                    model.clust_tree[lab1][lab2] = model.clust_tree[lab1][lab2].cuda() 
-  
+        model.pretrained_model = model.pretrained_model.cuda()
+        if hasattr(model.pretrained_model, "pretrained_model"):
+            #model.pretrained_model.mlp_head = model.pretrained_model.mlp_head.cuda()
+            model.pretrained_model.pretrained_model = model.pretrained_model.pretrained_model.cuda()
 
+        for lab1 in model.clust_tree.keys():
+            if lab1 == "0":
+                continue
+            for lab2 in model.lab_full.keys():
+                if lab2 in model.clust_tree[lab1].keys():
+                    if model.clust_tree[lab1][lab2] is not None:
+                        model.clust_tree[lab1][lab2] = model.clust_tree[lab1][lab2].cuda()
+
+    return model
+
+def predict(yml_conf):
+
+    test_fnames = yml_conf["data"]["files_test"]
+    train_fnames = yml_conf["data"]["files_train"]
+
+    model = prep_model(yml_conf)
  
     out_dir = yml_conf["output"]["out_dir"]
     generate_intermediate_output = yml_conf["output"]["generate_intermediate_output"]
@@ -525,7 +533,69 @@ def predict(yml_conf):
                 generate_output(data, model, True, out_dir, output_fle + ".clust.data", tiled = tiled)
             if generate_intermediate_output:
                 generate_output(data, model.pretrained_model, True, out_dir, output_fle + ".no_heir.clust.data", tiled = tiled)
- 
+
+
+def gen_embeddings(yml_conf, fname, gen_image_shaped = True):
+
+    model = prep_model(yml_conf)
+
+    data, output_file  = get_prediction_dataset(yml_conf, fname)
+    if data.data_full is None:
+        print("SKIPPING", fname, " No valid samples")
+        return None, None
+    output = None
+    embed = None
+    recon_arr = None
+    recon_lab = None
+    if model.pretrained_model is not None:
+        print("GENERATING EMBEDDING")
+        output, embed, _ = run_inference(data, model, torch.cuda.is_available(), yml_conf["output"]["out_dir"], output_file + ".clust.data", \
+                tiled = yml_conf["encoder"]["tiled"], return_embed =  True)
+
+        if gen_image_shaped:
+            recon_arr, recon_lab = conscruct_embed_image(embed, output, data.targets_full, init_shape = data.init_shape)
+            return recon_arr, recon_lab
+
+    return embed, output
+
+def conscruct_embed_image(embed, labels, coord, init_shape = []):
+
+    coord_coord_1 = 1
+    coord_coord_2 = 2
+    if coord.ndim < 3 and coord.shape[1] < 3:
+        coord_coord_1 = 0
+        coord_coord_2 = 1
+
+    reconstructed_arr = None
+    reconstructed_labels = None
+    if len(init_shape) > 0:
+        original_shape = init_shape[0]
+    else:
+        original_shape = (max(coord[:,coord_coord_1])+1, max(coord[:,coord_coord_2])+1)
+    if embed.ndim  == 4:
+        embed = np.transpose(embed, axes=(0,2,3,1))
+        reconstructed_arr = np.zeros((original_shape[0], original_shape[1], embed.shape[3]), dtype=np.float32)
+        reconstructed_labels = np.zeros((original_shape[0], original_shape[1]), dtype=np.float32) - 1
+    else:
+        reconstructed_arr = np.zeros((original_shape[0], original_shape[1], embed.shape[1]), dtype=np.float32)
+        reconstructed_labels = np.zeros((original_shape[0], original_shape[1]), dtype=np.float32) - 1
+
+    if embed.ndim  == 4:
+        for i in range(embed.shape[0]):
+            if coord[i,coord_coord_2]+embed.shape[2] > reconstructed_arr.shape[1] or \
+                    coord[i,coord_coord_1]+embed.shape[1] > reconstructed_arr.shape[0]:
+                continue
+            reconstructed_arr[coord[i,coord_coord_1]:coord[i,coord_coord_1]+embed.shape[1], \
+                    coord[i,coord_coord_2]:coord[i,coord_coord_2]+embed.shape[2], :] = embed[i,:,:,:]
+            reconstructed_labels[coord[i,coord_coord_1]:coord[i,coord_coord_1]+labels.shape[1], \
+                    coord[i,coord_coord_2]:coord[i,coord_coord_2]+labels.shape[2]] = labels[i,:,:]
+        else:
+            for i in range(embed.shape[0]):
+                reconstructed_arr[coord[i,coord_coord_1], coord[i,coord_coord_2]] = embed[i]
+                reconstructed_labels[coord[i,coord_coord_1], coord[i,coord_coord_2]] = labels[i]
+
+    return reconstructed_arr, reconstructed_labels
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

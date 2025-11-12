@@ -27,11 +27,12 @@ fname_res = ["(sif_finalday_\d+).*karenia_brevis_bloom.tif", ".*(\d{8}).*karenia
  
 def merge_datasets(paths, fname_str, out_dir, re_index = 0, base_index = 0): 
 
-    dqi = []
+    dqi_full = []
     products = []
 
     for root, dirs, files in os.walk(paths[base_index]):
         for fle in files:
+            print(fle, fname_str)
             if fname_str in fle:
                 if "OR_ABI" in fle or "_G18_" in fle:
                     goes_match = re.search(r"s(20\d{2})(\d{3})\d{6}", fle)
@@ -40,12 +41,14 @@ def merge_datasets(paths, fname_str, out_dir, re_index = 0, base_index = 0):
                     date_obj = datetime.datetime.strptime(year + doy, "%Y%j")
                     new_fname_root = date_obj.strftime("%Y%m%d")
                 else:
+                    print(fname_res[re_index], re_index, fle)
                     new_fname_root = re.search(fname_res[re_index], fle).group(1)
                 fname = os.path.join(out_dir, new_fname_root + "_" + fname_str)
                 dqi_fname = os.path.splitext(fname)[0] + ".DQI.tif"
                 data = None
                 qual = None
                 if os.path.exists(fname):
+                    print(fname)
                     data = gdal.Open(fname).ReadAsArray()
                     qual = gdal.Open(dqi_fname).ReadAsArray()
                 fle1 = os.path.join(root, fle)
@@ -109,9 +112,9 @@ def merge_datasets(paths, fname_str, out_dir, re_index = 0, base_index = 0):
                 out_ds = None
 
                 products.append(fname)
-                dqi.append(dqi_fname)
-
-    return products, dqi
+                dqi_full.append(dqi_fname)
+    print(len(products), len(dqi_full))
+    return products, dqi_full
 
 
 #assumes rename to having date in filename
@@ -120,7 +123,7 @@ def merge_monthly(dirname, fname_str):
     monthlies = {}
 
     products = []
-    dqi = []
+    dqi_full = []
 
     for root, dirs, files in os.walk(dirname):
         for fle in files:
@@ -201,9 +204,9 @@ def merge_monthly(dirname, fname_str):
             out_ds = None
 
             products.append(os.path.join(dirname, monthlies[yr][mnth][0][0].strftime("%Y%m") + "_" + fname_str + ".Monthly.tif"))
-            dqi.append(os.path.join(dirname, monthlies[yr][mnth][0][0].strftime("%Y%m") + "_" + fname_str + ".Monthly.DQI.tif"))
+            dqi_full.append(os.path.join(dirname, monthlies[yr][mnth][0][0].strftime("%Y%m") + "_" + fname_str + ".Monthly.DQI.tif"))
 
-    return products, dqi
+    return products, dqi_full
 
 
 def run_merge(yml_fpath):

@@ -4,6 +4,10 @@ output:
  class_name: ['BACKGROUND', 'OIL_PALM']
 
 data:
+ regrid: True
+ multiclass: True
+ zone_min: 0
+ zone_max: 1
  min_thresh: 0
  label_gtiffs: [
 [
@@ -19,4 +23,8 @@ data:
 ]
 
 regrid: True
+
+
+
+
 

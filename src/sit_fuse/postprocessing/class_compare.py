@@ -63,12 +63,12 @@ def calc_class_stats(new_data_label_counts, init_data_label_counts):
                 lst = sorted(lst, key = itemgetter(1), reverse=True)
                 label_agree_init_data[key] =  lst
 
-        pprint(new_data_label_counts.keys())
-        pprint(init_data_label_counts.keys())
-        pprint(new_data_label_counts)
-        pprint(init_data_label_counts)
-        pprint(new_data_stat)
-        pprint(init_data_stat)
+        #pprint(new_data_label_counts.keys())
+        #pprint(init_data_label_counts.keys())
+        #pprint(new_data_label_counts)
+        #pprint(init_data_label_counts)
+        #pprint(new_data_stat)
+        #pprint(init_data_stat)
         return new_data_stat, init_data_stat, label_agree_new_data, label_agree_init_data
 
 
@@ -84,7 +84,7 @@ def class_mask_gen_misr_svm(masks, good_vals, map_vals, key_order): #, refMaskAe
                 mask = np.zeros(masks[key].shape) - 1
                 maskTrack = np.zeros(masks[key].shape) - 1
             for i in range(len(good_vals[key])):
-                print(maskTrack.shape, compMaskInt.shape, key, "HERE SHAPE ISSUE")
+                #print(maskTrack.shape, compMaskInt.shape, key, "HERE SHAPE ISSUE")
                 if key == "Total":
                     extraInds = np.where(mask.astype(np.int32) ==good_vals[key][i])
                     extra = 0
@@ -179,7 +179,7 @@ def read_label_counts_pkl(pkl_list):
     new_data_label_counts = {}
     init_data_label_counts = {}
 
-    print(pkl_list.keys())
+    #print(pkl_list.keys())
     #sys.exit(0)
     for i in pkl_list.keys():
         #if i < 1: 
@@ -217,10 +217,10 @@ def read_label_counts_pkl(pkl_list):
 
   
 
-    print("KEYS")
-    pprint(init_data_label_counts)
-    print("KEYS")
-    pprint(new_data_label_counts)
+    #print("KEYS")
+    #pprint(init_data_label_counts)
+    #print("KEYS")
+    #pprint(new_data_label_counts)
     return new_data_label_counts, init_data_label_counts
 
 def read_label_counts_dbfs(dbf_list):
@@ -276,10 +276,10 @@ def read_label_counts_dbfs(dbf_list):
   
 
 
-    print("KEYS")
-    pprint(init_data_label_counts)
-    print("KEYS")
-    pprint(new_data_label_counts)
+    #print("KEYS")
+    #pprint(init_data_label_counts)
+    #print("KEYS")
+    #pprint(new_data_label_counts)
     return new_data_label_counts, init_data_label_counts
 
 
@@ -317,10 +317,10 @@ def run_compare_dbf(dbf_list, percent_threshold):
  
 
 
-    print("KEYS")
-    pprint(init_data_label_percentage)
-    print("KEYS")
-    pprint(new_data_label_percentage)
+    #print("KEYS")
+    #pprint(init_data_label_percentage)
+    #print("KEYS")
+    #pprint(new_data_label_percentage)
 
 
     kys = []
@@ -342,7 +342,7 @@ def run_compare_dbf(dbf_list, percent_threshold):
             assign = list(new_data_label_percentage[key].items())[0]
         percentage = assign[1]
         index = int(assign[0])
-        print(percentage, index)
+        #print(percentage, index)
         if percentage >= percent_threshold:
             assignment[index].append(key)
             kys.append(assign)
@@ -352,8 +352,8 @@ def run_compare_dbf(dbf_list, percent_threshold):
             tmp.insert(0, key)
             uncertain.append(tmp)
 
-    print("KYS", kys)
-    print("\n\n\nASSIGNMENT")
+    #print("KYS", kys)
+    #print("\n\n\nASSIGNMENT")
 
     #print(assignment)
     for i in range(len(assignment)):
@@ -364,13 +364,10 @@ def run_compare_dbf(dbf_list, percent_threshold):
     #    if assignment[1][i] not in assignment[0]:
     #        asn1.append(assignment[1][i])
     #assignment[1] = asn1
-    print(assignment)
+    #print(assignment)
 
-    print("\n\n\nUNCERTAIN")
-    pprint(uncertain)
-    print(len(assignment))
-    for i in range(len(assignment)):
-        print(len(assignment[i]))
+    #print("\n\n\nUNCERTAIN")
+    #pprint(uncertain)
     return assignment, uncertain
 
 def compare_label_sets(new_data, init_data, mask_name, map_vals, no_retrieval_init=-1, 
@@ -420,10 +417,10 @@ def compare_label_sets(new_data, init_data, mask_name, map_vals, no_retrieval_in
                                 new_data_label_counts[new_data[i,j]] = {init_data[i,j]: 1, "total": 1}
 
 
-        print("KEYS")
-        pprint(init_data_label_counts)
-        print("KEYS")
-        pprint(new_data_label_counts)
+        #print("KEYS")
+        #pprint(init_data_label_counts)
+        #print("KEYS")
+        #pprint(new_data_label_counts)
         return init_data, new_data, new_data_label_counts, init_data_label_counts
 
 
@@ -450,10 +447,10 @@ def plot_classifier_map(init_dat, new_dat, log_fname, total_data, total_mask,
         if gradient_local is None:
                 gradient_local = {}
 
-        pprint(agree_new)
+        #pprint(agree_new)
 
 
-        print(init_data.shape, new_data.shape, "HERE SIZES")
+        #print(init_data.shape, new_data.shape, "HERE SIZES")
         for i in range(new_data.shape[0]):
                 for j in range(new_data.shape[1]):
                         if init_data[i,j] == no_retrieval_init or \
@@ -495,11 +492,11 @@ def plot_classifier_map(init_dat, new_dat, log_fname, total_data, total_mask,
 
 
 
-        print("CLASSES", np.unique(flat_data), np.unique(flat_predict), labels[mask_name])
+        #print("CLASSES", np.unique(flat_data), np.unique(flat_predict), labels[mask_name])
 
 
-        with open(log_fname, "a") as f:
-                pprint(gradient, f)
+        #with open(log_fname, "a") as f:
+        #        pprint(gradient, f)
 
 
         if np.unique(flat_data).shape[0] > 0:
@@ -520,9 +517,9 @@ def plot_classifier_map(init_dat, new_dat, log_fname, total_data, total_mask,
         ny = new_data.shape[0]
         geoTransform = new_dat.GetGeoTransform()
         wkt = new_dat.GetProjection()
-        print(wkt)
+        #print(wkt)
         fname = log_fname + ".DBN_DATA_AGREE.tif"
-        print(fname, plotted_data.max())
+        #print(fname, plotted_data.max())
         out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Int32)
         out_ds.SetGeoTransform(geoTransform)
         out_ds.SetProjection(wkt)
@@ -555,7 +552,7 @@ def run_compare(init_input, new_input, class_order, log_fname, out_ext, clust_ex
         no_retrieval_new, good_vals, map_vals, labels, gradient, grad_increase, class_mask_gen_func):
 
 
-        print(new_input, init_input)
+        #print(new_input, init_input)
 
         for clust in range(len(new_input[0])):
                 for dbn1 in range(0, len(init_input), len(new_input)):
@@ -580,9 +577,9 @@ def run_compare(init_input, new_input, class_order, log_fname, out_ext, clust_ex
                                                 init_data[class_order[i]] = []
                                                 new_data[class_order[i]] = []
 
-                                        pprint(init_input)
-                                        pprint(new_input)
-                                        print(dbn, clust, class_order[i], len(new_input), len(init_input))
+                                        #pprint(init_input)
+                                        #pprint(new_input)
+                                        #print(dbn, clust, class_order[i], len(new_input), len(init_input))
                                         if not os.path.exists(new_input[dbn][clust]) or not os.path.exists(init_input[dbn][class_order[i]]):
                                                 print(new_input[dbn][clust], init_input[dbn][class_order[i]], 
                                                     os.path.exists(new_input[dbn][clust]), 
@@ -625,7 +622,7 @@ def run_compare(init_input, new_input, class_order, log_fname, out_ext, clust_ex
                                 glint = None
                                 log_fname_fn = None
                                 for i in range(len(class_order)):
-                                        print(log_fname, class_order[i], i, dbn, out_ext[dbn], clust, clust_ext[clust])
+                                        #print(log_fname, class_order[i], i, dbn, out_ext[dbn], clust, clust_ext[clust])
                                         log_fname_fn = log_fname + "_" + class_order[i] + "_" + \
                                             out_ext[dbn] + "_" + clust_ext[clust] + ".txt"
 
@@ -664,7 +661,7 @@ def run_compare(init_input, new_input, class_order, log_fname, out_ext, clust_ex
                                 lbls.extend(np.ravel(total_mask.astype(np.int32)))
                                 truth.extend(np.ravel(total_actual_mask.astype(np.int32)))
                                 cm2 = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-                                print(log_fname_fn)
+                                #print(log_fname_fn)
                                 with open(log_fname_fn, "a") as f:
                                         f.write("total_mask:")
                                         pprint(labels["total_mask"], f)
@@ -685,13 +682,13 @@ def run_compare(init_input, new_input, class_order, log_fname, out_ext, clust_ex
                                                 f.write("Accuracy = " + str(acc) + " Balanced Accuracy = " + str(balanced_acc) + "\n")
                                 zarr.save(log_fname_fn + "_TOTAL_MASK" + ".zarr", total_mask)
                                 zarr.save(log_fname_fn + "_TOTAL_ACTUAL_MASK" + ".zarr", total_actual_mask)
-                        print(out_ext[dbn1] + " TOTAL ACCURACY: " + str(accuracy_score(truth, lbls)) +  \
-                            " BALANCED ACC: ", str(balanced_accuracy_score(truth, lbls)), "\n")
+                        #print(out_ext[dbn1] + " TOTAL ACCURACY: " + str(accuracy_score(truth, lbls)) +  \
+                        #    " BALANCED ACC: ", str(balanced_accuracy_score(truth, lbls)), "\n")
                         cm = confusion_matrix(truth, lbls, labels=labels["total_mask"])
                         #cm2 = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-                        pprint(cm)
+                        #pprint(cm)
                         #pprint(cm2)
-                        print("N =", np.count_nonzero(np.array(lbls) > -1))
+                        #print("N =", np.count_nonzero(np.array(lbls) > -1))
 
 
 def run_class_compare_outside(yml_fpath):
