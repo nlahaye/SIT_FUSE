@@ -13,8 +13,7 @@ from sit_fuse.postprocessing.conv_and_cluster import conv_and_cluster
 from sit_fuse.postprocessing.contour_and_fill import contour_and_fill
  
 from sit_fuse.inference.generate_output import predict
-
-
+import re
 import sys
 
 def cluster_fname_builder(out_dir, gtiff_data, prob = True, no_heir = True):
@@ -53,8 +52,12 @@ def input_fname_builder(yml_conf):
     input_fle_pattern = os.path.join(input_dir, yml_conf["input_pattern"])
     fglob = glob.glob(input_fle_pattern)   
 
+    if "input_clip_re" in yml_conf:
+        for i in range(len(fglob)):
+            fglob[i] = re.sub(yml_conf["input_clip_re"], "", fglob[i])
+        
  
-    fglob = sorted(fglob)
+    fglob = sorted(list(set(fglob)))
 
 
     return fglob
@@ -167,7 +170,7 @@ def run_embed_gen(yml_conf, fname, gen_image_shaped = True):
     embed, labels = gen_embeddings(yml_conf, fname, gen_image_shaped) 
     return embed, labels
 
-def run_inferece_only(yml_conf, config_dict):
+def run_inference_only(yml_conf, config_dict):
 
     #Assumes initial context asignment has been done - other pipelines automate that process
 
@@ -199,7 +202,7 @@ def run_basic_inference_geolocation(yml_conf):
     #Assumes initial context asignment has been done - other pipelines automate that process
     training_conf = read_yaml(yml_conf["training_config"])
     config_dict = copy.deepcopy(training_conf)
-    run_inferece_only(yml_conf, config_dict)
+    run_inference_only(yml_conf, config_dict)
 
     context_conf = read_yaml(yml_conf["context_config"])
     config_dict = copy.deepcopy(context_conf)

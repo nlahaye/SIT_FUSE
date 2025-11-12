@@ -119,7 +119,7 @@ def run_multi_hist(yml_conf, output_dir):
 
     for i in range(len(arr_init)):
         arr_init[i] = sorted(arr_init[i])  
-    #print(arr_init)
+    print(arr_init)
 
     #pprint(hists)
     #print(labels)

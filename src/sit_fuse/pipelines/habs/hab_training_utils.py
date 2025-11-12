@@ -17,7 +17,7 @@ from sit_fuse.train.pretrain_encoder import run_pretraining
 from sit_fuse.train.finetune_dc_mlp_head import run_tuning
 from sit_fuse.train.train_heirarchichal_deep_cluster import run_heir_training
  
-def build_config_fname_cf_gtiff_gen(config_dir, instrument, with_trop = False):
+def build_config_fname_data_prep_and_train(config_dir, instrument, with_trop = False):
 
     config_fname = os.path.join(config_dir, "model", "train_model_" + instrument)
 
@@ -96,9 +96,31 @@ def find_train_test_fpaths(yml_conf, config_dict, instrument, key):
                 else:
                     test_fnames.append(lst_entry)
 
+        test_fnames = sorted(test_fnames)
+        train_fnames = sorted(train_fnames)
+        match_count = 0
+        final_test_fnames = []
+        for i in range(1, len(test_fnames)):
+            if test_fnames[i] == test_fnames[i-1]:
+                match_count += 1
+            else:
+                if match_count == NUM_CHANNELS[instrument] -1:
+                    final_test_fnames.append(test_fnames[i-1])
+                match_count = 0
+  
+        final_train_fnames = []
+        match_count = 0
+        for i in range(1, len(train_fnames)):
+            if train_fnames[i] == train_fnames[i-1]:
+                match_count += 1
+            else:
+                if match_count == NUM_CHANNELS[instrument] -1:
+                    final_train_fnames.append(train_fnames[i-1])
+                match_count = 0
 
-    config_dict["data"]["files_train"] = train_fnames
-    config_dict["data"]["files_test"] = test_fnames
+
+    config_dict["data"]["files_train"] = list(set(final_train_fnames))
+    config_dict["data"]["files_test"] = list(set(final_test_fnames))
 
     return config_dict
 
@@ -166,11 +188,12 @@ def run_data_preprocessing(yml_conf):
                 yml_conf["input_dir"] = instrument_dict[instrument][key]["input_oc_dir"]
                 goes_combine_and_clip_pipeline(yml_conf)                
 
-            run_data_prep(config_dict)             
+            if instrument_dict[instrument][key]["run_preprocess_and_scale"]:
+                run_data_prep(config_dict)             
 
             configs[instrument][key] = config_dict
 
-            config_fname = build_config_fname_cf_gtiff_gen(config_dir, instrument, with_trop = trop)
+            config_fname = build_config_fname_data_prep_and_train(config_dir, instrument, with_trop = trop)
 
             with open(config_fname, 'w') as fle:
                yaml.dump(config_dict, fle)

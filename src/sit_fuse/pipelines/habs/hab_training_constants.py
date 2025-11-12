@@ -171,14 +171,28 @@ REGION_BBS =  {
 READER_TYPE_MAP = {
 
     "TROP" : "oc_and_trop",
-    "S3A_OCI" : "s3_oc",
-    "S3B_OCI" : "s3_oc",
+    "S3A_OLCI" : "s3_oc",
+    "S3B_OLCI" : "s3_oc",
     "JPSS1_VIIRS" : "viirs_oc",
     "JPSS2_VIIRS" : "viirs_oc",
     "SNPP_VIIRS" : "viirs_oc",
     "AQUA_MODIS" : "modis_oc",
     "PACE_OCI" : "pace_oc",
     "GOES_18_ABI": "gtiff" 
+}
+
+NUM_CHANNELS = {
+
+    "TROP" : 1,
+    "S3A_OLCI" : 11,
+    "S3B_OLCI" : 11,
+    "JPSS1_VIIRS" : 5,
+    "JPSS2_VIIRS" : 5,
+    "SNPP_VIIRS" :  5,
+    "AQUA_MODIS" : 10,
+    "PACE_OCI" : 1, #all channels in one file
+    "GOES_18_ABI": 1, #all channels in one file after tiff gen
+
 }
 
 

@@ -32,7 +32,7 @@ def merge_datasets(paths, fname_str, out_dir, re_index = 0, base_index = 0):
 
     for root, dirs, files in os.walk(paths[base_index]):
         for fle in files:
-            print(fle, fname_str)
+            #print(fle, fname_str)
             if fname_str in fle:
                 if "OR_ABI" in fle or "_G18_" in fle:
                     goes_match = re.search(r"s(20\d{2})(\d{3})\d{6}", fle)
@@ -41,14 +41,14 @@ def merge_datasets(paths, fname_str, out_dir, re_index = 0, base_index = 0):
                     date_obj = datetime.datetime.strptime(year + doy, "%Y%j")
                     new_fname_root = date_obj.strftime("%Y%m%d")
                 else:
-                    print(fname_res[re_index], re_index, fle)
+                    #print(fname_res[re_index], re_index, fle)
                     new_fname_root = re.search(fname_res[re_index], fle).group(1)
                 fname = os.path.join(out_dir, new_fname_root + "_" + fname_str)
                 dqi_fname = os.path.splitext(fname)[0] + ".DQI.tif"
                 data = None
                 qual = None
                 if os.path.exists(fname):
-                    print(fname)
+                    #print(fname)
                     data = gdal.Open(fname).ReadAsArray()
                     qual = gdal.Open(dqi_fname).ReadAsArray()
                 fle1 = os.path.join(root, fle)
@@ -113,7 +113,7 @@ def merge_datasets(paths, fname_str, out_dir, re_index = 0, base_index = 0):
 
                 products.append(fname)
                 dqi_full.append(dqi_fname)
-    print(len(products), len(dqi_full))
+    #print(len(products), len(dqi_full))
     return products, dqi_full
 
 
@@ -142,7 +142,7 @@ def merge_monthly(dirname, fname_str):
                 else:
                     monthlies[dte.year] = {dte.month : [[dte, os.path.join(root, fle)]]}
  
-    pprint(monthlies.keys())
+    #pprint(monthlies.keys())
     for yr in monthlies.keys():
         for mnth in monthlies[yr].keys():
             newImgData = None
@@ -179,7 +179,7 @@ def merge_monthly(dirname, fname_str):
             newImgData[inds] = -1
             newDqi[inds] = -1
             pixCnt[inds] = 0
-            print("HERE ", mnth, yr)
+            #print("HERE ", mnth, yr)
 
 
             nx = newImgData.shape[1]
