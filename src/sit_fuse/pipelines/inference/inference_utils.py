@@ -17,7 +17,7 @@ from sit_fuse.inference.generate_output import predict
 
 import sys
 
-def cluster_fname_builder(out_dir, gtiff_data, prob = True, no_heir = True):
+def cluster_fname_builder(out_dir, gtiff_data, prob = True, no_heir = True, tiff=False):
 
     final_gtiff_data = []
     final_clust_data = []
@@ -25,17 +25,22 @@ def cluster_fname_builder(out_dir, gtiff_data, prob = True, no_heir = True):
     out_fname_base = out_dir
     for i in range(len(gtiff_data)):
         file_pattern = os.path.join(out_fname_base, os.path.basename(os.path.splitext(gtiff_data[i])[0]) + "*clust.data*zarr")
+        if tiff:
+            file_pattern += "*full_geo.tif"
         fglob = glob.glob(file_pattern)
         
         fglob = sorted(fglob)
 
         for j in range(len(fglob)):
   
-            if not prob and ".prob" in fglob[j]:
+            if not prob and "prob" in fglob[j]:
                 continue
 
             if not no_heir and "no_heir" in fglob[j]:
                 continue
+
+            print(gtiff_data[i])
+            print(fglob[j], prob, no_heir)
 
             final_gtiff_data.append(gtiff_data[i])
             final_clust_data.append(fglob[j])
@@ -64,6 +69,10 @@ def build_config_fname_contour(config_dir, run_uid):
     config_fname = os.path.join(config_dir, "postprocess", "contour_and_fill" + run_uid + ".yaml") 
     return config_fname
 
+def build_config_fname_conv_and_cluster(config_dir, run_uid):
+    config_fname = os.path.join(config_dir, "postprocess", "conv_and_cluster_" + run_uid + ".yaml")
+    return config_fname
+
 def build_config_fname_inference(config_dir, run_uid):
 
         config_fname = os.path.join(config_dir, "model", "inference_" + run_uid + ".yaml") 
@@ -83,13 +92,15 @@ def update_config_inference(yml_conf, config_dict):
     return config_dict
 
  
-def update_config_gtiff_gen(yml_conf, context_conf, config_dict):
+def update_config_gtiff_gen(yml_conf, training_conf, config_dict, context_assign = True):
 
     reuse_gtiffs = yml_conf["reuse_gtiffs"]
   
+    config_dict["context"]["apply_context"] = context_assign
+
     if not reuse_gtiffs:
         gtiff_data = input_fname_builder(yml_conf)
-        gtiff_data, cluster_fnames = cluster_fname_builder(config_dict["output"]["out_dir"], gtiff_data)
+        gtiff_data, cluster_fnames = cluster_fname_builder(training_conf["output"]["out_dir"], gtiff_data)
      
         config_dict["data"]["gtiff_data"] = gtiff_data
         config_dict["data"]["cluster_fnames"] = cluster_fnames
@@ -118,12 +129,23 @@ def update_config_contour_and_fill(config_dict, context_config):
 
     return config_dict
 
-def update_config_tiered_gtiff_gen(yml_conf, context_conf, config_dict):
+def update_config_tiered_gtiff_gen(yml_conf, training_conf, config_dict):
 
-    config_dict = update_config_gtiff_gen(yml_conf, context_conf, config_dict)
+    config_dict = update_config_gtiff_gen(yml_conf, training_conf, config_dict)
+
+    config_dict["context"]["apply_context"] = True #No need for tiered masking if not applying context
 
     tiered_masks = []
     tiered_classes = []
+    cluster_fnames = []
+    #TODO, create a non-tiered fnames list and only create single geotiff from them
+    for i in range(len(config_dict["data"]["cluster_fnames"])):
+        if "prob" in config_dict["data"]["cluster_fnames"][i] or "no_heir" in config_dict["data"]["cluster_fnames"][i]:
+            continue
+        else:
+            cluster_fnames.append(config_dict["data"]["cluster_fnames"][i])
+
+    config_dict["data"]["cluster_fnames"] = cluster_fnames
     for i in range(len(config_dict["data"]["cluster_fnames"])):
 
         drname = os.path.dirname(config_dict["data"]["cluster_fnames"][i])
@@ -132,11 +154,12 @@ def update_config_tiered_gtiff_gen(yml_conf, context_conf, config_dict):
 
         tiered_masks_sub = [] 
         for j in range(len(yml_conf["tile_tiers"])):
-            tiered_masks_sub.append(fname_base_final + ".tif.tile_cluster." + str(yml_conf["tile_tiers"][j]) + ".tif")
+            tiered_masks_sub.append(fname_base_final + ".zarr.full_geo.tif.tile_cluster." + str(yml_conf["tile_tiers"][j]) + ".tif")
         
         tiered_masks.append(tiered_masks_sub)
 
-        tiered_classes.append(context_conf["context"]["tiered_masking"]["tiered_classes"])
+        print(len(config_dict["context"]["tiered_masking"]["tiered_classes"]), len(config_dict["data"]["cluster_fnames"]))
+        tiered_classes.append(config_dict["context"]["tiered_masking"]["tiered_classes"][0]) #Should be uniform across samples for these cases
 
     config_dict["context"]["tiered_masking"]["tiered_classes"] = tiered_classes
     config_dict["context"]["tiered_masking"]["masks"] = tiered_masks
@@ -150,7 +173,9 @@ def update_config_conv_and_cluster(yml_conf, out_dir):
     tiled_features_conf["tile_size"] = yml_conf["tile_tiers"]
 
     gtiff_data = input_fname_builder(yml_conf)
-    clust_fnames = cluster_fname_builder(out_dir, gtiff_data, prob = False, no_heir = False)
+    final_gtiff_data, clust_fnames = cluster_fname_builder(out_dir, gtiff_data, prob = False, no_heir = False, tiff=True)
+
+    print(clust_fnames[0], "UPDATAE CONFIG")
 
     tiled_features_conf["train_fname"] = clust_fnames[0] #Arbitrary as assumption here is that training is completed already
     tiled_features_conf["test_fnames"] =  clust_fnames
@@ -163,7 +188,7 @@ def run_prediction(yml_conf):
     predict(yml_conf)
      
 
-def run_inferece_only(yml_conf, config_dict):
+def run_inference_only(yml_conf, config_dict):
 
     #Assumes initial context asignment has been done - other pipelines automate that process
 
@@ -190,37 +215,42 @@ def run_contour_and_fill(yml_conf, context_config):
  
     contour_and_fill(config_dict)
 
+
 def run_basic_inference_geolocation(yml_conf):
    
     #Assumes initial context asignment has been done - other pipelines automate that process
     training_conf = read_yaml(yml_conf["training_config"])
     config_dict = copy.deepcopy(training_conf)
-    run_inferece_only(yml_conf, config_dict)
+    run_inference_only(yml_conf, config_dict)
 
     context_conf = read_yaml(yml_conf["context_config"])
     config_dict = copy.deepcopy(context_conf)
     config_dict["output"] = {"out_dir" : training_conf["output"]["out_dir"]}
 
+    tiled_features_conf = None
+
     #Generate config
     if "tiered_masking" in context_conf["context"]:
         tiled_features_conf = update_config_conv_and_cluster(yml_conf, training_conf["output"]["out_dir"])
-        config_dict = update_config_tiered_gtiff_gen(yml_conf, context_conf, config_dict)
+        config_dict = update_config_tiered_gtiff_gen(yml_conf, training_conf, config_dict)
     else:
-        config_dict = update_config_gtiff_gen(yml_conf, context_conf, config_dict)
+        config_dict = update_config_gtiff_gen(yml_conf, training_conf, config_dict)
  
     #Dump to file
     config_fname = build_config_fname_gtiff_gen(yml_conf["config_dir"],  yml_conf["run_uid"] + "_geolocated_clusters")
     with open(config_fname, 'w') as fle:
         yaml.dump(config_dict, fle)
+
  
     if "tiered_masking" in context_conf["context"]:
-
-        config_fname = build_config_fname_gtiff_gen(yml_conf["config_dir"], yml_conf["run_uid"] + "_conv_and_cluster")
+ 
+        config_fname = build_config_fname_conv_and_cluster(yml_conf["config_dir"], yml_conf["run_uid"])
         with open(config_fname, 'w') as fle:
-            yaml.dump(config_dict, fle)
+            yaml.dump(tiled_features_conf, fle)
 
         print("Generating feature pyramids from pixel-level predictions")
         conv_and_cluster(tiled_features_conf)
+
 
     print("Generating geolocated products")
     run_geotiff_gen(config_dict) 
