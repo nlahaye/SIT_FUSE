@@ -330,7 +330,7 @@ def run_compare_dbf(dbf_list, percent_threshold):
     max_key = -1000
     for key in sorted(init_data_label_percentage.keys()):
         max_key = max(max_key, key)
-    for iasn in range(int(max_key)):
+    for iasn in range(int(max_key)+1):
         assignment.append([])
     assignment.append([])
     for key in sorted(new_data_label_percentage.keys()):
@@ -368,6 +368,9 @@ def run_compare_dbf(dbf_list, percent_threshold):
 
     print("\n\n\nUNCERTAIN")
     pprint(uncertain)
+    print(len(assignment))
+    for i in range(len(assignment)):
+        print(len(assignment[i]))
     return assignment, uncertain
 
 def compare_label_sets(new_data, init_data, mask_name, map_vals, no_retrieval_init=-1, 
