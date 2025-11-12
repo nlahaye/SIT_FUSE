@@ -269,8 +269,8 @@ def run_zonal_hist(yml_conf):
     with open(os.path.join(out_dir, out_tag + "_base_cluster_polygon_knn_graphs.pkl"), 'wb') as handle:
             dump(poly_knns, handle, True, pickle.HIGHEST_PROTOCOL)
 
-        #numpy.save(os.path.join(out_dir, out_tag[j] + "_base_cluster_polygon_knn_graphs.npz"), poly_knns, allow_pickle=True)
-
+        #numpy.save(os.path.join(out_dir, out_tag[-1] + "_base_cluster_polygon_knn_graphs.npz"), poly_knns, allow_pickle=True)
+    return os.path.join(out_dir, out_tags[-1] + "_hist_dict.pkl"), os.path.join(out_dir, out_tags[-1] + "_base_cluster_polygon_knn_graphs.pkl")
 
 if __name__ == '__main__':
 

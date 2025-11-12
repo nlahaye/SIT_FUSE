@@ -3,19 +3,24 @@ output:
  class_name: ['BACKGROUND_1024', 'OIL_PALM_1024']
 
 data:
+ regrid: True
+ multiclass: True
+ zone_min: 0
+ zone_max: 1
  min_thresh: 0
  label_gtiffs: [
 [
 '/data/nlahaye/remoteSensing/Palm_Oil/Dataset_Ucayali_Palm_V2.tif',
 '/data/nlahaye/remoteSensing/Palm_Oil/Dataset_Ucayali_Palm_V2.tif',
 '/data/nlahaye/remoteSensing/Palm_Oil/Dataset_Ucayali_Palm_V2.tif'
-],
-[
-'/data/nlahaye/remoteSensing/Palm_Oil/Dataset_Ucayali_Palm_V2.tif',
-'/data/nlahaye/remoteSensing/Palm_Oil/Dataset_Ucayali_Palm_V2.tif',
-'/data/nlahaye/remoteSensing/Palm_Oil/Dataset_Ucayali_Palm_V2.tif'
-],
-]
+]]
+#,
+#[
+#'/data/nlahaye/remoteSensing/Palm_Oil/Dataset_Ucayali_Palm_V2.tif',
+#'/data/nlahaye/remoteSensing/Palm_Oil/Dataset_Ucayali_Palm_V2.tif',
+#'/data/nlahaye/remoteSensing/Palm_Oil/Dataset_Ucayali_Palm_V2.tif'
+#],
+#]
 
 
 

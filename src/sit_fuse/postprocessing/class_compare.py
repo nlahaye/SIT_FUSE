@@ -330,7 +330,7 @@ def run_compare_dbf(dbf_list, percent_threshold):
     max_key = -1000
     for key in sorted(init_data_label_percentage.keys()):
         max_key = max(max_key, key)
-    for iasn in range(int(max_key)):
+    for iasn in range(int(max_key)+1):
         assignment.append([])
     assignment.append([])
     for key in sorted(new_data_label_percentage.keys()):

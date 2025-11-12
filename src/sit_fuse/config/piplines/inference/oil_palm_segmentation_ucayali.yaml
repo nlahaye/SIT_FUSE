@@ -1,13 +1,13 @@
 
 
 training_config: "../../config/model/palm_oil_dbn_multi_layer_wide_pl.yaml"
-context_config: "../../config/postprocess/palm_oil_tiered_masking_geotiff_gen_v3.yaml"
+context_config: "../../config/postprocess/palm_oil_tiered_masking_geotiff_gen_v4.yaml"
 
 run_uid: "palm_oil_tiered_v3"
 
 config_dir: "../../config/"
 
-reuse_gtiffs: True
+reuse_gtiffs: False #True
 update_inputs: False
  
 input_dir: "/data/nlahaye/remoteSensing/Palm_Oil/"

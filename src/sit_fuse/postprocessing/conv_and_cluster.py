@@ -163,12 +163,15 @@ def generate_features(model, feature_extractor, loader):
             flatten_fts = np.zeros((images.shape[0],2048)) - 1.0
         else:
             #images = preprocess(images)
-            images = images.cuda()
+            if torch.cuda.is_available():
+                images = images.cuda()
 
 
             #images = model(images).detach().cpu()
             features = feature_extractor(images)
-            flatten_fts = features["flatten"].squeeze().detach().cpu()
+            flatten_fts = features["flatten"].squeeze()
+            if torch.cuda.is_available():
+                flatten_fts = flatten_fts.detach().cpu()
             print(flatten_fts.shape)
 
 
@@ -227,7 +230,7 @@ def cluster_and_output(output, clust, tgts2, img_data_shape, fname, img_test, ti
     write_geotiff(img_test, outp, fname + ".tile_cluster." + str(tile) + ".tif")
 
 
-def pretrained_conv_and_cluster(clust, model, test_fnames, tile):
+def pretrained_conv_and_cluster(clust, model, feature_extractor, test_fnames, tile):
 
     stride = int(tile*0.6)
 
@@ -283,8 +286,9 @@ def run_conv_and_cluster(train_fname, test_fnames, tiles):
         clust = None
 
         with torch.no_grad():
-            model = model.cuda()
-            feature_extractor = feature_extractor.cuda()
+            if torch.cuda.is_available():
+                model = model.cuda()
+                feature_extractor = feature_extractor.cuda()
             #print(summary(model, (1,tile,tile)))  
 
             dat_full = generate_features(model, feature_extractor, loader)
@@ -350,9 +354,13 @@ def run_pretrained_conv_and_cluster(test_fnames, tiles):
         model_fpath = os.path.dirname(test_fnames[0]) + "/model_" + str(tiles[tle]) + ".ckpt"
         model, feature_extractor = load_model(model_fpath)
 
+        if torch.cuda.is_available():
+            model = model.cuda()
+            feature_extractor = feature_extractor.cuda()
+
         clust = joblib.load(os.path.dirname(test_fnames[0]) + "/clust_" + str(tiles[tle]) + ".joblib")
 
-        pretrained_conv_and_cluster(clust, model, test_fnames, tiles[tle])
+        pretrained_conv_and_cluster(clust, model, feature_extractor, test_fnames, tiles[tle])
  
 
 def conv_and_cluster_outside(yml_fpath):
