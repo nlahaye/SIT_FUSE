@@ -94,7 +94,10 @@ def pretrain_DBN(yml_conf, dataset, conv = False):
 
         lr_monitor = LearningRateMonitor(logging_interval="step")
         model_summary = ModelSummary(max_depth=2)
-        checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="encoder", enable_version_counter=False, every_n_train_steps = 100, save_on_train_epoch_end=False)
+        checkpoint_steps = 100
+        if max_epochs < checkpoint_steps:
+            checkpoint_steps = 1
+        checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="encoder", enable_version_counter=False, every_n_train_steps = checkpoint_steps, save_on_train_epoch_end=False)
 
         os.makedirs(save_dir, exist_ok=True) 
         if use_wandb_logger:
@@ -196,7 +199,10 @@ def pretrain_MAE(yml_conf, dataset):
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
-    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="encoder", enable_version_counter=False, every_n_train_steps = 100, save_on_train_epoch_end=False)
+    checkpoint_steps = 100
+    if max_epochs < checkpoint_steps:
+        checkpoint_steps = 1
+    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="encoder", enable_version_counter=False, every_n_train_steps = checkpoint_steps, save_on_train_epoch_end=False)
 
     os.makedirs(save_dir, exist_ok=True)
     if use_wandb_logger:
@@ -279,7 +285,10 @@ def pretrain_IJEPA(yml_conf, dataset):
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
-    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="encoder", enable_version_counter=False, every_n_train_steps = 100, save_on_train_epoch_end=False)
+    checkpoint_steps = 100
+    if max_epochs < checkpoint_steps:
+        checkpoint_steps = 1
+    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="encoder", enable_version_counter=False, every_n_train_steps = checkpoint_steps, save_on_train_epoch_end=False)
 
     os.makedirs(save_dir, exist_ok=True) 
     if use_wandb_logger:
@@ -386,7 +395,10 @@ def pretrain_BYOL(yml_conf, dataset):
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
-    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="encoder", enable_version_counter=False, every_n_train_steps = 100, save_on_train_epoch_end=False)
+    checkpoint_steps = 100
+    if max_epochs < checkpoint_steps:
+        checkpoint_steps = 1
+    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="encoder", enable_version_counter=False, every_n_train_steps = checkpoint_steps, save_on_train_epoch_end=False)
  
 
     os.makedirs(save_dir, exist_ok=True)

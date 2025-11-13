@@ -688,7 +688,7 @@ def merge_class_sets(yml_conf, species_run, classes, iter2_classes):
                     for k in range(len(arr_init)):
                         if arr_merge[i][j] in arr_init[k]:
                             ind = k
-                    if ind == -1: ##ind < i:
+                    if ind < i:
                         arr_tmp[i].append(arr_merge[i][j])
                     elif ind > -1:
                         arr_tmp[ind].append(arr_merge[i][j])

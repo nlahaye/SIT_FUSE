@@ -1412,14 +1412,14 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
             if sm >= hist[0]:
                 mx1 = np.argmax(hist[1:])
         algal[mx1].append(i / 1000.0)
-        #print(bins, hist,i)
+        print(bins, hist,i)
         plt.ylim(0, 50)
         plt.bar([k*2 for k in range(len(bins[:-1]))],hist, width=1, linewidth=1, align="center")
         plt.show()
         plt.savefig(os.path.join(output_dir, "TEST_HIST_" + str(i) + ".png"))
         plt.clf()
         final_hist.append((hist, bins,i))
-    #print("HERE FINAL", algal)
+    print("HERE FINAL", algal)
     return algal, final_hist
     
 
