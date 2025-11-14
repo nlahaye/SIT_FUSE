@@ -239,7 +239,6 @@ def run_basic_inference_geolocation(yml_conf):
 
     #Generate config
     if "tiered_masking" in context_conf["context"]:
-        tiled_features_conf = update_config_conv_and_cluster(yml_conf, training_conf["output"]["out_dir"])
         config_dict = update_config_tiered_gtiff_gen(yml_conf, training_conf, config_dict)
     else:
         config_dict = update_config_gtiff_gen(yml_conf, training_conf, config_dict)
@@ -255,6 +254,7 @@ def run_basic_inference_geolocation(yml_conf):
         print("Generating geolocated products")
         config_dict["context"]["apply_context"] = False
         run_geotiff_gen(config_dict) #Need Geotiffs to do conv_and_cluster
+        tiled_features_conf = update_config_conv_and_cluster(yml_conf, training_conf["output"]["out_dir"])
         config_dict["context"]["apply_context"] = True
         
  
