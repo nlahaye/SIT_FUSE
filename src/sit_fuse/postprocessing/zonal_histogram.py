@@ -224,6 +224,9 @@ def run_zonal_hist(yml_conf):
     zone_min = yml_conf["data"]["zone_min"]
     zone_max = yml_conf["data"]["zone_max"]
 
+    if isinstance(out_tag, list):
+        out_tag = out_tag[0]
+
 
     zonal_histogram = None
     poly_knns = []
@@ -270,7 +273,7 @@ def run_zonal_hist(yml_conf):
             dump(poly_knns, handle, True, pickle.HIGHEST_PROTOCOL)
 
         #numpy.save(os.path.join(out_dir, out_tag[-1] + "_base_cluster_polygon_knn_graphs.npz"), poly_knns, allow_pickle=True)
-    return os.path.join(out_dir, out_tags[-1] + "_hist_dict.pkl"), os.path.join(out_dir, out_tags[-1] + "_base_cluster_polygon_knn_graphs.pkl")
+    return os.path.join(out_dir, out_tag + "_hist_dict.pkl"), os.path.join(out_dir, out_tag + "_base_cluster_polygon_knn_graphs.pkl")
 
 if __name__ == '__main__':
 
