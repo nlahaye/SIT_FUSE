@@ -113,6 +113,14 @@ USE_KEY_FNAME_MAP = {
 "Total_Phytoplankton" : "total_phytoplankton"
 }
 
+VALIDATION_INSTRUMENT_SUFFIX = {
+"Pseudo_nitzschia_seriata_group" : "_pseudo_nitzschia_seriata",
+"Pseudo_nitzschia_delicatissima_group" : "_pseudo_nitzschia_delicatissima",
+"Alexandrium_spp" : "_alexandrium",
+"Karenia_Brevis" : "_karenia_brevis",
+"Total_Phytoplankton" : ""
+}
+
 
 YAML_TEMPLATE_GTIFF = {
 "gen_from_geotiffs" : True,
