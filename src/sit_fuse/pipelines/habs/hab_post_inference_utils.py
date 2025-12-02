@@ -1,4 +1,6 @@
 
+from sit_fuse.utils import read_yaml
+
 from sit_fuse.preprocessing.colocate_and_resample import resample_or_fuse_data
 
 from sit_fuse.postprocessing.multi_hist_insitu import run_multi_hist
@@ -88,9 +90,11 @@ def build_config_fname_class_comp(config_dir, instrument, with_trop = False):
     return config_fname
 
  
-def build_config_fname_data_stream_merge(config_dir, instrument, daily = True):
+def build_config_fname_data_stream_merge(config_dir, instrument, species_run, no_heir = True, daily = True):
 
-    config_fname = os.path.join(config_dir, "postprocess", "merge_datasets_" + instrument + "_oc")
+    config_fname = os.path.join(config_dir, "postprocess", "merge_datasets_" + instrument + "_" + species_run + "_oc")
+    if no_heir:
+        config_fname = config_fname + "_no_heir"
     if daily:
         config_fname = config_fname + "_daily"
     else:
@@ -161,7 +165,8 @@ def update_config_multi_hist(out_dir, config_dict, yml_conf, instrument, species
     if no_heir:
         config_dict["input_file_type"] =  config_dict["input_file_type"] + "_no_heir"
     elif validation:
-        config_dict["input_file_type"] =  'daily'
+        config_dict["input_file_type"] =  'daily' + VALIDATION_INSTRUMENT_SUFFIX[species_key]
+        
 
     
     return config_dict
@@ -296,6 +301,12 @@ def update_config_data_stream_merge(yml_conf, config_dict, out_dir, species_run,
         config_dict["dirname"] = config_dict["out_dir"]
         config_dict["max_class"] = config_dict["num_classes"] -1
 
+        config_dict["fname_str"] = ""
+        if no_heir:
+            config_dict["fname_str"] = config_dict["fname_str"] + "no_heir."
+        config_dict["fname_str"] = config_dict["fname_str"] + USE_KEY_FNAME_MAP[species_run]
+
+
     #config_dict["out_dir"] = out_dir
     config_dict["num_classes"] = len(YAML_TEMPLATE_MULTI_HIST['ranges'])-1 
 
@@ -325,7 +336,7 @@ def run_data_stream_merge(yml_conf, out_dir, species_run, no_heir = False):
         config_dict = update_config_data_stream_merge(yml_conf, config_dict, out_dir, species_run, instrument, daily = True, no_heir = no_heir)
  
         #Dump to file
-        config_fname = build_config_fname_data_stream_merge(config_dir, instrument, daily = True)
+        config_fname = build_config_fname_data_stream_merge(config_dir, instrument, species_run, no_heir=no_heir, daily = True)
         with open(config_fname, 'w') as fle:
             yaml.dump(config_dict, fle) 
  
@@ -339,7 +350,7 @@ def run_data_stream_merge(yml_conf, out_dir, species_run, no_heir = False):
         config_dict = update_config_data_stream_merge(yml_conf, config_dict, out_dir, species_run, instrument, daily = False, no_heir = no_heir)
 
         #Dump to file
-        config_fname = build_config_fname_data_stream_merge(config_dir, instrument, daily = False)
+        config_fname = build_config_fname_data_stream_merge(config_dir, instrument, species_run, no_heir=no_heir, daily = False)
         with open(config_fname, 'w') as fle:
             yaml.dump(config_dict, fle)
  
@@ -676,32 +687,20 @@ def merge_class_sets(yml_conf, species_run, classes, iter2_classes):
             arr_init = classes[instrument][key]["heir"]["classes"]
             arr_merge = iter2_classes[instrument][key]["classes"] 
  
-            count = 0
-            for c in range(1, len(arr_merge)):
-                count = count + len(arr_merge)
-            if count < 1:
-                final_class_set[instrument][key] = classes[instrument][key]["heir"]["classes"]  
- 
-            for i in range(len(arr_init)):
+            arr_tmp = arr_init
+
+            for i in range(len(arr_tmp)):
                 for j in range(len(arr_merge[i])):
                     ind = -1
-                    for k in range(len(arr_init)):
-                        if arr_merge[i][j] in arr_init[k]:
+                    for k in range(len(arr_tmp)):
+                        if arr_merge[i][j] in arr_tmp[k]:
                             ind = k
-                    if ind < i:
+                    if ind == -1:
                         arr_tmp[i].append(arr_merge[i][j])
-                    elif ind > -1:
-                        arr_tmp[ind].append(arr_merge[i][j])
-
-            for i in range(len(arr_init)):
-                for j in range(len(arr_init[i])):
-                    ind = -1
-                    for k in range(len(arr_init)):
-                        if arr_init[i][j] in arr_tmp[k]:
-                            ind = k
-                    if ind < 0:
-                        arr_tmp[i].append(arr_init[i][j])
-
+                        if ind > -1: ##
+                            arr_tmp[ind].remove(arr_merge[i][j]) ##
+                    #elif ind > -1:
+                    #    arr_tmp[ind].append(arr_merge[i][j])
 
 
             for i in range(len(arr_tmp)):
@@ -727,7 +726,7 @@ def class_dict_from_confs(yml_conf):
         for key in instrument_dict[instrument]:
             classes[instrument][key] = {}
             conf = read_yaml(instrument_dict[instrument][key])
-            classes[instrument][key]["heir"]["classes"] = conf["context"]["clusters"]
+            classes[instrument][key]["classes"] = conf["context"]["clusters"]
 
     return classes
 
