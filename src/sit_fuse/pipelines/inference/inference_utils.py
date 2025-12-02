@@ -209,6 +209,23 @@ def run_inference_only(yml_conf, config_dict):
         yaml.dump(config_dict, fle)
 
 
+def rename_output(config_dict, yml_conf):
+
+    for fname in config_dict["data"]["filename"]:
+        new_fname = os.path.basename(fname)
+        dirname = os.path.dirname(fname)
+ 
+        no_classes = True
+        for class_name in yml_conf["class_names"]:
+            if class_name in new_fname
+                new_fname = new_fname.split(yml_conf["fname_split"])[0] + "." + class_name + ".tif"
+                no_classes = False
+                break
+        if no_classes:
+            new_fname = new_fname.split(yml_conf["fname_split"])[0] + ".final.tif"
+
+
+
 def run_contour_and_fill(yml_conf, context_config):
 
     contour_conf = read_yaml(yml_conf["contour_config"]) 
@@ -221,6 +238,9 @@ def run_contour_and_fill(yml_conf, context_config):
         yaml.dump(config_dict, fle)
  
     contour_and_fill(config_dict)
+ 
+    if yml_conf["rename_fnames"]:
+        rename_output(config_dict, yml_conf)
 
 
 def run_basic_inference_geolocation(yml_conf):
