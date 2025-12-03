@@ -6,8 +6,6 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - _libgcc_mutex
-  - _openmp_mutex
   - arrow-cpp
   - aws-c-cal
   - aws-c-common
@@ -243,6 +241,7 @@ dependencies:
     - boto3
     - botocore
     - byol-pytorch
+    - torchinfo
     - cfgv
     - cftime
     - chardet
@@ -447,6 +446,7 @@ dependencies:
     - yarl
     - zarr
     - zipp
+    - git+https://github.com/Clay-foundation/model.git
     - git+https://github.com/nlahaye/I-JEPA.git
     - git+https://github.com/nlahaye/learnergy.git@module_list_update
     - git+https://github.com/nlahaye/x-transformers.git

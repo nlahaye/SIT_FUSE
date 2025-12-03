@@ -4,8 +4,6 @@ channels:
   - nvidia
   - conda-forge
 dependencies:
-  - _libgcc_mutex=0.1=conda_forge
-  - _openmp_mutex=4.5=2_kmp_llvm
   - aws-c-auth=0.7.20=h5f1c8d9_0
   - aws-c-cal=0.6.12=h2ba76a8_0
   - aws-c-common=0.9.17=h4ab18f5_0
@@ -433,6 +431,7 @@ dependencies:
       - stack-data==0.6.3
       - tabulate==0.9.0
       - tensorboard==2.16.2
+      - torchinfo==1.8.0
       - tensorboard-data-server==0.7.2
       - terminado==0.18.1
       - threadpoolctl==3.5.0
@@ -459,4 +458,5 @@ dependencies:
       - git+https://github.com/nlahaye/vit-pytorch.git
       - git+https://github.com/nlahaye/pytorch-segmentation.git
       - git+https://github.com/nlahaye/pixel-level-contrastive-learning.git
+      - git+https://github.com/Clay-foundation/model.git 
 prefix: /home/nlahaye/.conda/envs/sit_fuse
