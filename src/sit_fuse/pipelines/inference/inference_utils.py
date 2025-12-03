@@ -217,7 +217,7 @@ def rename_output(config_dict, yml_conf):
  
         no_classes = True
         for class_name in yml_conf["class_names"]:
-            if class_name in new_fname
+            if class_name in new_fname:
                 new_fname = new_fname.split(yml_conf["fname_split"])[0] + "." + class_name + ".tif"
                 no_classes = False
                 break
