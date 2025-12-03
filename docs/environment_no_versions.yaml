@@ -119,6 +119,7 @@ dependencies:
   - libevent
   - libexpat
   - libffi
+  - libgcc
   - libgcc-ng
   - libgdal
   - libgfortran-ng
@@ -214,7 +215,6 @@ dependencies:
   - python-dateutil
   - python-tzdata
   - python_abi
-  - pytorch
   - pytorch-cuda
   - pytorch-mutex
   - pytz
@@ -231,14 +231,12 @@ dependencies:
   - sortedcontainers
   - spdlog
   - sqlite
-  - sympy
   - tbb
   - tblib
   - tiledb
   - tk
   - toolz
   - torchaudio
-  - torchvision
   - tornado
   - translationstring
   - typing_extensions
@@ -313,6 +311,7 @@ dependencies:
       - diplib
       - distlib
       - docker-pycreds
+      - docstring-parser
       - donfig
       - einops
       - executing
@@ -339,6 +338,7 @@ dependencies:
       - huggingface-hub
       - identify
       - imageio
+      - importlib-resources
       - ipykernel
       - ipython
       - ipywidgets
@@ -346,6 +346,7 @@ dependencies:
       - jedi
       - joblib
       - json5
+      - jsonargparse
       - jsonpointer
       - jsonschema
       - jsonschema-specifications
@@ -362,7 +363,11 @@ dependencies:
       - jupyterlab-server
       - jupyterlab-widgets
       - kiwisolver
+      - kornia
+      - kornia-rs
       - lazy-loader
+      - learnergy
+      - lightning
       - lightning-utilities
       - markdown
       - matplotlib
@@ -378,6 +383,21 @@ dependencies:
       - notebook
       - notebook-shim
       - numcodecs
+      - nvidia-cublas-cu12
+      - nvidia-cuda-cupti-cu12
+      - nvidia-cuda-nvrtc-cu12
+      - nvidia-cuda-runtime-cu12
+      - nvidia-cudnn-cu12
+      - nvidia-cufft-cu12
+      - nvidia-cufile-cu12
+      - nvidia-curand-cu12
+      - nvidia-cusolver-cu12
+      - nvidia-cusparse-cu12
+      - nvidia-cusparselt-cu12
+      - nvidia-nccl-cu12
+      - nvidia-nvjitlink-cu12
+      - nvidia-nvshmem-cu12
+      - nvidia-nvtx-cu12
       - odc-geo
       - opencv-python
       - overrides
@@ -402,6 +422,7 @@ dependencies:
       - pyparsing
       - pyproj
       - pyresample
+      - python-box
       - python-json-logger
       - pytorch-lightning
       - pyzmq
@@ -429,21 +450,28 @@ dependencies:
       - soupsieve
       - sparse
       - stack-data
+      - sympy
       - tabulate
       - tensorboard
       - tensorboard-data-server
       - terminado
       - threadpoolctl
       - tifffile
+      - timm
       - tinycss2
+      - torch
+      - torchinfo
       - torchmetrics
       - torchsummary
+      - torchvision
       - tqdm
       - traitlets
-      - torchinfo
+      - triton
       - types-python-dateutil
+      - typeshed-client
       - uri-template
       - virtualenv
+      - vit-pytorch
       - wandb
       - wcwidth
       - webcolors
@@ -451,15 +479,13 @@ dependencies:
       - websocket-client
       - werkzeug
       - widgetsnbextension
-      - x-transformers
       - yarl
       - zarr
       - git+https://github.com/Clay-foundation/model.git
       - git+https://github.com/nlahaye/I-JEPA.git
-      - git+https://github.com/nlahaye/learnergy.git@module_list_update
       - git+https://github.com/nlahaye/x-transformers.git
       - git+https://github.com/nlahaye/SIT_FUSE.git
       - git+https://github.com/nlahaye/vit-pytorch.git
       - git+https://github.com/nlahaye/pytorch-segmentation.git
       - git+https://github.com/nlahaye/pixel-level-contrastive-learning.git
-
+prefix: /home/nlahaye/miniforge3/envs/sit_fuse
