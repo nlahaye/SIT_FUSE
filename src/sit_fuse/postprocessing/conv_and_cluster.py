@@ -17,8 +17,9 @@ def initialize_weights(model):
     for layer in model.children():
         if isinstance(layer, torch.nn.Linear) or isinstance(layer, torch.nn.Conv2d):
             torch.nn.init.xavier_uniform_(layer.weight)
-            layer.bias.data.fill_(0.01)
-
+            if layer.bias is not None:
+                layer.bias.data.fill_(0.01)
+ 
 
 
 def write_geotiff(dat, imgData, fname):
@@ -267,14 +268,19 @@ def pretrained_conv_and_cluster(clust, model, feature_extractor, test_fnames, ti
 
  
 def run_conv_and_cluster(train_fname, test_fnames, tiles): 
+    model_fpath = os.path.dirname(test_fnames[0]) + "/feature_extractor.ckpt"
+    if os.path.exists(model_fpath):
+        model, feature_extractor = load_model(model_fpath)
+    else:
+        model, feature_extractor = get_model()
     for tle in range(len(tiles)): 
 
         tile = tiles[tle]
 
         stride = int(tile*0.6)
  
-        model_fpath = os.path.dirname(test_fnames[0]) + "/model_" + str(tiles[tle]) + ".ckpt"
-        model, feature_extractor = load_model(model_fpath)
+        #model_fpath = os.path.dirname(test_fnames[0]) + "/model_" + str(tiles[tle]) + ".ckpt"
+        #model, feature_extractor = load_model(model_fpath)
 
         #model, feature_extractor = get_model()
         loader, tmp, tgts2, img_data_shape, img_test = get_data(train_fname, tile, stride)
@@ -343,16 +349,18 @@ def run_conv_and_cluster(train_fname, test_fnames, tiles):
                 print(dat_full.shape)
                 output = clust.predict(dat_full)
                 cluster_and_output(output, clust, tgts2, img_data_shape, test_fnames[i], img_test, tile)
-        torch.save(model.state_dict(), os.path.dirname(test_fnames[0]) + "/model_" + str(tiles[tle]) + ".ckpt")
+        #torch.save(model.state_dict(), os.path.dirname(test_fnames[0]) + "/model_" + str(tiles[tle]) + ".ckpt")
         joblib.dump(clust, os.path.dirname(test_fnames[0]) + "/clust_" + str(tiles[tle]) + ".joblib") 
-
-
+    torch.save(model.state_dict(), os.path.dirname(test_fnames[0]) + "/feature_extractor.ckpt")
+ 
 def run_pretrained_conv_and_cluster(test_fnames, tiles):
 
+    model_fpath = os.path.dirname(test_fnames[0]) + "/feature_extractor.ckpt"
+    model, feature_extractor = load_model(model_fpath)
     for tle in range(len(tiles)):
-  
-        model_fpath = os.path.dirname(test_fnames[0]) + "/model_" + str(tiles[tle]) + ".ckpt"
-        model, feature_extractor = load_model(model_fpath)
+   
+        #model_fpath = os.path.dirname(test_fnames[0]) + "/model_" + str(tiles[tle]) + ".ckpt"
+        #model, feature_extractor = load_model(model_fpath)
 
         if torch.cuda.is_available():
             model = model.cuda()
