@@ -224,6 +224,9 @@ def run_zonal_hist(yml_conf):
     zone_min = yml_conf["data"]["zone_min"]
     zone_max = yml_conf["data"]["zone_max"]
 
+    if isinstance(out_tag, list):
+        out_tag = out_tag[0]
+
 
     zonal_histogram = None
     poly_knns = []

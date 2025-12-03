@@ -104,7 +104,8 @@ def update_config_gtiff_gen(yml_conf, training_conf, config_dict, context_assign
     if not reuse_gtiffs:
         gtiff_data = input_fname_builder(yml_conf)
         gtiff_data, cluster_fnames = cluster_fname_builder(training_conf["output"]["out_dir"], gtiff_data)
-     
+        config_dict["data"]["clust_reader_type"] = "zarr_to_numpy"
+        config_dict["gen_from_geotiffs"] = False
         config_dict["data"]["gtiff_data"] = gtiff_data
         config_dict["data"]["cluster_fnames"] = cluster_fnames
 
@@ -258,7 +259,6 @@ def run_basic_inference_geolocation(yml_conf):
 
     #Generate config
     if "tiered_masking" in context_conf["context"]:
-        tiled_features_conf = update_config_conv_and_cluster(yml_conf, training_conf["output"]["out_dir"])
         config_dict = update_config_tiered_gtiff_gen(yml_conf, training_conf, config_dict)
     else:
         config_dict = update_config_gtiff_gen(yml_conf, training_conf, config_dict)
@@ -270,6 +270,13 @@ def run_basic_inference_geolocation(yml_conf):
 
  
     if "tiered_masking" in context_conf["context"]:
+
+        print("Generating geolocated products")
+        config_dict["context"]["apply_context"] = False
+        run_geotiff_gen(config_dict) #Need Geotiffs to do conv_and_cluster
+        tiled_features_conf = update_config_conv_and_cluster(yml_conf, training_conf["output"]["out_dir"])
+        config_dict["context"]["apply_context"] = True
+        
  
         config_fname = build_config_fname_conv_and_cluster(yml_conf["config_dir"], yml_conf["run_uid"])
         with open(config_fname, 'w') as fle:
@@ -279,7 +286,7 @@ def run_basic_inference_geolocation(yml_conf):
         conv_and_cluster(tiled_features_conf)
 
 
-    print("Generating geolocated products")
+    print("Generating geolocated context assigned products")
     run_geotiff_gen(config_dict) 
 
     if "contour_config" in yml_conf:
