@@ -1178,7 +1178,7 @@ def read_burn_severity_stacks(flename, **kwargs):
 def read_gtiff_generic(flename, **kwargs): 
 	dat = gdal.Open(flename, gdal.GA_ReadOnly).ReadAsArray()
 	print(dat.shape)
-	dat[np.where(dat.max() <= 0.0)] = -9999.0
+	#dat[np.where(dat.max() <= 0.0)] = -9999.0
 
 	tmp1 = None
 	tmp2 = None
@@ -1358,6 +1358,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
                 if abs(poi2.geometry.distance(poi.geometry)) < radius_degrees:
                     #print(poi.geometry, poi2.geometry, poi2.geometry.distance(poi.geometry))
                     clust_val = clust[index2] / 1000.0 
+                    #print("HERE", clust_val, clust_fname)
                     #if  discard_lower  and str(clust_val) in lookup and np.digitize(poi[use_key], ranges) < lookup[str(clust_val)]:
                     #    continue
                     neighbours.append(index2)
