@@ -13,8 +13,6 @@ import torch
 from einops import rearrange, repeat
 from torch import nn
 
-from clay.model import Encoder
-
 
 class MAESegmentEncoder(nn.Module):
     """

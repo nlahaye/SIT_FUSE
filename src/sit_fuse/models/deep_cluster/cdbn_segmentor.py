@@ -121,7 +121,6 @@ class CDBNSegmentor(nn.Module):
 
     def __init__(self, num_classes, feature_maps, cdbn_encoder):
         super().__init__()
-        # Default values are for the clay mae base model.
         self.encoder = CDBNSegmentEncoder(
             cdbn_encoder,
             feature_maps=feature_maps,
