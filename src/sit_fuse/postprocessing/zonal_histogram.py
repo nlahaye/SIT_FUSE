@@ -134,7 +134,7 @@ def gen_zonal_histogram(zone_raster_path, value_raster_path, zonal_histogram = N
     else:
         zone_array_0 = gdal.Open(zone_raster_path).ReadAsArray()
 
-    write_geotiff(gdal.Open(value_raster_path), zone_array_0 , "regridded_polygons.tif")
+    #write_geotiff(gdal.Open(value_raster_path), zone_array_0 , "regridded_polygons.tif")
 
     zone_array_1 = zone_array_0
     zone_array_1[np.where(zone_array_1 == (zone_ind-1))] = 255
@@ -270,7 +270,7 @@ def run_zonal_hist(yml_conf):
             dump(poly_knns, handle, True, pickle.HIGHEST_PROTOCOL)
 
         #numpy.save(os.path.join(out_dir, out_tag[-1] + "_base_cluster_polygon_knn_graphs.npz"), poly_knns, allow_pickle=True)
-    return os.path.join(out_dir, out_tags[-1] + "_hist_dict.pkl"), os.path.join(out_dir, out_tags[-1] + "_base_cluster_polygon_knn_graphs.pkl")
+    return os.path.join(out_dir, out_tag + "_hist_dict.pkl"), os.path.join(out_dir, out_tag + "_base_cluster_polygon_knn_graphs.pkl")
 
 if __name__ == '__main__':
 
