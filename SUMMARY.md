@@ -54,6 +54,8 @@
       * [Example Config File](user-guide/code-configuration/data-combination-colocation-and-resampling/example-config.md)
     * [Context Assignment](user-guide/code-configuration/context-assignment.md)
   * [Model Training](user-guide/model-training/README.md)
+    * [Training and Preprocessing Pipeline](user-guide/model-training/training-and-preprocessing-pipeline/README.md)
+      * [EMIT Training and Preprocessing Pipeline](user-guide/model-training/training-and-preprocessing-pipeline/emit-training-and-preprocessing-pipeline.md)
     * [Training Dataset Preprocessing](user-guide/model-training/training-dataset-preprocessing-examples/README.md)
       * [Code configuration](user-guide/model-training/training-dataset-preprocessing-examples/code-configuration.md)
     * [Training Command](user-guide/model-training/training-command-examples.md)

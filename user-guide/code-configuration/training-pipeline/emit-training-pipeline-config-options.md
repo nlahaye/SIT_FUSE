@@ -1,4 +1,14 @@
+---
+description: Config options for EMIT Data Preprocessing and Training Pipeline
+---
+
 # EMIT Training Pipeline Config Options
+
+To be used with:
+
+{% content-ref url="../../model-training/training-and-preprocessing-pipeline/emit-training-and-preprocessing-pipeline.md" %}
+[emit-training-and-preprocessing-pipeline.md](../../model-training/training-and-preprocessing-pipeline/emit-training-and-preprocessing-pipeline.md)
+{% endcontent-ref %}
 
 ```
 file_re: A regular expression (compatible with Python's re library) that will allow the code to identify input files of interest. Group 1 of the regular expression should map to the filename's timestamp. This allows users to specify timestamps associated with training scenes, so the model can split the data accordingly. See the example for further details.
