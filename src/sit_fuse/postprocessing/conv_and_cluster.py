@@ -7,7 +7,7 @@ from torchsummary import summary
 from sklearn.cluster import MiniBatchKMeans, AffinityPropagation
 import os
 import joblib
-from torchvision.models import resnet152, ResNet152_Weights
+from torchvision.models import resnet18
 from torchvision.models.feature_extraction import create_feature_extractor
 import argparse
 from sit_fuse.utils import read_yaml
@@ -48,7 +48,7 @@ def write_geotiff(dat, imgData, fname):
 def load_model(model_fpath):
 
     # Step 1: Initialize model with the best available weights
-    model = resnet152(weights=None)
+    model = resnet18(weights=None)
     model.conv1 = torch.nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False) #here 4 indicates 4-channel input
     model.load_state_dict(torch.load(model_fpath))
 
@@ -60,7 +60,7 @@ def load_model(model_fpath):
 def get_model():
 
     # Step 1: Initialize model with the best available weights
-    model = resnet152(weights=None)
+    model = resnet18(weights=None)
     model.conv1 = torch.nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False) #here 4 indicates 4-channel input
     initialize_weights(model)
     model.eval()
@@ -233,7 +233,7 @@ def cluster_and_output(output, clust, tgts2, img_data_shape, fname, img_test, ti
 
 def pretrained_conv_and_cluster(clust, model, feature_extractor, test_fnames, tile):
 
-    stride = int(tile*0.6)
+    stride = int(tile) #int(tile*0.6)
 
     for i in range(len(test_fnames)):
         loader, tmp, tgts2, img_data_shape, img_test = get_data(test_fnames[i], tile, stride)
@@ -267,51 +267,51 @@ def pretrained_conv_and_cluster(clust, model, feature_extractor, test_fnames, ti
 
 
  
-def run_conv_and_cluster(train_fname, test_fnames, tiles): 
+def run_conv_and_cluster(train_fnames, test_fnames, tiles): 
     model_fpath = os.path.dirname(test_fnames[0]) + "/feature_extractor.ckpt"
     if os.path.exists(model_fpath):
         model, feature_extractor = load_model(model_fpath)
     else:
         model, feature_extractor = get_model()
     for tle in range(len(tiles)): 
+        if os.path.exists(os.path.dirname(test_fnames[0]) + "/clust_" + str(tiles[tle]) + ".joblib"):
+            continue
 
         tile = tiles[tle]
 
-        stride = int(tile*0.6)
+        stride = int(tile) #int(tile*0.6)
  
         #model_fpath = os.path.dirname(test_fnames[0]) + "/model_" + str(tiles[tle]) + ".ckpt"
         #model, feature_extractor = load_model(model_fpath)
 
         #model, feature_extractor = get_model()
-        loader, tmp, tgts2, img_data_shape, img_test = get_data(train_fname, tile, stride)
-        loader_edge, tgts2_edge = get_edge_tiles(train_fname, tile, stride)
- 
-        print(tmp.shape)
-
         dat_full = None
         clust = None
-
         with torch.no_grad():
             if torch.cuda.is_available():
                 model = model.cuda()
                 feature_extractor = feature_extractor.cuda()
-            #print(summary(model, (1,tile,tile)))  
+            for train_fname in train_fnames:
+                loader, tmp, tgts2, img_data_shape, img_test = get_data(train_fname, tile, stride)
+                loader_edge, tgts2_edge = get_edge_tiles(train_fname, tile, stride)
+ 
+                print(tmp.shape)
+ 
+                dat_full = generate_features(model, feature_extractor, loader)
+                dat_full_edge = generate_features(model, feature_extractor, loader_edge)
 
-            dat_full = generate_features(model, feature_extractor, loader)
-            dat_full_edge = generate_features(model, feature_extractor, loader_edge)
-
-            print(dat_full.shape, dat_full_edge.shape, tgts2.shape, tgts2_edge.shape)
-            dat_full = np.concatenate((dat_full, dat_full_edge), axis=0)
-            tgts2 = np.concatenate((tgts2, tgts2_edge), axis=0)
+                print(dat_full.shape, dat_full_edge.shape, tgts2.shape, tgts2_edge.shape)
+                dat_full = np.concatenate((dat_full, dat_full_edge), axis=0)
+                tgts2 = np.concatenate((tgts2, tgts2_edge), axis=0)
 
             clust = train_cluster(dat_full)
      
             #model = model.cpu()
 
-        print(tmp.shape)
-
-        output = clust.predict(dat_full)
-        cluster_and_output(output, clust, tgts2, img_data_shape, train_fname, img_test, tile)
+            print(tmp.shape)
+ 
+        #output = clust.predict(dat_full)
+        #cluster_and_output(output, clust, tgts2, img_data_shape, train_fname, img_test, tile)
 
         del loader
         del tmp
@@ -380,17 +380,19 @@ def conv_and_cluster_outside(yml_fpath):
 def conv_and_cluster(yml_conf):
 
     #Run 
-    train_fname = yml_conf["train_fname"]
+    train_fnames = yml_conf["train_fnames"]
     test_fnames = yml_conf["test_fnames"]
     tiles = yml_conf["tile_size"]
+    if not isinstance(train_fnames, list):
+        train_fnames = [train_fnames]
 
     print(yml_conf["test_fnames"][0])
 
 
-    if os.path.exists(os.path.dirname(test_fnames[0]) + "/clust_" + str(tiles[0]) + ".joblib"):
+    if os.path.exists(os.path.dirname(test_fnames[0]) + "/clust_" + str(tiles[-1]) + ".joblib"):
         run_pretrained_conv_and_cluster(test_fnames, tiles)
     else:
-        run_conv_and_cluster(train_fname, test_fnames, tiles)
+        run_conv_and_cluster(train_fnames, test_fnames, tiles)
  
 
 

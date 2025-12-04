@@ -1,53 +1,62 @@
 name: sit_fuse
 channels:
   - pytorch
-  - rapidsai
   - nvidia
   - conda-forge
-  - defaults
 dependencies:
   - _libgcc_mutex
   - _openmp_mutex
-  - arrow-cpp
+  - aws-c-auth
   - aws-c-cal
   - aws-c-common
+  - aws-c-compression
   - aws-c-event-stream
+  - aws-c-http
   - aws-c-io
+  - aws-c-mqtt
+  - aws-c-s3
+  - aws-c-sdkutils
   - aws-checksums
+  - aws-crt-cpp
   - aws-sdk-cpp
+  - azure-core-cpp
+  - azure-identity-cpp
+  - azure-storage-blobs-cpp
+  - azure-storage-common-cpp
+  - blas
+  - blas-devel
   - blosc
   - bokeh
-  - boost-cpp
-  - brotlipy
+  - brotli-python
   - bzip2
   - c-ares
   - ca-certificates
-  - cachetools
   - cairo
   - certifi
-  - cffi
   - cfitsio
+  - charset-normalizer
   - click
   - cloudpickle
-  - cryptography
-  - cuda-python
-  - cudatoolkit
-  - cudf
-  - cudnn
-  - cuml
-  - cupy
-  - curl
+  - colorcet
+  - contourpy
+  - cuda-cudart
+  - cuda-cupti
+  - cuda-libraries
+  - cuda-nvrtc
+  - cuda-nvtx
+  - cuda-opencl
+  - cuda-runtime
+  - cuda-version
   - cytoolz
   - dask
   - dask-core
-  - dask-cuda
-  - dask-cudf
+  - dask-expr
+  - datashader
   - distributed
-  - dlpack
   - expat
-  - faiss-proc
-  - fastavro
-  - fastrlock
+  - ffmpeg
+  - filelock
+  - fmt
   - font-ttf-dejavu-sans-mono
   - font-ttf-inconsolata
   - font-ttf-source-code-pro
@@ -57,69 +66,86 @@ dependencies:
   - fonts-conda-forge
   - freetype
   - freexl
+  - fsspec
   - gdal
   - geos
   - geotiff
-  - gettext
   - gflags
   - giflib
   - glog
-  - grpc-cpp
+  - gmp
+  - gmpy2
+  - gnutls
   - hdf4
   - hdf5
-  - heapdict
+  - hupper
   - icu
+  - idna
+  - importlib-metadata
+  - importlib_metadata
   - jinja2
-  - joblib
-  - jpeg
   - json-c
   - kealib
   - keyutils
   - krb5
+  - lame
   - lcms2
   - ld_impl_linux-64
   - lerc
   - libabseil
+  - libaec
+  - libarchive
+  - libarrow
+  - libarrow-acero
+  - libarrow-dataset
+  - libarrow-substrait
   - libblas
+  - libboost-headers
   - libbrotlicommon
   - libbrotlidec
   - libbrotlienc
   - libcblas
   - libcrc32c
-  - libcudf
-  - libcuml
-  - libcumlprims
+  - libcublas
+  - libcufft
+  - libcufile
+  - libcurand
   - libcurl
   - libcusolver
   - libcusparse
-  - libdap4
   - libdeflate
   - libedit
   - libev
   - libevent
-  - libfaiss
+  - libexpat
   - libffi
+  - libgcc
   - libgcc-ng
   - libgdal
   - libgfortran-ng
   - libgfortran5
   - libglib
   - libgoogle-cloud
+  - libgoogle-cloud-storage
+  - libgrpc
+  - libhwloc
   - libiconv
+  - libjpeg-turbo
   - libkml
   - liblapack
-  - libllvm11
+  - liblapacke
+  - libllvm14
   - libnetcdf
   - libnghttp2
+  - libnpp
   - libnsl
-  - libopenblas
+  - libnvjitlink
+  - libnvjpeg
+  - libparquet
   - libpng
   - libpq
   - libprotobuf
-  - libraft-distance
-  - libraft-headers
-  - libraft-nn
-  - librmm
+  - libre2-11
   - librttopo
   - libspatialite
   - libsqlite
@@ -131,6 +157,7 @@ dependencies:
   - libuuid
   - libwebp-base
   - libxcb
+  - libxcrypt
   - libxml2
   - libzip
   - libzlib
@@ -139,54 +166,67 @@ dependencies:
   - locket
   - lz4
   - lz4-c
-  - magma
-  - magma-cuda117
+  - lzo
   - markupsafe
+  - minizip
   - mkl
+  - mkl-devel
+  - mkl-include
+  - mpc
+  - mpfr
+  - mpmath
   - msgpack-python
-  - nccl
+  - multipledispatch
   - ncurses
-  - ninja
+  - nettle
+  - networkx
   - nspr
   - nss
   - numba
-  - nvtx
+  - numpy
+  - openh264
   - openjpeg
   - openssl
   - orc
   - packaging
-  - parquet-cpp
+  - pandas
+  - param
   - partd
-  - pcre
+  - pastedeploy
   - pcre2
   - pillow
   - pip
   - pixman
+  - plaster
+  - plaster_pastedeploy
   - poppler
   - poppler-data
   - postgresql
   - proj
   - psutil
   - pthread-stubs
-  - ptxcompiler
   - pyarrow
-  - pycparser
-  - pynvml
-  - pyopenssl
-  - pyparsing
-  - pyraft
+  - pyarrow-core
+  - pyarrow-hotfix
+  - pyct
+  - pyramid
   - pysocks
   - python
   - python-dateutil
+  - python-tzdata
   - python_abi
+  - pytorch-cuda
+  - pytorch-mutex
   - pytz
   - pyyaml
+  - rapids
   - re2
   - readline
-  - rmm
+  - requests
   - s2n
+  - scipy
+  - setuptools
   - six
-  - sleef
   - snappy
   - sortedcontainers
   - spdlog
@@ -196,13 +236,19 @@ dependencies:
   - tiledb
   - tk
   - toolz
-  - treelite
+  - torchaudio
+  - tornado
+  - translationstring
+  - typing_extensions
   - tzcode
-  - ucx
-  - ucx-proc
-  - ucx-py
+  - tzdata
+  - uriparser
   - urllib3
+  - venusian
+  - webob
   - wheel
+  - xarray
+  - xarray-spatial
   - xerces-c
   - xorg-kbproto
   - xorg-libice
@@ -215,243 +261,231 @@ dependencies:
   - xorg-renderproto
   - xorg-xextproto
   - xorg-xproto
+  - xyzservices
   - xz
   - yaml
   - zict
+  - zipp
   - zlib
+  - zope.deprecation
+  - zope.interface
   - zstd
   - pip:
-    - absl-py
-    - accelerate
-    - affine
-    - aiohttp
-    - aiosignal
-    - anyio
-    - appdirs
-    - argon2-cffi
-    - argon2-cffi-bindings
-    - arrow
-    - asciitree
-    - astropy
-    - asttokens
-    - async-timeout
-    - attrs
-    - backcall
-    - beartype
-    - beautifulsoup4
-    - bleach
-    - boto3
-    - botocore
-    - byol-pytorch
-    - cfgv
-    - cftime
-    - chardet
-    - charset-normalizer
-    - click-plugins
-    - cligj
-    - comm
-    - configobj
-    - contourpy
-    - cycler
-    - cython
-    - d2l
-    - dask-glm
-    - dask-ml
-    - dbfread
-    - debugpy
-    - decorator
-    - defusedxml
-    - dill
-    - diplib
-    - distlib
-    - docker-pycreds
-    - einops
-    - entrypoints
-    - et-xmlfile
-    - executing
-    - fasteners
-    - fastervit
-    - fastjsonschema
-    - filelock
-    - fiona
-    - fonttools
-    - fqdn
-    - frozenlist
-    - fsspec
-    - gdown
-    - geocube
-    - geographiclib
-    - geopandas
-    - geopy
-    - gitdb
-    - gitpython
-    - google-auth
-    - google-auth-oauthlib
-    - gputil
-    - grpcio
-    - h5py
-    - healpy
-    - huggingface-hub
-    - identify
-    - idna
-    - ijepa
-    - imageio
-    - importlib-metadata
-    - ipykernel
-    - ipython
-    - ipython-genutils
-    - ipywidgets
-    - isoduration
-    - jedi
-    - jmespath
-    - jsonpointer
-    - jsonschema
-    - jupyter
-    - jupyter-client
-    - jupyter-console
-    - jupyter-core
-    - jupyter-events
-    - jupyter-server
-    - jupyter-server-terminals
-    - jupyterlab-pygments
-    - jupyterlab-widgets
-    - kiwisolver
-    - kornia
-    - learnergy
-    - lightning-utilities
-    - markdown
-    - matplotlib
-    - matplotlib-inline
-    - mistune
-    - multidict
-    - multipledispatch
-    - munch
-    - nbclassic
-    - nbclient
-    - nbconvert
-    - nbformat
-    - nest-asyncio
-    - netcdf4
-    - networkx
-    - nodeenv
-    - notebook
-    - notebook-shim
-    - numcodecs
-    - numpy
-    - nvidia-cublas-cu11
-    - nvidia-cuda-nvrtc-cu11
-    - nvidia-cuda-runtime-cu11
-    - nvidia-cudnn-cu11
-    - oauthlib
-    - odc-geo
-    - onnx
-    - onnxconverter-common
-    - opencv-python
-    - openpyxl
-    - pandas
-    - pandocfilters
-    - parso
-    - pexpect
-    - pickleshare
-    - pixel-level-contrastive-learning
-    - platformdirs
-    - pooch
-    - pot
-    - pre-commit
-    - prometheus-client
-    - prompt-toolkit
-    - protobuf
-    - ptyprocess
-    - pure-eval
-    - py-spy
-    - py4j
-    - pyasn1
-    - pyasn1-modules
-    - pyerfa
-    - pygments
-    - pyhdf
-    - pykdtree
-    - pypmml
-    - pyproj
-    - pyresample
-    - pyrsistent
-    - python-json-logger
-    - pytorch-lightning
-    - pywavelets
-    - pyzmq
-    - qtconsole
-    - qtpy
-    - rasterio
-    - ray
-    - regionmask
-    - requests
-    - requests-oauthlib
-    - rfc3339-validator
-    - rfc3986-validator
-    - rioxarray
-    - rsa
-    - s3transfer
-    - safetensors
-    - schedulefree
-    - scikit-image
-    - scikit-learn
-    - scipy
-    - segformer-pytorch
-    - send2trash
-    - sentry-sdk
-    - setproctitle
-    - setuptools
-    - shap
-    - shapely
-    - skl2onnx
-    - sklearn
-    - sklearn-json
-    - sklearn-pandas
-    - sklearn2pmml
-    - slicer
-    - smmap
-    - sniffio
-    - snuggs
-    - soupsieve
-    - stack-data
-    - tabulate
-    - tensorboard
-    - tensorboard-data-server
-    - tensorboard-plugin-wit
-    - terminado
-    - threadpoolctl
-    - tifffile
-    - timm
-    - tinycss2
-    - torch
-    - torchmetrics
-    - torchsummary
-    - torchvision
-    - tornado
-    - tqdm
-    - traitlets
-    - treelite-runtime
-    - typing-extensions
-    - tzdata
-    - uri-template
-    - virtualenv
-    - wandb
-    - wcwidth
-    - webcolors
-    - webencodings
-    - websocket-client
-    - werkzeug
-    - widgetsnbextension
-    - x-transformers
-    - xarray
-    - yarl
-    - zarr
-    - zipp
-    - git+https://github.com/nlahaye/I-JEPA.git
-    - git+https://github.com/nlahaye/learnergy.git@module_list_update
-    - git+https://github.com/nlahaye/x-transformers.git
-    - git+https://github.com/nlahaye/SIT_FUSE.git
-    - git+https://github.com/nlahaye/vit-pytorch.git
-    - git+https://github.com/nlahaye/pytorch-segmentation.git
-    - git+https://github.com/nlahaye/pixel-level-contrastive-learning.git
-
+      - absl-py
+      - accelerate
+      - affine
+      - aiohttp
+      - aiosignal
+      - anyio
+      - appdirs
+      - argon2-cffi
+      - argon2-cffi-bindings
+      - arrow
+      - asciitree
+      - astropy
+      - astropy-iers-data
+      - asttokens
+      - async-lru
+      - attrs
+      - babel
+      - beartype
+      - beautifulsoup4
+      - bleach
+      - byol-pytorch
+      - cachetools
+      - captum
+      - cffi
+      - cfgv
+      - cftime
+      - click-plugins
+      - cligj
+      - comm
+      - configobj
+      - cycler
+      - dask-glm
+      - dask-ml
+      - dbfread
+      - debugpy
+      - decorator
+      - defusedxml
+      - diplib
+      - distlib
+      - docker-pycreds
+      - docstring-parser
+      - donfig
+      - einops
+      - executing
+      - fasteners
+      - fastjsonschema
+      - fiona
+      - fonttools
+      - fqdn
+      - frozenlist
+      - geocube
+      - geographiclib
+      - geopandas
+      - geopy
+      - gitdb
+      - gitpython
+      - google-auth
+      - gputil
+      - grpcio
+      - h11
+      - h5py
+      - healpy
+      - httpcore
+      - httpx
+      - huggingface-hub
+      - identify
+      - imageio
+      - importlib-resources
+      - ipykernel
+      - ipython
+      - ipywidgets
+      - isoduration
+      - jedi
+      - joblib
+      - json5
+      - jsonargparse
+      - jsonpointer
+      - jsonschema
+      - jsonschema-specifications
+      - jupyter
+      - jupyter-client
+      - jupyter-console
+      - jupyter-core
+      - jupyter-events
+      - jupyter-lsp
+      - jupyter-server
+      - jupyter-server-terminals
+      - jupyterlab
+      - jupyterlab-pygments
+      - jupyterlab-server
+      - jupyterlab-widgets
+      - kiwisolver
+      - kornia
+      - kornia-rs
+      - lazy-loader
+      - learnergy
+      - lightning
+      - lightning-utilities
+      - markdown
+      - matplotlib
+      - matplotlib-inline
+      - mistune
+      - multidict
+      - nbclient
+      - nbconvert
+      - nbformat
+      - nest-asyncio
+      - netcdf4
+      - nodeenv
+      - notebook
+      - notebook-shim
+      - numcodecs
+      - nvidia-cublas-cu12
+      - nvidia-cuda-cupti-cu12
+      - nvidia-cuda-nvrtc-cu12
+      - nvidia-cuda-runtime-cu12
+      - nvidia-cudnn-cu12
+      - nvidia-cufft-cu12
+      - nvidia-cufile-cu12
+      - nvidia-curand-cu12
+      - nvidia-cusolver-cu12
+      - nvidia-cusparse-cu12
+      - nvidia-cusparselt-cu12
+      - nvidia-nccl-cu12
+      - nvidia-nvjitlink-cu12
+      - nvidia-nvshmem-cu12
+      - nvidia-nvtx-cu12
+      - odc-geo
+      - opencv-python
+      - overrides
+      - pandocfilters
+      - parso
+      - pexpect
+      - platformdirs
+      - pooch
+      - pre-commit
+      - prometheus-client
+      - prompt-toolkit
+      - protobuf
+      - ptyprocess
+      - pure-eval
+      - pyasn1
+      - pyasn1-modules
+      - pycparser
+      - pyerfa
+      - pygments
+      - pyhdf
+      - pykdtree
+      - pyparsing
+      - pyproj
+      - pyresample
+      - python-box
+      - python-json-logger
+      - pytorch-lightning
+      - pyzmq
+      - qtconsole
+      - qtpy
+      - rasterio
+      - referencing
+      - regionmask
+      - rfc3339-validator
+      - rfc3986-validator
+      - rioxarray
+      - rpds-py
+      - rsa
+      - safetensors
+      - schedulefree
+      - scikit-image
+      - scikit-learn
+      - send2trash
+      - sentry-sdk
+      - setproctitle
+      - shapely
+      - smmap
+      - sniffio
+      - snuggs
+      - soupsieve
+      - sparse
+      - stack-data
+      - sympy
+      - tabulate
+      - tensorboard
+      - tensorboard-data-server
+      - terminado
+      - threadpoolctl
+      - tifffile
+      - timm
+      - tinycss2
+      - torch
+      - torchinfo
+      - torchmetrics
+      - torchsummary
+      - torchvision
+      - tqdm
+      - traitlets
+      - triton
+      - types-python-dateutil
+      - typeshed-client
+      - uri-template
+      - virtualenv
+      - vit-pytorch
+      - wandb
+      - wcwidth
+      - webcolors
+      - webencodings
+      - websocket-client
+      - werkzeug
+      - widgetsnbextension
+      - yarl
+      - zarr
+      - git+https://github.com/Clay-foundation/model.git
+      - git+https://github.com/nlahaye/I-JEPA.git
+      - git+https://github.com/nlahaye/x-transformers.git
+      - git+https://github.com/nlahaye/SIT_FUSE.git
+      - git+https://github.com/nlahaye/vit-pytorch.git
+      - git+https://github.com/nlahaye/pytorch-segmentation.git
+      - git+https://github.com/nlahaye/pixel-level-contrastive-learning.git
+prefix: /home/nlahaye/miniforge3/envs/sit_fuse

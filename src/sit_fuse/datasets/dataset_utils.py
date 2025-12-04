@@ -148,6 +148,88 @@ def get_train_dataset_sf(yml_conf):
     return data    
 
     
+def get_scenes(yml_conf, filenames, stats = None):
+
+    #Get config values 
+    pixel_padding = yml_conf["data"]["pixel_padding"]
+    number_channel = yml_conf["data"]["number_channels"]
+    data_reader =  yml_conf["data"]["reader_type"]
+    data_reader_kwargs = yml_conf["data"]["reader_kwargs"]
+    fill = yml_conf["data"]["fill_value"]
+    chan_dim = yml_conf["data"]["chan_dim"]
+    valid_min = yml_conf["data"]["valid_min"]
+    valid_max = yml_conf["data"]["valid_max"]
+    delete_chans = yml_conf["data"]["delete_chans"]
+    scale_data = yml_conf["data"]["scale_data"]
+
+    transform_chans = yml_conf["data"]["transform_default"]["chans"]
+    transform_values =  yml_conf["data"]["transform_default"]["transform"]
+
+    read_func = get_read_func(data_reader)
+
+
+    data_local = []
+    increment = 0
+    for i in range(0, len(filenames)):
+        #Read data in one file at a time
+
+        print(filenames[i])
+        #Use read function passed in to get data into numpy ndarray
+        dat = read_func(filenames[i], **read_func_kwargs)
+        if dat is None:
+            continue
+
+        dat = dat.astype(np.float32)
+        print(dat.shape)
+        #If single channel, 2D data, transform into 3D (setting 3rd dimension to 1)
+        if dat.ndim == 2:
+            dat = np.expand_dims(dat, chan_dim)
+        increment = dat.ndim - 3
+        #Apply channel-specific transformations, if any.                
+        for t in range(len(transform_chans)):
+            slc = [slice(None)] * dat.ndim
+            slc[chan_dim+increment] = slice(transform_chans[t], transform_chans[t]+1)
+            tmp = dat[tuple(slc)]
+            if valid_min is not None:
+                inds = np.where(tmp < valid_min - 0.00000000005)
+                tmp[inds] = transform_value[t]
+            if valid_max is not None:
+                inds = np.where(tmp > valid_max - 0.00000000005)
+                tmp[inds] = transform_value[t]
+            dat[tuple(slc)] = tmp
+        if len(transform_chans) > 0:
+            del slc
+            del tmp
+
+        #Delete channels set to be unused in config     
+        dat = np.delete(dat, delete_chans, chan_dim+increment)
+
+        final_fill = -999999
+        if stats is not None and "mean" in stats:
+            final_fill = stats["mean"]
+
+        #Set all other values outside of specified valid range to fill
+        if valid_min is not None:
+            dat[np.where(dat < valid_min - 0.00000000005)] = final_fill
+        if valid_max is not None:
+            dat[np.where(dat > valid_max - 0.00000000005)] = final_fill
+        if fill_value is not None:
+            dat[np.where(dat == fill_value)] = final_fill
+        dat[~np.isfinite(dat)] = final_fill
+        #Move specified channel dimension to 3rd position for uniformity
+        dat = np.moveaxis(dat, chan_dim+increment, 2+increment)
+        print("HERE", dat.shape, len(data_local))
+        #Append data and stratification data from current files to full set
+        if dat.ndim == 3:
+            self.init_shape.append(dat.shape[:2])
+            data_local.append(dat)
+        else:
+            if len(data_local) == 0:
+                data_local = dat
+            else:
+                data_local = np.concatenate((data_local, dat), axis=0)
+
+
 
 
 def get_prediction_dataset(yml_conf, fname):

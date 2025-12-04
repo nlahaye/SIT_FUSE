@@ -31,6 +31,8 @@ def run_hab_post_inference_pipeline(yml_conf):
     print("Running Context-Free Geotiff Generation")
     yml_conf = run_context_free_geotiff_generation(yml_conf) 
 
+    out_dir = yml_conf["final_product_dir"]
+
     if not yml_conf["reuse_context"]:
         for run in species_run:
             print("Generating products for", run)
@@ -42,7 +44,6 @@ def run_hab_post_inference_pipeline(yml_conf):
             run_geotiff_generation(yml_conf, classes, run, is_final = False)    
  
             if no_heir:
-                out_dir = yml_conf["final_product_dir"]
 
                 print("Running No_Heir data stream merge")
                 yml_conf = run_data_stream_merge(yml_conf, out_dir, run, no_heir = True)
@@ -59,8 +60,6 @@ def run_hab_post_inference_pipeline(yml_conf):
                 print("Generating final products")
                 run_geotiff_generation(yml_conf, final_class_set, run, is_final = True)
 
-                print("Running final data stream merge")
-                yml_conf = run_data_stream_merge(yml_conf, out_dir, run, no_heir = False)
     else:
         for run in species_run:
             print("Generating products for", run)
@@ -72,8 +71,13 @@ def run_hab_post_inference_pipeline(yml_conf):
             print("Running Context-Assigned Geotiff Generation")
             run_geotiff_generation(yml_conf, classes, run, is_final = True)    
 
- 
-    
+    out_dir = yml_conf["final_product_dir"]
+    print("Running final data stream merge")
+
+    for run in species_run:
+        yml_conf = run_data_stream_merge(yml_conf, out_dir, run, no_heir = False)
+  
+    #Splitting out loop for ease of visualization
     for run in species_run:
         validation_output = run_validation(yml_conf, run)
         if "validation" not in yml_conf:

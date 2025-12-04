@@ -16,7 +16,7 @@ from sit_fuse.postprocessing.zonal_histogram import run_zonal_hist
 from sit_fuse.postprocessing.class_compare import run_class_compare
 
 from sit_fuse.pipelines.inference.inference_utils import run_inference_only, update_config_gtiff_gen, build_config_fname_gtiff_gen, \
-update_config_conv_and_cluster, build_config_fname_conv_and_cluster, update_config_tiered_gtiff_gen
+update_config_conv_and_cluster, build_config_fname_conv_and_cluster, update_config_tiered_gtiff_gen, run_contour_and_fill
 from sit_fuse.pipelines.context_assign.context_assign_constants import *
 
 
@@ -57,9 +57,9 @@ def class_compare(yml_conf, zonal_hist_fpath = None, tiered = False):
     config_dict = update_config_class_compare(config_dict, zonal_hist_fpath) 
 
     if tiered:
-        config_dict["dbf_percentage_thresh"] = 1.0 #Allow for any tiled features that include object type of interest
+        config_dict["dbf_percentage_thresh"] = yml_conf["tiled_agreement_thresh"] #1.0 #Allow for any tiled features that include object type of interest
     else:
-        config_dict["dbf_percentage_thresh"] = 0.9 #Slightly less constrained - remove majoritive negative clusters at the pixel level
+        config_dict["dbf_percentage_thresh"] = yml_conf["pixel_agreement_thresh"] #0.51 #Slightly less constrained - remove majoritive negative clusters at the pixel level
 
 
     #Dump to file
@@ -129,51 +129,58 @@ def run_context_assign_experiment(yml_conf):
     #Add generated class list to config 
     config_dict["context"]["clusters"] = classes
 
-    tiled_features_conf = update_config_conv_and_cluster(yml_conf, training_conf["output"]["out_dir"])
+    if len(yml_conf["tile_tiers"]) > 0:
+        tiled_features_conf = update_config_conv_and_cluster(yml_conf, training_conf["output"]["out_dir"])
 
-    config_fname = build_config_fname_conv_and_cluster(yml_conf["config_dir"], yml_conf["run_uid"])
-    with open(config_fname, 'w') as fle:
-        yaml.dump(tiled_features_conf, fle)
-
-    conv_and_cluster(tiled_features_conf)
-
-    tiered_classes = []
-    for j in range(len(yml_conf["tile_tiers"])):
-        tiered_zonal_hist_conf = update_config_tiered_zonal_hist(yml_conf, training_conf, zonal_hist_conf, yml_conf["tile_tiers"][j])
-        config_fname = build_config_fname_zonal_hist(yml_conf["config_dir"], yml_conf["run_uid"] + "_tiered_masking_" + str(yml_conf["tile_tiers"][j]))
+        config_fname = build_config_fname_conv_and_cluster(yml_conf["config_dir"], yml_conf["run_uid"])
         with open(config_fname, 'w') as fle:
-            yaml.dump(tiered_zonal_hist_conf, fle)
+            yaml.dump(tiled_features_conf, fle)
 
-        print("Generating zonal hist. Tile size:", str(yml_conf["tile_tiers"][j]))
-        zonal_hist_fname, _ = run_zonal_histogram(tiered_zonal_hist_conf) 
+        conv_and_cluster(tiled_features_conf)
 
-        print("Running tile-level class assignment. Tile size:", str(yml_conf["tile_tiers"][j]))
-        classes = class_compare(yml_conf, zonal_hist_fname, tiered = True)
+        tiered_classes = []
+        for j in range(len(yml_conf["tile_tiers"])):
+            tiered_zonal_hist_conf = update_config_tiered_zonal_hist(yml_conf, training_conf, zonal_hist_conf, yml_conf["tile_tiers"][j])
+            config_fname = build_config_fname_zonal_hist(yml_conf["config_dir"], yml_conf["run_uid"] + "_tiered_masking_" + str(yml_conf["tile_tiers"][j]))
+            with open(config_fname, 'w') as fle:
+                yaml.dump(tiered_zonal_hist_conf, fle)
 
-        classes.append(-1.0)
-        tiered_classes.append(classes) 
+            print("Generating zonal hist. Tile size:", str(yml_conf["tile_tiers"][j]))
+            zonal_hist_fname, _ = run_zonal_histogram(tiered_zonal_hist_conf) 
+
+            print("Running tile-level class assignment. Tile size:", str(yml_conf["tile_tiers"][j]))
+            classes = class_compare(yml_conf, zonal_hist_fname, tiered = True)
+
+            classes.append(-1.0)
+            tiered_classes.append(classes) 
        
 
-    tiered_classes_full = []
-    for i in range(len(config_dict["data"]["cluster_fnames"])):
-        tiered_classes_full.append(tiered_classes)
-    print(tiered_classes)
-    print("Generating config for tiered masking")
-    tiered_masking = copy.deepcopy(YAML_TEMPLATE_TIERED_MASKING) 
-
-    tiered_masking["tiered_classes"] = tiered_classes_full
-    config_dict["context"]["tiered_masking"] = tiered_masking
-    config_dict = update_config_tiered_gtiff_gen(yml_conf, training_conf, config_dict)
-   #Dump to file
+        tiered_classes_full = []
+        for i in range(len(config_dict["data"]["cluster_fnames"])):
+            tiered_classes_full.append(tiered_classes)
+        print(tiered_classes)
+        print("Generating config for tiered masking")
+        tiered_masking = copy.deepcopy(YAML_TEMPLATE_TIERED_MASKING) 
+    
+        tiered_masking["tiered_classes"] = tiered_classes_full
+        config_dict["context"]["tiered_masking"] = tiered_masking
+        config_dict = update_config_tiered_gtiff_gen(yml_conf, training_conf, config_dict)
+    else:
+        config_dict["context"]["apply_context"] = True
+    #Dump to file
     config_fname = build_config_fname_gtiff_gen(yml_conf["config_dir"],  yml_conf["run_uid"] + "_geolocated_clusters")
     with open(config_fname, 'w') as fle:
         yaml.dump(config_dict, fle)
-
+ 
 
 
     print("Generating geolocated products that incorporate tiered masking")
     run_geotiff_gen(config_dict)
 
+
+    if "contour_config" in yml_conf:
+        print("Generating contoured products")
+        run_contour_and_fill(yml_conf, config_dict)
 
 
 """

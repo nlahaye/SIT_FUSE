@@ -13,7 +13,7 @@ import torch
 from einops import rearrange, repeat
 from torch import nn
 
-from clay.model import Encoder
+from claymodel.model import Encoder
 
 
 class SegmentEncoder(Encoder):

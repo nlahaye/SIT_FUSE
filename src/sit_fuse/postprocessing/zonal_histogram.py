@@ -130,7 +130,6 @@ def gen_zonal_histogram(zone_raster_path, value_raster_path, zonal_histogram = N
  
     #write_geotiff(gdal.Open(value_raster_path), zone_array_0 , "regridded_polygons.tif")
 
-    #print("HERE", np.unique(zone_array_0), zone_ind-1)
     zone_array_1 = zone_array_0
     zone_array_1[np.where(zone_array_1 == (zone_ind-1))] = 255
     zone_array_1[np.where(zone_array_1 != 255)] = 0

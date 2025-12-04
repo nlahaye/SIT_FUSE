@@ -187,6 +187,7 @@ def read_label_counts_pkl(pkl_list):
         init_data_label_counts[i] = {'total' : 0} 
 
         itr = pkl_list[i]
+        print(itr.keys())
         for key in itr.keys():
                 try:
                     label = float(key)
@@ -364,7 +365,7 @@ def run_compare_dbf(dbf_list, percent_threshold):
     #    if assignment[1][i] not in assignment[0]:
     #        asn1.append(assignment[1][i])
     #assignment[1] = asn1
-    #print(assignment)
+    print(assignment)
 
     #print("\n\n\nUNCERTAIN")
     #pprint(uncertain)
