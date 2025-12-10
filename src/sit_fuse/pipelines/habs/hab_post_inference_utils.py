@@ -123,7 +123,7 @@ def update_config_cf_gtiff_gen(fdir, config, instrument, geo_zarr_path, proba = 
                 out_path = os.path.join(root, mtch_no_heir.group(1)) + ".no_heir.tif"
                 config["output_files"].append(out_path)
                 #This is the same file every time, can make this more configurable if needed
-            elif mtch_no_heir is None and mtch:
+            elif not no_heir and mtch_no_heir is None and mtch:
                 config["low_res"]["data"]["filenames"].append(os.path.join(root, fle))
                 config["low_res"]["data"]["geo_filenames"].append(geo_zarr_path) 
                 out_path = os.path.join(root, mtch.group(1)) + ".tif"
@@ -137,7 +137,7 @@ def update_config_cf_gtiff_gen(fdir, config, instrument, geo_zarr_path, proba = 
                     config["low_res"]["data"]["geo_filenames"].append(geo_zarr_path) 
                     out_path = os.path.join(root, mtch_prob_no_heir.group(1)) + ".no_heir.proba.tif"
                     config["output_files"].append(out_path)
-                elif mtch_prob_no_heir is None and mtch_prob:
+                elif not_no_heir and mtch_prob_no_heir is None and mtch_prob:
                     config["low_res"]["data"]["filenames"].append(os.path.join(root, fle))
                     config["low_res"]["data"]["geo_filenames"].append(geo_zarr_path)
                     out_path = os.path.join(root, mtch_prob.group(1)) + ".proba.tif"
@@ -280,7 +280,7 @@ def update_config_data_stream_merge(yml_conf, config_dict, out_dir, species_run,
         input_paths.append(os.path.dirname(yml_conf["instruments"]["troposif"]["trop"]["cf_gtiffs"][0]))
     else:
         input_paths.append("")
- 
+
     input_paths.append(os.path.dirname(yml_conf["instruments"][instrument]["no_trop"]["cf_gtiffs"][0]))
 
     config_dict["input_paths"] = input_paths

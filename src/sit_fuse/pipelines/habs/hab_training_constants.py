@@ -152,7 +152,7 @@ REGION_BBS =  {
 
 "gulf_of_mexico" : {
  "start_lon" : -97.8985,
- "end_lon" : -80.5301,
+ "end_lon" : -74.5301,
  "start_lat" : 18.1599,
  "end_lat" : 30.4159,
 },
@@ -178,7 +178,7 @@ READER_TYPE_MAP = {
     "SNPP_VIIRS" : "viirs_oc",
     "AQUA_MODIS" : "modis_oc",
     "PACE_OCI" : "pace_oc",
-    "GOES_18_ABI": "gtiff" 
+    "GOES18_ABI": "gtiff" 
 }
 
 NUM_CHANNELS = {
@@ -191,7 +191,7 @@ NUM_CHANNELS = {
     "SNPP_VIIRS" :  5,
     "AQUA_MODIS" : 10,
     "PACE_OCI" : 1, #all channels in one file
-    "GOES_18_ABI": 1, #all channels in one file after tiff gen
+    "GOES18_ABI": 1, #all channels in one file after tiff gen
 
 }
 
