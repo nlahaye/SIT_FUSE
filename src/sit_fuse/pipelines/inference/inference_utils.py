@@ -11,8 +11,8 @@ from sit_fuse.utils import read_yaml
 from sit_fuse.postprocessing.generate_cluster_geotiffs import run_geotiff_gen
 from sit_fuse.postprocessing.conv_and_cluster import conv_and_cluster
 from sit_fuse.postprocessing.contour_and_fill import contour_and_fill
- 
-from sit_fuse.inference.generate_output import predict
+  
+from sit_fuse.inference.generate_output import predict, gen_embeddings, gen_embeddings_from_arr
 import re
 import sys
 
@@ -193,6 +193,11 @@ def update_config_conv_and_cluster(yml_conf, out_dir):
 def run_prediction(yml_conf):
 
     predict(yml_conf)
+ 
+def run_embed_gen_from_scene_arr(yml_conf, data_arr, init_shape, gen_image_shaped = True, strat_inds = None):
+
+    embed, labels = gen_embeddings_from_arr(yml_conf, data_arr, init_shape, gen_image_shaped = gen_image_shaped, strat_inds = strat_inds)
+    return embed, labels
 
 def run_embed_gen(yml_conf, fname, gen_image_shaped = True):
 
