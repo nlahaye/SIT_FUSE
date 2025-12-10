@@ -1,0 +1,12 @@
+
+start_lon: -124.00
+end_lon: -114.00
+start_lat: 28.00
+end_lat: 38.00
+
+config_dir: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/"
+
+
+input_dir: "/mnt/data/GOES_18_LA_FIRE_RADIANCES/"
+ 
+
