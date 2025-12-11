@@ -10,7 +10,7 @@ config_dir: "../../config/"
 reuse_gtiffs: False #True
 update_inputs: False
  
-input_dir: "/data/nlahaye/remoteSensing/Palm_Oil/"
+input_dir: "/home/nlahaye/Palm_Oil/"
 input_pattern: "ucayali_stacks_2020_*tif"
  
 tile_tiers: [1024, 512, 256, 128, 64, 32]
