@@ -466,6 +466,7 @@ def prep_model(yml_conf):
     data = None
     cntr = 0
     while data is None or data.data_full is None:
+        print("HERE", data is None, cntr, len(train_fnames))
         data, _  = get_prediction_dataset(yml_conf, train_fnames[cntr])
         cntr = cntr + 1
 
@@ -534,6 +535,11 @@ def predict(yml_conf):
             if generate_intermediate_output:
                 generate_output(data, model.pretrained_model, True, out_dir, output_fle + ".no_heir.clust.data", tiled = tiled)
 
+def gen_embeddings_from_arr(yml_conf, data_arr, init_shape, gen_image_shaped = True, strat_inds = None):
+
+    model = prep_model(yml_conf)
+
+    data, output_file  = get_prediction_dataset_from_scene_arr(yml_conf, data_arr, init_shape, strat_inds)
 
 def gen_embeddings(yml_conf, fname, gen_image_shaped = True):
 

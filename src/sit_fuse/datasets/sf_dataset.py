@@ -113,6 +113,42 @@ class SFDataset(torch.utils.data.Dataset):
 			else:   
 				self.data_full = self.data_full[:self.subset_training,:]
 				self.targets_full = self.targets_full[:self.subset_training,:]
+ 
+	def preprocess_data_from_scene_arr(scene_arr, init_shape, strat_inds, fill_value, chan_dim, scaler, scale, transform, no_window = False, do_shuffle=False):
+		"""
+		High level initialization function for data ingestion, preprocessesing, and Dataset initialization. Data that has already been read in (from something like dataset_utils.get_scene) and gets preprocessed/changed into n_samples x n_features dimensionality. 
+
+		:param scene_arr: List of ndarrays with scene data - generated at an intermediate point in read_and_preprocess_data.
+		:param init_shape: Shape information for the initial scene - generated at an intermediate point in read_and_preprocess_data.
+		:strat_inds: per-scene stratification indices. Can be None (and likely will be most of the time for this function - generated at an intermediate point in read_and_preprocess_data.
+		:param fill_value: Optional fill value to be used for bad/unusample samples/pixeld. Default value is -999999.
+		:param chan_dim: Optional dimension of index that represents channels/bands. Default value is 0.
+		:param scaler: Optional per-feature scaler to train and use with the dataset. If set to None, no scaling will be applied. Default value is None.
+		:param scale: Optional boolean value specifying whether or not to use scaler to scale data. Default value is False.
+		:param transform: Optional unused currently, but will be updated to be a transform function to be applied in preprocessing. Used in child classes. Default is None.
+		:param no_window: Boolean value indicating whether or not a windowing function is used to split the data. Typically False.
+		:param do_shuffle: Boolean value indicating whether or not to shuffle samples.
+		"""
+
+		#Set class attributes
+		self.scene_arr = scene_arr
+		self.init_shape = init_shape
+		self.strat_inds = strat_inds
+		self.train_indices = None
+		self.training = False
+		self.transform = transform
+		self.fill_value = fill_value
+		self.init_shape = init_shape
+		self.chan_dim = chan_dim
+		self.scaler = scaler
+		self.scale = scale
+
+		self.no_window = no_window
+		self.do_shuffle = do_shuffle
+
+		#load and preprocess data
+		self.__loaddata_from_scene_arr__()
+
 
 
 	def read_and_preprocess_data(self, filenames, read_func, read_func_kwargs, pixel_padding, delete_chans, valid_min, valid_max, fill_value = -999999, chan_dim = 0, transform_chans = [], transform_values = [], scaler = None, scale=False, transform=None, train_scaler = False, subset_training = -1, stratify_data = None, no_window = False, do_shuffle = True):
@@ -122,20 +158,22 @@ class SFDataset(torch.utils.data.Dataset):
 		:param filenames: list of paths to files that will be ingested.
 		:param read_func: function used to read in data. Common interfaces for readers have been developed and can be seen within utils
 		:param read_func_kwargs: keyword args to be passes to read_func.
-			:param pixel_padding: Number of pixels to extend per-pixel/per-sample 'neighborhood' away from center sample of focus. Can be 0.
+		:param pixel_padding: Number of pixels to extend per-pixel/per-sample 'neighborhood' away from center sample of focus. Can be 0.
 		:param delete_chans: list of channels to be deleted pror to preprocessing. Can be empty.
 		:param valid_min: Minimum valid value in data. Anything less will be set to a fill value and not used.
 		:param valid_max: Maximum valid value in data. Anything greater  will be set to a fill value and not used.
-			:param fill_value: Optional fill value to be used for bad/unusample samples/pixeld. Default value is -999999.
-			:param chan_dim: Optional dimension of index that represents channels/bands. Default value is 0.
+		:param fill_value: Optional fill value to be used for bad/unusample samples/pixeld. Default value is -999999.
+		:param chan_dim: Optional dimension of index that represents channels/bands. Default value is 0.
 		:param transform_chans: Optional channels to have special transforms applied to pixels out of expected ranges prior to filling. Default value is empty list ([]).
 		:param transform_values: Optional values associated with transform_chans. Values to be used for out of range samples in each of the channels specified in transform_chans. Default value is empty list ([]).
-			:param scaler: Optional per-feature scaler to train and use with the dataset. If set to None, no scaling will be applied. Default value is None.
-			:param scale: Optional boolean value specifying whether or not to use scaler to scale data. Default value is False.
-			:param transform: Optional unused currently, but will be updated to be a transform function to be applied in preprocessing. Used in child classes. Default is None.
-			:param train_scaler: Optional boolean value indicating whether or not to train scaler with data in Dataset. Default is False.
-			:param subset_training: Optional number of samples to subset and extract out of full preprocessed set. Typically used for training Datasets. If set to -1, full set of samples is kept. Associated stratification and oversampling techniques being developed. Default is -1. 
-			:param stratify_data: Optional dictionary describing data and techniques for stratification of subset. Subset size specified via subset_training. Currently under development and should be left unset/set to None. If set to None, no stratification is done. Default value is None.
+		:param scaler: Optional per-feature scaler to train and use with the dataset. If set to None, no scaling will be applied. Default value is None.
+		:param scale: Optional boolean value specifying whether or not to use scaler to scale data. Default value is False.
+		:param transform: Optional unused currently, but will be updated to be a transform function to be applied in preprocessing. Used in child classes. Default is None.
+		:param train_scaler: Optional boolean value indicating whether or not to train scaler with data in Dataset. Default is False.
+		:param subset_training: Optional number of samples to subset and extract out of full preprocessed set. Typically used for training Datasets. If set to -1, full set of samples is kept. Associated stratification and oversampling techniques being developed. Default is -1. 
+		:param stratify_data: Optional dictionary describing data and techniques for stratification of subset. Subset size specified via subset_training. Currently under development and should be left unset/set to None. If set to None, no stratification is done. Default value is None.
+                :param no_window: Boolean value indicating whether or not a windowing function is used to split the data. Typically False.
+                :param do_shuffle: Boolean value indicating whether or not to shuffle samples.
 		"""
 
 		#Set class attributes
@@ -166,6 +204,152 @@ class SFDataset(torch.utils.data.Dataset):
 
 		#load and preprocess data
 		self.__loaddata__()
+
+
+	def __loaddata_from_scene_arr__(self):
+		"""
+		Internal function for post-ingestion preprocessing. Should not be interfaced with directly. Use preprocess_data_from_scene_arr to properly interface.
+		"""
+		strat_local = self.strat_inds
+		if strat_local is None:
+			strat_local = []
+		data_local = self.scene_arr
+
+		self.increment = 3 - data_local[0].ndim                 
+		self.chan_dim = 2+self.increment
+
+		if self.scale:
+			#Train scaler if applicable
+			if self.scaler is None or self.train_scaler:
+				self.training = True
+				self.__train_scaler__(data_local)
+		if self.subset_training >= 0:
+			self.training = True
+
+
+		if self.scale: #do per-channel scaling on all valid pixels
+			for r in range(len(data_local)):
+				subd = data_local[r]
+				shape = copy.deepcopy(subd.shape)
+				subd = subd.reshape(-1, shape[self.chan_dim-self.increment])
+				inds = np.where(subd == -999999)
+				subd = self.scaler.transform(subd)
+				subd[inds] = -999999
+				subd = subd.reshape(shape)
+				data_local[r] = subd
+
+
+
+		dim1 = 0
+		dim2 = 1
+		if self.chan_dim == 0:
+			dim1 = 1
+			dim2 = 2
+		elif self.chan_dim == 1:
+			dim2 = 2
+
+		self.data = []
+		self.targets = []
+		self.stratify_training = []
+		for r in range(len(data_local)):
+			"""
+			For each scene split out each pixel and its pre-specified neighborhood/surrounding window to be used as a single sample.
+			Pixel padding can be 0 (no neighborhood). If not zero, any pixel without enough neighbors in all directions 
+			will not be used (but can be used in another pixel's neighborhood)
+
+			Each pixels index is stored alongside it as a 'target' value. In this unsupervised/self-supervised space there are no
+			actual targets, so we use a pre-existing convention in supervised learning to stash these indices.
+			"""
+			size_wind = 1 + 2 * self.pixel_padding
+			tgts = np.indices(data_local[r].shape[0:2])
+			tgts = tgts[:,self.pixel_padding:tgts.shape[1] - self.pixel_padding,self.pixel_padding:tgts.shape[2] - self.pixel_padding]
+			tgts = np.concatenate((np.full((1,tgts.shape[1], tgts.shape[2]),r, dtype=np.int16), tgts), axis=0)
+			tgts = tgts.reshape((3,tgts.shape[1]*tgts.shape[2])).astype(np.int16)
+
+			if self.no_window:
+				sub_data_total = data_local[r]
+			else:
+				sub_data_total = view_as_windows(data_local[r], [size_wind, size_wind, data_local[r].shape[2]], step=1)
+			sub_data_total = sub_data_total.reshape((sub_data_total.shape[0]*sub_data_total.shape[1], -1))
+
+			print(sub_data_total.shape, sub_data_total.min(), sub_data_total.max(), sub_data_total.mean())
+			#No sample is used that contains a fill value
+			del_inds = np.where(sub_data_total == -999999)[0]
+			sub_data_total = np.delete(sub_data_total, del_inds, 0)
+			tgts = np.delete(tgts, del_inds, 1)
+
+			#Preprocess stratification data in same manner
+			if len(strat_local) > 0:
+				strat_local[r] = strat_local[r][self.pixel_padding:strat_local[r].shape[1] - \
+					self.pixel_padding,self.pixel_padding:strat_local[r].shape[1] - self.pixel_padding]
+				print(strat_local[r].shape)
+				sub_data_strat = np.squeeze(strat_local[r].flatten())
+				self.stratify_training.append(sub_data_strat)
+
+			print(sub_data_total.shape)
+			if sub_data_total.shape[0] == 0:
+				continue
+                        #Append to final data structure if any valid samples
+			if len(self.data) == 0:
+				self.data.append(sub_data_total)
+				self.targets.append(tgts)
+			else:
+				self.data[0] = np.concatenate((self.data[0],sub_data_total),axis=0)
+				self.targets[0] = np.concatenate((self.targets[0],tgts),axis=1)
+
+		self.data_full = None
+		if len(self.targets) == 0 or len(self.targets[0].shape) == 0 or self.targets[0].shape[0] == 0:
+			return
+		if len(self.data) == 0 or len(self.data[0].shape) == 0 or self.data[0].shape[0] == 0:
+			return
+		#Format as downstream processes expect
+		self.targets[0] = np.swapaxes(self.targets[0], 0, 1)
+		print(self.data[0].shape, self.targets[0].shape)
+		#Shuffle samples, indices, and (if applicable) stratification data together
+		if self.do_shuffle:
+			if len(self.stratify_training) > 0:
+				c = list(zip(self.data[0], self.targets[0], self.stratify_training[0]))
+			else:
+				c = list(zip(self.data[0], self.targets[0]))
+			random.shuffle(c)
+
+			if len(self.stratify_training) > 0:
+				self.data, self.targets, self.stratify_training = zip(*c)
+			else:
+				self.data, self.targets = zip(*c)
+		else:
+			self.data = self.data[0]
+			self.targets = self.targets[0]
+			if len(self.stratify_training) > 0:
+				self.stratify_training = self.stratify_training[0]
+
+		#Set to float32 type
+		self.data_full = np.array(self.data).astype(np.float32)
+		self.targets_full = np.copy(self.targets).astype(np.int16)
+
+		#Subset data for training and/or stratify
+		if self.training and (((self.subset_training < self.data_full.shape[0] and self.subset_training > 0) or len(self.stratify_training) > 0) and (self.stratify_data or self.stratify_data["kmeans"])):
+			if len(self.stratify_training) > 0:
+				self.stratify_training = np.array(self.stratify_training)
+				self.stratify_training = self.stratify_training.reshape((-1))
+				self.__stratify_training__()
+			elif self.subset_training > 0 and self.stratify_data and self.stratify_data["kmeans"]:
+				self.__stratify_k_means__()
+			else:
+				self.data_full = self.data_full[:self.subset_training,:]
+				self.targets_full = self.targets_full[:self.subset_training,:]
+		del self.data
+		del self.targets
+		self.data = self.data_full
+		self.targets = self.targets_full
+
+		print("STATS", self.data.min(), self.data.max(), self.data.mean(), self.data.std())
+
+		if self.data is None or self.data.shape[0] == 0:
+			return
+
+
+
 
 	def __loaddata__(self):
 		"""

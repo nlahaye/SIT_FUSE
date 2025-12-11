@@ -44,11 +44,10 @@ class PolygonAreaKNNGraph(object):
             bb_x  = abs(self.lr_x - self.ul_x) + 1
             self.knn_adj = np.zeros((bb_y, bb_x))
 
-            print( ul_x, ul_y, lr_x, lr_y, bb_y, bb_x)
+            #print( ul_x, ul_y, lr_x, lr_y, bb_y, bb_x)
 
         def build_knn_graph(self, img, symmetrize=True, metric='euclidean'):
      
-            print("HERE", self.lr_y, self.ul_y, self.ul_x, self.lr_x)
             self.knn_values = img[self.lr_y:self.ul_y+1,self.ul_x:self.lr_x+1]
             indices = np.indices(self.knn_values.shape).transpose(1,2,0).reshape(-1,2).astype(np.int16)
 
@@ -69,15 +68,10 @@ class PolygonAreaKNNGraph(object):
             # Construct the adjacency matrix (using a sparse matrix for efficiency)
 
             num_samples = indices.shape[0]
-            print(abs(distances.flatten()), num_samples, neighbors)
             self.knn_adj_final = scipy.sparse.csr_matrix((abs(distances.flatten()), (np.repeat(np.arange(num_samples), neighbors.shape[1]), neighbors.flatten())), shape=(num_samples, num_samples))
-            print(self.knn_adj_final)
 
-            print(self.knn_adj_final.shape)
-            #print(self.knn_adj_final)
             #self.knn_adj_final = self.knn_adj_final.multiply(self.knn_adj_final.transpose())
   
-            print(self.knn_values, self.knn_values.shape)
             self.values_final = self.knn_values.flatten()
 
 
@@ -100,7 +94,7 @@ def gen_zonal_histogram_vector(zone_vector_path, value_raster_path, zonal_histog
     zone = zone.to_crs(dataset.crs)
     stats = zonal_stats(zone, arr, affine=affine)
 
-    print("HERE", stats)
+    #print("HERE", stats)
 
 
 def gen_zonal_histogram_multiclass(zone_raster_path, value_raster_path, \
@@ -127,13 +121,13 @@ def gen_zonal_histogram(zone_raster_path, value_raster_path, zonal_histogram = N
               in the value raster.
     """
 
-    print(zone_raster_path)
+    #print(zone_raster_path)
 
     if regrid:
         zone_array_0 = regrid_map(zone_raster_path, value_raster_path)
     else:
         zone_array_0 = gdal.Open(zone_raster_path).ReadAsArray()
-
+ 
     #write_geotiff(gdal.Open(value_raster_path), zone_array_0 , "regridded_polygons.tif")
 
     zone_array_1 = zone_array_0
@@ -143,7 +137,7 @@ def gen_zonal_histogram(zone_raster_path, value_raster_path, zonal_histogram = N
 
 
     value_array = gdal.Open(value_raster_path).ReadAsArray()
-    print(value_array.shape)
+    #print(value_array.shape, np.unique(zone_array_1), zone_ind-1)
     zeros = np.zeros((value_array.shape[0],value_array.shape[1]))
     inds = [1,0]
  
@@ -152,7 +146,7 @@ def gen_zonal_histogram(zone_raster_path, value_raster_path, zonal_histogram = N
     zone_array[np.where(zone_array > 0)] = zone_ind
 
     unique_zones = np.unique(zone_array)
-    print(zone_raster_path, value_raster_path)
+    #print(zone_raster_path, value_raster_path)
     if poly_knns is None:
             poly_knns = []
     if zonal_histogram is None:
@@ -161,7 +155,7 @@ def gen_zonal_histogram(zone_raster_path, value_raster_path, zonal_histogram = N
         zonal_histograms = zonal_histogram 
 
     zone = zone_ind - 1
-    print("UNIQUE ZONES", unique_zones, zone_ind)
+    #print("UNIQUE ZONES", unique_zones, zone_ind)
     contours, hierarchy = cv2.findContours(zone_array_1,
             cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
@@ -169,16 +163,16 @@ def gen_zonal_histogram(zone_raster_path, value_raster_path, zonal_histogram = N
         
     #    continue
 
-    print(len(contours))    
+    #print(len(contours))    
 
     mask = zone_array #== zone
     masked_values = np.zeros(value_array.shape)-1
     inds = np.where(mask > 0)
-    print(masked_values.shape, value_array.shape, mask.shape)
+    #print(masked_values.shape, value_array.shape, mask.shape)
     masked_values[inds] = value_array[inds]
 
     tuple_arr = tuple(map(tuple, masked_values))
-    print(masked_values.shape, masked_values.dtype, mask.dtype, value_array.dtype)
+    #print(masked_values.shape, masked_values.dtype, mask.dtype, value_array.dtype)
     c = Counter(tuple_arr)
     if zone not in zonal_histograms.keys():
         zonal_histograms[zone] = {} 
@@ -200,9 +194,11 @@ def regrid_map(label_gtiff, clust_gtiff):
     labels = gdal.Open(label_gtiff).ReadAsArray()
     area_def = get_area_def_from_raster(label_gtiff)
     final_area_def = get_area_def_from_raster(clust_gtiff)
-
-    print(area_def, final_area_def)
-    reprojected_labels = np.squeeze(kd_tree.resample_nearest(area_def, labels, final_area_def, radius_of_influence=50, fill_value = -2))
+ 
+    #print(area_def, final_area_def) #, np.unique(labels))
+    #print("PRE GRID", np.unique(labels))
+    reprojected_labels = np.squeeze(kd_tree.resample_nearest(area_def, labels, final_area_def, radius_of_influence=5000, fill_value = -2))
+    #print(np.unique(reprojected_labels))
     reprojected_labels = reprojected_labels.astype(np.int32)
     return reprojected_labels
 
@@ -230,7 +226,7 @@ def run_zonal_hist(yml_conf):
 
     zonal_histogram = None
     poly_knns = []
-    print(len(clust_gtiffs), len(label_gtiffs[0]))
+    #print(len(clust_gtiffs), len(label_gtiffs[0]))
 
     #Assuming number of desired classes == number of sublists in label_gtiffs
     for j in range(len(label_gtiffs)):
@@ -247,7 +243,7 @@ def run_zonal_hist(yml_conf):
             else:
                 zonal_histogram, poly_knns = gen_zonal_histogram_vector(label_gtiffs[j][i], clust_gtiffs[i], zonal_histogram, poly_knns)
 
-        print(len(zonal_histogram.keys()), len(zonal_histogram[list(zonal_histogram.keys())[0]].keys()))
+        #print(len(zonal_histogram.keys()), len(zonal_histogram[list(zonal_histogram.keys())[0]].keys()))
 
         for zone in zonal_histogram.keys():
             values = zonal_histogram[zone].keys()
@@ -258,9 +254,9 @@ def run_zonal_hist(yml_conf):
             for value in del_vals:
                 del  zonal_histogram[zone][value]
 
-        print(zonal_histogram)
+        #print(zonal_histogram)
 
-        print(zonal_histogram.keys(), len(zonal_histogram[list(zonal_histogram.keys())[0]].keys()))
+        #print(zonal_histogram.keys(), len(zonal_histogram[list(zonal_histogram.keys())[0]].keys()))
 
     print("SAVING", os.path.join(out_dir, out_tag + "_hist_dict.pkl"))
 

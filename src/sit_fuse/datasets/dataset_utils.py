@@ -155,7 +155,13 @@ def get_scenes(yml_conf, filenames, stats = None):
     number_channel = yml_conf["data"]["number_channels"]
     data_reader =  yml_conf["data"]["reader_type"]
     data_reader_kwargs = yml_conf["data"]["reader_kwargs"]
-    fill = yml_conf["data"]["fill_value"]
+
+    geo_data_reader = None
+    geo_read_func = None
+    if "geo_reader_type" in yml_conf["data"]:
+        geo_data_reader =  yml_conf["data"]["geo_reader_type"]
+        geo_data_reader_kwargs = yml_conf["data"]["geo_reader_kwargs"]
+    fill_value = yml_conf["data"]["fill_value"]
     chan_dim = yml_conf["data"]["chan_dim"]
     valid_min = yml_conf["data"]["valid_min"]
     valid_max = yml_conf["data"]["valid_max"]
@@ -166,16 +172,25 @@ def get_scenes(yml_conf, filenames, stats = None):
     transform_values =  yml_conf["data"]["transform_default"]["transform"]
 
     read_func = get_read_func(data_reader)
+    if geo_data_reader is not None:
+        geo_read_func = get_read_func(geo_data_reader)
 
-
+    init_shape = []
     data_local = []
+    location = []
     increment = 0
     for i in range(0, len(filenames)):
         #Read data in one file at a time
 
         print(filenames[i])
         #Use read function passed in to get data into numpy ndarray
-        dat = read_func(filenames[i], **read_func_kwargs)
+        dat = read_func(filenames[i], **data_reader_kwargs)
+
+        loc = None
+        if geo_read_func is not None:
+            loc = geo_read_func(filenames[i], **geo_data_reader_kwargs)
+        location.append(loc) 
+
         if dat is None:
             continue
 
@@ -208,28 +223,116 @@ def get_scenes(yml_conf, filenames, stats = None):
         if stats is not None and "mean" in stats:
             final_fill = stats["mean"]
 
-        #Set all other values outside of specified valid range to fill
-        if valid_min is not None:
-            dat[np.where(dat < valid_min - 0.00000000005)] = final_fill
-        if valid_max is not None:
-            dat[np.where(dat > valid_max - 0.00000000005)] = final_fill
-        if fill_value is not None:
-            dat[np.where(dat == fill_value)] = final_fill
-        dat[~np.isfinite(dat)] = final_fill
         #Move specified channel dimension to 3rd position for uniformity
         dat = np.moveaxis(dat, chan_dim+increment, 2+increment)
+        
+
+        for chn in range(dat.shape[2+increment]):
+            slc = [slice(None)] * dat.ndim
+            slc[chan_dim+increment] = slice(chn, chn+1)
+            subd = dat[tuple(slc)]
+
+            if valid_min is not None:
+                inds = np.where(subd < valid_min - 0.00000000005)
+                if len(inds[0]) > 0:
+                    subd[inds] = final_fill[chn]
+            if valid_max is not None:
+                inds = np.where(subd > valid_max - 0.00000000005)
+                if len(inds[0]) > 0:
+                    subd[inds] = final_fill[chn]
+            if fill_value is not None:
+                inds = np.where(subd == fill_value)
+                if len(inds[0]) > 0:
+                    subd[inds] = final_fill[chn]
+            inds = np.where(~np.isfinite(subd))
+            if len(inds[0]) > 0:
+                subd[inds] = final_fill[chn]
+            dat[tuple(slc)] = subd
+            del subd
+            del slc
+
         print("HERE", dat.shape, len(data_local))
         #Append data and stratification data from current files to full set
         if dat.ndim == 3:
-            self.init_shape.append(dat.shape[:2])
+            init_shape.append(dat.shape[:2])
             data_local.append(dat)
         else:
             if len(data_local) == 0:
                 data_local = dat
             else:
                 data_local = np.concatenate((data_local, dat), axis=0)
+    return data_local, init_shape, location
 
 
+def get_prediction_dataset_from_scene_arr(yml_conf, data_arr, init_shape, strat_inds):
+    #Get config values 
+    pixel_padding = yml_conf["data"]["pixel_padding"]
+    number_channel = yml_conf["data"]["number_channels"]
+    data_reader =  yml_conf["data"]["reader_type"]
+    data_reader_kwargs = yml_conf["data"]["reader_kwargs"]
+    fill = yml_conf["data"]["fill_value"]
+    chan_dim = yml_conf["data"]["chan_dim"]
+    valid_min = yml_conf["data"]["valid_min"]
+    valid_max = yml_conf["data"]["valid_max"]
+    delete_chans = yml_conf["data"]["delete_chans"]
+    scale_data = yml_conf["data"]["scale_data"]
+
+    transform_chans = yml_conf["data"]["transform_default"]["chans"]
+    transform_values =  yml_conf["data"]["transform_default"]["transform"]
+
+    out_dir = yml_conf["output"]["out_dir"]
+    os.makedirs(out_dir, exist_ok=True)    
+
+    tiled = yml_conf["data"]["tile"]
+    tile_size = None
+    tile_step = None
+    if tiled:
+        tile_size = yml_conf["data"]["tile_size"]
+        tile_step = yml_conf["data"]["tile_step"]
+
+    tune_scaler = False
+    if "encoder" in yml_conf:
+        tune_scaler = yml_conf["encoder"]["tune_scaler"]
+
+    scaler = None
+    scaler_train = True
+    scaler_fname = os.path.join(out_dir, "encoder_scaler.pkl")
+
+    preprocess_train = True
+    targets_fname = os.path.join(out_dir, "train_data.indices.npy")
+    data_fname = os.path.join(out_dir, "train_data.npy")
+
+    if os.path.exists(targets_fname) and os.path.exists(data_fname):
+        preprocess_train = False
+
+    scaler_tune = False
+    if not os.path.exists(scaler_fname) or preprocess_train == True:
+        scaler_type = yml_conf["scaler"]["name"]
+        scaler, scaler_train = get_scaler(scaler_type)
+    else:
+        scaler = load(scaler_fname)
+        scaler_train = False
+        if tune_scaler:
+            scaler_train = True
+
+    transform = None
+    if os.path.exists(os.path.join(out_dir, "encoder_data_transform.ckpt")):
+        state_dict = torch.load(os.path.join(out_dir, "encoder_data_transform.ckpt"))
+        transform = torch.nn.Sequential(
+            transforms.Normalize(state_dict["mean_per_channel"], state_dict["std_per_channel"])
+        )
+
+    if not tiled:
+        data = SFDataset()
+        data.preprocess_data_from_scene_arr(scene_arr, init_shape, strat_inds, fill_value = fill, chan_dim = 2, scaler=scaler, scale = scale_data, \
+            transform=transform, do_shuffle=False)
+    else:
+        data = SFDatasetConv()
+        data.read_and_preprocess_data(scene_arr, init_shape, strat_inds, chan_dim = 2, transform = transform, \
+            tile=tiled, tile_size=tile_size, tile_step=tile_step, do_shuffle=False)
+
+    return data
+ 
 
 
 def get_prediction_dataset(yml_conf, fname):
@@ -302,6 +405,7 @@ def get_prediction_dataset(yml_conf, fname):
     fbase = os.path.basename(fbase)
     
     fname_begin = os.path.basename(fbase) + ".clust"
+    print("HERE UTILS", tiled, fbase, data_reader, fname)
     if not tiled:
         data = SFDataset()
         data.read_and_preprocess_data([fname], read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \

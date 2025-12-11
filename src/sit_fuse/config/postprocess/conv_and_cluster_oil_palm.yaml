@@ -1,6 +1,6 @@
 
 
-train_fname: "/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h1v1.tif.clust.data_79299clusters.zarr.full_geo.tif"
+train_fnames: ["/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h1v1.tif.clust.data_79299clusters.zarr.full_geo.tif"]
 
 test_fnames: [ 
 "/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h0v1.tif.clust.data_79299clusters.zarr.full_geo.tif",

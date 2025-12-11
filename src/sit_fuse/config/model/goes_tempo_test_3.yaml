@@ -206,7 +206,24 @@ data:
 
 
  files_test: [
-"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242071401175_e20242071403548_c20242071403590.tif",
+#"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242072121176_e20242072123549_c20242072124033.tif",
+#"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242072126176_e20242072128549_c20242072128592.tif",
+#"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242072206176_e20242072208549_c20242072208592.tif",
+#"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242092121179_e20242092123552_c20242092123599.tif",
+#"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242092126179_e20242092128552_c20242092128583.tif",
+#"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242092206179_e20242092208552_c20242092208595.tif",
+#"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242102121181_e20242102123554_c20242102123589.tif",
+#"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242102126181_e20242102128554_c20242102129017.tif",
+#"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242102206181_e20242102208554_c20242102208591.tif",
+#"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242112121183_e20242112123556_c20242112124023.tif",
+#"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242112126183_e20242112128556_c20242112129007.tif",
+#"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242112206183_e20242112208556_c20242112209007.tif",
+#"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242132121186_e20242132123559_c20242132124000.tif",
+#"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242132126186_e20242132128559_c20242132128591.tif",
+#"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242132206186_e20242132208559_c20242132208591.tif",
+
+##"/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242071401175_e20242071403548_c20242071403590.tif",
+
 "/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242071406175_e20242071408548_c20242071408582.tif",
 "/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242071411175_e20242071413548_c20242071413589.tif",
 "/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242071416175_e20242071418548_c20242071418579.tif",
@@ -737,7 +754,7 @@ scaler:
  name: "standard" 
 
 output:
- out_dir: "/data/nlahaye/output/Learnergy/GOES_TEMPO/"
+ out_dir: "/data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/"
  generate_train_output: True
  generate_intermediate_output: True
  

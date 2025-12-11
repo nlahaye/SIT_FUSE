@@ -11,8 +11,8 @@ from sit_fuse.utils import read_yaml
 from sit_fuse.postprocessing.generate_cluster_geotiffs import run_geotiff_gen
 from sit_fuse.postprocessing.conv_and_cluster import conv_and_cluster
 from sit_fuse.postprocessing.contour_and_fill import contour_and_fill
- 
-from sit_fuse.inference.generate_output import predict
+  
+from sit_fuse.inference.generate_output import predict, gen_embeddings, gen_embeddings_from_arr
 import re
 import sys
 
@@ -29,7 +29,6 @@ def cluster_fname_builder(out_dir, gtiff_data, prob = True, no_heir = True, tiff
         fglob = glob.glob(file_pattern)
         
         fglob = sorted(fglob)
-
         for j in range(len(fglob)):
   
             if not prob and "prob" in fglob[j]:
@@ -38,8 +37,6 @@ def cluster_fname_builder(out_dir, gtiff_data, prob = True, no_heir = True, tiff
             if not no_heir and "no_heir" in fglob[j]:
                 continue
 
-            print(gtiff_data[i])
-            print(fglob[j], prob, no_heir)
 
             final_gtiff_data.append(gtiff_data[i])
             final_clust_data.append(fglob[j])
@@ -162,7 +159,6 @@ def update_config_tiered_gtiff_gen(yml_conf, training_conf, config_dict):
         
         tiered_masks.append(tiered_masks_sub)
 
-        print(len(config_dict["context"]["tiered_masking"]["tiered_classes"]), len(config_dict["data"]["cluster_fnames"]))
         tiered_classes.append(config_dict["context"]["tiered_masking"]["tiered_classes"][0]) #Should be uniform across samples for these cases
 
     config_dict["context"]["tiered_masking"]["tiered_classes"] = tiered_classes
@@ -179,9 +175,16 @@ def update_config_conv_and_cluster(yml_conf, out_dir):
     gtiff_data = input_fname_builder(yml_conf)
     final_gtiff_data, clust_fnames = cluster_fname_builder(out_dir, gtiff_data, prob = False, no_heir = False, tiff=True)
 
-    print(clust_fnames[0], "UPDATAE CONFIG")
+    train_fnames = []
+    if "conv_clust_fpat" in yml_conf:
+        for fname in clust_fnames:
+            if yml_conf["conv_clust_fpat"] in fname:
+                train_fnames.append(fname)
+    else:
+        n_train = yml_conf["conv_clust_n_train"]
+        train_fnames = clust_fnames[np.random.choice(len(clust_fnames), n_train, replace=False)]
 
-    tiled_features_conf["train_fname"] = clust_fnames[0] #Arbitrary as assumption here is that training is completed already
+    tiled_features_conf["train_fnames"] = train_fnames
     tiled_features_conf["test_fnames"] =  clust_fnames
 
     return tiled_features_conf
@@ -190,6 +193,11 @@ def update_config_conv_and_cluster(yml_conf, out_dir):
 def run_prediction(yml_conf):
 
     predict(yml_conf)
+ 
+def run_embed_gen_from_scene_arr(yml_conf, data_arr, init_shape, gen_image_shaped = True, strat_inds = None):
+
+    embed, labels = gen_embeddings_from_arr(yml_conf, data_arr, init_shape, gen_image_shaped = gen_image_shaped, strat_inds = strat_inds)
+    return embed, labels
 
 def run_embed_gen(yml_conf, fname, gen_image_shaped = True):
 
@@ -249,7 +257,9 @@ def run_basic_inference_geolocation(yml_conf):
     #Assumes initial context asignment has been done - other pipelines automate that process
     training_conf = read_yaml(yml_conf["training_config"])
     config_dict = copy.deepcopy(training_conf)
-    run_inference_only(yml_conf, config_dict)
+
+    if yml_conf["run_inference"]:
+        run_inference_only(yml_conf, config_dict)
 
     context_conf = read_yaml(yml_conf["context_config"])
     config_dict = copy.deepcopy(context_conf)
@@ -268,15 +278,16 @@ def run_basic_inference_geolocation(yml_conf):
     with open(config_fname, 'w') as fle:
         yaml.dump(config_dict, fle)
 
+    print("Generating geolocated products")
+    config_dict["context"]["apply_context"] = False
+    run_geotiff_gen(config_dict) #Need Geotiffs to do conv_and_cluster
+ 
  
     if "tiered_masking" in context_conf["context"]:
 
         print("Generating geolocated products")
-        config_dict["context"]["apply_context"] = False
-        run_geotiff_gen(config_dict) #Need Geotiffs to do conv_and_cluster
         tiled_features_conf = update_config_conv_and_cluster(yml_conf, training_conf["output"]["out_dir"])
-        config_dict["context"]["apply_context"] = True
-        
+
  
         config_fname = build_config_fname_conv_and_cluster(yml_conf["config_dir"], yml_conf["run_uid"])
         with open(config_fname, 'w') as fle:
@@ -285,12 +296,19 @@ def run_basic_inference_geolocation(yml_conf):
         print("Generating feature pyramids from pixel-level predictions")
         conv_and_cluster(tiled_features_conf)
 
+ 
+    if yml_conf["run_context_assigned_geotiff_gen"]:
+        config_dict["context"]["apply_context"] = True
+        print("Generating geolocated context assigned products")
 
-    print("Generating geolocated context assigned products")
-    run_geotiff_gen(config_dict) 
+        config_fname = build_config_fname_gtiff_gen(yml_conf["config_dir"],  yml_conf["run_uid"] + "_geolocated_clusters_final")
+        with open(config_fname, 'w') as fle:
+            yaml.dump(config_dict, fle)
 
-    if "contour_config" in yml_conf:
-        run_contour_and_fill(yml_conf, config_dict)         
+        run_geotiff_gen(config_dict) 
+
+        if "contour_config" in yml_conf:
+            run_contour_and_fill(yml_conf, config_dict)         
 
 
 

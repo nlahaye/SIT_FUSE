@@ -1,7 +1,7 @@
 
 output:
  out_dir: '/data/nlahaye/output/GOES_LA_SMOKE/'
- class_name: ['smoke_background']
+ class_name: ['smoke_background', "smoke"]
 
 data:
  min_thresh: 0.0

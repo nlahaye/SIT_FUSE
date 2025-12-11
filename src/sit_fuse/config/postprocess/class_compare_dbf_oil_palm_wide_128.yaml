@@ -1,6 +1,6 @@
 
 dbf: True
-dbf_percentage_thresh: 1.0
+dbf_percentage_thresh: 0.9
 dbf_list: [[ 
 "/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/BACKGROUND_128_hist_dict.pkl"
 #"/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/OIL_PALM_128_hist_dict.pkl"

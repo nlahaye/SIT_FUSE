@@ -1,7 +1,7 @@
 
 
 training_config: "../../config/model/palm_oil_dbn_multi_layer_wide_pl.yaml"
-context_config: "../../config/postprocess/palm_oil_tiered_masking_geotiff_gen_v4.yaml"
+context_config: "../../config/postprocess/palm_oil_tiered_masking_geotiff_gen_v5.yaml"
 
 run_uid: "palm_oil_tiered_v3"
 
@@ -16,4 +16,10 @@ input_pattern: "ucayali_stacks_2020_*tif"
 tile_tiers: [1024, 512, 256, 128, 64, 32]
 
 context_classes: "oil_palm"
+
+
+#contour_config: "../../config/postprocess/goes_tempo_contour_smoke_la.yaml"
+#zonal_hist_config: "../../config/postprocess/zonal_histogram_goes_la_smoke.yaml"
+
+#run_inference: False
 
