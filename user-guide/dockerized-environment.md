@@ -20,8 +20,7 @@ See Docker's documentation for further details on running containers:
 
 ### NVIDIA Container Toolkit + Docker
 
-The nvidia-docker wrapper has been deprecated in favor of the NVIDIA Container Tookit. You can read more about installation and setup here:\
-
+The nvidia-docker wrapper has been deprecated in favor of the NVIDIA Container Tookit. You can read more about installation and setup here:<br>
 
 {% embed url="https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html" %}
 

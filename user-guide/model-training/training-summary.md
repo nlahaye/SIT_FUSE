@@ -25,6 +25,6 @@ python3 generate_output.py -y ../config/model/gk2a_test_dbn_multi_layer_pl.yaml
 [training-command-examples.md](training-command-examples.md)
 {% endcontent-ref %}
 
-{% content-ref url="inference-command.md" %}
-[inference-command.md](inference-command.md)
+{% content-ref url="../model-inference/inference-command.md" %}
+[inference-command.md](../model-inference/inference-command.md)
 {% endcontent-ref %}
