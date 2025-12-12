@@ -10,6 +10,8 @@ required before exporting such information to foreign countries or providing acc
 import os
 import numpy as np
 
+from collections.abc import Iterable
+
 #ML imports
 import torch
 import torch.nn as nn
@@ -232,21 +234,25 @@ def get_scenes(yml_conf, filenames, stats = None):
             slc[chan_dim+increment] = slice(chn, chn+1)
             subd = dat[tuple(slc)]
 
+            if isinstance(final_fill, Iterable):
+                fnl_fill = final_fill[chn]
+            else:
+                fnl_fill = final_fill
             if valid_min is not None:
                 inds = np.where(subd < valid_min - 0.00000000005)
                 if len(inds[0]) > 0:
-                    subd[inds] = final_fill[chn]
+                    subd[inds] = fnl_fill
             if valid_max is not None:
                 inds = np.where(subd > valid_max - 0.00000000005)
                 if len(inds[0]) > 0:
-                    subd[inds] = final_fill[chn]
+                    subd[inds] = fnl_fill
             if fill_value is not None:
                 inds = np.where(subd == fill_value)
                 if len(inds[0]) > 0:
-                    subd[inds] = final_fill[chn]
+                    subd[inds] = fnl_fill
             inds = np.where(~np.isfinite(subd))
             if len(inds[0]) > 0:
-                subd[inds] = final_fill[chn]
+                subd[inds] = fnl_fill
             dat[tuple(slc)] = subd
             del subd
             del slc
