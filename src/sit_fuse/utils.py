@@ -277,9 +277,10 @@ def read_noaa_oisst_daily(filename, **kwargs):
     vrs = ["anom", "ice", "sst"]
     kwrg = {}
     data = None
+    data1 = None
 
-    print(flename)
-    f = Dataset(flename)
+    print(filename)
+    f = Dataset(filename)
     f.set_auto_maskandscale(False)
 
     for i in range(len(vrs)):
@@ -307,10 +308,10 @@ def read_noaa_oisst_daily(filename, **kwargs):
             data1 = np.zeros((len(vrs), data.shape[0], data.shape[1]))
         data1[i] = data
     print(data1.shape)
-    dat = numpy.array(data1).astype(np.float32)
+    dat = np.array(data1).astype(np.float32)
 
     if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs:
-        loc = read_nc_geo(filename, **kwrg)
+        loc = read_nc_geo_sst(filename, **kwrg)
         lat = loc[0]
         lon = loc[1]
         print(lat.shape, lon.shape, dat.shape)
@@ -355,9 +356,9 @@ def read_copernicus_sss_ssd_daily(filename, **kwargs):
     vrs = ["sos", "dos"]
     kwrg = {}
     data = None
-
-    print(flename)
-    f = Dataset(flename)
+    data1 = None
+    print(filename)
+    f = Dataset(filename)
     f.set_auto_maskandscale(False)
 
     for i in range(len(vrs)):
@@ -384,10 +385,10 @@ def read_copernicus_sss_ssd_daily(filename, **kwargs):
             data1 = np.zeros((len(vrs), data.shape[0], data.shape[1]))
         data1[i] = data
     print(data1.shape)
-    dat = numpy.array(data1).astype(np.float32)
+    dat = np.array(data1).astype(np.float32)
 
     if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs:
-        loc = read_nc_geo(filename, **kwrg)
+        loc = read_nc_geo_sss(filename, **kwrg)
         lat = loc[0]
         lon = loc[1]
         print(lat.shape, lon.shape, dat.shape)
@@ -673,18 +674,82 @@ def read_viirs_oc(filename, **kwargs):
     return dat
 
 
-def read_nc_geo(filename, **kwargs):
+
+def read_nc_geo_sst(filename, **kwargs):
 
     vrs = ["lat", "lon"]
-    f = Dataset(flename)
+    f = Dataset(filename)
     f.set_auto_maskandscale(False)
     data1 = []
     for i in range(len(vrs)):
         ref = f.variables[vrs[i]]
         data = ref[:].astype(np.float32)
-        valid_data_ind = np.where((data >= ref.valid_min) & (data <= ref.valid_max))
-        invalid_data_ind = np.where((data < ref.valid_min) | (data > ref.valid_max))
-        data[invalid_data_ind] = -999999.0
+
+        try:
+            valid_data_ind = np.where((data >= ref.valid_min) & (data <= ref.valid_max))
+            invalid_data_ind = np.where((data < ref.valid_min) | (data > ref.valid_max))
+            try:
+                data[valid_data_ind] = data[valid_data_ind] * ref.scale_factor
+            except AttributeError:
+                pass
+            try: 
+                 data[valid_data_ind] = data[valid_data_ind] + ref.add_offset
+            except AttributeError:
+                pass
+            data[invalid_data_ind] = -999999.0
+        except AttributeError:
+            pass
+        
+        #valid_data_ind = np.where((data >= ref.valid_min) & (data <= ref.valid_max))
+        #invalid_data_ind = np.where((data < ref.valid_min) | (data > ref.valid_max))
+        #data[invalid_data_ind] = -999999.0
+        data1.append(data)
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+        data1[0] = data1[0][kwargs["start_line"]:kwargs["end_line"]]
+        data1[1] = data1[1][kwargs["start_sample"]:kwargs["end_sample"]]
+
+    if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs:
+        inds1 = np.where((data1[0] >= kwargs["start_lat"]) & (data1[0] <= kwargs["end_lat"]))
+        inds2 = np.where((data1[1] >= kwargs["start_lon"]) & (data1[1] <= kwargs["end_lon"]))
+        lat = data1[0]
+        lon = data1[1]
+
+
+        nind2, nind1 = np.meshgrid(inds2, inds1)
+        lon1, lat1 = np.meshgrid(lon, lat)
+
+        data1 = np.array([lat1,lon1])
+
+        data1 = data1[:, nind1,nind2]
+    else:
+        longr, latgr = np.meshgrid(data1[1], data1[0])
+        data1 = np.array([longr, latgr]).astype(np.float32) 
+    return data1
+
+def read_nc_geo_sss(filename, **kwargs):
+
+    vrs = ["lat", "lon"]
+    f = Dataset(filename)
+    f.set_auto_maskandscale(False)
+    data1 = []
+    for i in range(len(vrs)):
+        ref = f.variables[vrs[i]]
+        data = ref[:].astype(np.float32)
+
+        try:
+            valid_data_ind = np.where(data != ref._FillValue)
+            invalid_data_ind = np.where(data == ref._FillValue)
+            try:
+                data[valid_data_ind] = data[valid_data_ind] * ref.scale_factor
+            except AttributeError:
+                pass
+            try:
+                 data[valid_data_ind] = data[valid_data_ind] + ref.add_offset
+            except AttributeError:
+                pass
+            data[invalid_data_ind] = -999999.0
+        except AttributeError:
+            pass
         data1.append(data)
     #longr, latgr = np.meshgrid(data1[1], data1[0])
     #dat = np.array([longr, latgr]).astype(np.float32)
@@ -705,10 +770,12 @@ def read_nc_geo(filename, **kwargs):
         data1 = np.array([lat1,lon1])
 
         data1 = data1[:, nind1,nind2]
-
-
-        #dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+    else:
+        longr, latgr = np.meshgrid(data1[1], data1[0])
+        data1 = np.array([longr, latgr]).astype(np.float32)
+         
     return data1
+
 
 
 def read_oc_geo(filename, **kwargs):
@@ -754,9 +821,9 @@ def read_oc_geo(filename, **kwargs):
         data1 = np.array([lat1,lon1]) 
 
         data1 = data1[:, nind1,nind2]
-
-
-        #dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+    else:
+        longr, latgr = np.meshgrid(data1[1], data1[0])
+        data1 = np.array([longr, latgr]).astype(np.float32) 
     return data1
 
 
@@ -2656,8 +2723,10 @@ def get_read_func(data_reader):
         return read_noaa_oisst_daily
     if data_reader == "copernicus_sss_ssd_daily":
         return read_copernicus_sss_ssd_daily
-    if data_reader == "nc_geo":
-        return read_nc_geo
+    if data_reader == "nc_geo_sst":
+        return read_nc_geo_sst
+    if data_reader == "nc_geo_sss":
+        return read_nc_geo_sss
     if data_reader == "mspi":
         return read_mspi
     if data_reader == "mspi_geo":
