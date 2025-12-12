@@ -21,32 +21,32 @@ data:
   transform: []
 
  files_train: [
-"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h1v1.tif",
-"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h0v2.tif",
-"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h1v3.tif"]
+"/home/nlahaye/Palm_Oil/ucayali_stacks_2020_h1v1.tif",
+"/home/nlahaye/Palm_Oil/ucayali_stacks_2020_h0v2.tif",
+"/home/nlahaye/Palm_Oil/ucayali_stacks_2020_h1v3.tif"]
 
 
  files_test: [
-"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h1v1.tif",
-"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h0v1.tif",
-"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h0v2.tif",
-"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h1v0.tif",
-"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h1v1.tif",
-"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h1v2.tif",
-"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h1v3.tif",
-"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h2v0.tif",
-"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h2v1.tif",
-"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h2v2.tif",
-"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h2v3.tif",
-"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h4v2.tif",
-"/data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h4v3.tif"]
+"/home/nlahaye/Palm_Oil/ucayali_stacks_2020_h1v1.tif",
+"/home/nlahaye/Palm_Oil/ucayali_stacks_2020_h0v1.tif",
+"/home/nlahaye/Palm_Oil/ucayali_stacks_2020_h0v2.tif",
+"/home/nlahaye/Palm_Oil/ucayali_stacks_2020_h1v0.tif",
+"/home/nlahaye/Palm_Oil/ucayali_stacks_2020_h1v1.tif",
+"/home/nlahaye/Palm_Oil/ucayali_stacks_2020_h1v2.tif",
+"/home/nlahaye/Palm_Oil/ucayali_stacks_2020_h1v3.tif",
+"/home/nlahaye/Palm_Oil/ucayali_stacks_2020_h2v0.tif",
+"/home/nlahaye/Palm_Oil/ucayali_stacks_2020_h2v1.tif",
+"/home/nlahaye/Palm_Oil/ucayali_stacks_2020_h2v2.tif",
+"/home/nlahaye/Palm_Oil/ucayali_stacks_2020_h2v3.tif",
+"/home/nlahaye/Palm_Oil/ucayali_stacks_2020_h4v2.tif",
+"/home/nlahaye/Palm_Oil/ucayali_stacks_2020_h4v3.tif"]
 
 
 scaler:
  name: "standard" 
 
 output:
- out_dir: "/data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/"
+ out_dir: "/home/nlahaye/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/"
  generate_intermediate_output: False
  generate_train_output: True
 

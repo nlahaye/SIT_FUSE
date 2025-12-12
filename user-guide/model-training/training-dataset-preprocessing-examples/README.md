@@ -7,7 +7,7 @@ description: >-
 
 # Training Dataset Preprocessing
 
-**Disclaimer**: If you already have pre-trained model weights, skip to [inference-command.md](../inference-command.md "mention") and [code-configuration.md](code-configuration.md "mention").
+**Disclaimer**: If you already have pre-trained model weights, skip to [inference-command.md](../../model-inference/inference-command.md "mention") and [code-configuration.md](code-configuration.md "mention").
 
 ***
 

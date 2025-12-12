@@ -1,0 +1,21 @@
+test_fnames:
+- /home/nlahaye/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h0v1.tif.clust.data_79299clusters.zarr.full_geo.tif
+- /home/nlahaye/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h0v2.tif.clust.data_79299clusters.zarr.full_geo.tif
+- /home/nlahaye/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h1v0.tif.clust.data_79299clusters.zarr.full_geo.tif
+- /home/nlahaye/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h1v1.tif.clust.data_79299clusters.zarr.full_geo.tif
+- /home/nlahaye/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h1v2.tif.clust.data_79299clusters.zarr.full_geo.tif
+- /home/nlahaye/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h1v3.tif.clust.data_79299clusters.zarr.full_geo.tif
+- /home/nlahaye/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h2v0.tif.clust.data_79299clusters.zarr.full_geo.tif
+- /home/nlahaye/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h2v1.tif.clust.data_79299clusters.zarr.full_geo.tif
+- /home/nlahaye/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h2v2.tif.clust.data_79299clusters.zarr.full_geo.tif
+- /home/nlahaye/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h2v3.tif.clust.data_79299clusters.zarr.full_geo.tif
+- /home/nlahaye/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h4v2.tif.clust.data_79299clusters.zarr.full_geo.tif
+- /home/nlahaye/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h4v3.tif.clust.data_79299clusters.zarr.full_geo.tif
+tile_size:
+- 1024
+- 512
+- 256
+- 128
+- 64
+- 32
+train_fname: /home/nlahaye/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/ucayali_stacks_2020_h0v1.tif.clust.data_79299clusters.zarr.full_geo.tif

@@ -1,0 +1,132 @@
+cluster:
+  gauss_noise_stdev:
+  - 0.01
+  heir:
+    gauss_noise_stdev:
+    - 0.01
+    lambda: 1.0
+    num_classes: 100
+    tiers: 1
+    training:
+      accelerator: gpu
+      batch_size: 1000
+      devices: 1
+      epochs: 5
+      gradient_clip_val: 0.1
+      learning_rate: 0.0001
+      min_samples: 1000
+      precision: 16-mixed
+      save_dir: wandb_dbn_full_model_heir
+  lambda: 1.0
+  num_classes: 800
+  training:
+    accelerator: gpu
+    batch_size: 1000
+    devices: 1
+    epochs: 5
+    gradient_clip_val: 0.1
+    learning_rate: 0.0001
+    precision: 16-mixed
+    save_dir: wandb_full_model
+data:
+  chan_dim: 0
+  delete_chans: []
+  files_test:
+  - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h0v1.tif
+  - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h2v1.tif
+  - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h1v2.tif
+  - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h4v3.tif
+  - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h1v0.tif
+  - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h2v0.tif
+  - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h2v3.tif
+  - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h4v2.tif
+  - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h2v2.tif
+  files_train:
+  - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h0v2.tif
+  - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h1v1.tif
+  - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h1v3.tif
+  fill_value: -99999.0
+  num_loader_workers: 10
+  number_channels: 8
+  output_subset_count: 1
+  pixel_padding: 2
+  reader_kwargs:
+    none: none
+  reader_type: gtiff
+  scale_data: true
+  subset_count: 1
+  tile: false
+  transform_default:
+    chans: []
+    transform: []
+  val_percent: 0.1
+  valid_max: 100000000
+  valid_min: -900.0
+dbn:
+  batch_normalize:
+  - false
+  - false
+  - false
+  dbn_arch:
+  - 3000
+  - 2500
+  - 2000
+  gibbs_steps:
+  - 1
+  - 1
+  - 1
+  model_type:
+  - gaussian_selu
+  - gaussian_selu
+  - gaussian_selu
+  normalize_learnergy:
+  - false
+  - true
+  - true
+  temp:
+  - 1.0
+  - 1.0
+  - 1.0
+encoder:
+  overwrite_model: false
+  subset_training: -1
+  tiled: false
+  training:
+    accelerator: gpu
+    batch_size: 128
+    devices: 1
+    epochs: 5
+    gradient_clip_val: 0.1
+    learning_rate:
+    - 1.0e-05
+    - 1.0e-05
+    - 1.0e-05
+    momentum:
+    - 0.95
+    - 0.95
+    - 0.95
+    nesterov_accel:
+    - true
+    - true
+    - true
+    precision: 16-mixed
+    save_dir: wandb_encoder
+    stratify_data:
+      kmeans: true
+    weight_decay:
+    - 0.0001
+    - 0.0001
+    - 0.0001
+  tune_scaler: false
+encoder_type: dbn
+logger:
+  log_model: true
+  log_out_dir: wandb_dbn
+  project: SIT-FUSE
+  use_wandb: true
+output:
+  generate_intermediate_output: true
+  generate_train_output: true
+  out_dir: /home/nlahaye/DBN_OIL_PALM_MAPS/
+scaler:
+  name: standard

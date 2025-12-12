@@ -12,8 +12,8 @@ description: Steps to train SIT-FUSE
 [training-command-examples.md](training-command-examples.md)
 {% endcontent-ref %}
 
-{% content-ref url="inference-command.md" %}
-[inference-command.md](inference-command.md)
+{% content-ref url="../model-inference/inference-command.md" %}
+[inference-command.md](../model-inference/inference-command.md)
 {% endcontent-ref %}
 
 {% content-ref url="../pre-processing/collocation-and-resampling.md" %}

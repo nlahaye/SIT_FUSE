@@ -1,0 +1,22 @@
+
+run_uid: "palm_oil_tiered_v5"
+
+config_dir: "../../config/"
+
+reuse_gtiffs: False #True
+update_inputs: False
+
+input_dir: "/home/nlahaye/Palm_Oil/"
+input_glob: "ucayali_stacks_2020_*tif"
+gridded_file_re: 'ucayali_stacks_2020_(h.*)\.tif'
+
+
+out_dir: "/home/nlahaye/DBN_OIL_PALM_MAPS/"
+
+train_grid_inds: ["h1v1", "h0v2", "h1v3"]
+
+
+context_classes: "oil_palm"
+
+
+
