@@ -178,8 +178,13 @@ def update_config_conv_and_cluster(yml_conf, out_dir):
     train_fnames = []
     if "conv_clust_fpat" in yml_conf:
         for fname in clust_fnames:
-            if yml_conf["conv_clust_fpat"] in fname:
-                train_fnames.append(fname)
+            if isinstance(yml_conf["conv_clust_fpat"], list):
+                for fpat in yml_conf["conv_clust_fpat"]:
+                    if fpat in fname:
+                        train_fnames.append(fname)
+            else:
+                if yml_conf["conv_clust_fpat"] in fname:
+                    train_fnames.append(fname)
     else:
         n_train = yml_conf["conv_clust_n_train"]
         train_fnames = clust_fnames[np.random.choice(len(clust_fnames), n_train, replace=False)]
@@ -227,7 +232,9 @@ def rename_output(config_dict, yml_conf):
                 break
         if no_classes:
             new_fname = new_fname.split(yml_conf["fname_split"])[0] + ".final.tif"
-
+        print(fname, new_fname)
+        new_fname = os.path.join(dirname, new_fname)
+        os.rename(fname, new_fname)
 
 
 def run_contour_and_fill(yml_conf, context_config):
