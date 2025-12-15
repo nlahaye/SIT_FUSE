@@ -244,6 +244,10 @@ def read_emit_l2(filename, **kwargs):
         land_temp = ocean_basins_50.mask(lon, lat)
         land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
         tmp1 = land_temp.isnull().to_numpy().astype(np.bool_)
+
+        if kwargs["mask_oceans"] is False:
+            tmp1 = np.logical_not(tmp1)
+
         print(tmp1.shape, dat.shape)
         dat[tmp1,:] = -999999 
 
@@ -331,6 +335,8 @@ def read_noaa_oisst_daily(filename, **kwargs):
         land_temp = ocean_basins_50.mask(lon, lat)
         land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
         tmp1 = land_temp.isnull().to_numpy().astype(np.bool_)
+        if kwargs["mask_oceans"] is False:
+            tmp1 = np.logical_not(tmp1)
 
     final_mask = None
     if tmp1 is not None and tmp2 is not None:
@@ -408,6 +414,8 @@ def read_copernicus_sss_ssd_daily(filename, **kwargs):
         land_temp = ocean_basins_50.mask(lon, lat)
         land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
         tmp1 = land_temp.isnull().to_numpy().astype(np.bool_)
+        if kwargs["mask_oceans"] is False:
+            tmp1 = np.logical_not(tmp1)
 
     final_mask = None
     if tmp1 is not None and tmp2 is not None:
@@ -484,6 +492,9 @@ def read_pace_oc(filename, **kwargs):
         land_temp = ocean_basins_50.mask(lon, lat)
         land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
         tmp1 = land_temp.isnull().to_numpy().astype(np.bool_)
+
+        if kwargs["mask_oceans"] is False:
+            tmp1 = np.logical_not(tmp1)
 
     final_mask = None
     if tmp1 is not None and tmp2 is not None:
@@ -566,6 +577,8 @@ def read_s3_oc(filename, **kwargs):
         land_temp = ocean_basins_50.mask(lon, lat)
         land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
         tmp1 = land_temp.isnull().to_numpy().astype(np.bool_)
+        if kwargs["mask_oceans"] is False:
+            tmp1 = np.logical_not(tmp1)
 
     final_mask = None
     if tmp1 is not None and tmp2 is not None:
@@ -655,6 +668,9 @@ def read_viirs_oc(filename, **kwargs):
         land_temp = ocean_basins_50.mask(lon, lat)
         land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
         tmp1 = land_temp.isnull().to_numpy().astype(np.bool_)
+
+        if kwargs["mask_oceans"] is False:
+            tmp1 = np.logical_not(tmp1)
 
     final_mask = None
     if tmp1 is not None and tmp2 is not None:
@@ -889,6 +905,8 @@ def read_modis_oc(filename, **kwargs):
         land_temp = ocean_basins_50.mask(lon, lat)
         land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
         tmp1 = land_temp.isnull().to_numpy().astype(np.bool_)
+        if kwargs["mask_oceans"] is False:
+            tmp1 = np.logical_not(tmp1)
 
     final_mask = None
     if tmp1 is not None and tmp2 is not None:
@@ -1953,6 +1971,9 @@ def read_oc_and_trop(fnames, **kwargs):
         land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
         #final_mask = ((land_temp.isnull()) & (sif_temp.isnull())).to_numpy()
         tmp1 = land_temp.isnull().to_numpy().astype(np.bool_)
+
+        if kwargs["mask_oceans"] is False:
+            tmp1 = np.logical_not(tmp1)
 
     final_mask = None
     if tmp1 is not None and tmp2 is not None:
