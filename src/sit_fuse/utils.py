@@ -188,7 +188,7 @@ def read_emit_l2(filename, **kwargs):
     if "start_wl" in kwargs and "end_wl" in kwargs:
         wls = ds.groups["sensor_band_parameters"]["wavelengths"][:]
         inds = np.where(((wls >= kwargs["start_wl"]) & (wls <= kwargs["end_wl"])))
-        print(len(inds), inds)
+        print(len(inds), inds, len(inds(0)))
         dat = dat[inds[0],:,:]
 
     print(dat.shape)
@@ -476,13 +476,12 @@ def read_pace_oc(filename, **kwargs):
         lat = loc[0]
         lon = loc[1]
         print(lat.shape, lon.shape, dat.shape)
-        inds1 = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]))
-        inds2 = np.where((lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
-        lat = lat[inds1]
-        lon = lon[inds2]
-
-        nind2, nind1 = np.meshgrid(inds2, inds1)
-        dat = dat[:, nind1,nind2]
+        rows, cols = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]) & (lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
+        row_bound = [min(rows), max(rows)]
+        col_bound = [min(cols), max(cols)]
+        lat = lat[row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]]
+        lon = lon[row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]]
+        dat = dat[:, row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]]
 
     #TODO Mask via shapefile
 
@@ -561,13 +560,10 @@ def read_s3_oc(filename, **kwargs):
         lat = loc[0]
         lon = loc[1]
         print(lat.shape, lon.shape, dat.shape)
-        inds1 = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]))
-        inds2 = np.where((lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
-        lat = lat[inds1]
-        lon = lon[inds2]
-
-        nind2, nind1 = np.meshgrid(inds2, inds1)
-        dat = dat[:, nind1,nind2]
+        rows, cols = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]) & (lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
+        lat = lat[rows, cols]
+        lon = lon[rows, cols]
+        dat = dat[:, rows, cols]
 
     #TODO Mask via shapefile
 
@@ -652,13 +648,12 @@ def read_viirs_oc(filename, **kwargs):
         lat = loc[0]
         lon = loc[1]
         print(lat.shape, lon.shape, dat.shape)
-        inds1 = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]))
-        inds2 = np.where((lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
-        lat = lat[inds1]
-        lon = lon[inds2]
-        nind2, nind1 = np.meshgrid(inds2, inds1)
-        dat = dat[:, nind1,nind2]
-
+        rows, cols = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]) & (lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
+        row_bound = [min(rows), max(rows)]
+        col_bound = [min(cols), max(cols)]
+        lat = lat[row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]]
+        lon = lon[row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]]
+        dat = dat[:, row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]]
 
     #TODO Mask via shapefile
 
@@ -671,6 +666,20 @@ def read_viirs_oc(filename, **kwargs):
 
         if kwargs["mask_oceans"] is False:
             tmp1 = np.logical_not(tmp1)
+
+    final_mask = None
+    if tmp1 is not None and tmp2 is not None:
+        final_mask = xr.apply_ufunc(np.logical_and, tmp1, tmp2, vectorize=True, dask="parallelized",\
+            input_core_dims=[[],[]], output_core_dims=[[],[]])
+    elif tmp1 is not None:
+        final_mask = tmp1
+    elif tmp2 is not None:
+        final_mask = tmp2
+
+    if final_mask is not None:
+        print(final_mask)
+        dat[:,final_mask] = -999999
+
 
     final_mask = None
     if tmp1 is not None and tmp2 is not None:
@@ -839,7 +848,7 @@ def read_oc_geo(filename, **kwargs):
         data1 = data1[:, nind1,nind2]
     else:
         longr, latgr = np.meshgrid(data1[1], data1[0])
-        data1 = np.array([longr, latgr]).astype(np.float32) 
+        data1 = np.array([latgr, longr]).astype(np.float32) 
     return data1
 
 
@@ -885,22 +894,24 @@ def read_modis_oc(filename, **kwargs):
         #    plt.savefig(filename + "CHLOR_FULL.png")
     dat = np.array(data1).astype(np.float32)
 
-    loc = read_oc_geo(filename, **kwrg)
-    lat = loc[0]
-    lon = loc[1]
-    print(lat.shape, lon.shape, dat.shape)
     if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs: 
-        inds1 = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]))
-        inds2 = np.where((lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
-        lat = lat[inds1]
-        lon = lon[inds2]
-        nind2, nind1 = np.meshgrid(inds2, inds1)
-        dat = dat[:, nind1,nind2]
+        loc = read_oc_geo(filename, **kwrg)
+        lat = loc[0]
+        lon = loc[1]
+        print(lat.shape, lon.shape, dat.shape)
+        rows, cols = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]) & (lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
+        row_bound = [min(rows), max(rows)]
+        col_bound = [min(cols), max(cols)]
+        lat = lat[row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]]
+        lon = lon[row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]]
+        dat = dat[:, row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]]
+
 
     #TODO Mask via shapefile
 
     tmp1 = None
     tmp2 = None
+    print(lat.shape, lon.shape, dat.shape)
     if "mask_oceans" in kwargs:
         land_temp = ocean_basins_50.mask(lon, lat)
         land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
@@ -1889,17 +1900,16 @@ def read_oc_and_trop(fnames, **kwargs):
         dat1 = read_s3_oc(oc_fname, **kwargs)
     print("HERE DAT", dat1.shape) 
 
-    loc = read_oc_geo(oc_fname)
-    lat = loc[0]
-    lon = loc[1]
     if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs:
-        print(lat.shape, lon.shape, dat1.shape)
-        inds1 = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]))
-        inds2 = np.where((lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
-        lat = lat[inds1]
-        lon = lon[inds2]
- 
-        nind1, nind2 = np.meshgrid(inds2, inds1)
+        loc = read_oc_geo(filename, **kwrg)
+        lat = loc[0]
+        lon = loc[1]
+        print(lat.shape, lon.shape, dat.shape)
+        rows, cols = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]) & (lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
+        row_bound = [min(rows), max(rows)]
+        col_bound = [min(cols), max(cols)]
+        lat = lat[row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]]
+        lon = lon[row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]]
 
     print("HERE DAT", dat1.shape)
     sif_raw = read_sif(trop_fname, **kwargs)
