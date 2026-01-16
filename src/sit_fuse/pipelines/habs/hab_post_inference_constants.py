@@ -73,6 +73,9 @@ YAML_TEMPLATE_MULTI_HIST = {
 }
 
 
+ALEXANDRIUM_RANGES = [0,1000,10000,100000,1000000,10000000, 100000000]
+#[0,500,1000,5000,10000,500000,100000000]
+
 INSTRUMENT_PREFIX = {
 "pace" : "PACE_OCI",
 "s3a" : "S3A_OLCI_ERRNT",
@@ -91,6 +94,11 @@ RE_STR = "\.\d{8}\.L3m\.DAY).*"
 RE_STR_2 = "data_\d+clusters\.zarr"
 RE_STR_2_PROBA = "data_proba.zarr"
 
+RE_STR_TIFF = "\.\d{8}\.L3m\.DAY)"
+RE_END_TIFF = "\.tif"
+RE_END_NO_HEIR_TIFF = "\.no_heir\.tif"
+RE_END_NO_HEIR_PROBA_TIFF = "\.no_heir\.proba\.tif"
+RE_END_PROBA_TIFF = "\.proba\.tif"
 
 RE_STR_DATE = ".*(\d{8}).*"
 
@@ -153,7 +161,7 @@ YAML_TEMPLATE_ZONAL_HIST = {
 "data" : {
  "min_thresh": 0.0,
  "regrid": True,
- "zone_min": 0,
+ "zone_min": 1,
  "zone_max": 6,
  "multiclass": True,
  "clust_gtiffs" : [],
