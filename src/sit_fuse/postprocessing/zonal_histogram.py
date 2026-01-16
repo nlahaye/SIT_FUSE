@@ -94,7 +94,6 @@ def gen_zonal_histogram_vector(zone_vector_path, value_raster_path, zonal_histog
     zone = zone.to_crs(dataset.crs)
     stats = zonal_stats(zone, arr, affine=affine)
 
-    #print("HERE", stats)
 
 
 def gen_zonal_histogram_multiclass(zone_raster_path, value_raster_path, \
@@ -190,7 +189,7 @@ def gen_zonal_histogram(zone_raster_path, value_raster_path, zonal_histogram = N
 
 
 def regrid_map(label_gtiff, clust_gtiff):
-   
+  
     labels = gdal.Open(label_gtiff).ReadAsArray()
     area_def = get_area_def_from_raster(label_gtiff)
     final_area_def = get_area_def_from_raster(clust_gtiff)
