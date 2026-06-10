@@ -389,6 +389,7 @@ def run_data_stream_merge(yml_conf, out_dir, species_run, no_heir = False):
         products = sorted(products)
         dqi = sorted(dqi)
 
+        """ 
         #Monthly Merge
         #Generate config
         config_dict = copy.deepcopy(YAML_TEMPLATE_DAILY_MERGE)
@@ -402,6 +403,7 @@ def run_data_stream_merge(yml_conf, out_dir, species_run, no_heir = False):
         monthly_products, monthly_dqi = run_merge(config_fname)
         monthly_products = sorted(monthly_products)
         monthly_dqi = sorted(monthly_dqi)
+        """
 
         key = "heir"
         if no_heir:
@@ -417,17 +419,17 @@ def run_data_stream_merge(yml_conf, out_dir, species_run, no_heir = False):
         else:
             yml_conf["instruments"][instrument]["merged_dqi"][species_run] = {key : []}
 
-        if "monthly_merged_dqi" not in yml_conf["instruments"][instrument]:
-            yml_conf["instruments"][instrument]["monthly_merged_dqi"] = {}
+        #if "monthly_merged_dqi" not in yml_conf["instruments"][instrument]:
+        #    yml_conf["instruments"][instrument]["monthly_merged_dqi"] = {}
 
-        if "monthly_merged_products" not in yml_conf["instruments"][instrument]:
-            yml_conf["instruments"][instrument]["monthly_merged_products"] = {}
+        #if "monthly_merged_products" not in yml_conf["instruments"][instrument]:
+        #    yml_conf["instruments"][instrument]["monthly_merged_products"] = {}
 
         yml_conf["instruments"][instrument]["merged_products"][species_run][key] = products
         yml_conf["instruments"][instrument]["merged_dqi"][species_run][key] = dqi
 
-        yml_conf["instruments"][instrument]["monthly_merged_dqi"][key] = monthly_dqi
-        yml_conf["instruments"][instrument]["monthly_merged_products"][key] = monthly_products
+        #yml_conf["instruments"][instrument]["monthly_merged_dqi"][key] = monthly_dqi
+        #yml_conf["instruments"][instrument]["monthly_merged_products"][key] = monthly_products
         
     return yml_conf
 
