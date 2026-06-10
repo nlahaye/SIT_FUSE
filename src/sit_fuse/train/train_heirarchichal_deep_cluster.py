@@ -310,6 +310,8 @@ def run_heir_training_outside(yml_fpath):
 
 def run_heir_training(yml_conf):
 
+    torch.set_num_threads(5)
+
     dataset = get_train_dataset_sf(yml_conf)
 
     save_dir = yml_conf["output"]["out_dir"]

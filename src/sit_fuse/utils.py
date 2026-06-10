@@ -1037,10 +1037,11 @@ def read_tempo_no2_netcdf(filename, **kwargs):
     f.set_auto_mask(True)
  
     dat = f.groups["product"]["vertical_column_troposphere"][:]
-    mask = f.groups["support_data"]["amf_cloud_fraction"][:]
+    qual = f.groups['product']['main_data_quality_flag'][:]
+    mask = f.groups["support_data"]["eff_cloud_fraction"][:]
 
-    inds = np.where(mask > 0.75)
-    dat[inds] = np.nan
+    inds = np.where((qual > 1) | (mask >= 0.2))
+    dat[inds] = -1.0e+30 #.0 #np.nan
 
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
         dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
@@ -1547,7 +1548,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         if "sif" in input_file_type:
             clust_fname = os.path.join(os.path.join(clusters_dir, "sif_finalday_" + str(ind) + ".tif"))
         elif "daily" in input_file_type:
-            file_ext = "_DAY." #"DAY." #"_DAY." TODO HERE
+            file_ext = ".DAY." #"_DAY." #"DAY." #"_DAY." TODO HERE
             if "no_heir" in input_file_type:
                 file_ext = file_ext  + "no_heir."
             if "alexandrium" in input_file_type:
@@ -1561,7 +1562,14 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
             else:
                 file_ext = file_ext + "total_phytoplankton.tif"
             #clust_fname = os.path.join(os.path.join(clusters_dir, "AQUA_MODIS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m." + file_ext))
-            clust_fname = os.path.join(os.path.join(clusters_dir, pd.to_datetime(str(date)).strftime("%Y%m%d") +  file_ext))
+            #clust_fname = os.path.join(os.path.join(clusters_dir, pd.to_datetime(str(date)).strftime("%Y%m%d") +  file_ext))
+            print(os.path.join(clusters_dir, "*" + pd.to_datetime(str(date)).strftime("%Y%m%d") + "*" +  file_ext))
+            clusts = glob(os.path.join(clusters_dir, "*" + pd.to_datetime(str(date)).strftime("%Y%m%d") + "*" +  file_ext))
+            #print(clusts, pd.to_datetime(str(date)).strftime("%Y%m%d"))
+            if clusts is not None and len(clusts) > 0:
+                clust_fname = clusts[0]
+            else:
+                continue
             if not os.path.exists(clust_fname):
                 # For GOES
                 clust_fname = os.path.join(clusters_dir, pd.to_datetime(str(date)).strftime("%Y%m%d") + "_total_phytoplankton.tif")
@@ -1704,11 +1712,11 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
                 mx1 = np.argmax(hist[1:])
         algal[mx1].append(i / 1000.0)
         print(bins, hist,i)
-        plt.ylim(0, 50)
-        plt.bar([k*2 for k in range(len(bins[:-1]))],hist, width=1, linewidth=1, align="center")
-        plt.show()
-        plt.savefig(os.path.join(output_dir, "TEST_HIST_" + str(i) + ".png"))
-        plt.clf()
+        #plt.ylim(0, 50)
+        #plt.bar([k*2 for k in range(len(bins[:-1]))],hist, width=1, linewidth=1, align="center")
+        #plt.show()
+        #plt.savefig(os.path.join(output_dir, "TEST_HIST_" + str(i) + ".png"))
+        #plt.clf()
         final_hist.append((hist, bins,i))
     print("HERE FINAL", algal)
     return algal, final_hist

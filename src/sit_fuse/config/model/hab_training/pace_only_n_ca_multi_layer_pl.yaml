@@ -15,7 +15,7 @@ data:
  output_subset_count: 1
  reader_type: "pace_oc"
  reader_kwargs:
-  #nrt: True
+  nrt: True
   start_lon: -128.00
   end_lon: -116.00
   start_lat: 30.00

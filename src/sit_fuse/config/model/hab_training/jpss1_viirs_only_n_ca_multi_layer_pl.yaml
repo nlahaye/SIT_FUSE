@@ -125,7 +125,7 @@ scaler:
 output:
  out_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS1_VIIRS_S_CA/" # this is where wandb_dbn is but im not sure if this is the correct output dir
  generate_intermediate_output: True
-
+ generate_train_output: True
 
 dbn:
  model_type: ["gaussian_selu", "gaussian_selu"]

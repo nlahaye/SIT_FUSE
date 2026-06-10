@@ -1,5 +1,7 @@
+
+run_resample: False
  
-reuse_context: True
+reuse_context: False
 
 reuse_configs:
  instruments:
@@ -27,7 +29,7 @@ geo_zarr: "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/s_cal_geo.zarr"
 insitu_file: "/data/nlahaye/remoteSensing/TROPOMI_MODIS_HAB/InSitu/HAB_S_CA_Combined.csv"
 insitu_matchup_circle_max_radius: [0.09]
 start_date: "2018-06-01"
-end_date: "2019-12-31"
+end_date: "2025-12-31"
 clusters: 120000
 
 roi: "california"
@@ -35,9 +37,9 @@ roi: "california"
 final_product_dir: "/data/nlahaye/output/MERGED_HAB_20250918/"
  
 instruments: 
- pace:
-  no_trop: 
-      "out_dir": "/data/nlahaye/output/Learnergy/PACE_Only_S_CA/"
+ #pace:
+ # no_trop: 
+ #     "out_dir": "/data/nlahaye/output/Learnergy/PACE_Only_S_CA/"
  s3a: 
   no_trop:  
       "out_dir": "/data/nlahaye/output/Learnergy/S3A_Only_S_CA/"
