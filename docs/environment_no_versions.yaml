@@ -75,7 +75,7 @@ dependencies:
   - glog
   - gmp
   - gmpy2
-  - gnutls
+  - #gnutls
   - hdf4
   - hdf5
   - hupper
