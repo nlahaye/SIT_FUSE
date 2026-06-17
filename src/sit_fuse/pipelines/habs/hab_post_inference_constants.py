@@ -106,10 +106,11 @@ RE_STR_DATE = ".*(\d{8}).*"
 HAB_USE_KEYS =  {
 
 "gulf_of_mexico": ['Karenia_Brevis'],
-"california": ['Alexandrium_spp'],
-#'Pseudo_nitzschia_delicatissima_group',
-#'Pseudo_nitzschia_seriata_group',
-#'Total_Phytoplankton']
+"california": [
+#'Alexandrium_spp'],
+'Pseudo_nitzschia_delicatissima_group',
+'Pseudo_nitzschia_seriata_group',
+'Total_Phytoplankton']
 }
 
 USE_KEY_FNAME_MAP = {
