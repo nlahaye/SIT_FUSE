@@ -1,10 +1,11 @@
-name: sit_fuse
+name: sit_fuse_5
 channels:
-  #- pytorch
+  - pytorch
   - nvidia
+  - nodefaults
   - conda-forge
 dependencies:
-  - _libgcc_mutex
+  #- _libgcc_mutex
   - _openmp_mutex
   - aws-c-auth
   - aws-c-cal
@@ -218,6 +219,7 @@ dependencies:
   - pytorch-cuda
   - pytorch-mutex
   - pytz
+  - pyhdf
   - pyyaml
   - rapids
   - re2
@@ -316,7 +318,7 @@ dependencies:
       - einops
       - executing
       - fasteners
-      - fastjsonschema
+      #- fastjsonschema
       #- fiona
       - fonttools
       - fqdn
@@ -332,7 +334,6 @@ dependencies:
       - grpcio
       - h11
       - h5py
-      - healpy
       - httpcore
       - httpx
       - huggingface-hub
@@ -389,15 +390,6 @@ dependencies:
       - nvidia-cuda-runtime-cu12
       - nvidia-cudnn-cu12
       - nvidia-cufft-cu12
-      - nvidia-cufile-cu12
-      - nvidia-curand-cu12
-      - nvidia-cusolver-cu12
-      - nvidia-cusparse-cu12
-      - nvidia-cusparselt-cu12
-      - nvidia-nccl-cu12
-      - nvidia-nvjitlink-cu12
-      - nvidia-nvshmem-cu12
-      - nvidia-nvtx-cu12
       - odc-geo
       - opencv-python
       - overrides
@@ -417,7 +409,6 @@ dependencies:
       - pycparser
       - pyerfa
       - pygments
-      - pyhdf
       - pykdtree
       - pyparsing
       - pyproj
@@ -429,6 +420,7 @@ dependencies:
       - qtconsole
       - qtpy
       - rasterio
+      - rasterstats
       - referencing
       - regionmask
       - rfc3339-validator
@@ -466,7 +458,6 @@ dependencies:
       - torchvision
       - tqdm
       - traitlets
-      - triton
       - types-python-dateutil
       - typeshed-client
       - uri-template
@@ -488,4 +479,4 @@ dependencies:
      # - git+https://github.com/nlahaye/vit-pytorch.git
      # - git+https://github.com/nlahaye/pytorch-segmentation.git
      # - git+https://github.com/nlahaye/pixel-level-contrastive-learning.git
-prefix: D:\Users\charlotte.rhoads\AppData\Local\anaconda3\sit_fuse
+prefix: "D:\\Users\\charlotte.rhoads\\AppData\\Local\\anaconda3\\sit_fuse_5\\"
