@@ -747,7 +747,7 @@ def run_validation(yml_conf, species_run):
                  no_heir = False, validation = True)
 
             config_fname = build_config_fname_multi_hist(config_dir, instrument, species_run, no_heir = False, with_trop = trop, validation=True)
-            hists, _ = run_multi_hist(config_dict, instrument_dict[instrument][key]["out_dir"])
+            _, hists = run_multi_hist(config_dict, instrument_dict[instrument][key]["out_dir"])
             classes[instrument][key]["validation"] = hists
 
             with open(config_fname, 'w') as fle:
