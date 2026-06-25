@@ -2,7 +2,8 @@
 
 data:
  filename: [
-"/data/nlahaye/output/Learnergy/GOES_LA_K/OR_ABI-L1b-RadC-M6C01_G18_s20250060001192_e20250060003565_c20250060004002.tif.clust.data_76896clusters.smoke.tif",
+
+#"/data/nlahaye/output/Learnergy/GOES_LA_K/OR_ABI-L1b-RadC-M6C01_G18_s20250060001192_e20250060003565_c20250060004002.tif.clust.data_76896clusters.smoke.tif",
 "/data/nlahaye/output/Learnergy/GOES_LA_K/OR_ABI-L1b-RadC-M6C01_G18_s20250060006192_e20250060008565_c20250060009004.tif.clust.data_76896clusters.smoke.tif",
 "/data/nlahaye/output/Learnergy/GOES_LA_K/OR_ABI-L1b-RadC-M6C01_G18_s20250060101192_e20250060103565_c20250060104006.tif.clust.data_66965clusters.smoke.tif",
 "/data/nlahaye/output/Learnergy/GOES_LA_K/OR_ABI-L1b-RadC-M6C01_G18_s20250060106192_e20250060108565_c20250060109002.tif.clust.data_66965clusters.smoke.tif",
@@ -43,7 +44,8 @@ data:
 "/data/nlahaye/output/Learnergy/GOES_LA_K/OR_ABI-L1b-RadC-M6C01_G18_s20250072301172_e20250072303545_c20250072303584.tif.clust.data_76899clusters.smoke.tif",
 "/data/nlahaye/output/Learnergy/GOES_LA_K/OR_ABI-L1b-RadC-M6C01_G18_s20250072306172_e20250072308545_c20250072308580.tif.clust.data_76899clusters.smoke.tif",
 "/data/nlahaye/output/Learnergy/GOES_LA_K/OR_ABI-L1b-RadC-M6C01_G18_s20250080001172_e20250080003545_c20250080003581.tif.clust.data_76899clusters.smoke.tif",
-"/data/nlahaye/output/Learnergy/GOES_LA_K/OR_ABI-L1b-RadC-M6C01_G18_s20250080006172_e20250080008545_c20250080008596.tif.clust.data_76898clusters.smoke.tif",
+
+#"/data/nlahaye/output/Learnergy/GOES_LA_K/OR_ABI-L1b-RadC-M6C01_G18_s20250080006172_e20250080008545_c20250080008596.tif.clust.data_76898clusters.smoke.tif",
 "/data/nlahaye/output/Learnergy/GOES_LA_K/OR_ABI-L1b-RadC-M6C01_G18_s20250080101172_e20250080103545_c20250080103580.tif.clust.data_66998clusters.smoke.tif",
 "/data/nlahaye/output/Learnergy/GOES_LA_K/OR_ABI-L1b-RadC-M6C01_G18_s20250080106172_e20250080108545_c20250080108582.tif.clust.data_66998clusters.smoke.tif",
 "/data/nlahaye/output/Learnergy/GOES_LA_K/OR_ABI-L1b-RadC-M6C01_G18_s20250081601173_e20250081603546_c20250081603584.tif.clust.data_76898clusters.smoke.tif",

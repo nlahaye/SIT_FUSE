@@ -75,8 +75,8 @@ YAML_TEMPLATE_MULTI_HIST = {
 
 INSTRUMENT_PREFIX = {
 "pace" : "PACE_OCI",
-"s3a" : "S3A_OLCI",
-"s3b" : "S3B_OLCI",
+"s3a" : "S3A_OLCI_ERRNT",
+"s3b" : "S3B_OLCI_ERRNT",
 "jpss1" : "JPSS1_VIIRS",
 "jpss2" : "JPSS2_VIIRS",
 "snpp" : "SNPP_VIIRS",

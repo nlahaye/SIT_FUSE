@@ -154,6 +154,7 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 		tiered_masking_masks = None
 		tiered_masking_classes = None
 		if tiered_masking is not None:
+			print(len(tiered_masking["masks"]), len(tiered_masking["tiered_classes"]), p)
 			tiered_masking_masks = tiered_masking["masks"][p]
 			tiered_masking_classes = tiered_masking["tiered_classes"][p]
 			print(tiered_masking_masks, tiered_masking_classes)
@@ -238,8 +239,8 @@ def generate_cluster_gtiffs(data_reader, data_reader_kwargs, subset_inds,
 					outUnionFull = np.zeros((ny,nx), dtype=np.float32)
 					outUnionFull2 = np.zeros((ny,nx), dtype=np.float32)
 				outUnion = np.zeros(dbnDat1.shape, dtype=np.float32) 	
-
-			if not isinstance(context_clusters[0], list):
+ 
+			if (len(context_clusters) > 0 and not isinstance(context_clusters[0], list)) or len(context_clusters) == 0:
 				tmp = []
 				tmp.append(context_clusters)
 				context_clusters = tmp
@@ -617,7 +618,7 @@ def apply_tiered_masking(masks, tiered_classes, dbnDat):
     for i in range(len(masks)):
         current_mask = gdal.Open(masks[i]).ReadAsArray()
         print(dbnDat.shape, current_mask.shape)
-        if current_mask.shape == dbnDat.shape:
+        if current_mask.shape != dbnDat.shape:
             print("WARNING: Array and tiered mask  do not have the same shape")
         mask_classes = tiered_classes[i]
         tmp = np.zeros(dbnDat.shape, dtype = dbnDat.dtype) -1

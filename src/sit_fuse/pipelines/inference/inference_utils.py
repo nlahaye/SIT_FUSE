@@ -9,10 +9,10 @@ import copy
 from sit_fuse.utils import read_yaml
 
 from sit_fuse.postprocessing.generate_cluster_geotiffs import run_geotiff_gen
-from sit_fuse.postprocessing.conv_and_cluster import conv_and_cluster
+from sit_fuse.postprocessing.conv_and_cluster_fpn import conv_and_cluster
 from sit_fuse.postprocessing.contour_and_fill import contour_and_fill
- 
-from sit_fuse.inference.generate_output import predict
+  
+from sit_fuse.inference.generate_output import predict, gen_embeddings, gen_embeddings_from_arr
 import re
 import sys
 
@@ -153,13 +153,14 @@ def update_config_tiered_gtiff_gen(yml_conf, training_conf, config_dict):
         fname_base = os.path.basename(os.path.splitext(config_dict["data"]["cluster_fnames"][i])[0])
         fname_base_final = os.path.join(drname, fname_base)
 
-        tiered_masks_sub = [] 
+        tiered_masks_sub = []
+         
         for j in range(len(yml_conf["tile_tiers"])):
             tiered_masks_sub.append(fname_base_final + ".zarr.full_geo.tif.tile_cluster." + str(yml_conf["tile_tiers"][j]) + ".tif")
         
-        tiered_masks.append(tiered_masks_sub)
+            tiered_masks.append(tiered_masks_sub)
 
-        tiered_classes.append(config_dict["context"]["tiered_masking"]["tiered_classes"][0]) #Should be uniform across samples for these cases
+            tiered_classes.append(config_dict["context"]["tiered_masking"]["tiered_classes"][0]) #Should be uniform across samples for these cases
 
     config_dict["context"]["tiered_masking"]["tiered_classes"] = tiered_classes
     config_dict["context"]["tiered_masking"]["masks"] = tiered_masks
@@ -198,6 +199,11 @@ def update_config_conv_and_cluster(yml_conf, out_dir):
 def run_prediction(yml_conf):
 
     predict(yml_conf)
+ 
+def run_embed_gen_from_scene_arr(yml_conf, data_arr, init_shape, gen_image_shaped = True, strat_inds = None):
+
+    embed, labels = gen_embeddings_from_arr(yml_conf, data_arr, init_shape, gen_image_shaped = gen_image_shaped, strat_inds = strat_inds)
+    return embed, labels
 
 def run_embed_gen(yml_conf, fname, gen_image_shaped = True):
 

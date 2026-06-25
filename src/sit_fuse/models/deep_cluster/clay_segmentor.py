@@ -13,8 +13,8 @@ import torch
 from einops import rearrange, repeat
 from torch import nn
 
-from claymodel.model import Encoder
-
+#from claymodel.model import Encoder
+from clay.model import Encoder
 
 class SegmentEncoder(Encoder):
     """

@@ -13,7 +13,7 @@ update_inputs: True
 input_dir: "/data/nlahaye/remoteSensing/Palm_Oil/"
 input_pattern: "ucayali_stacks_2020_*tif"
  
-tile_tiers: [1024, 512, 256, 128, 64, 32]
+tile_tiers: 64 #[1024, 512, 256, 128, 64, 32]
 
 context_classes: "oil_palm"
 

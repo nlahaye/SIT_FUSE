@@ -233,6 +233,7 @@ def dc_DBN(yml_conf, dataset, conv=False):
             n_channels=number_channel, steps=gibbs_steps, learning_rate=learning_rate, momentum=momentum, \
             decay=decay, use_gpu=True, maxpooling=[False]*len(gibbs_steps)) #, maxpooling=mp)
 
+    print(ckpt_path, conv, model_type)
     dbn.load_state_dict(torch.load(ckpt_path))
 
     for param in dbn.parameters():

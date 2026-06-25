@@ -18,3 +18,7 @@ tile_tiers: [1024, 512, 256, 128, 64, 32]
 
 context_classes: "pv_panel"
 
+
+conv_clust_fpat: "pleides_RGBNED_6"
+
+

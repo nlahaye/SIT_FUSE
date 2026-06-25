@@ -32,60 +32,30 @@ data:
   chan_dim: 0
   delete_chans: []
   files_test:
-<<<<<<< HEAD
-  - /data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h1v1.tif
-  - /data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h0v1.tif
-  - /data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h0v2.tif
-  - /data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h1v0.tif
-  - /data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h1v1.tif
-  - /data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h1v2.tif
-  - /data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h1v3.tif
-  - /data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h2v0.tif
-  - /data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h2v1.tif
-  - /data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h2v2.tif
-  - /data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h2v3.tif
-  - /data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h4v2.tif
-  - /data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h4v3.tif
-  files_train:
-  - /data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h1v1.tif
-  - /data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h0v2.tif
-  - /data/nlahaye/remoteSensing/Palm_Oil/ucayali_stacks_2020_h1v3.tif
-=======
-  - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h1v1.tif
   - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h0v1.tif
-  - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h0v2.tif
-  - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h1v0.tif
-  - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h1v1.tif
-  - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h1v2.tif
-  - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h1v3.tif
-  - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h2v0.tif
   - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h2v1.tif
-  - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h2v2.tif
+  - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h1v2.tif
+  - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h4v3.tif
+  - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h1v0.tif
+  - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h2v0.tif
   - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h2v3.tif
   - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h4v2.tif
-  - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h4v3.tif
+  - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h2v2.tif
   files_train:
-  - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h1v1.tif
   - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h0v2.tif
+  - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h1v1.tif
   - /home/nlahaye/Palm_Oil/ucayali_stacks_2020_h1v3.tif
->>>>>>> 4ec782880d55d1860511985a352d0ad953cd9c32
   fill_value: -99999.0
   num_loader_workers: 10
   number_channels: 8
+  output_subset_count: 1
   pixel_padding: 2
   reader_kwargs:
-    no_arg: ''
+    none: none
   reader_type: gtiff
   scale_data: true
+  subset_count: 1
   tile: false
-  tile_size:
-  - 5
-  - 5
-  - 8
-  tile_step:
-  - 1
-  - 1
-  - 8
   transform_default:
     chans: []
     transform: []
@@ -125,7 +95,7 @@ encoder:
     accelerator: gpu
     batch_size: 128
     devices: 1
-    epochs: 4
+    epochs: 5
     gradient_clip_val: 0.1
     learning_rate:
     - 1.0e-05
@@ -155,12 +125,8 @@ logger:
   project: SIT-FUSE
   use_wandb: true
 output:
-  generate_intermediate_output: false
+  generate_intermediate_output: true
   generate_train_output: true
-<<<<<<< HEAD
-  out_dir: /data/nlahaye/output/Learnergy/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/
-=======
-  out_dir: /home/nlahaye/DBN_OIL_PALM_MULTI_LAYER_WIDE_NEW/
->>>>>>> 4ec782880d55d1860511985a352d0ad953cd9c32
+  out_dir: /home/nlahaye/DBN_OIL_PALM_MAPS/
 scaler:
   name: standard

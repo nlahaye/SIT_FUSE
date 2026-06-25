@@ -121,7 +121,7 @@ def gen_zonal_histogram(zone_raster_path, value_raster_path, zonal_histogram = N
               in the value raster.
     """
 
-    #print(zone_raster_path)
+    print(zone_raster_path, value_raster_path, "HERE ERROR")
 
     if regrid:
         zone_array_0 = regrid_map(zone_raster_path, value_raster_path)
@@ -193,6 +193,7 @@ def regrid_map(label_gtiff, clust_gtiff):
    
     labels = gdal.Open(label_gtiff).ReadAsArray()
     area_def = get_area_def_from_raster(label_gtiff)
+    print(label_gtiff, clust_gtiff)
     final_area_def = get_area_def_from_raster(clust_gtiff)
  
     #print(area_def, final_area_def) #, np.unique(labels))
@@ -230,7 +231,7 @@ def run_zonal_hist(yml_conf):
 
     #Assuming number of desired classes == number of sublists in label_gtiffs
     for j in range(len(label_gtiffs)):
-        for i in range(len(label_gtiffs[0])):
+        for i in range(len(clust_gtiffs)):
             
             if ".shp" not in label_gtiffs[j][i]:
              

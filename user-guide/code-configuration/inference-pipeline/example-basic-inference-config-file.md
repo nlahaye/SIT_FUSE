@@ -1,7 +1,8 @@
+# Example Config File
 
-contour_config: "../../config/postprocess/goes_park_smoke.yaml"
-zonal_hist_config: "../../config/postprocess/zonal_histogram_goes_park_smoke.yaml"
+```
 training_config: "../../config/model/goes_tempo_test_3.yaml"
+
 context_config: "../../config/postprocess/goes_tempo_geotiff_gen_4.yaml"
 
 
@@ -19,22 +20,7 @@ input_pattern: "OR*ABI*tif"
 
 run_inference: False
 
+tile_tiers: []
 
 run_context_assigned_geotiff_gen: False
-
-
-#conv_clust_fpat: "s2025007"
-
-#tile_tiers: [64, 32, 16]
-
-conv_clust_fpat: ["s2024207", "s2024208", "s2024209"]
-
-   
-tiled_agreement_thresh: 1.0
-pixel_agreement_thresh: 0.55
-
-class_names: ["smoke"]
-fname_split: ".tif"
-rename_fnames: True
-
-
+```
