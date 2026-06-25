@@ -11,25 +11,26 @@ import yaml
 import copy
 
 def run_multi_sensor_hab_inference(yml_conf):
+ 
+    if yml_conf["run_inference"]:
+        config_dicts = run_data_preprocessing(yml_conf)
 
-    config_dicts = run_data_preprocessing(yml_conf)
-
-    for instrument in yml_conf["instruments"]:
-        for key in yml_conf["instruments"][instrument]:
-            yml_conf["input_dir"] = yml_conf["instruments"][instrument][key]["input_dir"]
-            yml_conf["input_pattern"] = yml_conf["instruments"][instrument][key]["input_pattern"]
+        for instrument in yml_conf["instruments"]:
+            for key in yml_conf["instruments"][instrument]:
+                yml_conf["input_dir"] = yml_conf["instruments"][instrument][key]["input_dir"]
+                yml_conf["input_pattern"] = yml_conf["instruments"][instrument][key]["input_pattern"]
+         
+                if "input_clip_re" in yml_conf["instruments"][instrument][key]:
+                    yml_conf["input_clip_re"] =  yml_conf["instruments"][instrument][key]["input_clip_re"]
+                elif "input_clip_re" in yml_conf:
+                    del yml_conf["input_clip_re"]
+         
+                yml_conf["run_uid"] = yml_conf["run_uids"][instrument]
+         
+                config_dict = config_dicts[instrument][key]
     
-            if "input_clip_re" in yml_conf["instruments"][instrument][key]:
-                yml_conf["input_clip_re"] =  yml_conf["instruments"][instrument][key]["input_clip_re"]
-            elif "input_clip_re" in yml_conf:
-                del yml_conf["input_clip_re"]
-     
-            yml_conf["run_uid"] = yml_conf["run_uids"][instrument]
+                run_inference_only(yml_conf, config_dict)
     
-            config_dict = config_dicts[instrument][key]
-    
-            run_inference_only(yml_conf, config_dict)
-
     post_inference_conf = read_yaml(yml_conf["post_inference_config"])
     run_hab_post_inference_pipeline(post_inference_conf)
 

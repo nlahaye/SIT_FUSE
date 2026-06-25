@@ -45,28 +45,77 @@ def write_geotiff(dat, imgData, fname):
     out_ds = None
 
 
-def load_model(model_fpath):
+def load_model(model_fpath, fpn_fpath):
 
     # Step 1: Initialize model with the best available weights
     model = resnet101(weights=None)
     model.conv1 = torch.nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False) #here 4 indicates 4-channel input
     model.load_state_dict(torch.load(model_fpath))
 
+    stem = nn.Sequential(
+            model.conv1,
+            model.bn1,
+            model.relu,
+            model.maxpool,
+        )
+    layer1 = backbone.layer1  # C2
+    layer2 = backbone.layer2  # C3
+    layer3 = backbone.layer3  # C4
+    layer4 = backbone.layer4  # C5
+
+
+    # Channel dimensions of C2–C5 for ResNet-50
+    in_channels_list = [256, 512, 1024, 2048]
+
+    # ----- 2. Build FPN on top of ResNet feature maps -----
+    # All FPN output feature maps will have `out_channels` channels
+    self.fpn = FeaturePyramidNetwork(
+        in_channels_list=in_channels_list,
+        out_channels=out_channels,
+    )
+    fpn.load_state_dict(torch.load(fpn_fpath))
+
+
     model.eval()
     return_nodes = {'flatten': 'flatten'}
-    feature_extractor = create_feature_extractor(model, return_nodes=return_nodes)
-    return model, feature_extractor
+    #feature_extractor = create_feature_extractor(model, return_nodes=return_nodes)
+    return model, stem, fpn
 
 def get_model():
 
     # Step 1: Initialize model with the best available weights
     model = resnet101(weights=None)
     model.conv1 = torch.nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False) #here 4 indicates 4-channel input
+    stem = nn.Sequential(
+            model.conv1,
+            model.bn1,
+            model.relu,
+            model.maxpool,
+        )
+    layer1 = backbone.layer1  # C2
+    layer2 = backbone.layer2  # C3
+    layer3 = backbone.layer3  # C4
+    layer4 = backbone.layer4  # C5
+
+    out_channels = 256
+    # Channel dimensions of C2–C5 for ResNet-50
+    in_channels_list = [256, 512, 1024, 2048]
+
+    # ----- 2. Build FPN on top of ResNet feature maps -----
+    # All FPN output feature maps will have `out_channels` channels
+    self.fpn = FeaturePyramidNetwork(
+        in_channels_list=in_channels_list,
+        out_channels=out_channels,
+    )
+ 
+    #model.conv1 = torch.nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False) #here 4 indicates 4-channel input
+       
+ 
     initialize_weights(model)
     model.eval()
     return_nodes = {'flatten': 'flatten'}
-    feature_extractor = create_feature_extractor(model, return_nodes=return_nodes)
-    return model, feature_extractor
+    #feature_extractor = create_feature_extractor(model, return_nodes=return_nodes)
+    return model, stem, fpn
 
 
  
@@ -154,7 +203,7 @@ def get_edge_tiles(fname, tile, stride):
 
 
  
-def generate_features(model, feature_extractor, loader):
+def generate_features(model, feature_extractor, fpn, loader):
     dat_full = None
     for i,data in enumerate(tqdm(loader)):
         images, _ = data
@@ -169,7 +218,21 @@ def generate_features(model, feature_extractor, loader):
 
 
             #images = model(images).detach().cpu()
-            features = feature_extractor(images)
+            x = feature_extractor(images)
+            c2 = model.layer1(x)  # C2
+            c3 = model.layer2(c2)  # C3
+            c4 = model.layer3(c3)  # C4
+            c5 = model.layer4(c4)  # C5
+
+            feats = OrderedDict([
+                ("c2", c2),
+                ("c3", c3),
+                ("c4", c4),
+                ("c5", c5),
+            ])
+
+
+            features = fpn(feats)
             flatten_fts = features["flatten"].squeeze()
             if torch.cuda.is_available():
                 flatten_fts = flatten_fts.detach().cpu()
@@ -270,7 +333,7 @@ def pretrained_conv_and_cluster(clust, model, feature_extractor, test_fnames, ti
 def run_conv_and_cluster(train_fnames, test_fnames, tiles): 
     model_fpath = os.path.dirname(test_fnames[0]) + "/feature_extractor.ckpt"
     if os.path.exists(model_fpath):
-        model, feature_extractor = load_model(model_fpath)
+        model, feature_extractor, fpn = load_model(model_fpath)
     else:
         model, feature_extractor = get_model()
         torch.save(model.state_dict(), os.path.dirname(test_fnames[0]) + "/feature_extractor.ckpt")
@@ -292,14 +355,15 @@ def run_conv_and_cluster(train_fnames, test_fnames, tiles):
             if torch.cuda.is_available():
                 model = model.cuda()
                 feature_extractor = feature_extractor.cuda()
+                fpn = fpn.cuda()
             for train_fname in train_fnames:
                 loader, tmp, tgts2, img_data_shape, img_test = get_data(train_fname, tile, stride)
                 loader_edge, tgts2_edge = get_edge_tiles(train_fname, tile, stride)
  
                 print(tmp.shape)
  
-                dat_full = generate_features(model, feature_extractor, loader)
-                dat_full_edge = generate_features(model, feature_extractor, loader_edge)
+                dat_full = generate_features(model, feature_extractor, fpn, loader)
+                dat_full_edge = generate_features(model, feature_extractor, fpn, loader_edge)
 
                 print(dat_full.shape, dat_full_edge.shape, tgts2.shape, tgts2_edge.shape)
                 dat_full = np.concatenate((dat_full, dat_full_edge), axis=0)
@@ -327,8 +391,8 @@ def run_conv_and_cluster(train_fnames, test_fnames, tiles):
             loader_edge, tgts2_edge = get_edge_tiles(test_fnames[i], tile, stride)
 
             with torch.no_grad():
-                dat_full = generate_features(model, feature_extractor, loader)
-                dat_full_edge = generate_features(model, feature_extractor, loader_edge)
+                dat_full = generate_features(model, feature_extractor,fpn,  loader)
+                dat_full_edge = generate_features(model, feature_extractor, fpn, loader_edge)
 
                 if dat_full is None:
                     if dat_full_edge is None:
@@ -356,6 +420,7 @@ def run_conv_and_cluster(train_fnames, test_fnames, tiles):
 def run_pretrained_conv_and_cluster(test_fnames, tiles):
 
     model_fpath = os.path.dirname(test_fnames[0]) + "/feature_extractor.ckpt"
+    fpn_fpath = os.path.dirname(test_fnames[0]) + "/fpn.ckpt"
     model, feature_extractor = load_model(model_fpath)
     for tle in range(len(tiles)):
    
@@ -368,7 +433,7 @@ def run_pretrained_conv_and_cluster(test_fnames, tiles):
 
         clust = joblib.load(os.path.dirname(test_fnames[0]) + "/clust_" + str(tiles[tle]) + ".joblib")
 
-        pretrained_conv_and_cluster(clust, model, feature_extractor, test_fnames, tiles[tle])
+        pretrained_conv_and_cluster(clust, model, feature_extractor, fpn, test_fnames, tiles[tle])
  
 
 def conv_and_cluster_outside(yml_fpath):

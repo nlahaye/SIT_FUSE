@@ -76,7 +76,7 @@ input_dirs:
 
 post_inference_config: "../../config/piplines/habs/hab_reflectance_geotiff_gen_s_ca_2024.yaml"
  
-run_uid: "palm_oil_tiered_v3"
+run_uid: "hab_test"
 
 config_dir: "../../config/"
 
