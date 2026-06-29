@@ -1663,7 +1663,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         if "sif" in input_file_type:
             clust_fname = os.path.join(os.path.join(clusters_dir, "sif_finalday_" + str(ind) + ".tif"))
         elif "daily" in input_file_type:
-            file_ext = ".DAY." #"_DAY." #"DAY." #"_DAY." TODO HERE
+            file_ext = "_DAY." #"DAY." #"_DAY." TODO HERE
             if "no_heir" in input_file_type:
                 file_ext = file_ext  + "no_heir."
             if "alexandrium" in input_file_type:
