@@ -32,52 +32,54 @@ def run_hab_post_inference_pipeline(yml_conf):
     yml_conf = run_context_free_geotiff_generation(yml_conf) 
 
     out_dir = yml_conf["final_product_dir"]
-
-    if not yml_conf["reuse_context"]:
-        for run in species_run:
-            print("Generating products for", run)
-
-            print("Running Context Assignment")
-            classes = run_context_assignment(yml_conf, run)
-
-            print("Running Context-Assigned Geotiff Generation")
-            run_geotiff_generation(yml_conf, classes, run, is_final = False)    
  
-            if no_heir:
+    if "validation_only" not in yml_conf or yml_conf["validation_only"] is False: 
+        if not yml_conf["reuse_context"]:
+            for run in species_run:
+                print("Generating products for", run)
 
-                print("Running No_Heir data stream merge")
-                yml_conf = run_data_stream_merge(yml_conf, out_dir, run, no_heir = True)
+                print("Running Context Assignment")
+                classes = run_context_assignment(yml_conf, run)
 
-                print("Running Zonal Histogramming for Heir vs No_Heir Products")
-                run_multi_tier_zonal_histogram(yml_conf, run)
-
-                print("Running class comparison for Heir vs No_Heir Products")
-                iter2_classes = run_multi_tier_class_compare(yml_conf, run)
-
-                print("Merging class sets")
-                final_class_set = merge_class_sets(yml_conf, run, classes, iter2_classes)
-
-                print("Generating final products")
-                run_geotiff_generation(yml_conf, final_class_set, run, is_final = True)
-
-    else:
-        for run in species_run:
-            print("Generating products for", run)
-
-            conf_dict = yml_conf["reuse_configs"][run]
-            classes = class_dict_from_confs(conf_dict)
+                print("Running Context-Assigned Geotiff Generation")
+                run_geotiff_generation(yml_conf, classes, run, is_final = False)    
  
-            yml_conf["no_heir"] = False
-            print("Running Context-Assigned Geotiff Generation")
-            run_geotiff_generation(yml_conf, classes, run, is_final = True)    
+                if no_heir:
 
-    out_dir = yml_conf["final_product_dir"]
-    print("Running final data stream merge")
+                    print("Running No_Heir data stream merge")
+                    yml_conf = run_data_stream_merge(yml_conf, out_dir, run, no_heir = True)
 
-    for run in species_run:
-        yml_conf = run_data_stream_merge(yml_conf, out_dir, run, no_heir = False)
+                    print("Running Zonal Histogramming for Heir vs No_Heir Products")
+                    run_multi_tier_zonal_histogram(yml_conf, run)
+
+                    print("Running class comparison for Heir vs No_Heir Products")
+                    iter2_classes = run_multi_tier_class_compare(yml_conf, run)
+
+                    print("Merging class sets")
+                    final_class_set = merge_class_sets(yml_conf, run, classes, iter2_classes)
+    
+                    print("Generating final products")
+                    run_geotiff_generation(yml_conf, final_class_set, run, is_final = True)
+
+        else:
+            for run in species_run:
+                print("Generating products for", run)
+
+                conf_dict = yml_conf["reuse_configs"][run]
+                classes = class_dict_from_confs(conf_dict)
+ 
+                yml_conf["no_heir"] = False
+                print("Running Context-Assigned Geotiff Generation")
+                run_geotiff_generation(yml_conf, classes, run, is_final = True)    
+
+        out_dir = yml_conf["final_product_dir"]
+        print("Running final data stream merge")
+
+        for run in species_run:
+            yml_conf = run_data_stream_merge(yml_conf, out_dir, run, no_heir = False)
+
   
-    #Splitting out loop for ease of visualization
+    #Splitting out loop for ease of visualization and to allow for validation-only workflows
     for run in species_run:
         validation_output = run_validation(yml_conf, run)
         if "validation" not in yml_conf:
