@@ -7,8 +7,8 @@ data:
  reader_kwargs:
   None:
 
-remove_singles: True
-remove_singles_2: True
+remove_singles: False
+remove_singles_2: False
 write_geotiff: True
 contour_min_size: -1 
 

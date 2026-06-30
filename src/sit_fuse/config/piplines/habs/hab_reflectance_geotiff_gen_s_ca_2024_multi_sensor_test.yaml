@@ -4,7 +4,7 @@ reuse_context: False #True
 prob: False
 no_heir: True
 config_dir: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/"
-geo_zarr: "/mnt/data/cal_coast_geo.zarr"
+geo_zarr: ""
  
 insitu_file: "/mnt/data/la_hab_data/combined_full.csv" #HAB_S_CA_Combined.csv" #combined_full.csv"
 insitu_matchup_circle_max_radius: [0.09]

@@ -1,0 +1,18 @@
+clusters: 120000
+clusters_dir: Z:\2026\Summer\Southern California Bight HABs\Context_Free_Products\PACE_OCI_context_free_layer_2/
+end_date: '2025-04-01'
+global_max: 10000000
+input_file_type: PACE_OCI
+radius_degrees:
+- 0.09
+ranges:
+- 0
+- 1000
+- 10000
+- 100000
+- 1000000
+- 10000000
+- 100000000
+start_date: '2024-03-06'
+use_key: Pseudo_nitzschia_delicatissima_group
+xl_fname: Z:\2026\Summer\Southern California Bight HABs\in_situ_nick_data\combined_full.csv

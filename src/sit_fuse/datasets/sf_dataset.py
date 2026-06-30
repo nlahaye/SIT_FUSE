@@ -12,6 +12,7 @@ from osgeo import osr, gdal
 import os
 import numpy as np
 import random
+import zarr
 import copy
 import matplotlib
 matplotlib.use("Agg")
@@ -114,7 +115,7 @@ class SFDataset(torch.utils.data.Dataset):
 				self.data_full = self.data_full[:self.subset_training,:]
 				self.targets_full = self.targets_full[:self.subset_training,:]
  
-	def preprocess_data_from_scene_arr(scene_arr, init_shape, strat_inds, fill_value, chan_dim, scaler, scale, transform, no_window = False, do_shuffle=False):
+	def preprocess_data_from_scene_arr(self, scene_arr, init_shape, strat_inds, fill_value, chan_dim, scaler, scale, transform, no_window = False, do_shuffle=False):
 		"""
 		High level initialization function for data ingestion, preprocessesing, and Dataset initialization. Data that has already been read in (from something like dataset_utils.get_scene) and gets preprocessed/changed into n_samples x n_features dimensionality. 
 
@@ -232,7 +233,7 @@ class SFDataset(torch.utils.data.Dataset):
 				subd = data_local[r]
 				shape = copy.deepcopy(subd.shape)
 				subd = subd.reshape(-1, shape[self.chan_dim-self.increment])
-				inds = np.where(subd == -999999)
+				inds = np.where(subd < -9000)
 				subd = self.scaler.transform(subd)
 				subd[inds] = -999999
 				subd = subd.reshape(shape)
@@ -637,7 +638,7 @@ class SFDataset(torch.utils.data.Dataset):
 				print(subd[:,:,c].min(), subd[:,:,c].max(), subd[:,:,c].mean(), subd[:,:,c].std(), r, c)
 			mn = np.argmin(subd, axis=self.chan_dim-self.increment)
 			yy,xx = np.meshgrid(np.linspace(0,subd.shape[1]-1,subd.shape[1]).astype(np.int32), np.linspace(0,subd.shape[0]-1,subd.shape[0]).astype(np.int32))
-			indices = np.where(subd[xx.ravel(),yy.ravel(),mn.ravel()].reshape(shape[0],shape[1],1) > -999999)
+			indices = np.where(subd[xx.ravel(),yy.ravel(),mn.ravel()].reshape(shape[0],shape[1],1) > -9000)
 			print("TRAINING SCALER0", subd.shape)                 
 			subd = subd[indices[0], indices[1],:].reshape(-1, shape[self.chan_dim-self.increment])
 			print("TRAINING SCALER", subd.shape)
@@ -762,6 +763,43 @@ def run_data_prep(yml_conf):
 	#Save scaler
 	with open(os.path.join(out_dir, "encoder_scaler.pkl"), "wb") as f:
 		dump(x2.scaler, f, True, pickle.HIGHEST_PROTOCOL)
+
+
+def run_data_prep_from_scene_arr(): #yml_conf):
+
+    #TODO - generalize and add support for conv
+    n_inds = 4 #yml_conf["data"]["n_train_inds"]
+    train_data = zarr.load("/data/nlahaye/NatureNet_Env/Copernicus/cop_env_whales.zarr") #yml_conf["data"]["train_arr"]
+
+    out_dir = "/data/nlahaye/output/Learnergy/COP_WHALE_DEMO/"     
+    if n_inds < train_data.shape[0]:
+        inds = random.sample(range(0, train_data.shape[0]), n_inds)
+        train_data = train_data[inds]
+    train_data = np.moveaxis(train_data,1,3)
+    init_shape = train_data.shape[2:]
+    strat_inds = None
+    fill_value = -99999
+    chan_dim = 3 
+    scaler = StandardScaler()
+  
+    scale = True
+    transform = None
+    #no_window = False
+    do_shuffle=True
+    print(train_data.shape)  
+
+    x2 = SFDataset()
+    x2.train_scaler = True
+    x2.subset_training = 5000000
+    x2.stratify_data = {"kmeans" : True}
+    x2.pixel_padding = 1
+    x2.preprocess_data_from_scene_arr(train_data, init_shape, strat_inds, fill_value, chan_dim, scaler, scale, transform, no_window=False, do_shuffle=True)
+    np.save(os.path.join(out_dir, "train_data.indices"), x2.targets)
+    np.save(os.path.join(out_dir, "train_data"), x2.data)
+
+    #Save scaler
+    with open(os.path.join(out_dir, "encoder_scaler.pkl"), "wb") as f:
+            dump(x2.scaler, f, True, pickle.HIGHEST_PROTOCOL)
 
 
 if __name__ == '__main__':

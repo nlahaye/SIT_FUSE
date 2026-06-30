@@ -78,10 +78,13 @@ def pretrain_DBN(yml_conf, dataset, conv = False):
 
     devices = yml_conf["encoder"]["training"]["devices"]
     precision = yml_conf["encoder"]["training"]["precision"]
-    max_epochs = yml_conf["encoder"]["training"]["epochs"]
+    epochs = yml_conf["encoder"]["training"]["epochs"]
     gradient_clip_val = yml_conf["encoder"]["training"]["gradient_clip_val"]
 
     for i, model in enumerate(dbn.models):
+
+        max_epochs = epochs[i]
+
         current_rbm = model
         previous_layers = None
         if i > 0:
