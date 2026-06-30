@@ -15,6 +15,7 @@ run_multi_tier_zonal_histogram, run_multi_tier_class_compare, merge_class_sets, 
 import os
 import yaml
 import argparse
+import pickle
 
 def run_hab_post_inference_pipeline(yml_conf):
 
@@ -89,9 +90,9 @@ def run_hab_post_inference_pipeline(yml_conf):
     out_fname = os.path.join(yml_conf["final_product_dir"], "final_output")
     os.makedirs(out_fname, exist_ok=True)
 
-    out_fname = os.path.join(out_fname, "output_vals.yaml")
-    with open(out_fname, 'w') as fle:
-        yaml.dump(yml_conf, fle)
+    out_fname = os.path.join(out_fname, "output_vals.pkl")
+    with open(out_fname, 'wb') as fle:
+        pickle.dump(yml_conf, fle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 
