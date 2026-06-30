@@ -1,5 +1,5 @@
 clusters: 120000
-clusters_dir: Z:\2026\Summer\Southern California Bight HABs\validation_testrun2/AQUA_MODIS
+clusters_dir: Z:\2026\Summer\Southern California Bight HABs\validation_testrun/AQUA_MODIS
 end_date: '2025-04-01'
 global_max: 10000000
 input_file_type: daily_pseudo_nitzschia_seriata

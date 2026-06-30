@@ -1,0 +1,17 @@
+
+xl_fname: "Z:\\2026\\Summer\\Southern California Bight HABs\\in_situ_nick_data\\combined_full.csv"
+start_date:  "2024-03-06"
+end_date: "2025-04-01" 
+clusters: 5001
+ 
+clusters_dir: "Z:\\2026\\Summer\\Southern California Bight HABs\\validation_testrun\\JPSS1_VIIRS/"
+radius_degrees: [0.09]  #0.0225
+#0.045 degrees = 5km
+global_max: 10000000
+ranges: [0,1000,10000,100000,1000000,10000000, 100000000]
+input_file_type: 'daily_pseudo_nitzschia_delicatissima'
+
+
+use_key: 'Pseudo_nitzschia_delicatissima_group'
+
+
