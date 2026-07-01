@@ -4,45 +4,46 @@ reuse_context: False #True
 prob: False
 no_heir: True
 config_dir: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/"
-geo_zarr: ""
+geo_zarr: "/mnt/data1/cal_coast_geo.zarr"
  
-insitu_file: "/mnt/data/la_hab_data/combined_full.csv" #HAB_S_CA_Combined.csv" #combined_full.csv"
+insitu_file: "/mnt/data1/la_hab_data/combined_full.csv" #HAB_S_CA_Combined.csv" #combined_full.csv"
 insitu_matchup_circle_max_radius: [0.09]
 start_date: "2024-01-01"
-end_date: "2025-12-31" #"2025-12-31"
+end_date: "2025-04-01" #"2025-12-31"
 clusters: 120000
 
 roi: "california"
 
-final_product_dir: "/mnt/data/HAB_COMBINED_RUNS/MERGED_TEST_10082025/"
+final_product_dir: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_062526/"
  
 instruments: 
  pace:
    no_trop: 
-      "out_dir": "/mnt/data/HAB_COMBINED_RUNS/PACE_OCI_no_trop/"
+      "out_dir": "/mnt/data1/HAB_COMBINED_RUNS/PACE_OCI_no_trop/"
  s3a: 
   no_trop:  
-      "out_dir": "/mnt/data/HAB_COMBINED_RUNS/S3A_OLCI_no_trop/"
+      "out_dir": "/mnt/data1/HAB_COMBINED_RUNS/S3A_OLCI_no_trop/"
  s3b:
   no_trop:  
-      "out_dir": "/mnt/data/HAB_COMBINED_RUNS/S3B_OLCI_no_trop/"
+      "out_dir": "/mnt/data1/HAB_COMBINED_RUNS/S3B_OLCI_no_trop/"
  jpss1:
   no_trop:  
-      "out_dir": "/mnt/data/HAB_COMBINED_RUNS/JPSS1_VIIRS_no_trop/"
+      "out_dir": "/mnt/data1/HAB_COMBINED_RUNS/JPSS1_VIIRS_no_trop/"
  jpss2:
   no_trop:  
-      "out_dir": "/mnt/data/HAB_COMBINED_RUNS/JPSS2_VIIRS_no_trop/"
+      "out_dir": "/mnt/data1/HAB_COMBINED_RUNS/JPSS2_VIIRS_no_trop/"
  modis:
   no_trop:  
-      "out_dir": "/mnt/data/HAB_COMBINED_RUNS/AQUA_MODIS_no_trop/"
+      "out_dir": "/mnt/data1/HAB_COMBINED_RUNS/AQUA_MODIS_no_trop/"
  snpp:
   no_trop:  
-      "out_dir": "/mnt/data/HAB_COMBINED_RUNS/SNPP_VIIRS_no_trop/"
+      "out_dir": "/mnt/data1/HAB_COMBINED_RUNS/SNPP_VIIRS_no_trop/"
  #troposif: No SIF data for 2024-2025 cases
  #goes18:  
  # no_trop: 
- #'     "out_dir": "/data/nlahaye/output/Learnergy/GOES18_ABI_ONLY_S_CA/"
+ #'     "out_dir": "/data1/nlahaye/output/Learnergy/GOES18_ABI_ONLY_S_CA/"
 
 
 run_resample: False 
 
+validation_only: True
