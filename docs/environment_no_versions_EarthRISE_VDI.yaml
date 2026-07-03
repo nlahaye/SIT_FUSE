@@ -479,4 +479,4 @@ dependencies:
      # - git+https://github.com/nlahaye/vit-pytorch.git
      # - git+https://github.com/nlahaye/pytorch-segmentation.git
      # - git+https://github.com/nlahaye/pixel-level-contrastive-learning.git
-prefix: "D:\\Users\\charlotte.rhoads\\AppData\\Local\\anaconda3\\sit_fuse_5\\"
+prefix: "D:\\Users\\chloe.belinsky\\AppData\\Local\\anaconda3\\sit_fuse_clean\\"

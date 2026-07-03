@@ -199,8 +199,13 @@ def run_comparison():
                 break
 
     charm_data, data_arr, time_arr = regrid_and_bin_charm(CHARM_FILES[0], sf_fname)
-    charm_data_pace, da_pace, time_arr_pace = regrid_and_bin_charm(CHARM_FILES[1], sf_fname)
- 
+    charm_data_pace, da_pace, time_arr_pace = regrid_and_bin_charm(CHARM_FILES[0], sf_fname)
+   
+ #    lines added to reroute older non-pace data files 
+ #   charm_data = charm_data_pace
+ #   data_arr = da_pace
+ #   time_arr = time_arr_pace
+
     hist_by_concentration = {}
     hist_by_inst = {}
     hist_total = {}
@@ -406,7 +411,14 @@ def run_comparison():
         print(prod, np.average(hist_total[prod]["f1"], weights=hist_total[prod]["count"]))
         #print(hist_total[prod]["f1"])
         for instrument in instrument_order:
-            print(instrument, prod, np.average(hist_by_inst[instrument][prod]["f1"], weights=hist_by_inst[instrument][prod]["count"]))
+            #print(instrument, prod, np.average(hist_by_inst[instrument][prod]["f1"], weights=hist_by_inst[instrument][prod]["count"]))
+            
+            # Check if we actually have data counts for this satellite before averaging
+                if np.sum(hist_by_inst[instrument][prod]["count"]) > 0:
+                    print(instrument, prod, np.average(hist_by_inst[instrument][prod]["f1"], weights=hist_by_inst[instrument][prod]["count"]))
+                else:
+                    print(instrument, prod, "No data available for this satellite comparison (Skipped)")
+
             #print(hist_by_inst[instrument][prod]["f1"])
         for n in range(1,7):
             if sum(hist_by_concentration[prod][n]["count"]) < 1:
