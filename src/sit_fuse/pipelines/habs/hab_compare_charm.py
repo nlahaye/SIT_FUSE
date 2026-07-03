@@ -31,24 +31,28 @@ INST_SUBDIRS = {
 }
 
 PRODUCT_RE = {
-"pnd" : "(\d{8})_DAY.pseudo_nitzschia_delicatissima_bloom.tif",
-"pns" : "(\d{8})_DAY.pseudo_nitzschia_seriata_bloom.tif",
+"pnd" : "(\\d{8})_DAY.pseudo_nitzschia_delicatissima_bloom.tif",
+"pns" : "(\\d{8})_DAY.pseudo_nitzschia_seriata_bloom.tif",
 #"total" : "(\d{8})_DAY\.total_phytoplankton\.tif"
 } 
 
-SF_BASE_DIR = "/mnt/data/HAB_Data_SIT_FUSE/MERGED_HAB_20250225_S_CA/"
+#SF_BASE_DIR = "/mnt/data/HAB_Data_SIT_FUSE/MERGED_HAB_20250225_S_CA/"
+SF_BASE_DIR = "Z:\\2026\\Summer\\Southern California Bight HABs\\validation_testrun/"
 
+#CHARM_FILES = [
+#"/mnt/data/CHARM/charmForecast0day_LonPM180.nc",
+#"/mnt/data/CHARM/wvcharmV3_0day_LonPM180.nc"
+#]
 CHARM_FILES = [
-"/mnt/data/CHARM/charmForecast0day_LonPM180.nc",
-"/mnt/data/CHARM/wvcharmV3_0day_LonPM180.nc"
+"Z:\\2026\\Summer\\Southern California Bight HABs\\C-HARM data\\wvcharmV3_0day_LonPM180.nc"
 ]
 
-CHARM_AREA_DEF = "/mnt/data/CHARM/charmForecast0day_LonPM180.tif"
+CHARM_AREA_DEF = "Z:\\2026\\Summer\\Southern California Bight HABs\\C-HARM data\\charmForecast0day_LonPM180.tif"
 
-DT_RANGE = [datetime.strptime("20180621", "%Y%m%d"), datetime.strptime("20251231", "%Y%m%d")]
+DT_RANGE = [datetime.strptime("20240306", "%Y%m%d"), datetime.strptime("20250401", "%Y%m%d")]
 
-LON_BOUNDS = [-127.5, -117.0]
-LAT_BOUNDS = [31.285, 37.0]
+LON_BOUNDS = [-128, -116.0]
+LAT_BOUNDS = [30, 38.94]
 
 PN_VAR = "pseudo_nitzschia"
 TIME_VAR = "time"
