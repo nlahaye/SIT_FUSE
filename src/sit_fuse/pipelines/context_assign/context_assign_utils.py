@@ -61,6 +61,9 @@ def class_compare(yml_conf, zonal_hist_fpath = None, tiered = False):
     else:
         config_dict["dbf_percentage_thresh"] = yml_conf["pixel_agreement_thresh"] #0.51 #Slightly less constrained - remove majoritive negative clusters at the pixel level
 
+    run_uid = yml_conf["run_uid"]
+    if tiered:
+        run_uid = run_uid + "_TILED"
 
     #Dump to file
     config_fname = build_config_fname_class_comp(yml_conf["config_dir"], yml_conf["run_uid"])
@@ -71,7 +74,8 @@ def class_compare(yml_conf, zonal_hist_fpath = None, tiered = False):
     classes = None
     if len(assignment) == 3: #Binary problem
         classes = assignment[1]
-        classes.extend(assignment[2])
+        if yml_conf["accept_uncertain"]:
+            classes.extend(assignment[2])
         #Take all certain and uncertain assignments for class of interest
         #Tiled filtering via conv and cluster will help filter out further
     else:
@@ -79,13 +83,13 @@ def class_compare(yml_conf, zonal_hist_fpath = None, tiered = False):
 
     return classes
 
-def update_config_tiered_zonal_hist(yml_conf, training_conf, config_dict, tier):
+def update_config_tiered_zonal_hist(yml_conf, training_conf, config_dict, tile_tier):
 
     config_dict_ret = copy.deepcopy(config_dict)
     for i in range(len(config_dict_ret["output"]["class_name"])):
-        config_dict_ret["output"][i] = config_dict_ret["output"]["class_name"][i] + "_" + str(tier)
+        config_dict_ret["output"][i] = config_dict_ret["output"]["class_name"][i]
     for i in range(len(config_dict_ret["data"]["clust_gtiffs"])):
-        config_dict_ret["data"]["clust_gtiffs"][i] = config_dict_ret["data"]["clust_gtiffs"][i] + ".tile_cluster." + str(tier) + ".tif"
+        config_dict_ret["data"]["clust_gtiffs"][i] = config_dict_ret["data"]["clust_gtiffs"][i] + ".tile_cluster." + str(tile_tier) + ".tif"
    
 
     return config_dict_ret
@@ -129,13 +133,13 @@ def run_context_assign_experiment(yml_conf):
     #Add generated class list to config 
     config_dict["context"]["clusters"] = classes
 
-    if len(yml_conf["tile_tiers"]) > 0:
+    if "tile_tiers" in yml_conf:
         tiled_features_conf = update_config_conv_and_cluster(yml_conf, training_conf["output"]["out_dir"])
 
         config_fname = build_config_fname_conv_and_cluster(yml_conf["config_dir"], yml_conf["run_uid"])
         with open(config_fname, 'w') as fle:
             yaml.dump(tiled_features_conf, fle)
-
+        print("HERE", config_fname)
         conv_and_cluster(tiled_features_conf)
 
         tiered_classes = []
@@ -145,14 +149,14 @@ def run_context_assign_experiment(yml_conf):
             with open(config_fname, 'w') as fle:
                 yaml.dump(tiered_zonal_hist_conf, fle)
 
-            print("Generating zonal hist. Tile size:", str(yml_conf["tile_tiers"][j]))
-            zonal_hist_fname, _ = run_zonal_histogram(tiered_zonal_hist_conf) 
+                print("Generating zonal hist. Tile size:", str(yml_conf["tile_tiers"][j]))
+                zonal_hist_fname, _ = run_zonal_histogram(tiered_zonal_hist_conf) 
+ 
+                print("Running tile-level class assignment. Tile size:", str(yml_conf["tile_tiers"][j]))
+                classes = class_compare(yml_conf, zonal_hist_fname, tiered = True)
 
-            print("Running tile-level class assignment. Tile size:", str(yml_conf["tile_tiers"][j]))
-            classes = class_compare(yml_conf, zonal_hist_fname, tiered = True)
-
-            classes.append(-1.0)
-            tiered_classes.append(classes) 
+                classes.append(-1.0)
+                tiered_classes.append(classes) 
        
 
         tiered_classes_full = []

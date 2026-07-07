@@ -296,7 +296,7 @@ def cluster_and_output(output, clust, tgts2, img_data_shape, fname, img_test, ti
 
 def pretrained_conv_and_cluster(clust, model, feature_extractor, test_fnames, tile):
 
-    stride = int(tile) #int(tile*0.6)
+    stride = int(tile*0.7) #int(tile*0.6)
 
     for i in range(len(test_fnames)):
         loader, tmp, tgts2, img_data_shape, img_test = get_data(test_fnames[i], tile, stride)
@@ -335,14 +335,15 @@ def run_conv_and_cluster(train_fnames, test_fnames, tiles):
     if os.path.exists(model_fpath):
         model, feature_extractor, fpn = load_model(model_fpath)
     else:
-        model, feature_extractor, fpn = get_model()
+        model, feature_extractor = get_model()
+        torch.save(model.state_dict(), os.path.dirname(test_fnames[0]) + "/feature_extractor.ckpt")
     for tle in range(len(tiles)): 
         if os.path.exists(os.path.dirname(test_fnames[0]) + "/clust_" + str(tiles[tle]) + ".joblib"):
             continue
 
         tile = tiles[tle]
 
-        stride = int(tile) #int(tile*0.6)
+        stride = int(tile*0.7) #int(tile*0.6)
  
         #model_fpath = os.path.dirname(test_fnames[0]) + "/model_" + str(tiles[tle]) + ".ckpt"
         #model, feature_extractor = load_model(model_fpath)
@@ -415,8 +416,6 @@ def run_conv_and_cluster(train_fnames, test_fnames, tiles):
                 cluster_and_output(output, clust, tgts2, img_data_shape, test_fnames[i], img_test, tile)
         #torch.save(model.state_dict(), os.path.dirname(test_fnames[0]) + "/model_" + str(tiles[tle]) + ".ckpt")
         joblib.dump(clust, os.path.dirname(test_fnames[0]) + "/clust_" + str(tiles[tle]) + ".joblib") 
-    torch.save(model.state_dict(), os.path.dirname(test_fnames[0]) + "/feature_extractor.ckpt")
-    torch.save(fpn.state_dict(), os.path.dirname(test_fnames[0]) + "/fpn.ckpt")
  
 def run_pretrained_conv_and_cluster(test_fnames, tiles):
 
@@ -455,7 +454,11 @@ def conv_and_cluster(yml_conf):
     print(yml_conf["test_fnames"][0])
 
 
-    if os.path.exists(os.path.dirname(test_fnames[0]) + "/clust_" + str(tiles[-1]) + ".joblib"):
+    tiles_exist = True
+    for i in range(len(tiles)):
+        tiles_exist = tiles_exist and os.path.exists(os.path.dirname(test_fnames[0]) + "/clust_" + str(tiles[i]) + ".joblib")
+
+    if tiles_exist:
         run_pretrained_conv_and_cluster(test_fnames, tiles)
     else:
         run_conv_and_cluster(train_fnames, test_fnames, tiles)

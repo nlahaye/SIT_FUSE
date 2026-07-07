@@ -687,6 +687,9 @@ def run_context_assignment(yml_conf, species_run):
             config_dict = copy.deepcopy(YAML_TEMPLATE_MULTI_HIST)      
             if "Alexandrium" in species_run or "alexandrium" in species_run:
                 config_dict["ranges"] = copy.deepcopy(ALEXANDRIUM_RANGES) 
+            elif 'pDA' in species_run or 'domoic'  in species_run:
+                config_dict["ranges"] = copy.deepcopy(DOMOIC_ACID_RANGES)
+
             config_dict = update_config_multi_hist(instrument_dict[instrument][key]["out_dir"], config_dict, yml_conf, instrument, species_run, no_heir = False)
  
             config_fname = build_config_fname_multi_hist(config_dir, instrument, species_run, no_heir = False, with_trop = trop)
@@ -701,6 +704,8 @@ def run_context_assignment(yml_conf, species_run):
                 config_dict = copy.deepcopy(YAML_TEMPLATE_MULTI_HIST)
                 if "Alexandrium" in species_run or "alexandrium" in species_run:
                     config_dict["ranges"] = copy.deepcopy(ALEXANDRIUM_RANGES)
+                elif 'pDA' in species_run or 'domoic'  in species_run:
+                    config_dict["ranges"] = copy.deepcopy(DOMOIC_ACID_RANGES)
                 config_dict = update_config_multi_hist(instrument_dict[instrument][key]["out_dir"], config_dict, yml_conf, instrument, species_run, no_heir = True)
 
                 classes_no_heir, _ = run_multi_hist(config_dict, instrument_dict[instrument][key]["out_dir"]) 
@@ -738,6 +743,9 @@ def run_validation(yml_conf, species_run):
             config_dict = copy.deepcopy(YAML_TEMPLATE_MULTI_HIST)
             if "Alexandrium" in species_run or "alexandrium" in species_run:
                 config_dict["ranges"] = copy.deepcopy(ALEXANDRIUM_RANGES)
+            elif 'pDA' in species_run or 'domoic'  in species_run:
+                config_dict["ranges"] = copy.deepcopy(DOMOIC_ACID_RANGES)\
+
             out_dir = yml_conf["final_product_dir"]
 
             append = INSTRUMENT_PREFIX[instrument]
@@ -747,7 +755,7 @@ def run_validation(yml_conf, species_run):
                  no_heir = False, validation = True)
 
             config_fname = build_config_fname_multi_hist(config_dir, instrument, species_run, no_heir = False, with_trop = trop, validation=True)
-            hists, _ = run_multi_hist(config_dict, instrument_dict[instrument][key]["out_dir"])
+            _, hists = run_multi_hist(config_dict, instrument_dict[instrument][key]["out_dir"])
             classes[instrument][key]["validation"] = hists
 
             with open(config_fname, 'w') as fle:

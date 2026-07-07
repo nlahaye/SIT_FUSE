@@ -275,6 +275,101 @@ def read_zarr_geo(filename, **kwargs):
     print(filename, dat.shape)
     return dat
 
+def read_vars_copernicus_generic(filename, vrs, depth = 0):
+    kwrg = {}
+    data = None
+    data1 = []
+
+    print(filename)
+    f = Dataset(filename)
+    f.set_auto_maskandscale(False)
+
+    for i in range(len(vrs)):
+
+        ref = f.variables[vrs[i]]
+        data = ref[:].astype(np.float32)
+        data = np.squeeze(data)
+        try:
+            valid_data_ind = np.where((data != ref._FillValue) & (data >= ref.valid_min) & (data <=ref.valid_max))
+            invalid_data_ind = np.where((data == ref._FillValue) | (data < ref.valid_min) | (data > ref.valid_max))
+            try:
+                data[valid_data_ind] = data[valid_data_ind] * ref.scale_factor
+            except AttributeError:
+                pass
+            try: 
+                 data[valid_data_ind] = data[valid_data_ind] + ref.add_offset
+                 print(data[valid_data_ind].min(), data[valid_data_ind].max(), data[valid_data_ind].mean(), vrs[i])
+            except AttributeError:
+                pass
+            data[invalid_data_ind] = -999999.0
+        except AttributeError:
+            pass
+        print(data.shape, )
+        data1.append(data)
+    return data1
+
+def read_copernicus_generic(filename, vrs, depth = 0):
+    kwrg = {}
+    data = None
+    data1 = None
+
+    print(filename)
+    f = Dataset(filename)
+    f.set_auto_maskandscale(False)
+
+    for i in range(len(vrs)):
+
+        ref = f.variables[vrs[i]]
+        data = ref[:].astype(np.float32)
+        data = np.squeeze(data)
+        print(data.shape)
+        if data.ndim > 3: #depth
+            data = np.squeeze(data[:,depth,:,:])
+        print(data.shape)
+
+        try:
+            if hasattr(ref, "_FillValue") and hasattr(ref, "valid_min") and hasattr(ref, "valid_max"):
+                valid_data_ind = np.where((data != ref._FillValue) & (data >= ref.valid_min) & (data <=ref.valid_max))
+                invalid_data_ind = np.where((data == ref._FillValue) | (data < ref.valid_min) | (data > ref.valid_max))
+            elif hasattr(ref, "_FillValue"):
+                valid_data_ind = np.where((data != ref._FillValue))
+                invalid_data_ind = np.where((data == ref._FillValue))
+            elif hasattr(ref, "valid_min") and hasattr(ref, "valid_max"):
+                valid_data_ind = np.where((data >= ref.valid_min) & (data <=ref.valid_max))
+                invalid_data_ind = np.where((data < ref.valid_min) | (data > ref.valid_max)) 
+            else:
+                valid_data_ind = None
+                invalid_data_ind = None
+            try:
+                if valid_data_ind is not None:
+                    data[valid_data_ind] = data[valid_data_ind] * ref.scale_factor
+                else:
+                    data = data * ref.scale_factor
+            except AttributeError:
+                pass
+            try:
+                 if valid_data_ind is not None:
+                     data[valid_data_ind] = data[valid_data_ind] + ref.add_offset
+                     print(data[valid_data_ind].min(), data[valid_data_ind].max(), data[valid_data_ind].mean(), vrs[i])
+                 else:
+                     data = data + ref.add_offset
+            except AttributeError:
+                pass
+            if invalid_data_ind is not None:
+                data[invalid_data_ind] = -999999.0
+        except AttributeError:
+            pass
+        print(data.shape, )
+        if data1 is None:
+            if data.ndim == 3:
+                data1 = np.zeros((len(vrs), data.shape[0], data.shape[1], data.shape[2]))
+            elif data.ndim == 2:
+                data1 = np.zeros((len(vrs), data.shape[0], data.shape[1]))
+            elif data.ndim == 1:
+                data1 = np.zeros((len(vrs), data.shape[0]))
+        data1[i] = data
+    print(data1.shape)
+    return data1    
 
 def read_noaa_oisst_daily(filename, **kwargs):
 
@@ -295,13 +390,14 @@ def read_noaa_oisst_daily(filename, **kwargs):
         
         try:
             valid_data_ind = np.where((data != ref._FillValue) & (data >= ref.valid_min) & (data <=ref.valid_max))
-            invalid_data_ind = np.where((data == ref._FillValue) & (data < ref.valid_min) & (data > ref.valid_max))
+            invalid_data_ind = np.where((data == ref._FillValue) | (data < ref.valid_min) | (data > ref.valid_max))
             try:
                 data[valid_data_ind] = data[valid_data_ind] * ref.scale_factor
             except AttributeError:
                 pass
             try:
                  data[valid_data_ind] = data[valid_data_ind] + ref.add_offset
+                 print(data[valid_data_ind].min(), data[valid_data_ind].max(), data[valid_data_ind].mean(), vrs[i])
             except AttributeError:
                 pass
             data[invalid_data_ind] = -999999.0
@@ -1030,17 +1126,35 @@ def read_misr_sim(filename, **kwargs):
     return dat    
 
 
+def read_tempo_no2_netcdf_mask(filename, **kwargs):
+
+    f = Dataset(filename)
+    f.set_always_mask(True)
+    f.set_auto_mask(True)
+
+    qual = f.groups['product']['main_data_quality_flag'][:]
+    dat = f.groups["support_data"]["eff_cloud_fraction"][:]
+
+    inds = np.where((qual > 0))
+    dat[inds] = 1 #high certainty cloud .0 #np.nan
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+        dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+
+    return dat
+
 def read_tempo_no2_netcdf(filename, **kwargs):
 
     f = Dataset(filename)
     f.set_always_mask(True)
     f.set_auto_mask(True)
- 
+  
     dat = f.groups["product"]["vertical_column_troposphere"][:]
     qual = f.groups['product']['main_data_quality_flag'][:]
-    mask = f.groups["support_data"]["eff_cloud_fraction"][:]
+    #mask = f.groups["support_data"]["eff_cloud_fraction"][:]
 
-    inds = np.where((qual > 1) | (mask >= 0.2))
+    inds = np.where((qual > 0)) # | (mask >= 0.75))
+    #inds = np.where((qual > 1) | (mask >= 0.2))
     dat[inds] = -1.0e+30 #.0 #np.nan
 
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
@@ -1061,6 +1175,7 @@ def read_tempo_no2_netcdf_geo(filename, **kwargs):
     longr, latgr = np.meshgrid(lon, lat)
 
     dat = np.array([latgr, longr])
+    print(dat.shape, "GEO HERE")
 
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
             dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
@@ -1548,7 +1663,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         if "sif" in input_file_type:
             clust_fname = os.path.join(os.path.join(clusters_dir, "sif_finalday_" + str(ind) + ".tif"))
         elif "daily" in input_file_type:
-            file_ext = ".DAY." #"_DAY." #"DAY." #"_DAY." TODO HERE
+            file_ext = "_DAY." #"DAY." #"_DAY." TODO HERE
             if "no_heir" in input_file_type:
                 file_ext = file_ext  + "no_heir."
             if "alexandrium" in input_file_type:
@@ -1878,16 +1993,15 @@ def read_sif(trop_fname, **kwargs):
     return sif_raw
 
 
-def clip_and_save_trop(fnames, **kwargs):
+def clip_and_save_trop(fname, **kwargs):
     
-    for fname in fnames:
-        print(fname[1])
-        sif_raw = read_sif(fname[1], **kwargs)
-        if sif_raw is None:
-            continue
-        out_fname = fname[1].replace("ungridded", "clipped_c_fla")
-        print(out_fname)
-        sif_raw.to_netcdf(out_fname)
+    print(fname)
+    sif_raw = read_sif(fname, **kwargs)
+    if sif_raw is None:
+        return
+    out_fname = fname.replace("ungridded", "clipped_c_fla")
+    print(out_fname)
+    sif_raw.to_netcdf(out_fname)
 
 
 def read_oc_and_trop(fnames, **kwargs):
@@ -2198,6 +2312,7 @@ def read_gtiff_generic_geo(flename, **kwargs):
 
 def get_lat_lon(fname):
     # open the dataset and get the geo transform matrix
+    print(fname)
     ds = gdal.Open(fname)
     xoffset, px_w, rot1, yoffset, px_h, rot2 = ds.GetGeoTransform()
     dataArr = ds.ReadAsArray()
@@ -2788,6 +2903,8 @@ def get_read_func(data_reader):
         return read_tempo_no2_netcdf
     if data_reader == "tempo_no2_netcdf_geo":
          return read_tempo_no2_netcdf_geo
+    if data_reader == 'tempo_no2_netcdf_cloud':
+        return read_tempo_no2_netcdf_mask
     if data_reader == "bps_benchmark":
          return read_bps_benchmark
     if data_reader == "burn_severity":
@@ -2800,6 +2917,7 @@ def get_read_func(data_reader):
         return read_modis_aero_mask
     if data_reader == "modis_aero_mask_geo":
         return read_modis_aero_mask_geo
-
+    if data_reader == "sif":
+        return clip_and_save_trop
 
     return None

@@ -17589,8 +17589,8 @@ fusion:
  resample_n_procs: 10
  resample_epsilon: 1.6
  use_bilinear: True 
- lon_bounds: [-125.45, -109.75]
- lat_bounds: [35.0, 45.0]
+ lon_bounds: [-125.45, -101.98]
+ lat_bounds: [31.31, 49.01]
        
 output_files: [
 "/data/nlahaye/remoteSensing/GOES_TEMPO/new_data/OR_ABI-L1b-RadC-M6C01_G18_s20242071701175_e20242071703548_c20242071703583.tif",

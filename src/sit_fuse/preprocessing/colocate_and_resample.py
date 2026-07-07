@@ -99,7 +99,7 @@ def resample_or_fuse_data(yml_conf):
             hi_channel_dim = 2
             hi_coord_dim = 2
             if hi_geo.shape[0] > hi_dat.shape[0] or hi_geo.shape[1] > hi_dat.shape[1]:
-                tmp = np.zeros((hi_geo.shape[0], hi_geo.shape[1], hi_dat.shape[2])) - 99999.0
+                tmp = np.zeros((hi_geo.shape[0], hi_geo.shape[1], hi_dat.shape[2])) - 999999.0
                 tmp[:hi_dat.shape[0], :hi_dat.shape[1],:] = hi_dat
                 hi_dat = tmp
 
@@ -112,16 +112,16 @@ def resample_or_fuse_data(yml_conf):
             source_def_hi = geometry.SwathDefinition(lons=np.squeeze(hi_geo[tuple(slc_lon_hi)]), lats=np.squeeze(hi_geo[tuple(slc_lat_hi)]))
             hi_dat = np.ma.masked_where((hi_dat < valid_min_hi) | (hi_dat > valid_max_hi), hi_dat)
 
-            #Assumes reader or preprocessor has defaulted bad values to -9999
-            np.ma.set_fill_value(hi_dat, -99999.0)
+            #Assumes reader or preprocessor has defaulted bad values to -999999
+            np.ma.set_fill_value(hi_dat, -999999.0)
  
         lo_dat = read_func_lo(lo_filenames[i], **data_reader_kwargs_lo).astype(np.float32)
         if len(lo_dat.shape) < 3:
             lo_dat = np.expand_dims(lo_dat, lo_channel_dim)
 
-        print(lo_dat.shape) 
+        print(lo_dat.shape, "LO_SHAPE") 
         lo_geo = read_func_geo_lo(lo_geoloc[i], **geo_data_reader_kwargs_lo).astype(np.float32)
-        print(lo_geo.shape, lo_geoloc[i])
+        print(lo_geo.shape, lo_geoloc[i], "LO_GEO")
 
 
         print(lo_dat.shape, lo_geo.shape)
@@ -132,7 +132,7 @@ def resample_or_fuse_data(yml_conf):
         lo_channel_dim = 2
         lo_coord_dim = 2
         if lo_geo.shape[0] > lo_dat.shape[0] or lo_geo.shape[1] > lo_dat.shape[1]:
-            tmp = np.zeros((lo_geo.shape[0], lo_geo.shape[1], lo_dat.shape[2])) - 99999.0
+            tmp = np.zeros((lo_geo.shape[0], lo_geo.shape[1], lo_dat.shape[2])) - 999999.0
             min_shape_1 = min(lo_geo.shape[0], lo_dat.shape[0])
             min_shape_2 = min(lo_geo.shape[1], lo_dat.shape[1])
             tmp[:min_shape_1, :min_shape_2,:] = lo_dat[:min_shape_1, :min_shape_2,:]
@@ -163,11 +163,11 @@ def resample_or_fuse_data(yml_conf):
         area_def = create_area_def(area_id, projection, area_extent=area_extent, resolution = final_resolution, units = projection_units)
         lonsa, latsa = area_def.get_lonlats()
 
-        #Assumes reader or preprocessor has defaulted bad values to -9999
+        #Assumes reader or preprocessor has defaulted bad values to -999999
         print(np.where(lo_dat < valid_min_lo))
         print(np.where(lo_dat > valid_max_lo))
         lo_dat = np.ma.masked_where((lo_dat < valid_min_lo) | (lo_dat > valid_max_lo), lo_dat)
-        np.ma.set_fill_value(lo_dat, -99999.0)
+        np.ma.set_fill_value(lo_dat, -999999.0)
         print(lo_dat.min(), lo_dat.max(), lo_dat.mean(), lo_dat.std(), "STATS INIT")
         #lo_dat = lo_dat.transpose(1,0,2)
         #lo_dat = xr.DataArray(da.from_array(lo_dat), dims=['x','y','bands'], coords={'lon': (['y','x'], np.squeeze(lo_geo[tuple(slc_lon_lo)])), 'lat': (['y','x'], np.squeeze(lo_geo[tuple(slc_lat_lo)])), 'bands': range(lo_dat.shape[2])})
@@ -191,15 +191,15 @@ def resample_or_fuse_data(yml_conf):
                 resampler = bilinear.NumpyBilinearResampler(source_def_hi, area_def, resample_radius, neighbours=resample_n_neighbors)  
  
                 resampler.get_bil_info(kdtree_class=kdtree_class, nprocs=resample_n_procs)
-                result = resampler.get_sample_from_bil_info(hi_dat, fill_value=-99999.0, output_shape=None)
-                #result = resampler.resample(hi_dat, fill_value=-99999.0)
+                result = resampler.get_sample_from_bil_info(hi_dat, fill_value=-999999.0, output_shape=None)
+                #result = resampler.resample(hi_dat, fill_value=-999999.0)
 
-                #result = bilinear.resample_bilinear(hi_dat, source_def_hi, area_def, radius= resample_radius, neighbours= resample_n_neighbors, nprocs= resample_n_procs, fill_value = -99999.0)
+                #result = bilinear.resample_bilinear(hi_dat, source_def_hi, area_def, radius= resample_radius, neighbours= resample_n_neighbors, nprocs= resample_n_procs, fill_value = -999999.0)
             else:
                 #radius_of_influence=5000, epsilon=1.5, nprocs=6, 
-                result = kd_tree.resample_nearest(source_def_hi, hi_dat, area_def, radius_of_influence=resample_radius, epsilon=resample_epsilon, nprocs=resample_n_procs, fill_value = -9999)
+                result = kd_tree.resample_nearest(source_def_hi, hi_dat, area_def, radius_of_influence=resample_radius, epsilon=resample_epsilon, nprocs=resample_n_procs, fill_value = -999999)
             result = np.ma.masked_where((result < (min(valid_min_lo, valid_min_hi)-100.0)), result)
-            np.ma.set_fill_value(result, -99999.0)
+            np.ma.set_fill_value(result, -999999.0)
      
             print("BEFORE RESAMPLING2", hi_dat.shape, lo_dat.shape, result.shape)
 
@@ -207,15 +207,15 @@ def resample_or_fuse_data(yml_conf):
             #resampler = bilinear.XArrayBilinearResampler(source_def_lo, area_def, resample_radius, neighbours=resample_n_neighbors)
             resampler = bilinear.NumpyBilinearResampler(source_def_lo, area_def, resample_radius, neighbours=resample_n_neighbors)
             resampler.get_bil_info(kdtree_class=kdtree_class, nprocs=resample_n_procs)
-            result2 = resampler.get_sample_from_bil_info(lo_dat, fill_value=-99999.0, output_shape=None)    
-            #result2 = resampler.resample(lo_dat, fill_value=-99999.0)
-            #result2 = bilinear.resample_bilinear(lo_dat, source_def_lo, area_def, radius= resample_radius, neighbours= resample_n_neighbors, nprocs= resample_n_procs, fill_value = -99999.0)
+            result2 = resampler.get_sample_from_bil_info(lo_dat, fill_value=-999999.0, output_shape=None)    
+            #result2 = resampler.resample(lo_dat, fill_value=-999999.0)
+            #result2 = bilinear.resample_bilinear(lo_dat, source_def_lo, area_def, radius= resample_radius, neighbours= resample_n_neighbors, nprocs= resample_n_procs, fill_value = -999999.0)
 
         else:
-            result2 = kd_tree.resample_nearest(source_def_lo, lo_dat, area_def, radius_of_influence=resample_radius, epsilon=resample_epsilon, nprocs=resample_n_procs, fill_value = -9999)
+            result2 = kd_tree.resample_nearest(source_def_lo, lo_dat, area_def, radius_of_influence=resample_radius, epsilon=resample_epsilon, nprocs=resample_n_procs, fill_value = -999999)
         print("AFTER RESAMPLING2", lo_dat.shape, result2.shape, result2.min(), result2.max(), result2.mean(), result2.std())
         result2 = np.ma.masked_where((result2 < (min(valid_min_lo, valid_min_hi)-100.0)), result2)
-        np.ma.set_fill_value(result2, -99999.0)
+        np.ma.set_fill_value(result2, -999999.0)
 
         print("AFTER RESAMPLING2", lo_dat.shape, result2.shape, result2.min(), result2.max(), result2.mean(), result2.std())
    
@@ -290,11 +290,12 @@ def resample_scene(scene, location, yml_conf):
 	coord_dim = 2
 	print(location.shape, scene.shape, "HERE COLOCATE")
 	if location.shape[0] > scene.shape[0] or location.shape[1] > scene.shape[1]:
-		tmp = np.zeros((location.shape[0], location.shape[1], location.shape[2])) - 99999.0
-		min_shape_1 = min(location.shape[0], location.shape[0])
-		min_shape_2 = min(location.shape[1], location.shape[1])
+		tmp = np.zeros((location.shape[0], location.shape[1], scene.shape[2])) - 999999.0
+		min_shape_1 = min(location.shape[0], scene.shape[0])
+		min_shape_2 = min(location.shape[1], scene.shape[1])
 		tmp[:min_shape_1, :min_shape_2,:] = scene[:min_shape_1, :min_shape_2,:]
-		scen = tmp
+		scene = tmp
+
 	slc_lat_lo = [slice(None)] * location.ndim
 	slc_lat_lo[coord_dim] = slice(lat_index, lat_index+1)
 	slc_lon_lo = [slice(None)] * location.ndim
@@ -316,7 +317,7 @@ def resample_scene(scene, location, yml_conf):
 	lonsa, latsa = area_def.get_lonlats()
 
 	#Assumes reader or preprocessor has defaulted bad values to -9999
-	np.ma.set_fill_value(scene, -99999.0)
+	np.ma.set_fill_value(scene, -999999.0)
 
 	if resample_n_procs > 1:
 		from pyresample._spatial_mp import cKDTree_MP as kdtree_class
@@ -325,15 +326,16 @@ def resample_scene(scene, location, yml_conf):
 
 	scene = scene.astype(np.float32)
 
+	print("BEFORE RESAMPLING", scene.shape, scene.min(), scene.max(), scene.mean(), scene.std(), source_def_lo, area_def)
 	if use_bilinear:
 		resampler = bilinear.NumpyBilinearResampler(source_def_lo, area_def, resample_radius, neighbours=resample_n_neighbors)
 		resampler.get_bil_info(kdtree_class=kdtree_class, nprocs=resample_n_procs)
-		result2 = resampler.get_sample_from_bil_info(scene, fill_value=-99999.0, output_shape=None)
+		result2 = resampler.get_sample_from_bil_info(scene, fill_value=-999999.0, output_shape=None)
 	else:
-		result2 = kd_tree.resample_nearest(source_def_lo, scene, area_def, radius_of_influence=resample_radius, epsilon=resample_epsilon, nprocs=resample_n_procs, fill_value = -9999)
+		result2 = kd_tree.resample_nearest(source_def_lo, scene, area_def, radius_of_influence=resample_radius, epsilon=resample_epsilon, nprocs=resample_n_procs, fill_value = -999999)
 	print("AFTER RESAMPLING2", scene.shape, result2.shape, result2.min(), result2.max(), result2.mean(), result2.std())
 	result2 = np.ma.masked_where((result2 < valid_min), result2)
-	np.ma.set_fill_value(result2, -99999.0)
+	np.ma.set_fill_value(result2, -999999.0)
 
 	print("AFTER RESAMPLING2", scene.shape, result2.shape, result2.min(), result2.max(), result2.mean(), result2.std())
 
@@ -380,7 +382,7 @@ def toGeotiff(output_image, area_def, out_fname, proj_id):
  
   for i in range(output_image.shape[0]):
       dstds.GetRasterBand((i+1)).WriteArray(np.squeeze(output_image[i]))
-      dstds.GetRasterBand((i+1)).SetNoDataValue(-99999.0)
+      dstds.GetRasterBand((i+1)).SetNoDataValue(-999999.0)
 
   dstds=None
 
