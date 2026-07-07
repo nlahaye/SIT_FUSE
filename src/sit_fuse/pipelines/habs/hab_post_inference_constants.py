@@ -76,6 +76,8 @@ YAML_TEMPLATE_MULTI_HIST = {
 ALEXANDRIUM_RANGES = [0,1000,10000,100000,1000000,10000000, 100000000]
 #[0,500,1000,5000,10000,500000,100000000]
 
+DOMOIC_ACID_RANGES = [0, 0.1,1,10,100,1000]
+
 INSTRUMENT_PREFIX = {
 "pace" : "PACE_OCI",
 "s3a" : "S3A_OLCI_ERRNT",
@@ -108,6 +110,7 @@ HAB_USE_KEYS =  {
 "gulf_of_mexico": ['Karenia_Brevis'],
 "california": [
 #'Alexandrium_spp'],
+'pDA',
 'Pseudo_nitzschia_delicatissima_group',
 'Pseudo_nitzschia_seriata_group',
 'Total_Phytoplankton']
@@ -119,7 +122,8 @@ USE_KEY_FNAME_MAP = {
 "Pseudo_nitzschia_seriata_group" : "pseudo_nitzschia_seriata_bloom",
 "Pseudo_nitzschia_delicatissima_group" : "pseudo_nitzschia_delicatissima_bloom",
 "Alexandrium_spp" : "alexandrium_bloom",
-"Total_Phytoplankton" : "total_phytoplankton"
+"Total_Phytoplankton" : "total_phytoplankton",
+'pDA' : 'particulate_domoic_acid'
 }
 
 VALIDATION_INSTRUMENT_SUFFIX = {
@@ -127,7 +131,8 @@ VALIDATION_INSTRUMENT_SUFFIX = {
 "Pseudo_nitzschia_delicatissima_group" : "_pseudo_nitzschia_delicatissima",
 "Alexandrium_spp" : "_alexandrium",
 "Karenia_Brevis" : "_karenia_brevis",
-"Total_Phytoplankton" : ""
+"Total_Phytoplankton" : "",
+'pDA' : "_particulate_domoic_acid"
 }
 
 
@@ -210,5 +215,7 @@ USE_KEY_RE_INDEX = {
 "Pseudo_nitzschia_seriata_group_no_heir" : 7,
 "Pseudo_nitzschia_delicatissima_group_no_heir" : 8,
 "Alexandrium_spp_no_heir" : 9,
-"Total_Phytoplankton_no_heir": 10
+"Total_Phytoplankton_no_heir": 10,
+'pDA_no_heir' : 11,
+'pDA' : 12
 }
