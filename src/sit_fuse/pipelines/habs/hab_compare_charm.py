@@ -24,15 +24,15 @@ from pyresample.utils.rasterio import get_area_def_from_raster
 INST_SUBDIRS = {
 "modis" : "AQUA_MODIS",
 "jpss1" : "JPSS1_VIIRS",
-"pace" : "PACE",
-"s3a" : "S3A",
-"s3b" : "S3B",
+"pace" : "PACE_OCI",
+"s3a" : "S3A_OLCI_ERRNT",
+"s3b" : "S3B_OLCI_ERRNT",
 "snpp" : "SNPP_VIIRS"
 }
 
 PRODUCT_RE = {
-"pnd" : "(\\d{8})_DAY.pseudo_nitzschia_delicatissima_bloom.tif",
-"pns" : "(\\d{8})_DAY.pseudo_nitzschia_seriata_bloom.tif",
+"pnd" : "(\\d{8})_DAY.pseudo_nitzschia_delicatissima_bloom.tif$",
+"pns" : "(\\d{8})_DAY.pseudo_nitzschia_seriata_bloom.tif$",
 #"total" : "(\d{8})_DAY\.total_phytoplankton\.tif"
 } 
 
@@ -49,7 +49,7 @@ CHARM_FILES = [
 
 CHARM_AREA_DEF = "Z:\\2026\\Summer\\Southern California Bight HABs\\C-HARM data\\charmForecast0day_LonPM180.tif"
 
-DT_RANGE = [datetime.strptime("20240306", "%Y%m%d"), datetime.strptime("20250401", "%Y%m%d")]
+DT_RANGE = [datetime.strptime("20240306", "%Y%m%d"), datetime.strptime("20250701", "%Y%m%d")]
 
 LON_BOUNDS = [-128, -116.0]
 LAT_BOUNDS = [30, 38.94]
@@ -395,7 +395,11 @@ def run_comparison():
                     total_diffs[total_inds] = total_diffs[total_inds] + 1 #len(diff_inds[0])      
                     print(total_diffs, len(diff_inds[0]))
     print(diff_map.min(), diff_map.mean(),diff_map.max(), diff_map.std())
-    diff_map = diff_map / total_diffs
+ #   diff_map = diff_map / total_diffs
+
+    # Replace 0/0 with NaN automatically without throwing a warning
+    diff_map = np.divide(diff_map, total_diffs, out=np.full_like(diff_map, np.nan), where=total_diffs != 0)
+
     print(np.nanmean(diff_map), np.nanmin(diff_map),np.nanmax(diff_map), np.nanstd(diff_map))
     plt.matshow(diff_map, vmin=0, vmax=1, cmap="jet")  
     plt.colorbar() 
@@ -424,9 +428,6 @@ def run_comparison():
             if sum(hist_by_concentration[prod][n]["count"]) < 1:
                 continue
             print(prod, n, np.average(hist_by_concentration[prod][n]["f1"], weights=hist_by_concentration[prod][n]["count"]))      
-        
-
-
+       
 
 run_comparison()
-
