@@ -5,10 +5,8 @@ Modeled on sit_fuse.datasets.sf_dataset.SFDataset's vector-based path
 replaced by causal temporal windowing.
 
 Changes from initial version (per Nick LaHaye's PR feedback):
-- Replaced custom min-max scaling with sklearn's MinMaxScaler, following
-  the same scaler selection pattern used by sf_dataset.py. Scaler is
-  saved to disk after fitting via joblib.dump so it can be reloaded at
-  inference time.
+- Replaced custom min-max scaling with sklearn scaler via get_scaler(),
+  following the same scaler selection pattern used by sf_dataset.py.
 - Added fill value handling (default -999999, matching sf_dataset.py
   convention): any sequence containing a fill value is dropped entirely
   before training.
@@ -18,7 +16,6 @@ import numpy as np
 import torch
 import pickle
 from joblib import load, dump
-from sklearn.preprocessing import MinMaxScaler
 
 
 class SFTemporalDataset(torch.utils.data.Dataset):
@@ -45,9 +42,9 @@ class SFTemporalDataset(torch.utils.data.Dataset):
         :param data: ndarray, shape (N_timesteps, N_features).
         :param targets: ndarray, shape (N_timesteps, ...).
         :param seq_len: Number of consecutive timesteps per sequence.
-        :param scaler: Optional sklearn scaler instance. If None and
-            scale=True, a MinMaxScaler is created. Mirrors sf_dataset.py's
-            scaler parameter convention.
+        :param scaler: Optional sklearn scaler instance, created externally
+            via get_scaler() and passed in. If None, no scaling is applied.
+            Mirrors sf_dataset.py's scaler parameter convention exactly.
         :param transform: Optional transform applied per sequence.
         :param subset_training: If > 0, randomly subsample this many
             sequences. -1 means use all sequences.
@@ -75,15 +72,10 @@ class SFTemporalDataset(torch.utils.data.Dataset):
         self.stratify_data = stratify_data
         self.do_shuffle = do_shuffle
 
-        # Scaler setup -- mirrors sf_dataset.py's pattern:
-        # accept an existing scaler or create a MinMaxScaler if scaling
-        # is requested but no scaler was provided.
-        if scaler is not None:
-            self.scaler = scaler
-        elif scale:
-            self.scaler = MinMaxScaler()
-        else:
-            self.scaler = None
+        # Mirrors sf_dataset.py's pattern exactly: scaler is created
+        # externally via get_scaler() and passed in -- this class never
+        # creates a scaler internally.
+        self.scaler = scaler
 
         # Fit scaler on this data if requested.
         if self.scale and self.train_scaler and self.scaler is not None:
