@@ -1,30 +1,18 @@
 
-<<<<<<< HEAD
-
-start_lon: -128.00
-end_lon: -116.00
-start_lat: 30.00
-end_lat: 38.94
 
 train_min_date: "20250110"
 train_max_date: "20250220"
 
 output: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/GOES_18/"
-=======
+
 start_lon: -124.00
 end_lon: -114.00
 start_lat: 28.00
 end_lat: 38.00
->>>>>>> 4ec782880d55d1860511985a352d0ad953cd9c32
 
 config_dir: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/"
 
 
-<<<<<<< HEAD
-
-
-=======
 input_dir: "/mnt/data/GOES_18_LA_FIRE_RADIANCES/"
  
->>>>>>> 4ec782880d55d1860511985a352d0ad953cd9c32
 
