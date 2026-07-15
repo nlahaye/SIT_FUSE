@@ -1648,6 +1648,8 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
 
     uniques = sorted(np.unique(insitu_df['Datetime'].values))
 
+    print("USE KEY 2", use_key)
+
 
     #TODO
     #subset by date - start and end day of SIF 
@@ -1674,6 +1676,8 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
                 file_ext = file_ext  + "pseudo_nitzschia_delicatissima_bloom.tif"
             elif "karenia_brevis" in input_file_type: # CAN CHANGE BACK
                 file_ext = file_ext + "karenia_brevis_bloom.tif"
+            elif "domoic" in input_file_type: 
+                file_ext = file_ext + "particulate_domoic_acid.tif"
             else:
                 file_ext = file_ext + "total_phytoplankton.tif"
             #clust_fname = os.path.join(os.path.join(clusters_dir, "AQUA_MODIS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m." + file_ext))
