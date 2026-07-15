@@ -2292,18 +2292,16 @@ def read_geo_nc_ungridded(fname, **kwargs):
 
 
 def get_scaler(scaler_name, cuda=True):
-	if scaler_name == "standard":
-		return StandardScaler(), True
-	#elif scaler_name == "standard_dask":
-	#	return DaskStandardScaler(), True
-	elif scaler_name == "maxabs":
-		return MaxAbsScaler(), True
-	elif scaler_name == "sparse_standard":
-		return StandardScaler(with_mean=False), True
-	#elif scaler_name == "sparse_standard_dask":
-	#	return DaskStandardScaler(with_mean=False), True
-	else:
-		return None, True
+    if scaler_name == "standard":
+        return StandardScaler(), True
+    elif scaler_name == "maxabs":
+        return MaxAbsScaler(), True
+    elif scaler_name == "sparse_standard":
+        return StandardScaler(with_mean=False), True
+    elif scaler_name == "minmax":
+        return MinMaxScaler(), True
+    else:
+        return None, True
 
 def read_gtiff_generic_geo(flename, **kwargs):
     latLon = get_lat_lon(flename)    
