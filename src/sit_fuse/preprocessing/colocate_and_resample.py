@@ -11,6 +11,7 @@ import dask.array as da
 import xarray as xr
 
 from pyresample.geometry import AreaDefinition
+from pyresample.bucket import BucketResampler
 from pyresample import area_config, bilinear, geometry, data_reduce, create_area_def, kd_tree
 from sit_fuse.utils import numpy_to_torch, read_yaml, get_read_func
 from osgeo import gdal, osr
@@ -65,6 +66,11 @@ def resample_or_fuse_data(yml_conf):
     resample_epsilon= yml_conf["fusion"]["resample_epsilon"]
     use_bilinear = yml_conf["fusion"]["use_bilinear"]
 
+
+    use_bucket = False
+    if use_bilinear is False and "use_bucket" in yml_conf["fusion"]:
+        use_bucket = yml_conf["fusion"]["use_bucket"]
+ 
     return_products = False
     if "return_products" in yml_conf:
         return_products = yml_conf["return_products"]
@@ -195,9 +201,17 @@ def resample_or_fuse_data(yml_conf):
                 #result = resampler.resample(hi_dat, fill_value=-999999.0)
 
                 #result = bilinear.resample_bilinear(hi_dat, source_def_hi, area_def, radius= resample_radius, neighbours= resample_n_neighbors, nprocs= resample_n_procs, fill_value = -999999.0)
-            else:
+            elif not use_bucket:
                 #radius_of_influence=5000, epsilon=1.5, nprocs=6, 
                 result = kd_tree.resample_nearest(source_def_hi, hi_dat, area_def, radius_of_influence=resample_radius, epsilon=resample_epsilon, nprocs=resample_n_procs, fill_value = -999999)
+            else:
+                #TODO, allow for other aggregation functions
+                lons, lats = source_def_hi.get_lonlats()
+                lons = da.from_array(lons, chunks="auto")
+                lats = da.from_array(lats, chunks="auto")
+                resampler = BucketResampler(area_def, lons, lats)
+                result2 = resampler.get_max(da.from_array(hi_dat, chunks="auto"), fill_value=-999999.0) 
+
             result = np.ma.masked_where((result < (min(valid_min_lo, valid_min_hi)-100.0)), result)
             np.ma.set_fill_value(result, -999999.0)
      
@@ -211,8 +225,16 @@ def resample_or_fuse_data(yml_conf):
             #result2 = resampler.resample(lo_dat, fill_value=-999999.0)
             #result2 = bilinear.resample_bilinear(lo_dat, source_def_lo, area_def, radius= resample_radius, neighbours= resample_n_neighbors, nprocs= resample_n_procs, fill_value = -999999.0)
 
-        else:
+        elif not use_bucket:
             result2 = kd_tree.resample_nearest(source_def_lo, lo_dat, area_def, radius_of_influence=resample_radius, epsilon=resample_epsilon, nprocs=resample_n_procs, fill_value = -999999)
+        else:
+            #TODO, allow for other aggregation functions
+            lons, lats = source_def_lo.get_lonlats()
+            lons = da.from_array(lons, chunks="auto")
+            lats = da.from_array(lats, chunks="auto")
+            resampler = BucketResampler(area_def, lons, lats)
+            result2 = resampler.get_max(da.from_array(lo_dat, chunks="auto"), fill_value=-999999.0)
+
         print("AFTER RESAMPLING2", lo_dat.shape, result2.shape, result2.min(), result2.max(), result2.mean(), result2.std())
         result2 = np.ma.masked_where((result2 < (min(valid_min_lo, valid_min_hi)-100.0)), result2)
         np.ma.set_fill_value(result2, -999999.0)
@@ -282,6 +304,11 @@ def resample_scene(scene, location, yml_conf):
 	resample_epsilon= yml_conf["fusion"]["resample_epsilon"]
 	use_bilinear = yml_conf["fusion"]["use_bilinear"]
 
+	use_bucket = False
+	if use_bilinear is False and "use_bucket" in yml_conf["fusion"]:
+	    use_bucket = yml_conf["fusion"]["use_bucket"]
+
+
 	if channel_dim != 2: 
 		scene = np.moveaxis(scene, channel_dim, 2)
 	if coord_dim != 2:
@@ -331,8 +358,15 @@ def resample_scene(scene, location, yml_conf):
 		resampler = bilinear.NumpyBilinearResampler(source_def_lo, area_def, resample_radius, neighbours=resample_n_neighbors)
 		resampler.get_bil_info(kdtree_class=kdtree_class, nprocs=resample_n_procs)
 		result2 = resampler.get_sample_from_bil_info(scene, fill_value=-999999.0, output_shape=None)
-	else:
+	elif not use_bucket:
 		result2 = kd_tree.resample_nearest(source_def_lo, scene, area_def, radius_of_influence=resample_radius, epsilon=resample_epsilon, nprocs=resample_n_procs, fill_value = -999999)
+	else:
+                #TODO, allow for other aggregation functions
+                lons, lats = source_def_lo.get_lonlats()
+                lons = da.from_array(lons, chunks="auto")
+                lats = da.from_array(lats, chunks="auto")
+                resampler = BucketResampler(area_def, lons, lats)
+                result2 = resampler.get_max(da.from_array(scene, chunks="auto"), fill_value=-999999.0)
 	print("AFTER RESAMPLING2", scene.shape, result2.shape, result2.min(), result2.max(), result2.mean(), result2.std())
 	result2 = np.ma.masked_where((result2 < valid_min), result2)
 	np.ma.set_fill_value(result2, -999999.0)
