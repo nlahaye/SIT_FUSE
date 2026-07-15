@@ -1684,6 +1684,8 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
 
     uniques = sorted(np.unique(insitu_df['Datetime'].values))
 
+    print("USE KEY 2", use_key)
+
 
     #TODO
     #subset by date - start and end day of SIF 
@@ -1699,7 +1701,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         if "sif" in input_file_type:
             clust_fname = os.path.join(os.path.join(clusters_dir, "sif_finalday_" + str(ind) + ".tif"))
         elif "daily" in input_file_type:
-            file_ext = ".DAY." #"_DAY." #"DAY." #"_DAY." TODO HERE
+            file_ext = "_DAY." #"DAY." #"_DAY." TODO HERE
             if "no_heir" in input_file_type:
                 file_ext = file_ext  + "no_heir."
             if "alexandrium" in input_file_type:
@@ -1710,6 +1712,8 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
                 file_ext = file_ext  + "pseudo_nitzschia_delicatissima_bloom.tif"
             elif "karenia_brevis" in input_file_type: # CAN CHANGE BACK
                 file_ext = file_ext + "karenia_brevis_bloom.tif"
+            elif "domoic" in input_file_type: 
+                file_ext = file_ext + "particulate_domoic_acid.tif"
             else:
                 file_ext = file_ext + "total_phytoplankton.tif"
             #clust_fname = os.path.join(os.path.join(clusters_dir, "AQUA_MODIS." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m." + file_ext))
@@ -2324,18 +2328,16 @@ def read_geo_nc_ungridded(fname, **kwargs):
 
 
 def get_scaler(scaler_name, cuda=True):
-	if scaler_name == "standard":
-		return StandardScaler(), True
-	#elif scaler_name == "standard_dask":
-	#	return DaskStandardScaler(), True
-	elif scaler_name == "maxabs":
-		return MaxAbsScaler(), True
-	elif scaler_name == "sparse_standard":
-		return StandardScaler(with_mean=False), True
-	#elif scaler_name == "sparse_standard_dask":
-	#	return DaskStandardScaler(with_mean=False), True
-	else:
-		return None, True
+    if scaler_name == "standard":
+        return StandardScaler(), True
+    elif scaler_name == "maxabs":
+        return MaxAbsScaler(), True
+    elif scaler_name == "sparse_standard":
+        return StandardScaler(with_mean=False), True
+    elif scaler_name == "minmax":
+        return MinMaxScaler(), True
+    else:
+        return None, True
 
 def read_gtiff_generic_geo(flename, **kwargs):
     latLon = get_lat_lon(flename)    

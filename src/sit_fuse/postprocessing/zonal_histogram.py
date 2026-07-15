@@ -120,7 +120,6 @@ def gen_zonal_histogram(zone_raster_path, value_raster_path, zonal_histogram = N
               in the value raster.
     """
 
-    print(zone_raster_path, value_raster_path, "HERE ERROR")
 
     if regrid:
         zone_array_0 = regrid_map(zone_raster_path, value_raster_path)

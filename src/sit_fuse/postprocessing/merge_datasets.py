@@ -23,7 +23,7 @@ DATE_RE = ".*(\d{8}).*"
 
 
 
-fname_res = ["(sif_finalday_\d+).*karenia_brevis_bloom.tif", ".*(\d{8}).*karenia_brevis_bloom.tif", ".*(\d{8}).*no_heir.*karenia_brevis_bloom.tif", ".*(\d{8}).*pseudo_nitzschia_seriata_bloom.tif", ".*(\d{8}).*pseudo_nitzschia_delicatissima_bloom.tif", ".*(\d{8}).*alexandrium_bloom.tif", ".*(\d{8}).*total_phytoplankton.tif",".*(\d{8}).*no_heir.*pseudo_nitzschia_seriata_bloom.tif", ".*(\d{8}).*no_heir.*pseudo_nitzschia_delicatissima_bloom.tif", ".*(\d{8}).*no_heir.*alexandrium_bloom.tif", ".*(\d{8}).*no_heir.*total_phytoplankton.tif"]
+fname_res = ["(sif_finalday_\d+).*karenia_brevis_bloom.tif", ".*(\d{8}).*karenia_brevis_bloom.tif", ".*(\d{8}).*no_heir.*karenia_brevis_bloom.tif", ".*(\d{8}).*pseudo_nitzschia_seriata_bloom.tif", ".*(\d{8}).*pseudo_nitzschia_delicatissima_bloom.tif", ".*(\d{8}).*alexandrium_bloom.tif", ".*(\d{8}).*total_phytoplankton.tif",".*(\d{8}).*no_heir.*pseudo_nitzschia_seriata_bloom.tif", ".*(\d{8}).*no_heir.*pseudo_nitzschia_delicatissima_bloom.tif", ".*(\d{8}).*no_heir.*alexandrium_bloom.tif", ".*(\d{8}).*no_heir.*total_phytoplankton.tif", ".*(\d{8}).*no_heir.*particulate_domoic_acid.tif", ".*(\d{8}).*particulate_domoic_acid.tif"]
  
 def merge_datasets(paths, fname_str, out_dir, re_index = 0, base_index = 0): 
 

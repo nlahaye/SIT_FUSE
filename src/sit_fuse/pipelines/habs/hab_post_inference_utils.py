@@ -324,6 +324,7 @@ def update_config_data_stream_merge(yml_conf, config_dict, out_dir, species_run,
     else:
         input_paths.append("")
 
+    print(instrument, key2)
     input_paths.append(os.path.dirname(yml_conf["instruments"][instrument]["no_trop"][key2]["cf_gtiffs"][0]))
 
     config_dict["input_paths"] = input_paths
@@ -687,6 +688,9 @@ def run_context_assignment(yml_conf, species_run):
             config_dict = copy.deepcopy(YAML_TEMPLATE_MULTI_HIST)      
             if "Alexandrium" in species_run or "alexandrium" in species_run:
                 config_dict["ranges"] = copy.deepcopy(ALEXANDRIUM_RANGES) 
+            elif 'pDA' in species_run or 'domoic'  in species_run:
+                config_dict["ranges"] = copy.deepcopy(DOMOIC_ACID_RANGES)
+
             config_dict = update_config_multi_hist(instrument_dict[instrument][key]["out_dir"], config_dict, yml_conf, instrument, species_run, no_heir = False)
  
             config_fname = build_config_fname_multi_hist(config_dir, instrument, species_run, no_heir = False, with_trop = trop)
@@ -701,6 +705,8 @@ def run_context_assignment(yml_conf, species_run):
                 config_dict = copy.deepcopy(YAML_TEMPLATE_MULTI_HIST)
                 if "Alexandrium" in species_run or "alexandrium" in species_run:
                     config_dict["ranges"] = copy.deepcopy(ALEXANDRIUM_RANGES)
+                elif 'pDA' in species_run or 'domoic'  in species_run:
+                    config_dict["ranges"] = copy.deepcopy(DOMOIC_ACID_RANGES)
                 config_dict = update_config_multi_hist(instrument_dict[instrument][key]["out_dir"], config_dict, yml_conf, instrument, species_run, no_heir = True)
 
                 classes_no_heir, _ = run_multi_hist(config_dict, instrument_dict[instrument][key]["out_dir"]) 
@@ -738,6 +744,9 @@ def run_validation(yml_conf, species_run):
             config_dict = copy.deepcopy(YAML_TEMPLATE_MULTI_HIST)
             if "Alexandrium" in species_run or "alexandrium" in species_run:
                 config_dict["ranges"] = copy.deepcopy(ALEXANDRIUM_RANGES)
+            elif 'pDA' in species_run or 'domoic'  in species_run:
+                config_dict["ranges"] = copy.deepcopy(DOMOIC_ACID_RANGES)\
+
             out_dir = yml_conf["final_product_dir"]
 
             append = INSTRUMENT_PREFIX[instrument]
@@ -795,9 +804,9 @@ def merge_class_sets(yml_conf, species_run, classes, iter2_classes):
                         #Adding to i-1 because class_compare function run on no_heir vs heir comparison generates a dummy empty zero-class set of
                         # values, where multi_hist_insitu does not, so there is an offset in indexing between the class sets
                         arr_tmp[i-1].append(arr_merge[i][j])
-                    elif ind < (i-1):
-                        arr_tmp[i-1].append(arr_merge[i][j])
-                        arr_tmp[ind].remove(arr_merge[i][j])
+                    #elif ind > (i-1):
+                    #    arr_tmp[i-1].append(arr_merge[i][j])
+                    #    arr_tmp[ind].remove(arr_merge[i][j])
 
             for i in range(len(arr_tmp)):
                 arr_tmp[i] = sorted(arr_tmp[i]) 
