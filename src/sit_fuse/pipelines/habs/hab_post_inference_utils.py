@@ -324,6 +324,7 @@ def update_config_data_stream_merge(yml_conf, config_dict, out_dir, species_run,
     else:
         input_paths.append("")
 
+    print(instrument, key2)
     input_paths.append(os.path.dirname(yml_conf["instruments"][instrument]["no_trop"][key2]["cf_gtiffs"][0]))
 
     config_dict["input_paths"] = input_paths
@@ -803,9 +804,9 @@ def merge_class_sets(yml_conf, species_run, classes, iter2_classes):
                         #Adding to i-1 because class_compare function run on no_heir vs heir comparison generates a dummy empty zero-class set of
                         # values, where multi_hist_insitu does not, so there is an offset in indexing between the class sets
                         arr_tmp[i-1].append(arr_merge[i][j])
-                    elif ind < (i-1):
-                        arr_tmp[i-1].append(arr_merge[i][j])
-                        arr_tmp[ind].remove(arr_merge[i][j])
+                    #elif ind > (i-1):
+                    #    arr_tmp[i-1].append(arr_merge[i][j])
+                    #    arr_tmp[ind].remove(arr_merge[i][j])
 
             for i in range(len(arr_tmp)):
                 arr_tmp[i] = sorted(arr_tmp[i]) 
