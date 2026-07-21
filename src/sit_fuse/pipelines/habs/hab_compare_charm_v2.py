@@ -58,7 +58,7 @@ DEFAULTS = {
     "output_dir": ".",
     "write_pickle": True,
     "write_geotiff": True,
-    "write_boxplots": True,
+    "write_boxplots": False,
     "pickle_filename": "hab_compare_charm_histograms.pkl",
     "diff_map_filename": "TOTAL_DIFF_MAP.tif",
     "total_diffs_filename": "TOTAL_DIFFS.tif",
@@ -1133,8 +1133,8 @@ def main() -> None:
         save_pickle_payload(payload, output_dir / config.pickle_filename)
     if config.write_geotiff:
         save_diff_geotiffs(payload, output_dir, config)
-    #if config.write_boxplots:
-    #    save_boxplots(payload, output_dir, config)
+    if config.write_boxplots:
+        save_boxplots(payload, output_dir, config)
 
     print_summary(payload, config)
 
