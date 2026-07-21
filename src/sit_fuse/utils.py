@@ -1468,6 +1468,42 @@ def read_s6_netcdf_geo(filename, **kwargs):
         return dat
 
 
+def read_noaa_water_mask_netcdf(filename, **kwargs):
+    f = Dataset(filename)
+
+    #No fills, either 1 (water) or 0 (land)
+    dat = f.variables["watermask"][:]
+
+    data = dat.reshape((1, dat.shape[0], dat.shape[1])).astype(np.int8)
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+        data = data[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+
+    del dat
+    return data
+
+
+def read_noaa_water_mask_netcdf_geo(filename, **kwargs):
+
+    data1 = []
+    f = Dataset(filename)
+    dat = f.variables["lat"]
+    lat = dat[:]
+    data1.append(lat)
+    dat2 = f.variables["lon"]
+    lon = dat2[:]
+    data1.append(lon)
+    print(lat.shape, lon.shape)
+    #dat = np.array(data1)
+
+    longr, latgr = np.meshgrid(lon, lat)
+    del lon, lat, data1, dat
+    dat = np.array([latgr, longr], dtype=np.float32)
+
+    if "start_line" in kwargs and "end_line" in kwargs:
+        dat = dat[:, kwargs["start_line"]:kwargs["end_line"]]
+    return dat
+ 
+
 def read_s2_gtiff(files, **kwargs):
     print(files)
     data1 = []
@@ -2921,5 +2957,9 @@ def get_read_func(data_reader):
         return read_modis_aero_mask_geo
     if data_reader == "sif":
         return clip_and_save_trop
+    if data_reader == "noaa_water_mask_netcdf":
+        return read_noaa_water_mask_netcdf
+    if data_reader == "noaa_water_mask_netcdf_geo":
+        return read_noaa_water_mask_netcdf_geo
 
     return None
