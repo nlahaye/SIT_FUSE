@@ -1,486 +1,473 @@
-import salem
-from salem import get_demo_file, open_xr_dataset
-from sklearn.metrics import classification_report, confusion_matrix
-from pyresample import area_config, bilinear, geometry, data_reduce, create_area_def, kd_tree
-from pyresample.utils.rasterio import get_area_def_from_raster
+#!/usr/bin/env python3
 
-import skill_metrics as sm
-
-from scipy.spatial import distance
-
-from skimage.metrics import structural_similarity, variation_of_information, adapted_rand_error, contingency_table
- 
-from osgeo import gdal, osr
+from __future__ import annotations
 
 import argparse
- 
+import csv
+import math
 import os
+from pathlib import Path
+
 import numpy as np
-import cv2
+from osgeo import gdal
+from pyresample import kd_tree
+from pyresample.utils.rasterio import get_area_def_from_raster
+from skimage.metrics import structural_similarity
 
-import matplotlib
-matplotlib.use("Agg")
+from sit_fuse.utils import read_yaml
 
-import matplotlib.pyplot as plt
 
-from osgeo import gdal, osr
-import copy
+def is_finite_scalar(x):
+    return np.isfinite(x)
 
-from sit_fuse.utils import numpy_to_torch, read_yaml, get_read_func
 
-def is_real_num(value):
-    return (~np.isnan(value) and ~np.isinf(value))
+def safe_div(num, den):
+    return float(num) / float(den) if den != 0 else np.nan
 
-def weighted_mean(data, counts):
 
-    values = 0
-    full_count = 0
-    for i in range(len(data)):
-        if is_real_num(data[i]) and is_real_num(counts[i]):
-            values = values + (data[i]*counts[i])
-            full_count = full_count + counts[i]
+def weighted_mean(values, weights):
+    values = np.asarray(values, dtype=np.float64)
+    weights = np.asarray(weights, dtype=np.float64)
+    valid = np.isfinite(values) & np.isfinite(weights) & (weights > 0)
+    if valid.sum() == 0:
+        return np.nan
+    return np.sum(values[valid] * weights[valid]) / np.sum(weights[valid])
 
-    if full_count > 0:
-        return (values / full_count)
-    else:
+
+def read_raster(path):
+    ds = gdal.Open(path)
+    if ds is None:
+        raise FileNotFoundError(f"Could not open raster: {path}")
+    arr = ds.ReadAsArray()
+    nodata = ds.GetRasterBand(1).GetNoDataValue()
+    gt = ds.GetGeoTransform()
+    proj = ds.GetProjection()
+    metadata = ds.GetMetadata()
+    gcpcount = ds.GetGCPCount()
+    gcps = ds.GetGCPs() if gcpcount > 0 else None
+    gcpproj = ds.GetGCPProjection() if gcpcount > 0 else None
+    return {
+        "ds": ds,
+        "arr": np.squeeze(arr),
+        "nodata": nodata,
+        "gt": gt,
+        "proj": proj,
+        "metadata": metadata,
+        "gcps": gcps,
+        "gcpproj": gcpproj,
+    }
+
+
+def write_geotiff_like(reference_path, out_arr, out_path, dtype=gdal.GDT_Float32, nodata=None):
+    ref = gdal.Open(reference_path)
+    if ref is None:
+        raise FileNotFoundError(f"Could not open reference raster: {reference_path}")
+
+    ref_arr = ref.ReadAsArray()
+    nx = out_arr.shape[1]
+    ny = out_arr.shape[0]
+
+    geo_transform = ref.GetGeoTransform()
+    gt2 = [geo_transform[0], geo_transform[1], geo_transform[2],
+           geo_transform[3], geo_transform[4], geo_transform[5]]
+    gt2[1] = gt2[1] * ref_arr.shape[1] / nx
+    gt2[5] = gt2[5] * ref_arr.shape[0] / ny
+
+    out_path = str(out_path)
+    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+    out_ds = gdal.GetDriverByName("GTiff").Create(out_path, nx, ny, 1, dtype)
+    out_ds.SetGeoTransform(gt2)
+    out_ds.SetMetadata(ref.GetMetadata())
+    out_ds.SetProjection(ref.GetProjection())
+
+    if ref.GetGCPCount() > 0:
+        out_ds.SetGCPs(ref.GetGCPs(), ref.GetGCPProjection())
+
+    band = out_ds.GetRasterBand(1)
+    band.WriteArray(out_arr)
+    if nodata is not None:
+        band.SetNoDataValue(nodata)
+    band.FlushCache()
+    out_ds.FlushCache()
+    out_ds = None
+    ref = None
+
+
+def resample_to_target(src_path, src_arr, target_path, radius_of_influence=500, fill_value=np.nan):
+    src_area = get_area_def_from_raster(src_path)
+    tgt_area = get_area_def_from_raster(target_path)
+    out = kd_tree.resample_nearest(
+        src_area,
+        src_arr,
+        tgt_area,
+        radius_of_influence=radius_of_influence,
+        fill_value=fill_value,
+    )
+    return np.squeeze(out)
+
+
+def to_binary_mask(arr, threshold=0.0, nodata=None):
+    arr = np.asarray(arr, dtype=np.float32)
+    valid = np.isfinite(arr)
+    if nodata is not None:
+        valid &= (arr != nodata)
+    mask = np.zeros(arr.shape, dtype=np.uint8)
+    mask[valid & (arr > threshold)] = 1
+    return mask, valid
+
+
+def confusion_from_masks(truth, pred, valid_mask):
+    t = truth[valid_mask].astype(np.uint8)
+    p = pred[valid_mask].astype(np.uint8)
+
+    tp = int(np.sum((t == 1) & (p == 1)))
+    tn = int(np.sum((t == 0) & (p == 0)))
+    fp = int(np.sum((t == 0) & (p == 1)))
+    fn = int(np.sum((t == 1) & (p == 0)))
+    return tp, tn, fp, fn
+
+
+def metrics_from_confusion(tp, tn, fp, fn):
+    precision = safe_div(tp, tp + fp)
+    recall = safe_div(tp, tp + fn)
+    specificity = safe_div(tn, tn + fp)
+    f1 = safe_div(2 * tp, 2 * tp + fp + fn)
+    iou = safe_div(tp, tp + fp + fn)
+    balanced_accuracy = np.nanmean([recall, specificity])
+
+    denom = math.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
+    mcc = safe_div((tp * tn - fp * fn), denom) if denom != 0 else np.nan
+
+    total = tp + tn + fp + fn
+    prevalence = safe_div(tp + fn, total)
+    predicted_positive_rate = safe_div(tp + fp, total)
+
+    return {
+        "tp": tp,
+        "tn": tn,
+        "fp": fp,
+        "fn": fn,
+        "precision": precision,
+        "recall": recall,
+        "specificity": specificity,
+        "f1": f1,
+        "iou": iou,
+        "balanced_accuracy": balanced_accuracy,
+        "mcc": mcc,
+        "prevalence": prevalence,
+        "predicted_positive_rate": predicted_positive_rate,
+        "n_valid_pixels": total,
+    }
+
+
+def dice_similarity(truth, pred, valid_mask):
+    t = truth[valid_mask].astype(np.uint8)
+    p = pred[valid_mask].astype(np.uint8)
+    denom = (2 * np.sum((t == 1) & (p == 1)) + np.sum((t == 1) & (p == 0)) + np.sum((t == 0) & (p == 1)))
+    if denom == 0:
+        return np.nan
+    tp = np.sum((t == 1) & (p == 1))
+    fp = np.sum((t == 0) & (p == 1))
+    fn = np.sum((t == 1) & (p == 0))
+    return safe_div(2 * tp, 2 * tp + fp + fn)
+
+
+def compute_ssim(truth, pred, valid_mask):
+    if np.sum(valid_mask) == 0:
         return np.nan
 
-def f1_score(tp, tn, fp, fn):
+    truth_f = truth.astype(np.float32).copy()
+    pred_f = pred.astype(np.float32).copy()
 
-    if (float(tp) + float(fn)) == 0.0:
-        recall = 0.0
-    else:
-        recall = float(tp) / (float(tp) + float(fn))
+    truth_f[~valid_mask] = 0
+    pred_f[~valid_mask] = 0
 
-    if (float(tp) + float(fp)) == 0.0:
-        precision = 0.0
-    else:
-        precision = float(tp) / (float(tp) + float(fp))
+    win_size = min(truth_f.shape[0], truth_f.shape[1])
+    if win_size < 3:
+        return np.nan
+    if win_size % 2 == 0:
+        win_size -= 1
+    if win_size < 3:
+        return np.nan
 
-
-    if precision + recall == 0.0:
-        f1 = 0.0
-    else:
-        f1 = (2*precision*recall) / (precision + recall)
-
-    return precision, recall, f1
-
-def dice_sim(labels, truth):
- 
-    dice = distance.dice(labels, truth)
-    return dice
-
-def diff_map(tmp2, tmp, sfmd, fle_ext):
-        out_dat = np.squeeze(tmp - tmp2)
-        print(tmp.min(), tmp2.min(), tmp.max(), tmp2.max(), tmp.shape, tmp2.shape, "COMPARE")
-        print(np.nanmean(out_dat), np.nanmin(out_dat), np.nanmax(out_dat))
-
-        dat = gdal.Open(sfmd)
-
-        dat_tmp = dat.ReadAsArray()
-        nx = out_dat.shape[1]
-        ny = out_dat.shape[0]
-        geoTransform = dat.GetGeoTransform()
-        gt2 = [geoTransform[0], geoTransform[1], geoTransform[2], geoTransform[3], geoTransform[4], geoTransform[5]]
-        gt2[1] = gt2[1] * dat_tmp.shape[1] / nx
-        gt2[5] = gt2[5] * dat_tmp.shape[0] / ny
-
-        metadata = dat.GetMetadata()
-        wkt = dat.GetProjection()
-        gcpcount = dat.GetGCPCount()
-        gcp = None
-        gcpproj = None
-
-        if gcpcount > 0:
-            gcp = dat.GetGCPs()
-            gcpproj = dat.GetGCPProjection()
-            dat.FlushCache()
-            dat = None
-
-        fbase = os.path.splitext(sfmd)[0] + "_DIFF_" + fle_ext + ".tif"
-        print(out_dat.shape, np.nanmean(out_dat), np.nanmin(out_dat), np.nanmax(out_dat), nx, ny, "HERE")
-        print(geoTransform, gt2)
-        fname = fbase + ".tif"
-        print(fname)
-        out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Float32)
-        out_ds.SetGeoTransform(gt2)
-        out_ds.SetMetadata(metadata)
-        out_ds.SetProjection(wkt)
-        if gcpcount > 0:
-            out_ds.SetGCPs(gcp, gcpproj)
-        out_ds.GetRasterBand(1).WriteArray(out_dat)
-        out_ds.FlushCache()
-        out_ds = None
+    return structural_similarity(
+        truth_f,
+        pred_f,
+        data_range=1.0,
+        gaussian_weights=False,
+        win_size=win_size,
+    )
 
 
+def diff_map(reference_path, truth_mask, pred_mask, valid_mask, out_path):
+    diff = np.full(truth_mask.shape, np.nan, dtype=np.float32)
+    diff[valid_mask] = pred_mask[valid_mask].astype(np.float32) - truth_mask[valid_mask].astype(np.float32)
+    write_geotiff_like(reference_path, diff, out_path, dtype=gdal.GDT_Float32, nodata=np.nan)
 
-def calculate_iou(gt_mask, pred_mask):
-    overlap = pred_mask * gt_mask  # Logical AND
-    union = (pred_mask + gt_mask)>0  # Logical OR
-    iou = overlap.sum() / float(union.sum())
-    return iou
- 
+
+def summarize_metric(rows, key):
+    vals = [r[key] for r in rows if is_finite_scalar(r.get(key, np.nan))]
+    if len(vals) == 0:
+        return np.nan
+    return float(np.mean(vals))
+
+
+def weighted_metric(rows, key, weight_key="n_valid_pixels"):
+    vals = [r.get(key, np.nan) for r in rows]
+    wts = [r.get(weight_key, np.nan) for r in rows]
+    return float(weighted_mean(vals, wts))
+
+
+def aggregate_rows(rows):
+    tp = sum(r["tp"] for r in rows)
+    tn = sum(r["tn"] for r in rows)
+    fp = sum(r["fp"] for r in rows)
+    fn = sum(r["fn"] for r in rows)
+
+    agg = metrics_from_confusion(tp, tn, fp, fn)
+    agg["dice_mean"] = summarize_metric(rows, "dice")
+    agg["dice_weighted"] = weighted_metric(rows, "dice")
+    agg["ssim_mean"] = summarize_metric(rows, "ssim")
+    agg["ssim_weighted"] = weighted_metric(rows, "ssim")
+    agg["n_scenes"] = len(rows)
+    return agg
+
+
+def compare_one_pair(sf_path, truth_path, other_path, cfg, outputs):
+    radius = cfg.get("radius_of_influence", 500)
+    sit_thresh = cfg.get("sit_fuse_threshold", 0.0)
+    truth_thresh = cfg.get("truth_threshold", 0.0)
+    other_thresh = cfg.get("other_threshold", 0.0)
+
+    sf = read_raster(sf_path)
+    truth = read_raster(truth_path)
+
+    truth_on_sf = resample_to_target(
+        truth_path,
+        truth["arr"],
+        sf_path,
+        radius_of_influence=radius,
+        fill_value=np.nan,
+    )
+
+    sf_mask, sf_valid = to_binary_mask(sf["arr"], threshold=sit_thresh, nodata=sf["nodata"])
+    truth_mask, truth_valid = to_binary_mask(truth_on_sf, threshold=truth_thresh, nodata=np.nan)
+
+    valid_eval = sf_valid & truth_valid
+
+    row = {
+        "sit_fuse_map": sf_path,
+        "truth_map": truth_path,
+        "other_map": other_path if other_path is not None else "",
+    }
+
+    if np.sum(valid_eval) == 0:
+        row.update({
+            "tp": 0, "tn": 0, "fp": 0, "fn": 0,
+            "precision": np.nan, "recall": np.nan, "specificity": np.nan,
+            "f1": np.nan, "iou": np.nan, "balanced_accuracy": np.nan,
+            "mcc": np.nan, "prevalence": np.nan,
+            "predicted_positive_rate": np.nan,
+            "dice": np.nan, "ssim": np.nan,
+            "n_valid_pixels": 0,
+            "status": "no_valid_overlap",
+        })
+        return row, None
+
+    tp, tn, fp, fn = confusion_from_masks(truth_mask, sf_mask, valid_eval)
+    row.update(metrics_from_confusion(tp, tn, fp, fn))
+    row["dice"] = dice_similarity(truth_mask, sf_mask, valid_eval)
+    row["ssim"] = compute_ssim(truth_mask, sf_mask, valid_eval)
+    row["status"] = "ok"
+
+    if outputs.get("write_diff_rasters", True):
+        diff_dir = Path(outputs["diff_raster_dir"])
+        diff_dir.mkdir(parents=True, exist_ok=True)
+        sf_stem = Path(sf_path).stem
+        diff_map(
+            sf_path,
+            truth_mask,
+            sf_mask,
+            valid_eval,
+            diff_dir / f"{sf_stem}_diff_truth_vs_sitfuse.tif",
+        )
+
+    other_row = None
+    if other_path is not None and str(other_path).strip() != "":
+        other = read_raster(other_path)
+        other_on_sf = resample_to_target(
+            other_path,
+            other["arr"],
+            sf_path,
+            radius_of_influence=radius,
+            fill_value=np.nan,
+        )
+        other_mask, other_valid = to_binary_mask(other_on_sf, threshold=other_thresh, nodata=np.nan)
+        valid_eval_other = valid_eval & other_valid
+
+        if np.sum(valid_eval_other) > 0:
+            tp2, tn2, fp2, fn2 = confusion_from_masks(truth_mask, other_mask, valid_eval_other)
+            other_row = metrics_from_confusion(tp2, tn2, fp2, fn2)
+            other_row["dice"] = dice_similarity(truth_mask, other_mask, valid_eval_other)
+            other_row["ssim"] = compute_ssim(truth_mask, other_mask, valid_eval_other)
+            other_row["status"] = "ok"
+            other_row["n_valid_pixels"] = int(np.sum(valid_eval_other))
+
+            if outputs.get("write_diff_rasters", True):
+                diff_dir = Path(outputs["diff_raster_dir"])
+                sf_stem = Path(sf_path).stem
+                diff_map(
+                    sf_path,
+                    truth_mask,
+                    other_mask,
+                    valid_eval_other,
+                    diff_dir / f"{sf_stem}_diff_truth_vs_other.tif",
+                )
+        else:
+            other_row = {
+                "tp": 0, "tn": 0, "fp": 0, "fn": 0,
+                "precision": np.nan, "recall": np.nan, "specificity": np.nan,
+                "f1": np.nan, "iou": np.nan, "balanced_accuracy": np.nan,
+                "mcc": np.nan, "prevalence": np.nan,
+                "predicted_positive_rate": np.nan,
+                "dice": np.nan, "ssim": np.nan,
+                "n_valid_pixels": 0,
+                "status": "no_valid_overlap",
+            }
+
+    return row, other_row
+
+
+def write_rows_csv(path, rows):
+    if len(rows) == 0:
+        return
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    fieldnames = list(rows[0].keys())
+    with open(path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(row)
+
+
+def write_summary_csv(path, summary_rows):
+    if len(summary_rows) == 0:
+        return
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    fieldnames = list(summary_rows[0].keys())
+    with open(path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in summary_rows:
+            writer.writerow(row)
+
+
 def regrid_and_compare(config):
-
     sit_fuse_map_fnames = config["sit_fuse_maps"]
     truth_map_fnames = config["truth_maps"]
+    other_map_fnames = config.get("other_maps", None)
 
+    if len(sit_fuse_map_fnames) != len(truth_map_fnames):
+        raise ValueError("sit_fuse_maps and truth_maps must have the same length.")
+    if other_map_fnames is not None and len(other_map_fnames) != len(sit_fuse_map_fnames):
+        raise ValueError("other_maps must have the same length as sit_fuse_maps when provided.")
 
-    other_map_fnames = None
-    if "other_maps" in config.keys():
-        other_map_fnames = config["other_maps"]
+    analysis_cfg = config.get("analysis", {})
+    outputs_cfg = config.get("outputs", {})
+    outputs_cfg.setdefault("per_scene_csv", "comparison_per_scene.csv")
+    outputs_cfg.setdefault("summary_csv", "comparison_summary.csv")
+    outputs_cfg.setdefault("diff_raster_dir", "diff_rasters")
+    outputs_cfg.setdefault("write_diff_rasters", True)
 
-    ##truth_full = None
-    ##sf_full = None
-    tp = 0.0
-    fp = 0.0
-    tn = 0.0
-    fn = 0.0
+    per_scene_rows = []
+    per_scene_other_rows = []
 
-    tp2 = 0.0
-    fp2 = 0.0
-    tn2 = 0.0
-    fn2 = 0.0
-    ##ssim_full = 0.0
-
-    tpb1 = 0.0
-    fpb1 = 0.0
-    tnb1 = 0.0
-    fnb1 = 0.0
-
-    tpb2 = 0.0
-    fpb2 = 0.0
-    tnb2 = 0.0
-    fnb2 = 0.0
-
-    errors = []
-    precisions = []
-    recalls = []
-    splitss = []
-    mergess = []
-    ssims = []
-    ssims2 = []
-    dices = []
-    dices2 = []
-    pix_cnts = []
-    bsss = []
-
-    errors_b1 = []
-    precisions_b1 = []
-    recalls_b1 = []
-    ssims_b1 = []
-
-    errors_b2 = []
-    precisions_b2 = []
-    recalls_b2 = []
-    ssims_b2 = []
-
-
-    img_count = 0
     for i in range(len(sit_fuse_map_fnames)):
- 
-        map_fle = truth_map_fnames[i]
-        sfmd = sit_fuse_map_fnames[i]
+        sf_path = sit_fuse_map_fnames[i]
+        truth_path = truth_map_fnames[i]
+        other_path = other_map_fnames[i] if other_map_fnames is not None else None
 
-        other = None
-        if other_map_fnames is not None:
-            other = other_map_fnames[i]
+        print(f"[{i+1}/{len(sit_fuse_map_fnames)}] Comparing")
+        print("  SIT-FUSE:", sf_path)
+        print("  TRUTH   :", truth_path)
+        if other_path is not None:
+            print("  OTHER   :", other_path)
 
-        print(sfmd, map_fle)
+        row, other_row = compare_one_pair(sf_path, truth_path, other_path, analysis_cfg, outputs_cfg)
+        per_scene_rows.append(row)
 
-        sfm = gdal.Open(sfmd).ReadAsArray()
-        if sfm.max() < 0.0:
-            continue
+        if other_row is not None:
+            other_full = {
+                "sit_fuse_map": sf_path,
+                "truth_map": truth_path,
+                "other_map": other_path,
+                **other_row,
+            }
+            per_scene_other_rows.append(other_full)
 
+    sit_valid_rows = [r for r in per_scene_rows if r["status"] == "ok"]
+    sit_summary = aggregate_rows(sit_valid_rows) if len(sit_valid_rows) > 0 else {"n_scenes": 0}
+    sit_summary["comparison"] = "sit_fuse_vs_truth"
 
-        print("Opening", map_fle)
-        gm = gdal.Open(map_fle).ReadAsArray()
-        #gm = gm.clip(min=0, max=1)
+    summary_rows = [sit_summary]
 
-        print(gm.min(), gm.max())
-        print("Regridding")
+    if len(per_scene_other_rows) > 0:
+        other_valid_rows = [r for r in per_scene_other_rows if r["status"] == "ok"]
+        other_summary = aggregate_rows(other_valid_rows) if len(other_valid_rows) > 0 else {"n_scenes": 0}
+        other_summary["comparison"] = "other_vs_truth"
+        summary_rows.append(other_summary)
 
-        area_def = get_area_def_from_raster(map_fle)
-        final_area_def = get_area_def_from_raster(sfmd)
-        print(area_def, final_area_def, gm.min(), gm.max(), gm.mean(), "HERE")
-        gm_on_sfm = np.squeeze(kd_tree.resample_nearest(area_def, gm, final_area_def, radius_of_influence=500, fill_value = 0))
-        print(gm_on_sfm.min(), gm_on_sfm.max(), gm_on_sfm.mean(), "HERE")
-        #gm_on_sfm[np.where(gm_on_sfm  > 1)] = 0
-        gm_on_sfm[np.where(gm_on_sfm  > 0)] = 1
-        gm_on_sfm[np.where(gm_on_sfm  < 0)] = 0
+    baseline_zero = None
+    baseline_one = None
+    if len(sit_valid_rows) > 0:
+        total_tp = sum(r["tp"] for r in sit_valid_rows)
+        total_tn = sum(r["tn"] for r in sit_valid_rows)
+        total_fp = sum(r["fp"] for r in sit_valid_rows)
+        total_fn = sum(r["fn"] for r in sit_valid_rows)
+        total_valid = total_tp + total_tn + total_fp + total_fn
+        total_pos = total_tp + total_fn
+        total_neg = total_tn + total_fp
 
-        print(gm_on_sfm.min(), gm_on_sfm.max(), gm_on_sfm.mean(), "HERE")
+        baseline_zero = metrics_from_confusion(0, total_neg, 0, total_pos)
+        baseline_zero["comparison"] = "baseline_all_zero"
 
+        baseline_one = metrics_from_confusion(total_pos, 0, total_neg, 0)
+        baseline_one["comparison"] = "baseline_all_one"
 
-        oth_on_sfm = None
-        if other is not None:
-            oth = gdal.Open(other).ReadAsArray()
-            area_def = get_area_def_from_raster(other)
-            print(area_def, final_area_def, oth.min(), oth.max(), oth.mean(), "HERE")
-            oth_on_sfm = np.squeeze(kd_tree.resample_nearest(area_def, oth, final_area_def, radius_of_influence=500, fill_value = 0))
-            print(oth_on_sfm.min(), oth_on_sfm.max(), oth_on_sfm.mean(), "HERE")
-            #oth_on_sfm[np.where(oth_on_sfm  > 1)] = 0
-            oth_on_sfm[np.where(oth_on_sfm  > 0)] = 1
-            oth_on_sfm[np.where(oth_on_sfm  < 0)] = 0
+        summary_rows.append(baseline_zero)
+        summary_rows.append(baseline_one)
 
+    write_rows_csv(outputs_cfg["per_scene_csv"], per_scene_rows)
+    if len(per_scene_other_rows) > 0:
+        other_csv = os.path.splitext(outputs_cfg["per_scene_csv"])[0] + "_other.csv"
+        write_rows_csv(other_csv, per_scene_other_rows)
+    write_summary_csv(outputs_cfg["summary_csv"], summary_rows)
 
-        print(gm.min(), gm.max(), gm_on_sfm.min(), gm_on_sfm.max(), sfm.min(), sfm.max())
+    print("\nSIT-FUSE vs TRUTH")
+    for k, v in sit_summary.items():
+        print(k, v)
 
+    if len(per_scene_other_rows) > 0:
+        print("\nOTHER vs TRUTH")
+        for row in summary_rows:
+            if row.get("comparison") == "other_vs_truth":
+                for k, v in row.items():
+                    print(k, v)
 
-        tmp = np.array(sfm).astype(np.float32)
+    print("\nOutputs written:")
+    print("  Per-scene CSV:", outputs_cfg["per_scene_csv"])
+    print("  Summary CSV  :", outputs_cfg["summary_csv"])
+    if outputs_cfg.get("write_diff_rasters", True):
+        print("  Diff rasters :", outputs_cfg["diff_raster_dir"])
 
-        tmp[np.where(tmp  > 0)] = 1
-        tmp[np.where(tmp  < 0)] = 0
-  
-        tmp2 = np.array(gm_on_sfm).astype(np.float32)
-        #tmp2_2 = cv2.dilate(tmp2.copy(), None, iterations=2)
-        #tmp2_2 = cv2.erode(tmp2_2.copy(), None, iterations=1)
-        #tmp2[np.where((tmp2_2 > 0) & (tmp2 == 0))] = 0.75
-        #tmp2_3 = cv2.dilate(tmp2_2.copy(), None, iterations=1)
-        #tmp2[np.where((tmp2_3 < 0.5) & (tmp2_3 > 0.0)& (tmp2 == 0))] = 0.25
-        tmp2_neg = 1 - tmp2
-
-
-        tmp2[np.where(np.isnan(tmp2))] = 0
-
-        #tmp2 is truth, tmp is SIT-FUSE, tmp3 is 'other'
-        diff_map(tmp2, tmp, sfmd, "TRUTH")
-
-        baseline1 = np.zeros(tmp2.shape)
-        baseline2 = np.ones(tmp2.shape)
-
-        
-        del sfm
-        del gm_on_sfm
-        del gm
-
-        tmp3 = None
-        if oth_on_sfm is not None:
-            tmp3 = np.array(oth_on_sfm).astype(np.float32)
-            tmp3[np.where(np.isnan(tmp3))] = 0
-            diff_map(tmp2, tmp3, sfmd, "PRE_TRUTH")
-            del oth
-            del oth_on_sfm
-
-
-        #ssim_b1 = structural_similarity(tmp2.astype(np.int32), baseline1.astype(np.int32))
-        #ssim_b2 = structural_similarity(tmp2.astype(np.int32), baseline2.astype(np.int32))
-
-        win_size = min(tmp2.shape[0], tmp2.shape[1])
-        dice = np.nan
-        if win_size % 2 == 0:
-            win_size = win_size -1
-        dice = dice_sim(tmp2.flatten(), tmp.flatten())
-        ssim = structural_similarity(tmp2.astype(np.float32), tmp.astype(np.float32), data_range=1, gaussian_weights=False, win_size=win_size)
-        pix_cnt = np.prod(tmp2.shape)
-
-        ssim2 = np.nan
-        dice2 = np.nan
-        if tmp3 is not None:
-            ssim2 = structural_similarity(tmp2.astype(np.float32), tmp3.astype(np.float32), data_range=1, gaussian_weights=False, win_size=win_size)
-            dice2 = dice_sim(tmp2.flatten(), tmp3.flatten())
-        print("SSIM", ssim)
-        print("Pixel Count", pix_cnt)
-
-        #ignore = [-1] #0
-
-        tpb1 = tpb1 + np.sum(tmp2[np.where((tmp2 > 0) & (baseline1 > 0))])
-        tnb1 = tnb1 + np.sum(tmp2[np.where((tmp2_neg < 1) & (tmp2_neg >= 0) & (baseline1 < 1))]) + len(np.where((tmp2 == 0) & (baseline1 == 0))[0]) 
-        fpb1 = fpb1 + np.sum(tmp2[np.where((tmp2_neg < 1) & (tmp2_neg >= 0) & (baseline1 > 0))]) + len(np.where((tmp2 == 0) & (baseline1 > 0))[0]) 
-        fnb1 = fnb1 + np.sum(tmp2[np.where((tmp2 > 0) & (baseline1 < 1))])
- 
-        tpb2 = tpb2 + np.sum(tmp2[np.where((tmp2 > 0) & (baseline2 > 0))]) 
-        tnb2 = tnb2 + np.sum(tmp2[np.where((tmp2_neg < 1) & (tmp2_neg >= 0) & (baseline2 < 1))]) + len(np.where((tmp2 == 0) & (baseline2 == 0))[0])
-        fpb2 = fpb2 + np.sum(tmp2[np.where((tmp2_neg < 1) & (tmp2_neg >= 0) & (baseline2 > 0))]) + len(np.where((tmp2 == 0) & (baseline2 > 0))[0])
-        fnb2 = fnb2 + np.sum(tmp2[np.where((tmp2 > 0) & (baseline2 < 1))])
-
-
-        #t1_b1 = contingency_table(tmp2.astype(np.int32), baseline1.astype(np.int32), ignore_labels=ignore, normalize=False)
-        #t1_b2 = contingency_table(tmp2.astype(np.int32), baseline2.astype(np.int32), ignore_labels=ignore, normalize=False)
-
-        #error_b1, precision_b1, recall_b1 = adapted_rand_error(tmp2.astype(np.int32), baseline1.astype(np.int32), ignore_labels=ignore, table=t1_b1)
-        #error_b2, precision_b2, recall_b2 = adapted_rand_error(tmp2.astype(np.int32), baseline2.astype(np.int32), ignore_labels=ignore, table=t1_b2)
-
-
-        #t1 = contingency_table(tmp2.astype(np.int32), tmp.astype(np.int32), ignore_labels=ignore, normalize=False)
-  
-        #error, precision, recall = adapted_rand_error(tmp2.astype(np.int32), tmp.astype(np.int32), ignore_labels=ignore, table=t1)
-        #splits, merges = variation_of_information(tmp2.astype(np.int32), tmp.astype(np.int32), ignore_labels=ignore, table=t1)
-          
- 
-        bss = np.nan
-        if tmp3 is not None:
-            #bss = sm.skill_score_brier(tmp,tmp3,tmp2)
-            tp2 = tp2 + np.sum(tmp2[np.where((tmp2 > 0) & (tmp3 > 0))])
-            tn2 = tn2 + np.sum(tmp2[np.where((tmp2_neg < 1) & (tmp2_neg >= 0) & (tmp3 < 1))]) + len(np.where((tmp2 == 0) & (tmp3 == 0))[0])
-            fp2 = fp2 + np.sum(tmp2[np.where((tmp2_neg < 1) & (tmp2_neg >= 0) & (tmp3 > 0))]) + len(np.where((tmp2 == 0) & (tmp3 > 0))[0])
-            fn2 = fn2 + np.sum(tmp2[np.where((tmp2 > 0) & (tmp3 < 1))])
- 
-        #errors.append(error)
-        #precisions.append(precision)
-        #recalls.append(recall)
-        #splitss.append(splits)
-        #mergess.append(merges)
-        ssims.append(ssim)
-        pix_cnts.append(pix_cnt)
-        ssims2.append(ssim2)
-        dices.append(dice)
-        dices2.append(dice2)
-        #bsss.append(bss)
-     
-        #errors_b1.append(error_b1)
-        #precisions_b1.append(precision_b1)
-        #recalls_b1.append(recall_b1)
-        #ssims_b1.append(ssim_b1)
- 
-        #errors_b2.append(error_b2)
-        #precisions_b2.append(precision_b2)
-        #recalls_b2.append(recall_b2)
-        #ssims_b2.append(ssim_b2)
-
-        ##report = classification_report(tmp2.ravel(), tmp.ravel(), labels=[0,1])
-        ##iou = calculate_iou(tmp2.ravel(), tmp.ravel()) 
-        ##cm = confusion_matrix(tmp2.ravel(), tmp.ravel(), labels=[0,1])
-        #report = classification_report(tmp[finite_points], tmp2[finite_points], labels=[0,1])
-        ##if sf_full is None:
-        ##    sf_full = tmp.ravel()
-        ##    truth_full = tmp2.ravel()
-        ##else:
-        ##    sf_full = np.concatenate((sf_full, tmp.ravel()))
-        ##    truth_full = np.concatenate((truth_full, tmp2.ravel()))
-        tp = tp + np.sum(tmp2[np.where((tmp2 > 0) & (tmp > 0))])
-        tn = tn + np.sum(tmp2[np.where((tmp2_neg < 1) & (tmp2_neg >= 0) & (tmp < 1))]) + len(np.where((tmp2 == 0) & (tmp == 0))[0])
-        fp = fp + np.sum(tmp2[np.where((tmp2_neg < 1) & (tmp2_neg >= 0) & (tmp > 0))]) + len(np.where((tmp2 == 0) & (tmp > 0))[0])
-        fn = fn + np.sum(tmp2[np.where((tmp2 > 0) & (tmp < 1))])
-        ##ssim_full = ssim_full + ssim
-        ##print(sf_full.shape, truth_full.shape, "LENGTHS")
-        ##print(report)
-        ##print(cm)
-        ##print("IOU:", iou)
- 
-        ##print("TP", tp, "FP", fp, "FN", fn, "TN", tn, "SSIM", ssim)
-        #print("SSIM", ssim)
-        #print("Adapted Rand Error, Precision, Recall", error, precision, recall)
-        #print("variation of information", splits, merges)
-        ##del cm
-        ##del report
-        ##img_count = img_count + 1
-
-    precision, recall, f1 = f1_score(tp, tn, fp, fn)
-
-    cm_full = np.zeros((2,2))
-    cm_full[0,0] = tn
-    cm_full[1,0] = fp
-    cm_full[0,1] = fn
-    cm_full[1,1] = tp
-
-
-    print("SIT-FUSE Comparison")
-    print("Precision", precision)
-    print("Recall", recall)
-    print("F1", f1)
-    print(cm_full)
-
-
-
-    if other_map_fnames is not None:
-        print("OTHER Comparison")
-        precision, recall, f1 = f1_score(tp2, tn2, fp2, fn2)
-        cm_full = np.zeros((2,2))
-        cm_full[0,0] = tn2
-        cm_full[1,0] = fp2
-        cm_full[0,1] = fn2
-        cm_full[1,1] = tp2
-        print("Precision", precision)
-        print("Recall", recall)
-        print("F1", f1)
-        print(cm_full)
- 
-
-    ##ssim_full = ssim_full / img_count
-    #print("Precision", precisions)
-    #print("Recall:", recalls)
-    #print("Error:", errors)
-    #print("BSS", bsss)
-    print("SSIM", ssims)
-    print("SSIM2", ssims2)
-    #print("Precision:", np.nanmean(precisions), "Recall:", np.nanmean(recalls), "Error:", np.nanmean(errors))
-    #print("BSS", np.nanmean(bsss))
-    print("SSIM Full", np.nanmean(ssims))
-    print("SSIM2 Full", np.nanmean(ssims2))
-
-    print("SSIM Full Weighted", weighted_mean(ssims, pix_cnts))
-    print("SSIM2 Full Weighted", weighted_mean(ssims2, pix_cnts))
-
-    print("Dice", np.nanmean(dice))
-    print("Dice_2", np.nanmean(dice2))
-
-    print("Dice Weighted", weighted_mean(dices, pix_cnts))
-    print("Dice_2 Weighted", weighted_mean(dices2, pix_cnts))
- 
-    print("N Pixels", sum(pix_cnts))
-
-
-    print("BASELINES")
-
-    precision, recall, f1 = f1_score(tpb1, tnb1, fpb1, fnb1)
-    cm_full = np.zeros((2,2))
-    cm_full[0,0] = tnb1
-    cm_full[1,0] = fpb1
-    cm_full[0,1] = fnb1
-    cm_full[1,1] = tpb1
-    print("Precision", precision)
-    print("Recall", recall)
-    print("F1", f1)
-    print(cm_full)
-
-    precision, recall, f1 = f1_score(tpb2, tnb2, fpb2, fnb2)
-    cm_full = np.zeros((2,2))
-    cm_full[0,0] = tnb2
-    cm_full[1,0] = fpb2
-    cm_full[0,1] = fnb2
-    cm_full[1,1] = tpb2
-    print("Precision", precision)
-    print("Recall", recall)
-    print("F1", f1)
-    print(cm_full)
-
-
-    #print("Precision", precisions_b1)
-    #print("Recall:", recalls_b1)
-    #print("Error:", errors_b1)
-    #print("SSIM", ssims_b1)
-    #print("Precision:", np.nanmean(precisions_b1), "Recall:", np.nanmean(recalls_b1), "Error:", np.nanmean(errors_b1))
-    #print("SSIM Full", np.nanmean(ssims_b1))
- 
-    #print("Precision", precisions_b2)
-    #print("Recall:", recalls_b2)
-    #print("Error:", errors_b2)
-    #print("SSIM", ssims_b2)
-    #print("Precision:", np.nanmean(precisions_b2), "Recall:", np.nanmean(recalls_b2), "Error:", np.nanmean(errors_b2))
-    #print("SSIM Full", np.nanmean(ssims_b2))
-
-    ##print(cm_full)
-  
-    ##full_report = classification_report(truth_full, sf_full, labels=[0,1])
-    ##cm_full = confusion_matrix(truth_full, sf_full, labels=[0,1])
-    ##iou_full = calculate_iou(truth_full, sf_full)
-    ##print(full_report)
-    ##print(cm_full)
-    ##print("IOU:", iou_full)
 
 def main(yml_fpath):
-
-    #Translate config to dictionary 
     yml_conf = read_yaml(yml_fpath)
     regrid_and_compare(yml_conf)
 
 
-if __name__ == '__main__':
-
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-y", "--yaml", help="YAML file for DBN and output config.")
+    parser.add_argument("-y", "--yaml", required=True, help="YAML config for comparison.")
     args = parser.parse_args()
     main(args.yaml)
-
-

@@ -33,6 +33,11 @@ from pyhdf import SD
 from datetime import datetime
 import regionmask
 import h5py
+ 
+from pathlib import Path
+import rasterio
+from rasterio.warp import transform
+
 from collections import OrderedDict
 ocean_basins_50 =  regionmask.defined_regions.natural_earth_v5_1_2.ocean_basins_50 
 
@@ -163,6 +168,53 @@ def read_viirs_aerosol_type_geo(filename, **kwargs):
     print(dat.shape)
 
     return dat
+
+
+
+def read_envi_bil(filename, **kwargs):
+    bil_file = Path(filenamne)
+ 
+    dat = None
+    with rasterio.open(bil_file) as src:
+        dat = src.read()  # (bands, rows, cols)
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+        dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+
+    print(dat.shape)
+
+    return dat
+
+
+def read_envi_bil_geo(filename, **kwargs):
+    bil_file = Path(filenamne)
+
+    latlon = None 
+    with rasterio.open(bil_file) as src:
+
+        rows, cols = src.height, src.width
+        rr, cc = np.meshgrid(np.arange(rows), np.arange(cols), indexing="ij")
+
+        # Coordinates of pixel centers in the dataset CRS
+        xs, ys = rasterio.transform.xy(src.transform, rr, cc, offset="center")
+        xs = np.asarray(xs)
+        ys = np.asarray(ys)
+
+        # Convert to geographic lat/lon if needed
+        if src.crs is not None:
+            lon, lat = transform(src.crs, "EPSG:4326", xs.ravel(), ys.ravel())
+            lat = np.asarray(lat).reshape(rows, cols)
+            lon = np.asarray(lon).reshape(rows, cols)
+        else:
+            # If no CRS is defined, assume x/y are already lon/lat-like
+            lon = xs
+            lat = ys
+
+        latlon = np.stack([lat, lon], axis=-1)  # (rows, cols, 2)
+
+    return latlon
+
+
 
 def read_emit(filename, **kwargs):
 
@@ -2961,5 +3013,9 @@ def get_read_func(data_reader):
         return read_noaa_water_mask_netcdf
     if data_reader == "noaa_water_mask_netcdf_geo":
         return read_noaa_water_mask_netcdf_geo
-
+    if data_reader == "envi_bil":
+        read_envi_bil
+    if data_reader == "envi_bil_geo":
+        read_envi_bil_geo
+ 
     return None
