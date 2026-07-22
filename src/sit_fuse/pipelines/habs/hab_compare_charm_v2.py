@@ -336,13 +336,16 @@ def binarize_charm_cube(data_arr: np.ndarray, threshold: float) -> np.ndarray:
     return out.astype(np.int16)
 
 
-def load_and_regrid_charm(charm_fname: str, sf_fname: str, config: ComparisonConfig) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def load_and_regrid_charm(charm_fname: str, sf_fname: str, config: ComparisonConfig, pda=False) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     with Dataset(charm_fname) as nc:
         nc.set_auto_maskandscale(False)
         lat = nc.variables["latitude"][:]
         lon = nc.variables["longitude"][:]
         nc.set_auto_maskandscale(True)
-        data_arr = nc.variables["pseudo_nitzschia"][:]
+        if not pda:
+            data_arr = nc.variables["pseudo_nitzschia"][:]
+        else:
+            data_arr = nc.variables["particulate_domoic"][:]
         time_arr = nc.variables["time"][:]
 
     data_arr = np.moveaxis(data_arr, 0, 2)
@@ -516,18 +519,17 @@ def compute_overall_metrics(sf_data: np.ndarray, sf_binned: np.ndarray, charm_ar
 
 
 def choose_charm_slice(
-    instrument: str,
+    product: str,
     time_index: int,
     charm_standard: np.ndarray,
-    charm_pace: np.ndarray,
+    charm_pda: np.ndarray,
     time_standard: np.ndarray,
-    time_pace: np.ndarray,
 ) -> Optional[Tuple[str, np.ndarray]]:
-    if instrument == "pace":
-        if time_index >= time_pace.shape[0]:
+    if product == "pda":
+        if time_index >= time_standard.shape[0]:
             return None
-        charm_dt = datetime.fromtimestamp(time_pace[time_index], tz=timezone.utc)
-        charm_arr = np.squeeze(charm_pace[:, :, time_index])
+        charm_dt = datetime.fromtimestamp(time_standard[time_index], tz=timezone.utc)
+        charm_arr = np.squeeze(charm_pda[:, :, time_index])
     else:
         charm_dt = datetime.fromtimestamp(time_standard[time_index], tz=timezone.utc)
         charm_arr = np.squeeze(charm_standard[:, :, time_index])
@@ -739,7 +741,7 @@ def run_comparison(config: ComparisonConfig) -> Dict[str, Any]:
     template_sf_fname = first_available_sf_filename(sf_products)
 
     charm_standard, _, time_standard = load_and_regrid_charm(config.charm_files[0], template_sf_fname, config)
-    charm_pace, _, time_pace = load_and_regrid_charm(config.charm_files[0], template_sf_fname, config)
+    charm_pda, _, _ = load_and_regrid_charm(config.charm_files[0], template_sf_fname, config, pda = True)
 
     hist_by_concentration, hist_by_inst, hist_total = initialize_histograms(config)
     hist_by_date, hist_by_date_and_instrument = initialize_date_histograms(config)
@@ -750,12 +752,19 @@ def run_comparison(config: ComparisonConfig) -> Dict[str, Any]:
 
     for time_index in range(len(time_standard)):
         for instrument in config.instrument_order:
-            chosen = choose_charm_slice(instrument, time_index, charm_standard, charm_pace, time_standard, time_pace)
-            if chosen is None:
-                continue
-            date_str, charm_arr = chosen
+            #chosen = choose_charm_slice(instrument, time_index, charm_standard, charm_pda, time_standard)
+            #if chosen is None:
+            #    continue
+            #date_str, charm_arr = chosen
 
             for product in config.product_order:
+
+                chosen = choose_charm_slice(product, time_index, charm_standard, charm_pda, time_standard)
+
+                if chosen is None:
+                    continue
+                date_str, charm_arr = chosen
+
                 sf_path = sf_products.get(instrument, {}).get(product, {}).get(date_str)
                 if not sf_path:
                     continue
