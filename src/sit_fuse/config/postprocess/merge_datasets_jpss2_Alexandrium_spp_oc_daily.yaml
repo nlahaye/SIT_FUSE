@@ -1,0 +1,10 @@
+fname_str: DAY.alexandrium_bloom.tif
+gen_daily: true
+gen_monthly: false
+input_paths:
+- ''
+- ''
+- Z:\2026\Summer\Southern California Bight HABs\Context_Free_Products\JPSS2_VIIRS_context_free_layer_2
+num_classes: 6
+out_dir: Z:\2026\Summer\Southern California Bight HABs\validation_testrun/JPSS2_VIIRS
+re_index: 5
