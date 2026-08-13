@@ -1,0 +1,35 @@
+output_dir: "/data/experiments/hms_context_free/models"
+
+random_state: 42
+
+models:
+  - logistic_regression
+  - decision_tree
+  - random_forest
+
+label_column: "label"
+group_column: "pair_id"
+
+cross_validation:
+  grouped: true
+  n_splits: 5
+
+split:
+  enabled: true
+  test_size: 0.2
+  label_column: "label"
+  group_column: "pair_id"
+
+bootstrap_ensemble:
+  enabled: true
+  n_models: 25
+
+features:
+  # Preserve or add the options required by build_training_dataset().
+  # Exact settings depend on sit_fuse_utils_multiscale_final.py.
+  scales:
+    - 1
+    - 2
+    - 4
+
+

@@ -1,0 +1,95 @@
+time_range:
+  start: "2024-06-01T00:00:00Z"
+  end: "2024-06-30T23:59:59Z"
+
+sit_fuse:
+  directory: "/data/sit_fuse/context_free_outputs"
+
+  # Retain only context-free outputs. Tune these to your actual naming convention.
+  context_free_filters:
+    include_patterns:
+      - "context[._-]?free"
+      - "contextfree"
+      - "cf"
+    exclude_patterns:
+      - "contextual"
+      - "with[._-]?context"
+      - "multiscale"
+      - "feature"
+      - "embedding"
+
+  # SIT-FUSE filenames must contain smoke/fire and a timestamp.
+  patterns:
+    smoke:
+      - "\\.smoke\\."
+      - "_smoke_"
+      - "smoke"
+    fire:
+      - "\\.fire\\."
+      - "_fire_"
+      - "fire"
+
+    # Capture group 1 must be a full timestamp.
+    timestamp_patterns:
+      - "(\\d{8}T\\d{6}Z)"
+      - "(\\d{8}T\\d{6})"
+
+    # Used only if some SIT-FUSE files are daily products.
+    daily_date_patterns:
+      - "(\\d{8})"
+
+  daily_time_policy: "start_of_day"
+
+hms:
+  directory: "/data/noaa/hms/rasterized"
+
+  patterns:
+    smoke:
+      - "hms_smoke"
+      - "smoke"
+    fire:
+      - "hms_fire"
+      - "fire"
+
+    # Optional if your processed HMS rasters retain a full UTC timestamp.
+    timestamp_patterns:
+      - "(\\d{8}T\\d{6}Z)"
+      - "(\\d{8}T\\d{6})"
+
+    # The first matching pattern should expose YYYYMMDD in capture group 1.
+    daily_date_patterns:
+      - "hms_smoke(\\d{8})"
+      - "hms_fire(\\d{8})"
+      - "(\\d{8})"
+
+  # HMS daily rasters are assigned a representative time for audit reporting.
+  daily_time_policy: "midday"
+
+matching:
+  # A SIT-FUSE scene can reuse the same daily HMS raster. This is normally
+  # necessary when multiple context-free SIT-FUSE timestamps occur per day.
+  allow_hms_reuse: true
+
+  # Full daily window, appropriate for daily HMS truth labels.
+  max_time_difference_seconds: 86400
+
+  # Recommended: prevents grouped CV and grouped holdout from splitting
+  # SIT-FUSE scenes that share an HMS day/product across folds.
+  # Options: hms_day | sit_fuse_day | product | pair
+  group_by: "hms_day"
+
+classifier_config:
+  # Existing classifier config carrying your feature-construction settings
+  # expected by build_training_dataset() in sit_fuse_utils_multiscale_final.py.
+  base_yaml: "/data/configs/simple_classifier_base.yaml"
+
+output:
+  classifier_yaml: "/data/experiments/hms_context_free/simple_classifier_generated.yaml"
+  audit_csv: "/data/experiments/hms_context_free/matchup_audit.csv"
+
+  # Destination key written into the generated config.
+  #
+  # Change this after checking build_training_dataset() if it expects,
+  # for example, "data.samples", "training_pairs", or "file_pairs".
+  matchup_key: "matchups"
+

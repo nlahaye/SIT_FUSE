@@ -86,23 +86,154 @@ def evaluate_model(model: Pipeline, X: pd.DataFrame, y: pd.Series, groups: pd.Se
     }
 
 
-def maybe_holdout_split(df: pd.DataFrame, cfg: Dict):
-    split_cfg = cfg.get("split", {})
-    if not split_cfg.get("enabled", False):
-        return df, pd.DataFrame()
-    gss = GroupShuffleSplit(
-        n_splits=1,
-        test_size=float(split_cfg.get("test_size", 0.2)),
-        random_state=int(cfg.get("random_state", 42))
-    )
-    idx_train, idx_test = next(
-        gss.split(
-            df,
-            df[split_cfg.get("label_column", "label")],
-            groups=df[split_cfg.get("group_column", "pair_id")]
+def canonicalize_dates(values: pd.Series, column_name: str) -> pd.Series:
+    """
+    Convert date or timestamp values to ISO day strings: YYYY-MM-DD.
+
+    Accepted examples:
+      2024-06-15
+      2024-06-15T19:00:00Z
+      2024-06-15 19:00:00
+    """
+    parsed = pd.to_datetime(values, errors="coerce", utc=True)
+
+    if parsed.isna().any():
+        bad_examples = values.loc[parsed.isna()].astype(str).head(5).tolist()
+        raise ValueError(
+            f"Column '{column_name}' contains unparseable date values. "
+            f"Examples: {bad_examples}"
         )
+
+    return parsed.dt.strftime("%Y-%m-%d")
+
+
+def normalize_holdout_dates(values) -> set[str]:
+    """
+    Normalize configured YAML date strings to YYYY-MM-DD.
+    """
+    if not isinstance(values, list) or not values:
+        raise ValueError(
+            "split.holdout_dates must be a non-empty YAML list when "
+            "split.mode is 'explicit_dates'."
+        )
+
+    normalized = set()
+    for value in values:
+        parsed = pd.to_datetime(str(value), errors="raise", utc=True)
+        normalized.add(parsed.strftime("%Y-%m-%d"))
+
+    return normalized
+
+
+def maybe_holdout_split(df: pd.DataFrame, cfg: Dict):
+    """
+    Create either:
+
+    1. A random grouped holdout split using GroupShuffleSplit, or
+    2. An explicit date-defined holdout split.
+
+    YAML examples:
+
+      split:
+        enabled: true
+        mode: explicit_dates
+        date_column: hms_date
+        holdout_dates:
+          - "2024-06-15"
+          - "2024-06-16"
+
+      split:
+        enabled: true
+        mode: random_group
+        test_size: 0.2
+        group_column: pair_id
+    """
+    split_cfg = cfg.get("split", {})
+
+    if not split_cfg.get("enabled", False):
+        return df.reset_index(drop=True), pd.DataFrame()
+
+    mode = str(split_cfg.get("mode", "random_group")).lower()
+
+    if mode == "explicit_dates":
+        date_column = split_cfg.get("date_column", "hms_date")
+
+        if date_column not in df.columns:
+            raise KeyError(
+                f"Date holdout requested, but date column '{date_column}' "
+                f"was not found. Available columns: {list(df.columns)}"
+            )
+
+        sample_dates = canonicalize_dates(df[date_column], date_column)
+        holdout_dates = normalize_holdout_dates(split_cfg["holdout_dates"])
+
+        holdout_mask = sample_dates.isin(holdout_dates)
+
+        if not holdout_mask.any():
+            available_dates = sorted(sample_dates.unique().tolist())
+            raise ValueError(
+                "None of split.holdout_dates occur in the training dataset. "
+                f"Requested: {sorted(holdout_dates)}. "
+                f"Available dates: {available_dates[:20]}"
+            )
+
+        if holdout_mask.all():
+            raise ValueError(
+                "All samples were selected for holdout. "
+                "Choose fewer holdout dates or expand the training date range."
+            )
+
+        train_df = df.loc[~holdout_mask].copy().reset_index(drop=True)
+        test_df = df.loc[holdout_mask].copy().reset_index(drop=True)
+
+        LOG.info(
+            "Using explicit date holdout: %d train samples, %d holdout samples, "
+            "holdout dates=%s",
+            len(train_df),
+            len(test_df),
+            sorted(holdout_dates),
+        )
+
+        return train_df, test_df
+
+    if mode == "random_group":
+        label_column = split_cfg.get(
+            "label_column",
+            cfg.get("label_column", "label"),
+        )
+        group_column = split_cfg.get(
+            "group_column",
+            cfg.get("group_column", "pair_id"),
+        )
+
+        if label_column not in df.columns:
+            raise KeyError(f"Label column not found: '{label_column}'")
+        if group_column not in df.columns:
+            raise KeyError(f"Group column not found: '{group_column}'")
+
+        gss = GroupShuffleSplit(
+            n_splits=1,
+            test_size=float(split_cfg.get("test_size", 0.2)),
+            random_state=int(cfg.get("random_state", 42)),
+        )
+
+        idx_train, idx_test = next(
+            gss.split(
+                df,
+                df[label_column],
+                groups=df[group_column],
+            )
+        )
+
+        return (
+            df.iloc[idx_train].reset_index(drop=True),
+            df.iloc[idx_test].reset_index(drop=True),
+        )
+
+    raise ValueError(
+        f"Unsupported split.mode='{mode}'. "
+        "Supported values are: explicit_dates, random_group."
     )
-    return df.iloc[idx_train].reset_index(drop=True), df.iloc[idx_test].reset_index(drop=True)
 
 
 def train_bootstrap_ensemble(
@@ -145,6 +276,7 @@ def train_and_save(df: pd.DataFrame, cfg: Dict, output_dir: Path) -> None:
     feats = feature_columns(df)
     label_col = cfg.get("label_column", "label")
     group_col = cfg.get("group_column", "pair_id")
+    split_col = cfg.get("split", {}),
     train_df, test_df = maybe_holdout_split(df, cfg)
     X_train, y_train, groups_train = train_df[feats], train_df[label_col], train_df[group_col]
     models = build_models(cfg)
@@ -190,6 +322,7 @@ def train_and_save(df: pd.DataFrame, cfg: Dict, output_dir: Path) -> None:
             "bootstrap_manifest": bootstrap_manifest,
             "label_column": label_col,
             "group_column": group_col,
+            "split": split_col,
         },
         "metrics": metrics,
     })

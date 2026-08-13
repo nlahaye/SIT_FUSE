@@ -1,0 +1,47 @@
+output_dir: "/data/experiments/hms_context_free/models"
+
+random_state: 42
+
+models:
+  - logistic_regression
+  - decision_tree
+  - random_forest
+
+label_column: "label"
+
+# Use HMS day as the CV/bootstrap grouping variable. This prevents feature
+# samples derived from the same daily HMS truth product from crossing folds.
+group_column: "hms_date"
+
+cross_validation:
+  grouped: true
+  n_splits: 5
+
+split:
+  enabled: true
+  mode: "explicit_dates"
+
+  # Field created by the matchup generator:
+  #   hms_date: "YYYY-MM-DD"
+  date_column: "hms_date"
+
+  # These dates are held out in full. Every sample with hms_date equal to
+  # one of these values is excluded from model fitting and evaluated only
+  # as holdout data.
+  holdout_dates:
+    - "2024-06-15"
+    - "2024-06-16"
+    - "2024-06-20"
+    - "2024-06-24"
+
+bootstrap_ensemble:
+  enabled: true
+  n_models: 25
+
+features:
+  scales:
+    - 1
+    - 2
+    - 4
+
+
