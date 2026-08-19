@@ -17,9 +17,20 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeClassifier
 
-from sit_fuse_utils_multiscale_final import (
+
+from sklearn.base import BaseEstimator
+from sklearn.model_selection import GroupKFold, GroupShuffleSplit, StratifiedKFold, cross_val_predict
+
+
+from sit_fuse.train.classifier_utils import (
     build_training_dataset,
+    train_and_save,
+    build_cv_splitter,
+    build_models,
+    evaluate_model,
+    canonicalize_dates,
     canonical_feature_signature,
+    normalize_holdout_dates,
     feature_columns,
     load_yaml,
     save_json,
@@ -28,212 +39,6 @@ from sit_fuse_utils_multiscale_final import (
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 LOG = logging.getLogger("sit-fuse-train-multiscale-final")
 
-
-def build_models(cfg: Dict) -> Dict[str, Pipeline]:
-    rs = int(cfg.get("random_state", 42))
-    models = {
-        "logistic_regression": Pipeline([
-            ("imputer", SimpleImputer(strategy="median")),
-            ("scaler", StandardScaler()),
-            ("clf", LogisticRegression(max_iter=1000, class_weight="balanced", random_state=rs)),
-        ]),
-        "decision_tree": Pipeline([
-            ("imputer", SimpleImputer(strategy="median")),
-            ("clf", DecisionTreeClassifier(max_depth=5, min_samples_leaf=20, class_weight="balanced", random_state=rs)),
-        ]),
-        "random_forest": Pipeline([
-            ("imputer", SimpleImputer(strategy="median")),
-            ("clf", RandomForestClassifier(
-                n_estimators=100,
-                max_depth=8,
-                min_samples_leaf=10,
-                class_weight="balanced_subsample",
-                n_jobs=-1,
-                random_state=rs
-            )),
-        ]),
-    }
-    requested = cfg.get("models", list(models.keys()))
-    return {k: v for k, v in models.items() if k in requested}
-
-
-def build_cv_splitter(groups: pd.Series, cfg: Dict):
-    cv_cfg = cfg.get("cross_validation", {})
-    n_splits = int(cv_cfg.get("n_splits", 5))
-    use_grouped = bool(cv_cfg.get("grouped", True))
-    rs = int(cfg.get("random_state", 42))
-    if use_grouped and groups.nunique() >= n_splits:
-        return GroupKFold(n_splits=n_splits), "group"
-    return StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=rs), "stratified"
-
-
-def evaluate_model(model: Pipeline, X: pd.DataFrame, y: pd.Series, groups: pd.Series, cfg: Dict) -> Dict:
-    splitter, split_type = build_cv_splitter(groups, cfg)
-    if split_type == "group":
-        probs = cross_val_predict(model, X, y, cv=splitter, groups=groups, method="predict_proba", n_jobs=1)
-    else:
-        probs = cross_val_predict(model, X, y, cv=splitter, method="predict_proba", n_jobs=1)
-
-    fitted = model.fit(X, y)
-    classes = fitted.classes_
-    preds = classes[np.argmax(probs, axis=1)]
-    labels = list(classes)
-    return {
-        "cv_type": split_type,
-        "classification_report": classification_report(y, preds, output_dict=True, zero_division=0),
-        "confusion_matrix": confusion_matrix(y, preds, labels=labels).tolist(),
-        "labels": [x.item() if hasattr(x, "item") else x for x in labels],
-    }
-
-
-def canonicalize_dates(values: pd.Series, column_name: str) -> pd.Series:
-    """
-    Convert date or timestamp values to ISO day strings: YYYY-MM-DD.
-
-    Accepted examples:
-      2024-06-15
-      2024-06-15T19:00:00Z
-      2024-06-15 19:00:00
-    """
-    parsed = pd.to_datetime(values, errors="coerce", utc=True)
-
-    if parsed.isna().any():
-        bad_examples = values.loc[parsed.isna()].astype(str).head(5).tolist()
-        raise ValueError(
-            f"Column '{column_name}' contains unparseable date values. "
-            f"Examples: {bad_examples}"
-        )
-
-    return parsed.dt.strftime("%Y-%m-%d")
-
-
-def normalize_holdout_dates(values) -> set[str]:
-    """
-    Normalize configured YAML date strings to YYYY-MM-DD.
-    """
-    if not isinstance(values, list) or not values:
-        raise ValueError(
-            "split.holdout_dates must be a non-empty YAML list when "
-            "split.mode is 'explicit_dates'."
-        )
-
-    normalized = set()
-    for value in values:
-        parsed = pd.to_datetime(str(value), errors="raise", utc=True)
-        normalized.add(parsed.strftime("%Y-%m-%d"))
-
-    return normalized
-
-
-def maybe_holdout_split(df: pd.DataFrame, cfg: Dict):
-    """
-    Create either:
-
-    1. A random grouped holdout split using GroupShuffleSplit, or
-    2. An explicit date-defined holdout split.
-
-    YAML examples:
-
-      split:
-        enabled: true
-        mode: explicit_dates
-        date_column: hms_date
-        holdout_dates:
-          - "2024-06-15"
-          - "2024-06-16"
-
-      split:
-        enabled: true
-        mode: random_group
-        test_size: 0.2
-        group_column: pair_id
-    """
-    split_cfg = cfg.get("split", {})
-
-    if not split_cfg.get("enabled", False):
-        return df.reset_index(drop=True), pd.DataFrame()
-
-    mode = str(split_cfg.get("mode", "random_group")).lower()
-
-    if mode == "explicit_dates":
-        date_column = split_cfg.get("date_column", "hms_date")
-
-        if date_column not in df.columns:
-            raise KeyError(
-                f"Date holdout requested, but date column '{date_column}' "
-                f"was not found. Available columns: {list(df.columns)}"
-            )
-
-        sample_dates = canonicalize_dates(df[date_column], date_column)
-        holdout_dates = normalize_holdout_dates(split_cfg["holdout_dates"])
-
-        holdout_mask = sample_dates.isin(holdout_dates)
-
-        if not holdout_mask.any():
-            available_dates = sorted(sample_dates.unique().tolist())
-            raise ValueError(
-                "None of split.holdout_dates occur in the training dataset. "
-                f"Requested: {sorted(holdout_dates)}. "
-                f"Available dates: {available_dates[:20]}"
-            )
-
-        if holdout_mask.all():
-            raise ValueError(
-                "All samples were selected for holdout. "
-                "Choose fewer holdout dates or expand the training date range."
-            )
-
-        train_df = df.loc[~holdout_mask].copy().reset_index(drop=True)
-        test_df = df.loc[holdout_mask].copy().reset_index(drop=True)
-
-        LOG.info(
-            "Using explicit date holdout: %d train samples, %d holdout samples, "
-            "holdout dates=%s",
-            len(train_df),
-            len(test_df),
-            sorted(holdout_dates),
-        )
-
-        return train_df, test_df
-
-    if mode == "random_group":
-        label_column = split_cfg.get(
-            "label_column",
-            cfg.get("label_column", "label"),
-        )
-        group_column = split_cfg.get(
-            "group_column",
-            cfg.get("group_column", "pair_id"),
-        )
-
-        if label_column not in df.columns:
-            raise KeyError(f"Label column not found: '{label_column}'")
-        if group_column not in df.columns:
-            raise KeyError(f"Group column not found: '{group_column}'")
-
-        gss = GroupShuffleSplit(
-            n_splits=1,
-            test_size=float(split_cfg.get("test_size", 0.2)),
-            random_state=int(cfg.get("random_state", 42)),
-        )
-
-        idx_train, idx_test = next(
-            gss.split(
-                df,
-                df[label_column],
-                groups=df[group_column],
-            )
-        )
-
-        return (
-            df.iloc[idx_train].reset_index(drop=True),
-            df.iloc[idx_test].reset_index(drop=True),
-        )
-
-    raise ValueError(
-        f"Unsupported split.mode='{mode}'. "
-        "Supported values are: explicit_dates, random_group."
-    )
 
 
 def train_bootstrap_ensemble(
@@ -272,60 +77,6 @@ def train_bootstrap_ensemble(
     return paths
 
 
-def train_and_save(df: pd.DataFrame, cfg: Dict, output_dir: Path) -> None:
-    feats = feature_columns(df)
-    label_col = cfg.get("label_column", "label")
-    group_col = cfg.get("group_column", "pair_id")
-    split_col = cfg.get("split", {}),
-    train_df, test_df = maybe_holdout_split(df, cfg)
-    X_train, y_train, groups_train = train_df[feats], train_df[label_col], train_df[group_col]
-    models = build_models(cfg)
-    metrics = {}
-    bootstrap_manifest = {}
-
-    for name, model in models.items():
-        LOG.info("Training %s", name)
-        cv_metrics = evaluate_model(model, X_train, y_train, groups_train, cfg)
-
-        model.fit(X_train, y_train)
-        joblib.dump(model, output_dir / f"{name}.joblib")
-
-        bootstrap_paths = train_bootstrap_ensemble(name, model, X_train, y_train, groups_train, output_dir, cfg)
-        if bootstrap_paths:
-            bootstrap_manifest[name] = bootstrap_paths
-
-        model_metrics = {"cross_validation": cv_metrics}
-        if not test_df.empty:
-            X_test, y_test = test_df[feats], test_df[label_col]
-            probs = model.predict_proba(X_test)
-            classes = model.classes_
-            preds = classes[np.argmax(probs, axis=1)]
-            labels = list(classes)
-            model_metrics["holdout"] = {
-                "classification_report": classification_report(y_test, preds, output_dict=True, zero_division=0),
-                "confusion_matrix": confusion_matrix(y_test, preds, labels=labels).tolist(),
-                "labels": [x.item() if hasattr(x, "item") else x for x in labels],
-            }
-        metrics[name] = model_metrics
-
-    train_df.to_csv(output_dir / "training_features.csv", index=False)
-    if not test_df.empty:
-        test_df.to_csv(output_dir / "holdout_features.csv", index=False)
-
-    save_json(output_dir / "training_summary.json", {
-        "metadata": {
-            "feature_columns": feats,
-            "feature_signature": canonical_feature_signature(cfg.get("features", {})),
-            "n_train": len(train_df),
-            "n_holdout": len(test_df),
-            "models": list(models.keys()),
-            "bootstrap_manifest": bootstrap_manifest,
-            "label_column": label_col,
-            "group_column": group_col,
-            "split": split_col,
-        },
-        "metrics": metrics,
-    })
 
 
 def main() -> None:

@@ -38,8 +38,11 @@ DATASET_CONFIG = {
 
 SMOKE_DENSITY_MAP = {
     "light": 1,
+    "Light": 1,
+    "Medium": 2,
     "medium": 2,
     "moderate": 2,
+    "Heavy": 3,
     "heavy": 3,
     "thick": 3,
 }
@@ -103,6 +106,18 @@ def validate_config(cfg: dict) -> dict:
     raster = cfg["raster"]
     resolution_deg = float(raster.get("resolution_deg", 0.05))
     all_touched = bool(raster.get("all_touched", True))
+    
+    temporal_cfg = cfg.get("temporal_split", {})
+    split_by_feature_times = bool(temporal_cfg.get("enabled", False))
+
+    start_field = temporal_cfg.get("start_field")
+    end_field = temporal_cfg.get("end_field")
+
+    if split_by_feature_times and (not start_field or not end_field):
+        raise ValueError(
+            "When temporal_split.enabled is true, both "
+            "`temporal_split.start_field` and `temporal_split.end_field` are required."
+        )
 
     combine_method = cfg.get("combine", None)
     if combine_method not in (None, "max", "sum", "count"):
@@ -121,6 +136,11 @@ def validate_config(cfg: dict) -> dict:
         "combine": combine_method,
         "overwrite": overwrite,
         "outdir": outdir,
+        "split_by_feature_times": split_by_feature_times,
+        "start_field": start_field,
+        "end_field": end_field,
+        "time_format": temporal_cfg.get("time_format"),
+        "time_rounding": temporal_cfg.get("time_rounding", "none"),
     }
 
 
@@ -198,6 +218,7 @@ def infer_smoke_value_column(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
             found = cols[c]
             break
 
+    print(found, "FOUND")
     gdf = gdf.copy()
     if found is None:
         gdf["rast_val"] = 1
@@ -210,6 +231,7 @@ def infer_smoke_value_column(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         return SMOKE_DENSITY_MAP.get(s, 1)
 
     gdf["rast_val"] = gdf[found].map(map_density)
+    print(gdf["rast_val"], "RAST VAL")
     return gdf
 
 
@@ -248,6 +270,7 @@ def rasterize_gdf(
     out_tif: Path,
     all_touched: bool = True,
     agg: str = "max",
+    binry: bool = False,
 ) -> Path:
     width, height, transform = make_grid(bbox_vals, resolution_deg)
 
@@ -258,15 +281,29 @@ def rasterize_gdf(
 
         merge_alg = MergeAlg.add if agg == "sum" else MergeAlg.replace
 
-        arr = rasterize(
-            shapes=shapes,
-            out_shape=(height, width),
-            fill=0,
-            transform=transform,
-            all_touched=all_touched,
-            dtype="float32",
-            merge_alg=merge_alg,
-        )
+        gdf = gdf.sort_values(by="rast_val", ascending=True)
+
+        out_shape = (height, width)
+
+        arr = np.zeros(out_shape, dtype=np.float32)
+
+        for geom, val in shapes:
+            temp_raster = rasterize(
+                [(geom, val)],
+                out_shape=out_shape,
+                transform=transform,
+                all_touched=all_touched,
+                dtype="float32",
+                fill=0
+            )
+
+            arr = np.maximum(arr, temp_raster)
+
+    if binry:
+        inds = np.where(arr > 0)
+        inds2 = np.where(arr <= 0)
+        arr[inds] = 1
+        arr[inds2] = 0
 
     out_tif.parent.mkdir(parents=True, exist_ok=True)
     with rasterio.open(
@@ -280,7 +317,7 @@ def rasterize_gdf(
         crs="EPSG:4326",
         transform=transform,
         compress="lzw",
-        nodata=0,
+        nodata=-9999,
     ) as dst:
         dst.write(arr, 1)
 
@@ -306,13 +343,170 @@ def combine_daily_rasters(raster_paths: list[Path], out_tif: Path, method: str =
     else:
         combined = stack.max(axis=0)
 
-    meta.update(dtype="float32", count=1, compress="lzw", nodata=0)
+    meta.update(dtype="float32", count=1, compress="lzw", nodata=-9999)
     out_tif.parent.mkdir(parents=True, exist_ok=True)
 
     with rasterio.open(out_tif, "w", **meta) as dst:
         dst.write(combined.astype(np.float32), 1)
 
     return out_tif
+
+def parse_feature_datetime(
+    value,
+    field_name: str,
+    time_format: str | None = None,
+) -> pd.Timestamp:
+    """
+    Parse a date/time attribute stored in an HMS shapefile.
+
+    Returns a timezone-aware UTC pandas Timestamp. Shapefile attributes may be
+    strings, Python datetimes, pandas timestamps, or date-only values.
+    """
+    if pd.isna(value):
+        raise ValueError(f"Missing value in temporal field {field_name!r}")
+
+    if time_format:
+        parsed = pd.to_datetime(
+            str(value),
+            format=time_format,
+            errors="coerce",
+            utc=True,
+        )
+    else:
+        parsed = pd.to_datetime(value, errors="coerce", utc=True)
+
+    if pd.isna(parsed):
+        raise ValueError(
+            f"Could not parse value {value!r} from temporal field {field_name!r}. "
+            "Set temporal_split.time_format explicitly if needed."
+        )
+
+    return parsed
+
+
+def validate_temporal_fields(
+    gdf: gpd.GeoDataFrame,
+    start_field: str,
+    end_field: str,
+) -> None:
+    """
+    Match configured names case-insensitively and fail with usable diagnostics.
+    """
+    lookup = {str(column).lower(): column for column in gdf.columns}
+
+    if start_field.lower() not in lookup:
+        raise KeyError(
+            f"Configured start field {start_field!r} was not found. "
+            f"Available fields: {list(gdf.columns)}"
+        )
+
+    if end_field.lower() not in lookup:
+        raise KeyError(
+            f"Configured end field {end_field!r} was not found. "
+            f"Available fields: {list(gdf.columns)}"
+        )
+
+
+def resolve_field_name(
+    gdf: gpd.GeoDataFrame,
+    requested_name: str,
+) -> str:
+    """Return the actual case-preserved shapefile field name."""
+    lookup = {str(column).lower(): column for column in gdf.columns}
+    return lookup[requested_name.lower()]
+
+
+def add_feature_time_columns(
+    gdf: gpd.GeoDataFrame,
+    start_field: str,
+    end_field: str,
+    time_format: str | None = None,
+) -> gpd.GeoDataFrame:
+    """
+    Add standardized UTC start/end columns and reject invalid intervals.
+    """
+    validate_temporal_fields(gdf, start_field, end_field)
+
+    start_column = resolve_field_name(gdf, start_field)
+    end_column = resolve_field_name(gdf, end_field)
+
+    out = gdf.copy()
+    out["_feature_start_utc"] = out[start_column].map(
+        lambda value: parse_feature_datetime(value, start_column, time_format)
+    )
+    out["_feature_end_utc"] = out[end_column].map(
+        lambda value: parse_feature_datetime(value, end_column, time_format)
+    )
+
+    invalid = out["_feature_end_utc"] < out["_feature_start_utc"]
+    if invalid.any():
+        bad = out.loc[
+            invalid,
+            [start_column, end_column],
+        ].head(5).to_dict("records")
+        raise ValueError(
+            f"Found {int(invalid.sum())} polygon(s) with end time before start time. "
+            f"Examples: {bad}"
+        )
+
+    return out
+
+
+def round_time_for_grouping(
+    timestamp: pd.Timestamp,
+    rounding: str,
+) -> pd.Timestamp:
+    """
+    Optional grouping resolution.
+
+    Valid values:
+      - none: exact start/end times define groups
+      - hour: group to beginning of UTC hour
+      - 10min: group to beginning of UTC 10-minute interval
+      - day: group to beginning of UTC day
+    """
+    if rounding == "none":
+        return timestamp
+    if rounding == "hour":
+        return timestamp.floor("h")
+    if rounding == "10min":
+        return timestamp.floor("10min")
+    if rounding == "day":
+        return timestamp.normalize()
+
+    raise ValueError(
+        "temporal_split.time_rounding must be one of: "
+        "none, 10min, hour, day"
+    )
+
+
+def group_features_by_time_interval(
+    gdf: gpd.GeoDataFrame,
+    rounding: str = "none",
+):
+    """
+    Yield (start_time, end_time, subgroup) for polygons sharing an interval.
+
+    Both start and end times are used as grouping keys. This avoids combining
+    polygons that happen to have the same start but different validity end times.
+    """
+    out = gdf.copy()
+
+    out["_group_start_utc"] = out["_feature_start_utc"].map(
+        lambda timestamp: round_time_for_grouping(timestamp, rounding)
+    )
+    out["_group_end_utc"] = out["_feature_end_utc"].map(
+        lambda timestamp: round_time_for_grouping(timestamp, rounding)
+    )
+
+    for (start_time, end_time), subset in out.groupby(
+        ["_group_start_utc", "_group_end_utc"],
+        sort=True,
+        dropna=False,
+    ):
+        yield start_time, end_time, subset.drop(
+            columns=["_group_start_utc", "_group_end_utc"]
+        )
 
 
 def process_one_day(
@@ -323,7 +517,19 @@ def process_one_day(
     all_touched: bool,
     outdir: Path,
     overwrite: bool = False,
+    split_by_feature_times: bool = False,
+    start_field: str | None = None,
+    end_field: str | None = None,
+    time_format: str | None = None,
+    time_rounding: str = "none",
 ):
+
+    """
+    Download one daily HMS archive and produce either:
+
+    - one daily raster, when split_by_feature_times is False; or
+    - one raster per unique polygon start/end-time interval, when True.
+    """
     url = build_url(dataset, day)
     zip_name = url.split("/")[-1]
 
@@ -331,7 +537,7 @@ def process_one_day(
     zip_path = raw_dir / zip_name
 
     if not download_file(url, zip_path, overwrite=overwrite):
-        return None
+        return []
 
     extract_dir = outdir / "extracted" / dataset / f"{day:%Y%m%d}"
     if not extract_dir.exists() or overwrite:
@@ -345,26 +551,118 @@ def process_one_day(
     if dataset == "smoke":
         gdf = infer_smoke_value_column(gdf)
         agg = "max"
+        binary = False
     else:
         gdf = infer_fire_value_column(gdf)
-        agg = "sum"
+        agg = "max"
+        binary = True
 
-    vector_out = outdir / "clipped_vectors" / dataset / f"{day:%Y%m%d}.gpkg"
-    vector_out.parent.mkdir(parents=True, exist_ok=True)
-    gdf.to_file(vector_out, driver="GPKG")
 
-    raster_out = outdir / "rasters" / dataset / f"{day:%Y%m%d}.tif"
-    rasterize_gdf(
+    if gdf.empty:
+        print(f"[warn] {day}: no {dataset} features intersect the requested bbox.")
+        return []
+
+    results = []
+
+    binry = False
+    if "fire" in dataset:
+        binry = True
+
+    if not split_by_feature_times:
+        vector_out = outdir / "clipped_vectors" / dataset / f"{day:%Y%m%d}.gpkg"
+        vector_out.parent.mkdir(parents=True, exist_ok=True)
+        gdf.to_file(vector_out, driver="GPKG")
+
+
+
+        raster_out = outdir / "rasters" / dataset / f"{day:%Y%m%d}.{dataset}.tif"
+        rasterize_gdf(
+            gdf=gdf,
+            bbox_vals=bbox_vals,
+            resolution_deg=resolution_deg,
+            out_tif=raster_out,
+            all_touched=all_touched,
+            agg=agg,
+            binry=binry,
+        )
+
+        print(f"[ok] processed {day} -> {raster_out}")
+        return [{
+            "date": day,
+            "start_time": None,
+            "end_time": None,
+            "vector": vector_out,
+            "raster": raster_out,
+            "n_features": len(gdf),
+        }]
+
+    if not start_field or not end_field:
+        raise ValueError(
+            "Temporal splitting requires both start_field and end_field."
+        )
+ 
+    gdf = add_feature_time_columns(
         gdf=gdf,
-        bbox_vals=bbox_vals,
-        resolution_deg=resolution_deg,
-        out_tif=raster_out,
-        all_touched=all_touched,
-        agg=agg,
+        start_field=start_field,
+        end_field=end_field,
+        time_format=time_format,
     )
 
-    print(f"[ok] processed {day} -> {raster_out}")
-    return {"date": day, "vector": vector_out, "raster": raster_out, "n_features": len(gdf)}
+    for start_time, end_time, interval_gdf in group_features_by_time_interval(
+        gdf,
+        rounding=time_rounding,
+    ):
+        start_token = start_time.strftime("%Y%m%dT%H%M%SZ")
+        end_token = end_time.strftime("%Y%m%dT%H%M%SZ")
+        stem = f"{dataset}_{start_token}_{end_token}"
+
+        vector_out = (
+            outdir
+            / "clipped_vectors"
+            / dataset
+            / f"{day:%Y%m%d}"
+            / f"{stem}.gpkg"
+        )
+        vector_out.parent.mkdir(parents=True, exist_ok=True)
+        interval_gdf.to_file(vector_out, driver="GPKG")
+
+        raster_out = (
+            outdir
+            / "rasters"
+            / dataset
+            / f"{day:%Y%m%d}"
+            / f"{stem}.tif"
+        )
+
+        if raster_out.exists() and not overwrite:
+            print(f"[skip] {raster_out}")
+        else:
+            rasterize_gdf(
+                gdf=interval_gdf,
+                bbox_vals=bbox_vals,
+                resolution_deg=resolution_deg,
+                out_tif=raster_out,
+                all_touched=all_touched,
+                agg=agg,
+                binry=binary,
+            )
+
+        print(
+            f"[ok] {day}: {len(interval_gdf)} polygons "
+            f"for {start_time.isoformat()} to {end_time.isoformat()} "
+            f"-> {raster_out}"
+        )
+
+        results.append({
+            "date": day,
+            "start_time": start_time,
+            "end_time": end_time,
+            "vector": vector_out,
+            "raster": raster_out,
+            "n_features": len(interval_gdf),
+        })
+
+    return results
 
 
 def main():
@@ -380,7 +678,7 @@ def main():
     results = []
     for day in date_range(cfg["start"], cfg["end"]):
         try:
-            res = process_one_day(
+            day_results = process_one_day(
                 dataset=cfg["dataset"],
                 day=day,
                 bbox_vals=cfg["bbox"],
@@ -388,9 +686,15 @@ def main():
                 all_touched=cfg["all_touched"],
                 outdir=cfg["outdir"],
                 overwrite=cfg["overwrite"],
+                split_by_feature_times=cfg["split_by_feature_times"],
+                start_field=cfg["start_field"],
+                end_field=cfg["end_field"],
+                time_format=cfg["time_format"],
+                time_rounding=cfg["time_rounding"],
             )
-            if res is not None:
-                results.append(res)
+
+            results.extend(day_results)
+
         except Exception as e:
             print(f"[err] {day}: {e}")
 

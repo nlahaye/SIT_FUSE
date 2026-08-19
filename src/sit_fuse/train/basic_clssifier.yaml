@@ -1,0 +1,39 @@
+output_dir: /data/nlahaye/experiments/hms_context_free/models
+random_state: 42
+models:
+- logistic_regression
+- decision_tree
+- random_forest
+label_column: label
+group_column: pair_id
+cross_validation:
+  grouped: true
+  n_splits: 3
+split:
+  enabled: true
+  strategy: grouped_date
+  date_column: sitfuse_timestamp
+  test_size: 0.1
+  label_column: label
+training_sampling:
+  max_samples: 8000000
+  stratified: true
+  group_balanced: true
+  label_column: label
+  group_column: pair_id
+  random_state: 42
+bootstrap_ensemble:
+  enabled: true
+  n_models: 15
+features:
+  cross_scale_deltas: true
+  window_radii: [1,2,4,6]
+  cluster_nodata: -9999
+  annotation_nodata: -9999
+  scales:
+  - 1
+  - 2
+  - 4
+  - 6
+
+

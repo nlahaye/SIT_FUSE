@@ -142,7 +142,7 @@ def filter_files_in_time_range(start: dt.datetime, end: dt.datetime) -> list[tup
     for day in daterange(start, end):
         daily = list_daily_files(day)
         for ts, url in daily:
-            if start <= ts <= end:
+            if start <= ts.date() <= end:
                 files.append((ts, url))
     return files
 

@@ -32,9 +32,24 @@ GEOTIFF_SUFFIXES = {".tif", ".tiff"}
 class RasterRecord:
     path: Path
     product: str
-    timestamp: dt.datetime
+    timestamp: dt.datetime | None
     date: dt.date
     source: str
+
+    # For SIT-FUSE rasters, these are normally None.
+    # For time-sliced HMS truth rasters, both are populated.
+    interval_start: dt.datetime | None = None
+    interval_end: dt.datetime | None = None
+
+    @property
+    def interval_midpoint(self) -> dt.datetime | None:
+        if self.interval_start is None or self.interval_end is None:
+            return None
+        return self.interval_start + (
+            self.interval_end - self.interval_start
+        ) / 2
+
+
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -148,6 +163,163 @@ def parse_filename_time(
         return day
 
     return None
+
+def parse_hms_interval_from_filename(
+    filename: str,
+    interval_patterns: list[str],
+) -> tuple[dt.datetime, dt.datetime] | None:
+    """
+    Parse HMS time-sliced raster intervals from filename patterns.
+
+    Each pattern must contain two capture groups:
+      1. start timestamp: YYYYMMDDTHHMMSSZ or YYYYMMDDTHHMMSS
+      2. end timestamp:   YYYYMMDDTHHMMSSZ or YYYYMMDDTHHMMSS
+    """
+    for pattern in interval_patterns:
+        match = re.search(pattern, filename, flags=re.IGNORECASE)
+        if match is None:
+            continue
+
+        if len(match.groups()) < 2:
+            raise ValueError(
+                "Each hms interval_timestamp_patterns entry must contain "
+                "two capture groups: start timestamp and end timestamp. "
+                f"Pattern: {pattern!r}"
+            )
+
+        start_token, end_token = match.group(1), match.group(2)
+
+        for fmt in ("%Y%m%dT%H%M%SZ", "%Y%m%dT%H%M%S"):
+            try:
+                start = dt.datetime.strptime(start_token, fmt)
+                break
+            except ValueError:
+                start = None
+        else:
+            start = None
+
+        for fmt in ("%Y%m%dT%H%M%SZ", "%Y%m%dT%H%M%S"):
+            try:
+                end = dt.datetime.strptime(end_token, fmt)
+                break
+            except ValueError:
+                end = None
+        else:
+            end = None
+
+        if start is None or end is None:
+            raise ValueError(
+                f"Could not parse interval tokens {start_token!r}, {end_token!r} "
+                f"from {filename!r}."
+            )
+
+        if end < start:
+            raise ValueError(
+                f"Invalid HMS interval in {filename!r}: "
+                f"end {end} precedes start {start}."
+            )
+
+        return start, end
+
+    return None
+
+def collect_hms_truth_records(
+    cfg: dict[str, Any],
+    start: dt.datetime,
+    end: dt.datetime,
+) -> tuple[list[RasterRecord], list[dict[str, str]]]:
+    """
+    Collect time-sliced HMS truth rasters.
+
+    Time-sliced filenames are preferred. Legacy daily HMS rasters remain
+    supported via the existing parse_filename_time() fallback.
+    """
+    root = Path(cfg["directory"])
+    patterns = cfg["patterns"]
+    interval_patterns = patterns.get("interval_timestamp_patterns", [])
+    daily_time_policy = cfg.get("daily_time_policy", "midday")
+
+    records: list[RasterRecord] = []
+    skipped: list[dict[str, str]] = []
+
+    for path in find_geotiffs(root):
+        product = infer_product(
+            path.name,
+            patterns["smoke"],
+            patterns["fire"],
+        )
+        if product is None:
+            skipped.append({
+                "path": str(path),
+                "reason": "could_not_infer_smoke_or_fire_product",
+            })
+            continue
+
+        interval = parse_hms_interval_from_filename(
+            path.name,
+            interval_patterns,
+        )
+
+        if interval is not None:
+            interval_start, interval_end = interval
+
+            # Preserve intervals that overlap the requested temporal range.
+            if interval_end < start or interval_start > end:
+                continue
+
+            records.append(
+                RasterRecord(
+                    path=path.resolve(),
+                    product=product,
+                    timestamp=interval_start,
+                    date=interval_start.date(),
+                    source="hms_interval",
+                    interval_start=interval_start,
+                    interval_end=interval_end,
+                )
+            )
+            continue
+
+        # Backward-compatible daily-raster fallback.
+        timestamp = parse_filename_time(
+            filename=path.name,
+            timestamp_patterns=patterns.get("timestamp_patterns", []),
+            daily_date_patterns=patterns.get("daily_date_patterns", []),
+            daily_time_policy=daily_time_policy,
+        )
+
+        if timestamp is None:
+            skipped.append({
+                "path": str(path),
+                "reason": "could_not_parse_truth_interval_or_timestamp",
+            })
+            continue
+
+        if not (start.date() <= timestamp.date() <= end.date()):
+            continue
+
+        records.append(
+            RasterRecord(
+                path=path.resolve(),
+                product=product,
+                timestamp=timestamp,
+                date=timestamp.date(),
+                source="hms_daily",
+                interval_start=None,
+                interval_end=None,
+            )
+        )
+
+    records.sort(
+        key=lambda record: (
+            record.product,
+            record.interval_start or record.timestamp,
+            record.interval_end or record.timestamp,
+            str(record.path),
+        )
+    )
+    return records, skipped
+
 
 
 def collect_records(
@@ -264,46 +436,119 @@ def collect_context_free_sit_fuse_records(
     return records, skipped
 
 
-def make_hms_lookup(records: list[RasterRecord]) -> dict[tuple[dt.date, str], list[RasterRecord]]:
-    lookup: dict[tuple[dt.date, str], list[RasterRecord]] = {}
+def seconds_to_interval(
+    timestamp: dt.datetime,
+    interval_start: dt.datetime,
+    interval_end: dt.datetime,
+) -> int:
+    """
+    Distance from a timestamp to a closed interval in seconds.
 
-    for record in records:
-        lookup.setdefault((record.date, record.product), []).append(record)
+    Returns zero if the timestamp is inside the interval.
+    """
+    if interval_start <= timestamp <= interval_end:
+        return 0
+    if timestamp < interval_start:
+        return int((interval_start - timestamp).total_seconds())
+    return int((timestamp - interval_end).total_seconds())
 
-    for key in lookup:
-        lookup[key].sort(key=lambda x: (x.timestamp, str(x.path)))
 
-    return lookup
+def interval_duration_seconds(record: RasterRecord) -> int:
+    if record.interval_start is None or record.interval_end is None:
+        return 24 * 60 * 60
+    return int((record.interval_end - record.interval_start).total_seconds())
+
+
+def choose_hms_interval_match(
+    sitfuse_record: RasterRecord,
+    hms_records: list[RasterRecord],
+    max_offset_seconds: int,
+    allow_hms_reuse: bool,
+    used_hms_paths: set[str],
+    allow_nearest_interval: bool = True,
+) -> tuple[RasterRecord | None, int | None, str | None]:
+    """
+    Match a SIT-FUSE timestamp to an HMS truth interval.
+
+    Priority:
+      1. Same-product truth intervals containing the SIT-FUSE timestamp.
+      2. If configured, nearest same-product truth interval within tolerance.
+      3. Legacy daily rasters are interpreted as a daily surrogate interval.
+    """
+    candidates = [
+        record
+        for record in hms_records
+        if record.product == sitfuse_record.product
+        and (allow_hms_reuse or str(record.path) not in used_hms_paths)
+    ]
+
+    if not candidates:
+        return None, None, None
+
+    def record_interval(record: RasterRecord) -> tuple[dt.datetime, dt.datetime]:
+        if record.interval_start is not None and record.interval_end is not None:
+            return record.interval_start, record.interval_end
+
+        # Legacy daily rasters: treat as a one-day validity interval.
+        day_start = dt.datetime.combine(record.date, dt.time.min)
+        day_end = dt.datetime.combine(record.date, dt.time.max)
+        return day_start, day_end
+
+    containing = []
+    for record in candidates:
+        start_time, end_time = record_interval(record)
+        if start_time <= sitfuse_record.timestamp <= end_time:
+            midpoint = start_time + (end_time - start_time) / 2
+            midpoint_distance = abs(
+                (sitfuse_record.timestamp - midpoint).total_seconds()
+            )
+            containing.append(
+                (
+                    midpoint_distance,
+                    interval_duration_seconds(record),
+                    str(record.path),
+                    record,
+                )
+            )
+
+    if containing:
+        containing.sort(key=lambda item: item[:3])
+        chosen = containing[0][3]
+        return chosen, 0, "contains_timestamp"
+
+    if not allow_nearest_interval:
+        return None, None, None
+
+    nearest = []
+    for record in candidates:
+        start_time, end_time = record_interval(record)
+        distance = seconds_to_interval(
+            sitfuse_record.timestamp,
+            start_time,
+            end_time,
+        )
+        nearest.append(
+            (
+                distance,
+                interval_duration_seconds(record),
+                str(record.path),
+                record,
+            )
+        )
+
+    nearest.sort(key=lambda item: item[:3])
+    distance, _, _, chosen = nearest[0]
+
+    if distance > max_offset_seconds:
+        return None, None, None
+
+    return chosen, distance, "nearest_interval"
+
+
 
 
 def seconds_offset(a: dt.datetime, b: dt.datetime) -> int:
     return int(abs((a - b).total_seconds()))
-
-
-def choose_hms_match(
-    sit_fuse_record: RasterRecord,
-    hms_lookup: dict[tuple[dt.date, str], list[RasterRecord]],
-    max_offset_seconds: int,
-    allow_reuse: bool,
-    used_hms_paths: set[str],
-) -> RasterRecord | None:
-    candidates = hms_lookup.get((sit_fuse_record.date, sit_fuse_record.product), [])
-
-    if not allow_reuse:
-        candidates = [x for x in candidates if str(x.path) not in used_hms_paths]
-
-    if not candidates:
-        return None
-
-    chosen = min(
-        candidates,
-        key=lambda x: (seconds_offset(sit_fuse_record.timestamp, x.timestamp), str(x.path)),
-    )
-
-    if seconds_offset(sit_fuse_record.timestamp, chosen.timestamp) > max_offset_seconds:
-        return None
-
-    return chosen
 
 
 def build_pair_id(
@@ -328,51 +573,79 @@ def build_pair_id(
 
 
 def build_matchups(
-    sit_fuse_records: list[RasterRecord],
+    sitfuse_records: list[RasterRecord],
     hms_records: list[RasterRecord],
     cfg: dict[str, Any],
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    hms_lookup = make_hms_lookup(hms_records)
-    used_hms_paths: set[str] = set()
-
     matching_cfg = cfg["matching"]
-    max_offset_seconds = int(matching_cfg.get("max_time_difference_seconds", 86400))
+    max_offset_seconds = int(
+        matching_cfg.get("max_time_difference_seconds", 3600)
+    )
     allow_hms_reuse = bool(matching_cfg.get("allow_hms_reuse", True))
-    group_by = matching_cfg.get("group_by", "hms_day")
+    allow_nearest_interval = bool(
+        matching_cfg.get("allow_nearest_interval", True)
+    )
+    group_by = matching_cfg.get("group_by", "hms_interval")
 
+    used_hms_paths: set[str] = set()
     matchups: list[dict[str, Any]] = []
     audit: list[dict[str, Any]] = []
 
-    for sf in sit_fuse_records:
-        hms = choose_hms_match(
-            sit_fuse_record=sf,
-            hms_lookup=hms_lookup,
+    for sf in sitfuse_records:
+        hms, offset_seconds, match_method = choose_hms_interval_match(
+            sitfuse_record=sf,
+            hms_records=hms_records,
             max_offset_seconds=max_offset_seconds,
-            allow_reuse=allow_hms_reuse,
+            allow_hms_reuse=allow_hms_reuse,
             used_hms_paths=used_hms_paths,
+            allow_nearest_interval=allow_nearest_interval,
         )
 
         if hms is None:
-            audit.append(
-                {
-                    "sit_fuse_path": str(sf.path),
-                    "sit_fuse_product": sf.product,
-                    "sit_fuse_timestamp": sf.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    "hms_path": "",
-                    "hms_product": "",
-                    "hms_timestamp": "",
-                    "time_offset_seconds": "",
-                    "pair_id": "",
-                    "status": "no_hms_match",
-                    "notes": "No HMS truth raster found for this product and date.",
-                }
-            )
+            audit.append({
+                "sit_fuse_path": str(sf.path),
+                "sit_fuse_product": sf.product,
+                "sit_fuse_timestamp": sf.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "hms_path": "",
+                "hms_product": "",
+                "hms_interval_start": "",
+                "hms_timestamp": "",
+                "hms_interval_end": "",
+                "time_offset_seconds": "",
+                "match_method": "",
+                "pair_id": "",
+                "status": "no_hms_interval_match",
+                "notes": "No same-product HMS interval contained or was close enough to the SIT-FUSE timestamp.",
+            })
             continue
 
         if not allow_hms_reuse:
             used_hms_paths.add(str(hms.path))
 
-        pair_id = build_pair_id(sf, hms, group_by)
+        hms_start = hms.interval_start or dt.datetime.combine(
+            hms.date, dt.time.min
+        )
+        hms_end = hms.interval_end or dt.datetime.combine(
+            hms.date, dt.time.max
+        )
+
+        if group_by == "hms_interval":
+            pair_id = (
+                f"{hms.product}_"
+                f"{hms_start:%Y%m%dT%H%M%SZ}_"
+                f"{hms_end:%Y%m%dT%H%M%SZ}"
+            )
+        elif group_by == "sit_fuse_timestamp":
+            pair_id = f"{sf.product}_{sf.timestamp:%Y%m%dT%H%M%SZ}"
+        elif group_by == "hms_day":
+            pair_id = f"{hms.product}_{hms_start:%Y%m%d}"
+        elif group_by == "product":
+            pair_id = hms.product
+        else:
+            raise ValueError(
+                "matching.group_by must be one of: hms_interval, "
+                "sit_fuse_timestamp, hms_day, product"
+            )
 
         matchup = {
             "pair_id": pair_id,
@@ -380,30 +653,33 @@ def build_matchups(
             "product": sf.product,
             "sit_fuse_context_free": str(sf.path),
             "truth_hms": str(hms.path),
-            "sit_fuse_timestamp": sf.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "hms_timestamp": hms.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "hms_date": hms.date.isoformat(),
-            "time_offset_seconds": seconds_offset(sf.timestamp, hms.timestamp),
+            "sit_fuse_timestamp": sf.timestamp.strftime("%Y-%m-%dT%H%M%SZ"),
+            "hms_date": hms_start.date().isoformat(),
+            "hms_interval_start": hms_start.strftime("%Y-%m-%dT%H%M%SZ"),
+            "hms_interval_end": hms_end.strftime("%Y-%m-%dT%H%M%SZ"),
+            "hms_timestamp": hms_start.strftime("%Y-%m-%dT%H%M%SZ"),
+            "time_offset_seconds": offset_seconds,
+            "match_method": match_method,
         }
         matchups.append(matchup)
 
-        audit.append(
-            {
-                "sit_fuse_path": str(sf.path),
-                "sit_fuse_product": sf.product,
-                "sit_fuse_timestamp": sf.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "hms_path": str(hms.path),
-                "hms_product": hms.product,
-                "hms_timestamp": hms.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "time_offset_seconds": seconds_offset(sf.timestamp, hms.timestamp),
-                "pair_id": pair_id,
-                "status": "matched",
-                "notes": "",
-            }
-        )
+        audit.append({
+            "sit_fuse_path": str(sf.path),
+            "sit_fuse_product": sf.product,
+            "sit_fuse_timestamp": matchup["sit_fuse_timestamp"],
+            "hms_path": str(hms.path),
+            "hms_product": hms.product,
+            "hms_interval_start": matchup["hms_interval_start"],
+            "hms_interval_end": matchup["hms_interval_end"],
+            "hms_timestamp": matchup["hms_interval_start"],
+            "time_offset_seconds": offset_seconds,
+            "match_method": match_method,
+            "pair_id": pair_id,
+            "status": "matched",
+            "notes": "",
+        })
 
     return matchups, audit
-
 
 def write_csv(rows: list[dict[str, Any]], output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -414,12 +690,18 @@ def write_csv(rows: list[dict[str, Any]], output_path: Path) -> None:
         "sit_fuse_timestamp",
         "hms_path",
         "hms_product",
+        "hms_interval_start",
+        "hms_interval_end",
         "hms_timestamp",
         "time_offset_seconds",
+        "match_method",
         "pair_id",
         "status",
         "notes",
     ]
+
+
+    print(rows[0].keys())
 
     with output_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
@@ -541,26 +823,21 @@ def main(config_path: str) -> None:
 
     LOG.info("Finding HMS smoke/fire truth GeoTIFFs.")
     hms_cfg = cfg["hms"]
-    hms_records, hms_skipped = collect_records(
-        root=Path(hms_cfg["directory"]),
-        source="hms",
-        smoke_patterns=hms_cfg["patterns"]["smoke"],
-        fire_patterns=hms_cfg["patterns"]["fire"],
-        timestamp_patterns=hms_cfg["patterns"].get("timestamp_patterns", []),
-        daily_date_patterns=hms_cfg["patterns"]["daily_date_patterns"],
-        daily_time_policy=hms_cfg.get("daily_time_policy", "midday"),
+
+    hms_records, hms_skipped = collect_hms_truth_records(
+        cfg=cfg["hms"],
         start=start,
         end=end,
-        include_if_same_day=True,
     )
+
 
     LOG.info("SIT-FUSE context-free rasters found: %d", len(sit_fuse_records))
     LOG.info("HMS rasters found: %d", len(hms_records))
 
     matchups, audit = build_matchups(
-        sit_fuse_records=sit_fuse_records,
-        hms_records=hms_records,
-        cfg=cfg,
+        sit_fuse_records,
+        hms_records,
+        cfg,
     )
 
     for item in sit_fuse_skipped:
