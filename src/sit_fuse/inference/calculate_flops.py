@@ -27,6 +27,7 @@ from sit_fuse.datasets.dataset_utils import get_prediction_dataset
 from sit_fuse.models.deep_cluster.heir_dc import Heir_DC
 from sit_fuse.utils import read_yaml
 from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes
+from sit_fuse.train.pretrain_rtdbn_dc import load_trained_rtdbn_dc
 
 from tqdm import tqdm
 
@@ -347,7 +348,7 @@ def get_model(yml_conf, n_visible):
         encoder_type=yml_conf["encoder_type"]
 
     encoder = None
-    if encoder_type is not None and  "dbn" in encoder_type:
+    if encoder_type is not None and  "dbn" in encoder_type and encoder_type != "rtdbn":
         model_type = tuple(yml_conf["dbn"]["model_type"])
         dbn_arch = tuple(yml_conf["dbn"]["dbn_arch"])
         gibbs_steps = tuple(yml_conf["dbn"]["gibbs_steps"])
@@ -456,9 +457,34 @@ def get_model(yml_conf, n_visible):
 
 
 
+def calculate_flops_rtdbn(yml_conf):
+    """RTDBN-specific FLOPs entrypoint. RTDBN_DC takes (batch, seq_len, n_visible)
+    windows rather than the flat (batch, n_features) input the Heir_DC path above
+    profiles, so this builds a dummy tensor of that shape instead of reusing
+    run_inference()'s in-loop calculate_flops() call (which also assumes a
+    Heir_DC-shaped model via the 'clust_tree' attribute check).
+    """
+    model = load_trained_rtdbn_dc(yml_conf)
+
+    if torch.cuda.is_available():
+        model = model.cuda()
+        model.pretrained_model = model.pretrained_model.cuda()
+
+    seq_len = int(yml_conf["data"]["seq_len"])
+    n_visible = int(yml_conf["rtdbn"]["n_visible"])
+    input_shape = (1, seq_len, n_visible)
+
+    flops, macs, params = calculate_flops(model=model, input_shape=input_shape, output_as_string=True, output_precision=4)
+    print("FLOPs:%s   MACs:%s   Params:%s \n" % (flops, macs, params))
+
+
 def main(yml_fpath):
 
     yml_conf = read_yaml(yml_fpath)
+
+    if yml_conf.get("encoder_type") == "rtdbn":
+        calculate_flops_rtdbn(yml_conf)
+        return
 
     test_fnames = yml_conf["data"]["files_test"]
     train_fnames = yml_conf["data"]["files_train"]

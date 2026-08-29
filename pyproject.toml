@@ -4,6 +4,22 @@ line-length = 88
 [project]
 name = "sit_fuse"
 dynamic = ["version"]
+dependencies = [
+    # Pinned after myoArmReachFixed-v0's observation dimension silently
+    # changed from 78 to 80 dims on an unpinned myosuite upgrade (surfaced
+    # as a cryptic Gibbs-sampling tensor-shape mismatch, not an install
+    # error -- see rtdbn.n_visible's fail-fast check in
+    # sit_fuse/train/pretrain_rtdbn.py). Every RTDBN/PLOS-track dataset and
+    # result in this repo was generated under these exact versions; bump
+    # deliberately and regenerate data if a newer version is ever needed,
+    # not by letting this float.
+    "myosuite==2.12.2",
+    "gymnasium==1.2.3",
+    "timeshap>=1.0.4",
+    # Pinned <=0.42.1: newer shap renamed a private class timeshap depends on
+    # (feedzai/timeshap #48/#56, unresolved as of Aug 2026).
+    "shap<=0.42.1",
+]
 
 
 [build-system]

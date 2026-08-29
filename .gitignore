@@ -160,3 +160,10 @@ cython_debug/
 #.idea/
 .idea/
 .DS_Store
+
+# Experiment outputs (checkpoints, logs, generated figures) -- not source, shouldn't be tracked
+experiments/*/encoder/
+experiments/*/lightning_logs/
+experiments/*/*.ckpt
+experiments/*/*.png
+experiments/*/*.pkl

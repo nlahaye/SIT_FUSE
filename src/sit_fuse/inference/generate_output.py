@@ -26,10 +26,13 @@ from sit_fuse.datasets.dataset_utils import get_prediction_dataset
 from sit_fuse.models.deep_cluster.heir_dc import Heir_DC
 from sit_fuse.utils import read_yaml
 from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes
+from sit_fuse.train.pretrain_rtdbn_dc import load_trained_rtdbn_dc
+from sit_fuse.datasets.rtdbn_data_utils import build_rtdbn_splits
 
 from tqdm import tqdm
 
 import argparse
+import csv
 import os
 import numpy as np
 import sys
@@ -343,7 +346,7 @@ def get_model(yml_conf, n_visible):
         encoder_type=yml_conf["encoder_type"]
 
     encoder = None
-    if encoder_type is not None and  "dbn" in encoder_type:
+    if encoder_type is not None and  "dbn" in encoder_type and encoder_type != "rtdbn":
         model_type = tuple(yml_conf["dbn"]["model_type"])
         dbn_arch = tuple(yml_conf["dbn"]["dbn_arch"])
         gibbs_steps = tuple(yml_conf["dbn"]["gibbs_steps"])
@@ -452,11 +455,84 @@ def get_model(yml_conf, n_visible):
 
 
 
+def generate_output_rtdbn(dataset, model, split_name, out_dir, use_gpu):
+    """Runs RTDBN_DC inference on a temporal dataset and writes per-window cluster
+    assignments to a CSV, keyed by (trial_idx, timestep) from SFTemporalDataset's targets.
+
+    RTDBN windows have no spatial coordinate to georeference, so this writes a flat
+    table instead of plot_clusters()'s GeoTIFF/zarr raster output.
+    """
+    loader = DataLoader(dataset, batch_size=1024, shuffle=False, num_workers=0, drop_last=False)
+
+    if use_gpu:
+        model = model.cuda()
+
+    rows = []
+    with torch.no_grad():
+        for x, target in tqdm(loader):
+            if use_gpu:
+                x = x.cuda()
+
+            logits = model(x)
+            # RTDBN_DC's forward() already ends in a Softmax layer (MultiPrototypes), so this
+            # re-softmaxes -- matching the existing (double-softmax) convention run_inference()
+            # already uses for DBN's flat/no_heir path, for output-format consistency.
+            probs = torch.max(torch.nn.functional.softmax(logits, dim=1), dim=1).values
+            labels = torch.argmax(torch.nn.functional.softmax(logits, dim=1), dim=1)
+
+            labels = labels.detach().cpu().numpy()
+            probs = probs.detach().cpu().numpy()
+            target = target.numpy() if isinstance(target, torch.Tensor) else np.array(target)
+
+            for i in range(len(labels)):
+                trial_idx, timestep = int(target[i][0]), int(target[i][1])
+                rows.append((trial_idx, timestep, int(labels[i]), float(probs[i])))
+
+    out_path = os.path.join(out_dir, f"rtdbn_{split_name}_clusters.csv")
+    with open(out_path, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["trial_idx", "timestep", "cluster", "probability"])
+        writer.writerows(rows)
+
+    print(f"RTDBN cluster assignments written to {out_path} ({len(rows)} windows)")
+    return out_path
+
+
+def predict_rtdbn(yml_conf):
+    """RTDBN-specific inference entrypoint. Separate from predict() because RTDBN uses
+    a flat RTDBN_DC head (not Heir_DC) and temporal windows (not spatial tiles/GDAL) --
+    see load_trained_rtdbn_dc() and generate_output_rtdbn() for why.
+    """
+    out_dir = yml_conf["output"]["out_dir"]
+    encoder_dir = os.path.join(out_dir, "encoder")
+
+    model = load_trained_rtdbn_dc(yml_conf)
+
+    use_gpu = torch.cuda.is_available()
+    if use_gpu:
+        model.pretrained_model = model.pretrained_model.cuda()
+
+    _, val_ds, test_ds = build_rtdbn_splits(
+        yml_conf, scaler_in_path=os.path.join(encoder_dir, "scaler.pkl")
+    )
+
+    if test_ds is not None:
+        generate_output_rtdbn(test_ds, model, "test", out_dir, use_gpu)
+    else:
+        print("No held-out test split configured (data.test_percent) -- skipping test-split output.")
+
+    if yml_conf["output"].get("generate_intermediate_output", False):
+        generate_output_rtdbn(val_ds, model, "val", out_dir, use_gpu)
+
+
 def predict_outside(yml_fpath):
 
     yml_conf = read_yaml(yml_fpath)
 
-    predict(yml_conf)
+    if yml_conf.get("encoder_type") == "rtdbn":
+        predict_rtdbn(yml_conf)
+    else:
+        predict(yml_conf)
 
 
 def prep_model(yml_conf):

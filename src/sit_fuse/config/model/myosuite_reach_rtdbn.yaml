@@ -1,0 +1,52 @@
+# RTDBN training config for MyoSuite myoArmReachFixed-v0
+
+data:
+  data_dir: "C:/Users/wafis/Documents/SIT-FUSE-RTRBM/data/reach_fixed" # folder containing episode_000.npy ... episode_099.npy
+  seq_len: 20
+  val_percent: 0.15
+  test_percent: 0.15  # 70/15/15 split
+  split_seed: 42
+  num_loader_workers: 4
+  fill_value: -999999.0
+
+output:
+  out_dir: "experiments/sit_fuse_rtdbn"
+  generate_intermediate_output: True
+
+rtdbn:
+  model_type: ["variance_gaussian"]
+  n_visible: 78
+  n_hidden: [64]
+  gibbs_steps: [1]
+  temp: [1.0]
+
+encoder_type: "rtdbn"
+encoder:
+  training:
+    learning_rate: [0.001]
+    momentum: [0.0]
+    weight_decay: [0.0]
+    nesterov_accel: [False]
+    warmup_epochs: 15
+    batch_size: 32
+    epochs: [30]
+    accelerator: "cpu" # change to "gpu" if available
+    devices: 1
+    gradient_clip_val: 1.0
+    precision: "32"
+
+cluster:
+  num_classes: 10
+  gauss_noise_stdev: [0.01]
+  lambda: 1.0
+  training:
+    learning_rate: 0.001
+    batch_size: 32
+    epochs: 30
+    accelerator: "cpu"
+    devices: 1
+    gradient_clip_val: 1.0
+    precision: "32"
+
+logger:
+  use_wandb: False
