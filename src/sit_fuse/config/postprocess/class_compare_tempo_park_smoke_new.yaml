@@ -1,0 +1,7 @@
+dbf: true
+dbf_list:
+- - /data/nlahaye/output/Learnergy/SF_TEMPO_PARK/SMOKE_hist_dict.pkl
+dbf_percentage_thresh: 0.65
+
+
+
