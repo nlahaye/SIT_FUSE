@@ -20,14 +20,38 @@ hms:
 
   patterns:
     smoke:
-      - "(?i)smoke"
+      - "(?i)_smoke"
     fire:
-      - "(?i)fire"
+      - "(?i)foire"
 
-    interval_timestamp_patterns:
-      - "(?i)(\\d{8}T\\d{6}Z)_(\\d{8}T\\d{6}Z)"
+    #interval_timestamp_patterns:
+    #  - "(?i)(\\d{8}T\\d{6}Z)_(\\d{8}T\\d{6}Z)"
+    
+    #timestamp_patterns:
+    #  - "(\\d{8}T\\d{6}Z)"
+    #  - "(\\d{8}T\\d{6})"
+
+    # No interval patterns means daily matching is used.
+    interval_timestamp_patterns: []
+
+    # Optional: retain if some HMS products later include full timestamps.
+    timestamp_patterns:
+      - "(\\d{8}T\\d{6}Z)"
+      - "(\\d{8}T\\d{6})"
+
+    # Daily raster filename patterns. Each must capture YYYYMMDD.
+    daily_date_patterns:
+      - "hms_smoke(\\d{8})"
+      - "hms_fire(\\d{8})"
+      - "smoke_(\\d{8})"
+      - "fire_(\\d{8})"
+      - "(\\d{8})"
 
 
+matching:
+  mode: daily
+  allow_hms_reuse: true
+  group_by: hms_day
 
 
 time_range:
@@ -51,7 +75,7 @@ sit_fuse:
     smoke:
       - "full_geo"
     fire:
-      - "full_geo"
+      - "fowl_geo"
 
 
 
@@ -74,8 +98,8 @@ classifier_config:
   base_yaml: "/home/nlahaye/SIT_FUSE/src/sit_fuse/train/basic_clssifier.yaml"
 
 output:
-  classifier_yaml: "//data/nlahaye/experiments/basic_clssifier.yaml"
-  audit_csv: "/data/nlahaye/experiments/hms_context_free/matchup_audit.csv"
+  classifier_yaml: "//data/nlahaye/experiments/basic_clssifier_iter_2.yaml"
+  audit_csv: "/data/nlahaye/experiments/hms_context_free/matchup_audit_post.csv"
 
   # Destination key written into the generated config.
   #

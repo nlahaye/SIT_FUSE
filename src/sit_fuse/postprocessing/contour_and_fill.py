@@ -45,7 +45,9 @@ def contour_and_fill(yml_conf):
     for i in range(len(data_fnames)):
         dat = gdal.Open(data_fnames[i])
         imgData = dat.ReadAsArray().astype(np.float32)
- 
+
+        neg_inds = np.where(imgData < 0) 
+
         imgData[np.where(imgData < 0)] = 0 
         imgData[np.where(imgData > 0)] = 1       
         imgData = imgData.astype(np.uint8) * 255
@@ -142,6 +144,9 @@ def contour_and_fill(yml_conf):
             final_contours.append(contours[j])
         zeros = np.zeros(edged.shape)
         cv2.drawContours(zeros, final_contours, -1, 1, thickness=cv2.FILLED)
+        zeros = zeros.astype(np.int16)
+        zeros[neg_inds] = -1
+
         if wrt_geotiff:
             write_geotiff(dat, zeros, data_fnames[i] + ".Contours.tif") 
         else:
@@ -150,6 +155,9 @@ def contour_and_fill(yml_conf):
         if len(final_contours) < 1:
             continue
         zeros = np.zeros(edged.shape)
+        zeros = zeros.astype(np.int16)
+        zeros[neg_inds] = -1
+
         cv2.drawContours(zeros, [final_contours[max_contour_final_ind]], -1, 1, thickness=cv2.FILLED)
         if wrt_geotiff:
             write_geotiff(dat, zeros, data_fnames[i] + ".Max_Contour.tif")
@@ -170,7 +178,7 @@ def write_geotiff(dat, imgData, fname):
     if gcpcount > 0:
         gcp = dat.GetGCPs()
         gcpproj = dat.GetGCPProjection()
-    out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Byte)
+    out_ds = gdal.GetDriverByName("GTiff").Create(fname, nx, ny, 1, gdal.GDT_Int16)
     print(fname)
     out_ds.SetGeoTransform(geoTransform)
     out_ds.SetProjection(wkt)

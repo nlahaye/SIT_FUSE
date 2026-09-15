@@ -108,10 +108,12 @@ def infer_product(
     text = filename.lower()
 
     for pattern in smoke_patterns:
+        print(pattern, text)
         if re.search(pattern, text, flags=re.IGNORECASE):
             return "smoke"
 
     for pattern in fire_patterns:
+        print(pattern, text)
         if re.search(pattern, text, flags=re.IGNORECASE):
             return "fire"
 
@@ -545,6 +547,42 @@ def choose_hms_interval_match(
     return chosen, distance, "nearest_interval"
 
 
+def choose_hms_daily_match(
+    sitfuse_record: RasterRecord,
+    hms_records: list[RasterRecord],
+    allow_hms_reuse: bool,
+    used_hms_paths: set[str],
+) -> tuple[RasterRecord | None, str | None]:
+    """
+    Match a SIT-FUSE scene to a daily HMS truth raster.
+
+    Requirements:
+      - Exact same product: smoke-to-smoke or fire-to-fire.
+      - Exact same UTC date.
+      - HMS daily rasters may be reused when multiple SIT-FUSE scenes
+        occur on the same day.
+
+    If more than one candidate exists, choose lexicographically by path to
+    make selection deterministic.
+    """
+    candidates = [
+        record
+        for record in hms_records
+        if record.product == sitfuse_record.product
+        and record.date == sitfuse_record.date
+        and record.source == "hms_daily"
+        and (
+            allow_hms_reuse
+            or str(record.path) not in used_hms_paths
+        )
+    ]
+
+    if not candidates:
+        return None, None
+
+    candidates.sort(key=lambda record: str(record.path))
+    return candidates[0], "same_utc_day"
+
 
 
 def seconds_offset(a: dt.datetime, b: dt.datetime) -> int:
@@ -577,75 +615,162 @@ def build_matchups(
     hms_records: list[RasterRecord],
     cfg: dict[str, Any],
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """
+    Build SIT-FUSE/HMS matchups.
+
+    Matching modes:
+      daily:
+          SIT-FUSE and HMS must share product and UTC calendar date.
+
+      interval:
+          Use HMS Start/Stop-derived raster intervals. A SIT-FUSE timestamp
+          is matched to an HMS interval that contains it, or optionally to
+          the nearest interval within max_time_difference_seconds.
+
+      auto:
+          Prefer interval HMS truth if present for a product/date; otherwise
+          fall back to daily HMS truth.
+    """
     matching_cfg = cfg["matching"]
+
+    mode = str(
+        matching_cfg.get("mode", "auto")
+    ).strip().lower()
+
+    if mode not in {"daily", "interval", "auto"}:
+        raise ValueError(
+            "matching.mode must be one of: daily, interval, auto."
+        )
+
     max_offset_seconds = int(
         matching_cfg.get("max_time_difference_seconds", 3600)
     )
-    allow_hms_reuse = bool(matching_cfg.get("allow_hms_reuse", True))
+
+    allow_hms_reuse = bool(
+        matching_cfg.get("allow_hms_reuse", True)
+    )
+
     allow_nearest_interval = bool(
         matching_cfg.get("allow_nearest_interval", True)
     )
-    group_by = matching_cfg.get("group_by", "hms_interval")
+
+    group_by = str(
+        matching_cfg.get("group_by", "hms_day")
+    ).lower()
+
+    valid_group_by = {
+        "hms_day",
+        "hms_interval",
+        "sit_fuse_day",
+        "sit_fuse_timestamp",
+        "product",
+    }
+
+    if group_by not in valid_group_by:
+        raise ValueError(
+            f"Unsupported matching.group_by='{group_by}'. "
+            f"Allowed values: {sorted(valid_group_by)}"
+        )
 
     used_hms_paths: set[str] = set()
     matchups: list[dict[str, Any]] = []
     audit: list[dict[str, Any]] = []
 
     for sf in sitfuse_records:
-        hms, offset_seconds, match_method = choose_hms_interval_match(
-            sitfuse_record=sf,
-            hms_records=hms_records,
-            max_offset_seconds=max_offset_seconds,
-            allow_hms_reuse=allow_hms_reuse,
-            used_hms_paths=used_hms_paths,
-            allow_nearest_interval=allow_nearest_interval,
-        )
+        hms = None
+        offset_seconds = None
+        match_method = None
+
+        # --------------------------------------------------------------
+        # Daily HMS matching.
+        # --------------------------------------------------------------
+        if mode in {"daily", "auto"}:
+            hms, match_method = choose_hms_daily_match(
+                sitfuse_record=sf,
+                hms_records=hms_records,
+                allow_hms_reuse=allow_hms_reuse,
+                used_hms_paths=used_hms_paths,
+            )
+
+            if hms is not None:
+                offset_seconds = 0
+
+        # --------------------------------------------------------------
+        # Interval HMS matching only when daily match did not succeed.
+        # --------------------------------------------------------------
+        if hms is None and mode in {"interval", "auto"}:
+            hms, offset_seconds, match_method = choose_hms_interval_match(
+                sitfuse_record=sf,
+                hms_records=hms_records,
+                max_offset_seconds=max_offset_seconds,
+                allow_hms_reuse=allow_hms_reuse,
+                used_hms_paths=used_hms_paths,
+                allow_nearest_interval=allow_nearest_interval,
+            )
 
         if hms is None:
             audit.append({
                 "sit_fuse_path": str(sf.path),
                 "sit_fuse_product": sf.product,
-                "sit_fuse_timestamp": sf.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "sit_fuse_timestamp": sf.timestamp.strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                ),
                 "hms_path": "",
                 "hms_product": "",
                 "hms_interval_start": "",
-                "hms_timestamp": "",
                 "hms_interval_end": "",
+                "hms_timestamp": "",
                 "time_offset_seconds": "",
                 "match_method": "",
                 "pair_id": "",
-                "status": "no_hms_interval_match",
-                "notes": "No same-product HMS interval contained or was close enough to the SIT-FUSE timestamp.",
+                "status": "no_hms_match",
+                "notes": (
+                    "No same-product HMS daily raster or compatible HMS "
+                    "time interval was found."
+                ),
             })
             continue
 
         if not allow_hms_reuse:
             used_hms_paths.add(str(hms.path))
 
-        hms_start = hms.interval_start or dt.datetime.combine(
-            hms.date, dt.time.min
-        )
-        hms_end = hms.interval_end or dt.datetime.combine(
-            hms.date, dt.time.max
-        )
+        # Daily products represent a full UTC calendar day.
+        if hms.source == "hms_daily":
+            hms_start = dt.datetime.combine(hms.date, dt.time.min)
+            hms_end = dt.datetime.combine(
+                hms.date + dt.timedelta(days=1),
+                dt.time.min,
+            )
+        else:
+            hms_start = hms.interval_start
+            hms_end = hms.interval_end
 
-        if group_by == "hms_interval":
+        if hms_start is None or hms_end is None:
+            raise RuntimeError(
+                f"Could not determine temporal bounds for HMS record: {hms.path}"
+            )
+
+        if group_by == "hms_day":
+            pair_id = f"{hms.product}_{hms.date:%Y%m%d}"
+
+        elif group_by == "hms_interval":
             pair_id = (
                 f"{hms.product}_"
                 f"{hms_start:%Y%m%dT%H%M%SZ}_"
                 f"{hms_end:%Y%m%dT%H%M%SZ}"
             )
+
+        elif group_by == "sit_fuse_day":
+            pair_id = f"{sf.product}_{sf.date:%Y%m%d}"
+
         elif group_by == "sit_fuse_timestamp":
-            pair_id = f"{sf.product}_{sf.timestamp:%Y%m%dT%H%M%SZ}"
-        elif group_by == "hms_day":
-            pair_id = f"{hms.product}_{hms_start:%Y%m%d}"
-        elif group_by == "product":
-            pair_id = hms.product
-        else:
-            raise ValueError(
-                "matching.group_by must be one of: hms_interval, "
-                "sit_fuse_timestamp, hms_day, product"
+            pair_id = (
+                f"{sf.product}_"
+                f"{sf.timestamp:%Y%m%dT%H%M%SZ}"
             )
+
+        else:
+            pair_id = hms.product
 
         matchup = {
             "pair_id": pair_id,
@@ -653,14 +778,23 @@ def build_matchups(
             "product": sf.product,
             "sit_fuse_context_free": str(sf.path),
             "truth_hms": str(hms.path),
-            "sit_fuse_timestamp": sf.timestamp.strftime("%Y-%m-%dT%H%M%SZ"),
-            "hms_date": hms_start.date().isoformat(),
-            "hms_interval_start": hms_start.strftime("%Y-%m-%dT%H%M%SZ"),
-            "hms_interval_end": hms_end.strftime("%Y-%m-%dT%H%M%SZ"),
-            "hms_timestamp": hms_start.strftime("%Y-%m-%dT%H%M%SZ"),
+            "sit_fuse_timestamp": sf.timestamp.strftime(
+                "%Y-%m-%dT%H:%M:%SZ"
+            ),
+            "hms_date": hms.date.isoformat(),
+            "hms_interval_start": hms_start.strftime(
+                "%Y-%m-%dT%H:%M:%SZ"
+            ),
+            "hms_interval_end": hms_end.strftime(
+                "%Y-%m-%dT%H:%M:%SZ"
+            ),
+            "hms_timestamp": hms_start.strftime(
+                "%Y-%m-%dT%H:%M:%SZ"
+            ),
             "time_offset_seconds": offset_seconds,
             "match_method": match_method,
         }
+
         matchups.append(matchup)
 
         audit.append({
@@ -671,7 +805,7 @@ def build_matchups(
             "hms_product": hms.product,
             "hms_interval_start": matchup["hms_interval_start"],
             "hms_interval_end": matchup["hms_interval_end"],
-            "hms_timestamp": matchup["hms_interval_start"],
+            "hms_timestamp": matchup["hms_timestamp"],
             "time_offset_seconds": offset_seconds,
             "match_method": match_method,
             "pair_id": pair_id,
@@ -680,6 +814,7 @@ def build_matchups(
         })
 
     return matchups, audit
+
 
 def write_csv(rows: list[dict[str, Any]], output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -841,36 +976,39 @@ def main(config_path: str) -> None:
     )
 
     for item in sit_fuse_skipped:
-        audit.append(
-            {
-                "sit_fuse_path": item["path"],
-                "sit_fuse_product": "",
-                "sit_fuse_timestamp": "",
-                "hms_path": "",
-                "hms_product": "",
-                "hms_timestamp": "",
-                "time_offset_seconds": "",
-                "pair_id": "",
-                "status": "skipped_sit_fuse",
-                "notes": item["reason"],
-            }
-        )
+        audit.append({
+            "sit_fuse_path": item["path"],
+            "sit_fuse_product": "",
+            "sit_fuse_timestamp": "",
+            "hms_path": "",
+            "hms_product": "",
+            "hms_interval_start": "",
+            "hms_interval_end": "",
+            "hms_timestamp": "",
+            "time_offset_seconds": "",
+            "match_method": "",
+            "pair_id": "",
+            "status": "skipped_sit_fuse",
+            "notes": item["reason"],
+        })
+
 
     for item in hms_skipped:
-        audit.append(
-            {
-                "sit_fuse_path": "",
-                "sit_fuse_product": "",
-                "sit_fuse_timestamp": "",
-                "hms_path": item["path"],
-                "hms_product": "",
-                "hms_timestamp": "",
-                "time_offset_seconds": "",
-                "pair_id": "",
-                "status": "skipped_hms",
-                "notes": item["reason"],
-            }
-        )
+        audit.append({
+            "sit_fuse_path": "",
+            "sit_fuse_product": "",
+            "sit_fuse_timestamp": "",
+            "hms_path": item["path"],
+            "hms_product": "",
+            "hms_interval_start": "",
+            "hms_interval_end": "",
+            "hms_timestamp": "",
+            "time_offset_seconds": "",
+            "match_method": "",
+            "pair_id": "",
+            "status": "skipped_hms",
+            "notes": item["reason"],
+        })
 
     base_classifier_config_path = Path(cfg["classifier_config"]["base_yaml"])
     base_classifier_cfg = load_yaml(base_classifier_config_path)

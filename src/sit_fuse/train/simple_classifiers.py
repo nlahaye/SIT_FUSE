@@ -8,7 +8,6 @@ import joblib
 import numpy as np
 import pandas as pd
 from sklearn.base import clone
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, confusion_matrix
@@ -77,6 +76,81 @@ def train_bootstrap_ensemble(
     return paths
 
 
+def load_or_build_training_dataframe(cfg: Dict) -> pd.DataFrame:
+    """
+    Load a precomputed feature table when configured; otherwise construct one
+    through build_training_dataset().
+
+    Config modes:
+      data_source:
+        mode: build
+
+      data_source:
+        mode: csv
+        csv_path: /path/to/features.csv
+    """
+    source_cfg = cfg.get("data_source", {})
+    mode = str(source_cfg.get("mode", "build")).strip().lower()
+
+    if mode == "build":
+        LOG.info("Building training dataset from configured raster inputs.")
+        df, _ = build_training_dataset(cfg)
+        return df
+
+    if mode == "csv":
+        csv_path = source_cfg.get("csv_path")
+        if not csv_path:
+            raise ValueError(
+                "data_source.csv_path is required when data_source.mode is 'csv'."
+            )
+
+        csv_path = Path(csv_path)
+        if not csv_path.exists():
+            raise FileNotFoundError(
+                f"Configured feature CSV does not exist: {csv_path}"
+            )
+
+        LOG.info("Loading precomputed training dataset from %s", csv_path)
+        df = pd.read_csv(csv_path)
+
+        if df.empty:
+            raise ValueError(f"Precomputed feature CSV is empty: {csv_path}")
+
+        label_col = cfg.get("label_column", "label")
+        group_col = cfg.get("group_column", "pair_id")
+
+        required_columns = {label_col, group_col}
+        missing_columns = required_columns - set(df.columns)
+
+        if missing_columns:
+            raise KeyError(
+                f"CSV is missing required columns: {sorted(missing_columns)}. "
+                f"Available columns: {list(df.columns)}"
+            )
+
+        features = feature_columns(df)
+        if not features:
+            raise ValueError(
+                "No feature columns were identified in the precomputed CSV. "
+                "Confirm that its columns match the expectations of "
+                "feature_columns()."
+            )
+
+        LOG.info(
+            "Loaded %d rows, %d features, %d labels, and %d groups.",
+            len(df),
+            len(features),
+            df[label_col].nunique(),
+            df[group_col].nunique(),
+        )
+
+        return df
+
+    raise ValueError(
+        f"Unsupported data_source.mode='{mode}'. "
+        "Supported values are: build, csv."
+    )
+
 
 
 def main() -> None:
@@ -90,8 +164,9 @@ def main() -> None:
     output_dir = Path(cfg.get("output_dir", "output"))
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    df, _ = build_training_dataset(cfg)
+    df = load_or_build_training_dataframe(cfg)
     train_and_save(df, cfg, output_dir)
+ 
     LOG.info("Done. Outputs written to %s", output_dir)
 
 

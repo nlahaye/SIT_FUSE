@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import argparse
 import datetime as dt
 import sys
@@ -48,8 +49,148 @@ SMOKE_DENSITY_MAP = {
 }
 
 
+
+def parse_datetime_utc(value: str) -> dt.datetime:
+    """
+    Parse a UTC date or timestamp from YAML.
+
+    Accepted:
+      YYYY-MM-DD
+      YYYY-MM-DDTHH:MM:SSZ
+      YYYY-MM-DDTHH:MM:SS
+    """
+    value = str(value).strip()
+
+    for fmt in (
+        "%Y-%m-%dT%H:%M:%SZ",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%d",
+    ):
+        try:
+            return dt.datetime.strptime(value, fmt)
+        except ValueError:
+            continue
+
+    raise ValueError(
+        f"Could not parse datetime '{value}'. "
+        "Expected YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ."
+    )
+
+
 def parse_date(value: str) -> dt.date:
-    return dt.datetime.strptime(value, "%Y-%m-%d").date()
+    return parse_datetime_utc(value).date()
+
+
+def parse_hms_smoke_datetime(value, default_date: dt.date | None = None) -> pd.Timestamp:
+    """
+    Parse an HMS smoke Start/Stop field to UTC.
+
+    Handles common ISO-like date/time strings and optionally accepts a
+    time-only value when the archive date is supplied as default_date.
+    """
+    if pd.isna(value):
+        return pd.NaT
+
+    text = str(value).strip()
+    parsed = pd.to_datetime(text, errors="coerce", utc=True)
+
+    if not pd.isna(parsed):
+        return parsed
+
+    if default_date is not None:
+        for fmt in ("%H:%M:%S", "%H:%M", "%H%M", "%H%M%S"):
+            try:
+                parsed_dt = dt.datetime.strptime(text, fmt)
+                return pd.Timestamp(
+                    dt.datetime.combine(default_date, parsed_dt.time()),
+                    tz="UTC",
+                )
+            except ValueError:
+                continue
+
+    return pd.NaT
+
+
+def find_column_case_insensitive(
+    gdf: gpd.GeoDataFrame,
+    candidates: list[str],
+) -> str | None:
+    lookup = {str(col).lower(): col for col in gdf.columns}
+
+    for candidate in candidates:
+        if candidate.lower() in lookup:
+            return lookup[candidate.lower()]
+
+    return None
+
+
+def add_hms_smoke_intervals(
+    gdf: gpd.GeoDataFrame,
+    archive_day: dt.date,
+) -> gpd.GeoDataFrame:
+    """
+    Add smoke_start_utc and smoke_stop_utc fields from HMS smoke attributes.
+    """
+    start_col = find_column_case_insensitive(
+        gdf,
+        ["Start", "START", "StartTime", "START_TIME", "Begin"],
+    )
+    stop_col = find_column_case_insensitive(
+        gdf,
+        ["Stop", "STOP", "StopTime", "STOP_TIME", "End"],
+    )
+
+    if start_col is None or stop_col is None:
+        raise KeyError(
+            "HMS smoke file is missing Start and/or Stop fields. "
+            f"Available columns: {list(gdf.columns)}"
+        )
+
+    gdf = gdf.copy()
+
+    gdf["smoke_start_utc"] = gdf[start_col].map(
+        lambda x: parse_hms_smoke_datetime(x, default_date=archive_day)
+    )
+    gdf["smoke_stop_utc"] = gdf[stop_col].map(
+        lambda x: parse_hms_smoke_datetime(x, default_date=archive_day)
+    )
+
+    invalid = (
+        gdf["smoke_start_utc"].isna()
+        | gdf["smoke_stop_utc"].isna()
+        | (gdf["smoke_stop_utc"] < gdf["smoke_start_utc"])
+    )
+
+    if invalid.any():
+        print(
+            f"[warn] Dropping {int(invalid.sum())} smoke polygons with invalid "
+            "or unparseable Start/Stop timestamps."
+        )
+        gdf = gdf.loc[~invalid].copy()
+
+    return gdf
+
+
+def select_smoke_time_bin(
+    gdf: gpd.GeoDataFrame,
+    bin_start: dt.datetime,
+    bin_end: dt.datetime,
+) -> gpd.GeoDataFrame:
+    """
+    Select polygons whose [start, stop] interval overlaps [bin_start, bin_end).
+
+    This intentionally allows one smoke polygon to appear in multiple bins.
+    """
+    start_ts = pd.Timestamp(bin_start, tz="UTC")
+    end_ts = pd.Timestamp(bin_end, tz="UTC")
+
+    overlaps = (
+        (gdf["smoke_start_utc"] < end_ts)
+        & (gdf["smoke_stop_utc"] >= start_ts)
+    )
+
+    return gdf.loc[overlaps].copy()
+
 
 
 def date_range(start: dt.date, end: dt.date):
@@ -86,13 +227,24 @@ def validate_config(cfg: dict) -> dict:
     dataset = cfg["dataset"]
     if dataset not in DATASET_CONFIG:
         raise ValueError(f"dataset must be one of {list(DATASET_CONFIG.keys())}")
-
+ 
     tr = cfg["time_range"]
-    start = parse_date(tr["start"])
-    end = parse_date(tr["end"])
-    if end < start:
+    start_dt = parse_datetime_utc(tr["start"])
+    end_dt = parse_datetime_utc(tr["end"])
+
+    if end_dt < start_dt:
         raise ValueError("time_range.end must be >= time_range.start")
 
+    start = start_dt.date()
+    end = end_dt.date()
+
+    temporal_resolution_minutes = cfg.get("temporal_resolution_minutes", None)
+    if temporal_resolution_minutes is not None:
+        temporal_resolution_minutes = int(temporal_resolution_minutes)
+        if temporal_resolution_minutes <= 0:
+            raise ValueError("temporal_resolution_minutes must be positive.")
+
+ 
     bb = cfg["bbox"]
     bbox = (
         float(bb["min_lon"]),
@@ -107,18 +259,6 @@ def validate_config(cfg: dict) -> dict:
     resolution_deg = float(raster.get("resolution_deg", 0.05))
     all_touched = bool(raster.get("all_touched", True))
     
-    temporal_cfg = cfg.get("temporal_split", {})
-    split_by_feature_times = bool(temporal_cfg.get("enabled", False))
-
-    start_field = temporal_cfg.get("start_field")
-    end_field = temporal_cfg.get("end_field")
-
-    if split_by_feature_times and (not start_field or not end_field):
-        raise ValueError(
-            "When temporal_split.enabled is true, both "
-            "`temporal_split.start_field` and `temporal_split.end_field` are required."
-        )
-
     combine_method = cfg.get("combine", None)
     if combine_method not in (None, "max", "sum", "count"):
         raise ValueError("combine must be one of: null, max, sum, count")
@@ -136,11 +276,9 @@ def validate_config(cfg: dict) -> dict:
         "combine": combine_method,
         "overwrite": overwrite,
         "outdir": outdir,
-        "split_by_feature_times": split_by_feature_times,
-        "start_field": start_field,
-        "end_field": end_field,
-        "time_format": temporal_cfg.get("time_format"),
-        "time_rounding": temporal_cfg.get("time_rounding", "none"),
+        "start_dt": start_dt,
+        "end_dt": end_dt,
+        "temporal_resolution_minutes": temporal_resolution_minutes,
     }
 
 
@@ -254,6 +392,217 @@ def infer_fire_value_column(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 
     return gdf
 
+def find_column_case_insensitive(gdf: gpd.GeoDataFrame, candidates: list[str]) -> str | None:
+    """
+    Return the first matching column name without depending on exact case.
+    """
+    lookup = {str(col).lower(): col for col in gdf.columns}
+
+    for candidate in candidates:
+        if candidate.lower() in lookup:
+            return lookup[candidate.lower()]
+
+    return None
+
+
+def parse_hms_year_day(value) -> dt.date | None:
+    """
+    Parse HMS YearDay values.
+
+    Expected common representations:
+      2024167       -> 2024, Julian day 167
+      2024-167      -> 2024, Julian day 167
+      2024167.0     -> 2024, Julian day 167
+    """
+    if pd.isna(value):
+        return None
+
+    text = str(value).strip()
+
+    if text.endswith(".0"):
+        text = text[:-2]
+
+    digits = re.sub(r"[^0-9]", "", text)
+    if len(digits) < 7:
+        return None
+
+    year = int(digits[:4])
+    day_of_year = int(digits[4:])
+
+    try:
+        return dt.date(year, 1, 1) + dt.timedelta(days=day_of_year - 1)
+    except ValueError:
+        return None
+
+
+def parse_hms_time(value) -> dt.time | None:
+    """
+    Parse HMS Time values.
+
+    Supported examples:
+      1530       -> 15:30:00
+      153045     -> 15:30:45
+      "15:30"    -> 15:30:00
+      "15:30:45" -> 15:30:45
+      930        -> 09:30:00
+      "0930"     -> 09:30:00
+
+    Invalid values return None.
+    """
+    if pd.isna(value):
+        return None
+
+    text = str(value).strip()
+
+    if text.endswith(".0"):
+        text = text[:-2]
+
+    for fmt in ("%H:%M:%S", "%H:%M"):
+        try:
+            return dt.datetime.strptime(text, fmt).time()
+        except ValueError:
+            pass
+
+    digits = re.sub(r"[^0-9]", "", text)
+
+    if len(digits) == 3:
+        digits = digits.zfill(4)
+
+    if len(digits) == 4:
+        hour = int(digits[:2])
+        minute = int(digits[2:4])
+        second = 0
+    elif len(digits) == 6:
+        hour = int(digits[:2])
+        minute = int(digits[2:4])
+        second = int(digits[4:6])
+    else:
+        return None
+
+    try:
+        return dt.time(hour=hour, minute=minute, second=second)
+    except ValueError:
+        return None
+
+
+def add_hms_fire_timestamp(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    """
+    Add fire_time_utc derived from HMS YearDay and Time fields.
+
+    Rows with malformed or missing time metadata retain NaT.
+    """
+    year_day_col = find_column_case_insensitive(
+        gdf,
+        ["YearDay", "YEAR_DAY", "YEARDOY", "YEARDAY"],
+    )
+    time_col = find_column_case_insensitive(
+        gdf,
+        ["Time", "TIME", "HHMM", "UTC_TIME"],
+    )
+
+    if year_day_col is None or time_col is None:
+        raise KeyError(
+            "HMS fire file is missing required YearDay and/or Time fields. "
+            f"Available columns: {list(gdf.columns)}"
+        )
+
+    gdf = gdf.copy()
+
+    dates = gdf[year_day_col].map(parse_hms_year_day)
+    times = gdf[time_col].map(parse_hms_time)
+
+    gdf["fire_time_utc"] = [
+        dt.datetime.combine(day, time)
+        if day is not None and time is not None
+        else pd.NaT
+        for day, time in zip(dates, times)
+    ]
+
+    gdf["fire_time_utc"] = pd.to_datetime(
+        gdf["fire_time_utc"],
+        errors="coerce",
+        utc=True,
+    )
+
+    n_valid = int(gdf["fire_time_utc"].notna().sum())
+    n_missing = int(gdf["fire_time_utc"].isna().sum())
+
+    print(
+        f"[info] Parsed HMS fire times using "
+        f"YearDay='{year_day_col}', Time='{time_col}': "
+        f"{n_valid} valid, {n_missing} missing."
+    )
+
+    return gdf
+
+
+def filter_fire_time_range(
+    gdf: gpd.GeoDataFrame,
+    start_utc: dt.datetime | None,
+    end_utc: dt.datetime | None,
+) -> gpd.GeoDataFrame:
+    """
+    Keep fire detections inside an optional closed UTC interval.
+    """
+    if start_utc is None and end_utc is None:
+        return gdf
+
+    if "fire_time_utc" not in gdf.columns:
+        raise ValueError("fire_time_utc must be created before time filtering.")
+
+    mask = gdf["fire_time_utc"].notna()
+
+    if start_utc is not None:
+        start_ts = pd.Timestamp(start_utc, tz="UTC")
+        mask &= gdf["fire_time_utc"] >= start_ts
+
+    if end_utc is not None:
+        end_ts = pd.Timestamp(end_utc, tz="UTC")
+        mask &= gdf["fire_time_utc"] <= end_ts
+
+    return gdf.loc[mask].copy()
+
+
+def iter_time_bins(
+    start_utc: dt.datetime,
+    end_utc: dt.datetime,
+    minutes: int,
+):
+    """
+    Yield half-open UTC bins [bin_start, bin_end).
+
+    The final bin is clipped to end_utc.
+    """
+    current = start_utc
+    delta = dt.timedelta(minutes=minutes)
+
+    while current < end_utc:
+        next_time = min(current + delta, end_utc)
+        yield current, next_time
+        current = next_time
+
+
+def select_fire_time_bin(
+    gdf: gpd.GeoDataFrame,
+    bin_start: dt.datetime,
+    bin_end: dt.datetime,
+) -> gpd.GeoDataFrame:
+    """
+    Select detections in [bin_start, bin_end).
+
+    The final caller may optionally include the right endpoint if desired.
+    """
+    start_ts = pd.Timestamp(bin_start, tz="UTC")
+    end_ts = pd.Timestamp(bin_end, tz="UTC")
+
+    mask = (
+        gdf["fire_time_utc"].notna()
+        & (gdf["fire_time_utc"] >= start_ts)
+        & (gdf["fire_time_utc"] < end_ts)
+    )
+
+    return gdf.loc[mask].copy()
+
 
 def make_grid(bbox_vals: tuple[float, float, float, float], resolution_deg: float):
     min_lon, min_lat, max_lon, max_lat = bbox_vals
@@ -273,39 +622,50 @@ def rasterize_gdf(
     binry: bool = False,
 ) -> Path:
     width, height, transform = make_grid(bbox_vals, resolution_deg)
+    
 
     if gdf.empty:
         arr = np.zeros((height, width), dtype=np.float32)
+
     else:
-        shapes = ((geom, float(val)) for geom, val in zip(gdf.geometry, gdf["rast_val"]))
+        shapes = [
+            (geom, float(value))
+            for geom, value in zip(gdf.geometry, gdf["rast_val"])
+            if geom is not None and not geom.is_empty
+        ]
 
-        merge_alg = MergeAlg.add if agg == "sum" else MergeAlg.replace
-
-        gdf = gdf.sort_values(by="rast_val", ascending=True)
-
-        out_shape = (height, width)
-
-        arr = np.zeros(out_shape, dtype=np.float32)
-
-        for geom, val in shapes:
-            temp_raster = rasterize(
-                [(geom, val)],
-                out_shape=out_shape,
+        if agg == "sum":
+            arr = rasterize(
+                shapes=shapes,
+                out_shape=(height, width),
+                fill=0,
                 transform=transform,
                 all_touched=all_touched,
                 dtype="float32",
-                fill=0
+                merge_alg=MergeAlg.add,
             )
+        else:
+            # Smoke density: use maximum density of overlapping polygons.
+            arr = np.zeros((height, width), dtype=np.float32)
 
-            arr = np.maximum(arr, temp_raster)
+            for geom, value in shapes:
+                feature_arr = rasterize(
+                    [(geom, value)],
+                    out_shape=(height, width),
+                    fill=0,
+                    transform=transform,
+                    all_touched=all_touched,
+                    dtype="float32",
+                )
+                arr = np.maximum(arr, feature_arr)
 
-    if binry:
-        inds = np.where(arr > 0)
+
+    if binry: #TODO - setup to pass product type - set 1 for smoke and 0 for fire for binary thresh
+        inds = np.where(arr > 0) 
         inds2 = np.where(arr <= 0)
         arr[inds] = 1
         arr[inds2] = 0
 
-    out_tif.parent.mkdir(parents=True, exist_ok=True)
     with rasterio.open(
         out_tif,
         "w",
@@ -351,163 +711,6 @@ def combine_daily_rasters(raster_paths: list[Path], out_tif: Path, method: str =
 
     return out_tif
 
-def parse_feature_datetime(
-    value,
-    field_name: str,
-    time_format: str | None = None,
-) -> pd.Timestamp:
-    """
-    Parse a date/time attribute stored in an HMS shapefile.
-
-    Returns a timezone-aware UTC pandas Timestamp. Shapefile attributes may be
-    strings, Python datetimes, pandas timestamps, or date-only values.
-    """
-    if pd.isna(value):
-        raise ValueError(f"Missing value in temporal field {field_name!r}")
-
-    if time_format:
-        parsed = pd.to_datetime(
-            str(value),
-            format=time_format,
-            errors="coerce",
-            utc=True,
-        )
-    else:
-        parsed = pd.to_datetime(value, errors="coerce", utc=True)
-
-    if pd.isna(parsed):
-        raise ValueError(
-            f"Could not parse value {value!r} from temporal field {field_name!r}. "
-            "Set temporal_split.time_format explicitly if needed."
-        )
-
-    return parsed
-
-
-def validate_temporal_fields(
-    gdf: gpd.GeoDataFrame,
-    start_field: str,
-    end_field: str,
-) -> None:
-    """
-    Match configured names case-insensitively and fail with usable diagnostics.
-    """
-    lookup = {str(column).lower(): column for column in gdf.columns}
-
-    if start_field.lower() not in lookup:
-        raise KeyError(
-            f"Configured start field {start_field!r} was not found. "
-            f"Available fields: {list(gdf.columns)}"
-        )
-
-    if end_field.lower() not in lookup:
-        raise KeyError(
-            f"Configured end field {end_field!r} was not found. "
-            f"Available fields: {list(gdf.columns)}"
-        )
-
-
-def resolve_field_name(
-    gdf: gpd.GeoDataFrame,
-    requested_name: str,
-) -> str:
-    """Return the actual case-preserved shapefile field name."""
-    lookup = {str(column).lower(): column for column in gdf.columns}
-    return lookup[requested_name.lower()]
-
-
-def add_feature_time_columns(
-    gdf: gpd.GeoDataFrame,
-    start_field: str,
-    end_field: str,
-    time_format: str | None = None,
-) -> gpd.GeoDataFrame:
-    """
-    Add standardized UTC start/end columns and reject invalid intervals.
-    """
-    validate_temporal_fields(gdf, start_field, end_field)
-
-    start_column = resolve_field_name(gdf, start_field)
-    end_column = resolve_field_name(gdf, end_field)
-
-    out = gdf.copy()
-    out["_feature_start_utc"] = out[start_column].map(
-        lambda value: parse_feature_datetime(value, start_column, time_format)
-    )
-    out["_feature_end_utc"] = out[end_column].map(
-        lambda value: parse_feature_datetime(value, end_column, time_format)
-    )
-
-    invalid = out["_feature_end_utc"] < out["_feature_start_utc"]
-    if invalid.any():
-        bad = out.loc[
-            invalid,
-            [start_column, end_column],
-        ].head(5).to_dict("records")
-        raise ValueError(
-            f"Found {int(invalid.sum())} polygon(s) with end time before start time. "
-            f"Examples: {bad}"
-        )
-
-    return out
-
-
-def round_time_for_grouping(
-    timestamp: pd.Timestamp,
-    rounding: str,
-) -> pd.Timestamp:
-    """
-    Optional grouping resolution.
-
-    Valid values:
-      - none: exact start/end times define groups
-      - hour: group to beginning of UTC hour
-      - 10min: group to beginning of UTC 10-minute interval
-      - day: group to beginning of UTC day
-    """
-    if rounding == "none":
-        return timestamp
-    if rounding == "hour":
-        return timestamp.floor("h")
-    if rounding == "10min":
-        return timestamp.floor("10min")
-    if rounding == "day":
-        return timestamp.normalize()
-
-    raise ValueError(
-        "temporal_split.time_rounding must be one of: "
-        "none, 10min, hour, day"
-    )
-
-
-def group_features_by_time_interval(
-    gdf: gpd.GeoDataFrame,
-    rounding: str = "none",
-):
-    """
-    Yield (start_time, end_time, subgroup) for polygons sharing an interval.
-
-    Both start and end times are used as grouping keys. This avoids combining
-    polygons that happen to have the same start but different validity end times.
-    """
-    out = gdf.copy()
-
-    out["_group_start_utc"] = out["_feature_start_utc"].map(
-        lambda timestamp: round_time_for_grouping(timestamp, rounding)
-    )
-    out["_group_end_utc"] = out["_feature_end_utc"].map(
-        lambda timestamp: round_time_for_grouping(timestamp, rounding)
-    )
-
-    for (start_time, end_time), subset in out.groupby(
-        ["_group_start_utc", "_group_end_utc"],
-        sort=True,
-        dropna=False,
-    ):
-        yield start_time, end_time, subset.drop(
-            columns=["_group_start_utc", "_group_end_utc"]
-        )
-
 
 def process_one_day(
     dataset: str,
@@ -516,19 +719,25 @@ def process_one_day(
     resolution_deg: float,
     all_touched: bool,
     outdir: Path,
+    start_dt: dt.datetime | None = None,
+    end_dt: dt.datetime | None = None,
+    temporal_resolution_minutes: int | None = None,
     overwrite: bool = False,
-    split_by_feature_times: bool = False,
-    start_field: str | None = None,
-    end_field: str | None = None,
-    time_format: str | None = None,
-    time_rounding: str = "none",
-):
-
+) -> list[dict]:
     """
-    Download one daily HMS archive and produce either:
+    Download one daily HMS archive, clip features to bbox, and rasterize.
 
-    - one daily raster, when split_by_feature_times is False; or
-    - one raster per unique polygon start/end-time interval, when True.
+    Behavior:
+      - Smoke with temporal_resolution_minutes:
+          one raster per fixed bin; a smoke polygon appears in every bin
+          overlapping its Start/Stop interval.
+
+      - Fire with temporal_resolution_minutes:
+          one raster per fixed bin; each fire point belongs to the bin
+          containing its YearDay/Time timestamp.
+
+      - Either dataset with temporal_resolution_minutes: null:
+          one daily raster.
     """
     url = build_url(dataset, day)
     zip_name = url.split("/")[-1]
@@ -544,49 +753,66 @@ def process_one_day(
         unzip_archive(zip_path, extract_dir)
 
     shp_path = find_shapefile(extract_dir)
+
     gdf = gpd.read_file(shp_path)
     gdf = normalize_crs_to_wgs84(gdf)
     gdf = clip_to_bbox(gdf, bbox_vals)
 
+    if gdf.empty:
+        print(f"[warn] {day}: no {dataset} features intersect requested bbox.")
+        return []
+
+    binary = True
     if dataset == "smoke":
         gdf = infer_smoke_value_column(gdf)
         agg = "max"
-        binary = False
-    else:
-        gdf = infer_fire_value_column(gdf)
-        agg = "max"
-        binary = True
+        #binary = False
 
+        if temporal_resolution_minutes is not None:
+            gdf = add_hms_smoke_intervals(gdf, archive_day=day)
+
+    elif dataset == "fire":
+        gdf = add_hms_fire_timestamp(gdf)
+        gdf = filter_fire_time_range(gdf, start_dt, end_dt)
+        gdf = infer_fire_value_column(gdf)
+        agg = "sum"
+
+    else:
+        raise ValueError(f"Unsupported dataset: {dataset}")
 
     if gdf.empty:
-        print(f"[warn] {day}: no {dataset} features intersect the requested bbox.")
+        print(f"[warn] {day}: no valid time-filtered {dataset} features remain.")
         return []
 
     results = []
 
-    binry = False
-    if "fire" in dataset:
-        binry = True
+    # --------------------------------------------------------------
+    # Daily output: one raster for all clipped features in the archive.
+    # --------------------------------------------------------------
+    if temporal_resolution_minutes is None:
+        vector_out = outdir / "clipped_vectors" / dataset / f"{day:%Y%m%d}_{dataset}.gpkg"
+        raster_out = outdir / "rasters" / dataset / f"{day:%Y%m%d}_{dataset}.tif"
 
-    if not split_by_feature_times:
-        vector_out = outdir / "clipped_vectors" / dataset / f"{day:%Y%m%d}.gpkg"
+        print(vector_out.parent)
+
         vector_out.parent.mkdir(parents=True, exist_ok=True)
         gdf.to_file(vector_out, driver="GPKG")
 
+        if raster_out.exists() and not overwrite:
+            print(f"[skip] {raster_out}")
+        else:
+            rasterize_gdf(
+                gdf=gdf,
+                bbox_vals=bbox_vals,
+                resolution_deg=resolution_deg,
+                out_tif=raster_out,
+                all_touched=all_touched,
+                agg=agg,
+                binry=binary,
+            )
 
+        print(f"[ok] processed daily {dataset} raster -> {raster_out}")
 
-        raster_out = outdir / "rasters" / dataset / f"{day:%Y%m%d}.{dataset}.tif"
-        rasterize_gdf(
-            gdf=gdf,
-            bbox_vals=bbox_vals,
-            resolution_deg=resolution_deg,
-            out_tif=raster_out,
-            all_touched=all_touched,
-            agg=agg,
-            binry=binry,
-        )
-
-        print(f"[ok] processed {day} -> {raster_out}")
         return [{
             "date": day,
             "start_time": None,
@@ -596,25 +822,35 @@ def process_one_day(
             "n_features": len(gdf),
         }]
 
-    if not start_field or not end_field:
-        raise ValueError(
-            "Temporal splitting requires both start_field and end_field."
-        )
- 
-    gdf = add_feature_time_columns(
-        gdf=gdf,
-        start_field=start_field,
-        end_field=end_field,
-        time_format=time_format,
-    )
+    # --------------------------------------------------------------
+    # Time-resolved output: fixed bins over this day and requested range.
+    # --------------------------------------------------------------
+    day_start = dt.datetime.combine(day, dt.time.min)
+    day_end = dt.datetime.combine(day + dt.timedelta(days=1), dt.time.min)
 
-    for start_time, end_time, interval_gdf in group_features_by_time_interval(
-        gdf,
-        rounding=time_rounding,
+    if start_dt is not None:
+        day_start = max(day_start, start_dt)
+
+    if end_dt is not None:
+        day_end = min(day_end, end_dt)
+
+    if day_start >= day_end:
+        return []
+
+    for bin_start, bin_end in iter_time_bins(
+        start_utc=day_start,
+        end_utc=day_end,
+        minutes=temporal_resolution_minutes,
     ):
-        start_token = start_time.strftime("%Y%m%dT%H%M%SZ")
-        end_token = end_time.strftime("%Y%m%dT%H%M%SZ")
-        stem = f"{dataset}_{start_token}_{end_token}"
+        if dataset == "smoke":
+            bin_gdf = select_smoke_time_bin(gdf, bin_start, bin_end)
+        else:
+            bin_gdf = select_fire_time_bin(gdf, bin_start, bin_end)
+
+        start_token = bin_start.strftime("%Y%m%dT%H%M%SZ")
+        end_token = bin_end.strftime("%Y%m%dT%H%M%SZ")
+
+        stem = f"hms_{dataset}_{start_token}_{end_token}"
 
         vector_out = (
             outdir
@@ -623,8 +859,6 @@ def process_one_day(
             / f"{day:%Y%m%d}"
             / f"{stem}.gpkg"
         )
-        vector_out.parent.mkdir(parents=True, exist_ok=True)
-        interval_gdf.to_file(vector_out, driver="GPKG")
 
         raster_out = (
             outdir
@@ -634,11 +868,15 @@ def process_one_day(
             / f"{stem}.tif"
         )
 
+        raster_out.parent.mkdir(parents=True, exist_ok=True)
+        vector_out.parent.mkdir(parents=True, exist_ok=True)
+        bin_gdf.to_file(vector_out, driver="GPKG")
+
         if raster_out.exists() and not overwrite:
             print(f"[skip] {raster_out}")
         else:
             rasterize_gdf(
-                gdf=interval_gdf,
+                gdf=bin_gdf,
                 bbox_vals=bbox_vals,
                 resolution_deg=resolution_deg,
                 out_tif=raster_out,
@@ -648,21 +886,23 @@ def process_one_day(
             )
 
         print(
-            f"[ok] {day}: {len(interval_gdf)} polygons "
-            f"for {start_time.isoformat()} to {end_time.isoformat()} "
-            f"-> {raster_out}"
+            f"[ok] {dataset} bin "
+            f"{bin_start:%Y-%m-%dT%H:%M:%SZ} to "
+            f"{bin_end:%Y-%m-%dT%H:%M:%SZ}: "
+            f"{len(bin_gdf)} features -> {raster_out}"
         )
 
         results.append({
             "date": day,
-            "start_time": start_time,
-            "end_time": end_time,
+            "start_time": bin_start,
+            "end_time": bin_end,
             "vector": vector_out,
             "raster": raster_out,
-            "n_features": len(interval_gdf),
+            "n_features": len(bin_gdf),
         })
 
     return results
+
 
 
 def main():
@@ -678,22 +918,21 @@ def main():
     results = []
     for day in date_range(cfg["start"], cfg["end"]):
         try:
-            day_results = process_one_day(
-                dataset=cfg["dataset"],
-                day=day,
-                bbox_vals=cfg["bbox"],
-                resolution_deg=cfg["resolution_deg"],
-                all_touched=cfg["all_touched"],
-                outdir=cfg["outdir"],
-                overwrite=cfg["overwrite"],
-                split_by_feature_times=cfg["split_by_feature_times"],
-                start_field=cfg["start_field"],
-                end_field=cfg["end_field"],
-                time_format=cfg["time_format"],
-                time_rounding=cfg["time_rounding"],
-            )
 
-            results.extend(day_results)
+           day_results = process_one_day(
+               dataset=cfg["dataset"],
+               day=day,
+               bbox_vals=cfg["bbox"],
+               resolution_deg=cfg["resolution_deg"],
+               all_touched=cfg["all_touched"],
+               outdir=cfg["outdir"],
+               start_dt=cfg["start_dt"],
+               end_dt=cfg["end_dt"],
+               temporal_resolution_minutes=cfg["temporal_resolution_minutes"],
+               overwrite=cfg["overwrite"],
+           )
+
+           results.extend(day_results)
 
         except Exception as e:
             print(f"[err] {day}: {e}")
@@ -704,9 +943,22 @@ def main():
         combined_out = (
             cfg["outdir"]
             / "combined"
-            / f"{cfg['dataset']}_{cfg['start']:%Y%m%d}_{cfg['end']:%Y%m%d}_{cfg['combine']}.tif"
+            / (
+                f"{cfg['dataset']}_"
+                f"{cfg['start_dt']:%Y%m%dT%H%M%SZ}_"
+                f"{cfg['end_dt']:%Y%m%dT%H%M%SZ}_"
+                f"{cfg['combine']}.tif"
+            )
         )
-        combine_daily_rasters([r["raster"] for r in results], combined_out, method=cfg["combine"])
+ 
+        all_rasters = [result["raster"] for result in results]
+
+        combine_daily_rasters(
+            all_rasters,
+            combined_out,
+            method=cfg["combine"],
+        )
+
         print(f"[ok] combined raster -> {combined_out}")
 
 

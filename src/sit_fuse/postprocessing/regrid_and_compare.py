@@ -22,7 +22,7 @@ def is_finite_scalar(x):
 
 
 def safe_div(num, den):
-    return float(num) / float(den) if den != 0 else np.nan
+    return float(num) / float(den) if den != 0 else -999999
 
 
 def weighted_mean(values, weights):
@@ -30,7 +30,7 @@ def weighted_mean(values, weights):
     weights = np.asarray(weights, dtype=np.float64)
     valid = np.isfinite(values) & np.isfinite(weights) & (weights > 0)
     if valid.sum() == 0:
-        return np.nan
+        return -999999
     return np.sum(values[valid] * weights[valid]) / np.sum(weights[valid])
 
 
@@ -93,7 +93,7 @@ def write_geotiff_like(reference_path, out_arr, out_path, dtype=gdal.GDT_Float32
     ref = None
 
 
-def resample_to_target(src_path, src_arr, target_path, radius_of_influence=500, fill_value=np.nan):
+def resample_to_target(src_path, src_arr, target_path, radius_of_influence=500, fill_value=-999999):
     src_area = get_area_def_from_raster(src_path)
     tgt_area = get_area_def_from_raster(target_path)
     out = kd_tree.resample_nearest(
@@ -133,10 +133,10 @@ def metrics_from_confusion(tp, tn, fp, fn):
     specificity = safe_div(tn, tn + fp)
     f1 = safe_div(2 * tp, 2 * tp + fp + fn)
     iou = safe_div(tp, tp + fp + fn)
-    balanced_accuracy = np.nanmean([recall, specificity])
+    balanced_accuracy = np.mean([recall, specificity])
 
     denom = math.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
-    mcc = safe_div((tp * tn - fp * fn), denom) if denom != 0 else np.nan
+    mcc = safe_div((tp * tn - fp * fn), denom) if denom != 0 else -999999
 
     total = tp + tn + fp + fn
     prevalence = safe_div(tp + fn, total)
@@ -165,7 +165,7 @@ def dice_similarity(truth, pred, valid_mask):
     p = pred[valid_mask].astype(np.uint8)
     denom = (2 * np.sum((t == 1) & (p == 1)) + np.sum((t == 1) & (p == 0)) + np.sum((t == 0) & (p == 1)))
     if denom == 0:
-        return np.nan
+        return -999999
     tp = np.sum((t == 1) & (p == 1))
     fp = np.sum((t == 0) & (p == 1))
     fn = np.sum((t == 1) & (p == 0))
@@ -174,7 +174,7 @@ def dice_similarity(truth, pred, valid_mask):
 
 def compute_ssim(truth, pred, valid_mask):
     if np.sum(valid_mask) == 0:
-        return np.nan
+        return -999999
 
     truth_f = truth.astype(np.float32).copy()
     pred_f = pred.astype(np.float32).copy()
@@ -184,11 +184,11 @@ def compute_ssim(truth, pred, valid_mask):
 
     win_size = min(truth_f.shape[0], truth_f.shape[1])
     if win_size < 3:
-        return np.nan
+        return -999999
     if win_size % 2 == 0:
         win_size -= 1
     if win_size < 3:
-        return np.nan
+        return -999999
 
     return structural_similarity(
         truth_f,
@@ -200,21 +200,21 @@ def compute_ssim(truth, pred, valid_mask):
 
 
 def diff_map(reference_path, truth_mask, pred_mask, valid_mask, out_path):
-    diff = np.full(truth_mask.shape, np.nan, dtype=np.float32)
+    diff = np.full(truth_mask.shape, -999999, dtype=np.float32)
     diff[valid_mask] = pred_mask[valid_mask].astype(np.float32) - truth_mask[valid_mask].astype(np.float32)
-    write_geotiff_like(reference_path, diff, out_path, dtype=gdal.GDT_Float32, nodata=np.nan)
+    write_geotiff_like(reference_path, diff, out_path, dtype=gdal.GDT_Float32, nodata=-999999)
 
 
 def summarize_metric(rows, key):
-    vals = [r[key] for r in rows if is_finite_scalar(r.get(key, np.nan))]
+    vals = [r[key] for r in rows if is_finite_scalar(r.get(key, -999999))]
     if len(vals) == 0:
-        return np.nan
+        return -999999
     return float(np.mean(vals))
 
 
 def weighted_metric(rows, key, weight_key="n_valid_pixels"):
-    vals = [r.get(key, np.nan) for r in rows]
-    wts = [r.get(weight_key, np.nan) for r in rows]
+    vals = [r.get(key, -999999) for r in rows]
+    wts = [r.get(weight_key, -999999) for r in rows]
     return float(weighted_mean(vals, wts))
 
 
@@ -240,18 +240,33 @@ def compare_one_pair(sf_path, truth_path, other_path, cfg, outputs):
     other_thresh = cfg.get("other_threshold", 0.0)
 
     sf = read_raster(sf_path)
-    truth = read_raster(truth_path)
+    truth = read_raster(truth_path)    
+
+    sf["arr"] = sf["arr"].astype(np.int32)
+    truth["arr"] = truth["arr"].astype(np.int32)
+
+    sf["arr"][np.where(np.isnan(sf["arr"]))] = -999999
+    sf["arr"][np.where(sf["arr"] < 0)] = 0 #-999999
+
+    truth["arr"][np.where(np.isnan(truth["arr"]))] = -999999
+    #truth["arr"][np.where(truth["arr"] == 1)] = 0
+    #truth["arr"][np.where(truth["arr"] == 1)] = 0
+    truth["arr"][np.where(truth["arr"] > 1)] = 1
+    truth["arr"][np.where(truth["arr"] < 0)] = 0 #-999999
+
+    #truth["arr"] = truth["arr"].astype(np.int16)
+    print("HERE MISMATCH", truth["arr"].min(), truth["arr"].max(), sf["arr"].min(), sf["arr"].max())
 
     truth_on_sf = resample_to_target(
         truth_path,
         truth["arr"],
         sf_path,
         radius_of_influence=radius,
-        fill_value=np.nan,
+        fill_value=-999999,
     )
 
     sf_mask, sf_valid = to_binary_mask(sf["arr"], threshold=sit_thresh, nodata=sf["nodata"])
-    truth_mask, truth_valid = to_binary_mask(truth_on_sf, threshold=truth_thresh, nodata=np.nan)
+    truth_mask, truth_valid = to_binary_mask(truth_on_sf, threshold=truth_thresh, nodata=-999999)
 
     valid_eval = sf_valid & truth_valid
 
@@ -264,11 +279,11 @@ def compare_one_pair(sf_path, truth_path, other_path, cfg, outputs):
     if np.sum(valid_eval) == 0:
         row.update({
             "tp": 0, "tn": 0, "fp": 0, "fn": 0,
-            "precision": np.nan, "recall": np.nan, "specificity": np.nan,
-            "f1": np.nan, "iou": np.nan, "balanced_accuracy": np.nan,
-            "mcc": np.nan, "prevalence": np.nan,
-            "predicted_positive_rate": np.nan,
-            "dice": np.nan, "ssim": np.nan,
+            "precision": -999999, "recall": np.nan, "specificity": np.nan,
+            "f1": -999999, "iou": np.nan, "balanced_accuracy": np.nan,
+            "mcc": -999999, "prevalence": np.nan,
+            "predicted_positive_rate": -999999,
+            "dice": -999999, "ssim": np.nan,
             "n_valid_pixels": 0,
             "status": "no_valid_overlap",
         })
@@ -300,9 +315,9 @@ def compare_one_pair(sf_path, truth_path, other_path, cfg, outputs):
             other["arr"],
             sf_path,
             radius_of_influence=radius,
-            fill_value=np.nan,
+            fill_value=-999999,
         )
-        other_mask, other_valid = to_binary_mask(other_on_sf, threshold=other_thresh, nodata=np.nan)
+        other_mask, other_valid = to_binary_mask(other_on_sf, threshold=other_thresh, nodata=-999999)
         valid_eval_other = valid_eval & other_valid
 
         if np.sum(valid_eval_other) > 0:
@@ -326,11 +341,11 @@ def compare_one_pair(sf_path, truth_path, other_path, cfg, outputs):
         else:
             other_row = {
                 "tp": 0, "tn": 0, "fp": 0, "fn": 0,
-                "precision": np.nan, "recall": np.nan, "specificity": np.nan,
-                "f1": np.nan, "iou": np.nan, "balanced_accuracy": np.nan,
-                "mcc": np.nan, "prevalence": np.nan,
-                "predicted_positive_rate": np.nan,
-                "dice": np.nan, "ssim": np.nan,
+                "precision": -999999, "recall": np.nan, "specificity": np.nan,
+                "f1": -999999, "iou": np.nan, "balanced_accuracy": np.nan,
+                "mcc": -999999, "prevalence": np.nan,
+                "predicted_positive_rate": -999999,
+                "dice": -999999, "ssim": np.nan,
                 "n_valid_pixels": 0,
                 "status": "no_valid_overlap",
             }

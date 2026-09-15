@@ -125,8 +125,11 @@ def gen_zonal_histogram(zone_raster_path, value_raster_path, zonal_histogram = N
         zone_array_0 = regrid_map(zone_raster_path, value_raster_path)
     else:
         zone_array_0 = gdal.Open(zone_raster_path).ReadAsArray()
+  
+    #write_geotiff(gdal.Open(value_raster_path), zone_array_0 , zone_raster_path + ".regridded.tif")
  
-    #write_geotiff(gdal.Open(value_raster_path), zone_array_0 , "regridded_polygons.tif")
+    #zone_array_0[np.where(zone_array_0 < 1)] = 0
+    zone_array_0[np.where(zone_array_0 >= 1)] = 1
 
     zone_array_1 = zone_array_0
     zone_array_1[np.where(zone_array_1 == (zone_ind-1))] = 255
@@ -199,6 +202,7 @@ def regrid_map(label_gtiff, clust_gtiff):
     reprojected_labels = np.squeeze(kd_tree.resample_nearest(area_def, labels, final_area_def, radius_of_influence=5000, fill_value = -2))
     #print(np.unique(reprojected_labels))
     reprojected_labels = reprojected_labels.astype(np.int32)
+    print("HERE", reprojected_labels.min(), reprojected_labels.max(), reprojected_labels.mean())
     return reprojected_labels
 
 def run_zonal_hist_outside(yml_fpath):

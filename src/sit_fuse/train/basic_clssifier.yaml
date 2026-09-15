@@ -27,7 +27,14 @@ bootstrap_ensemble:
   n_models: 15
 features:
   cross_scale_deltas: true
-  window_radii: [1,2,4,6]
+  hashed_histogram:
+   enabled: True
+   n_bins: 512
+  window_radii:
+  - 1
+  - 2
+  - 4
+  - 6
   cluster_nodata: -9999
   annotation_nodata: -9999
   scales:

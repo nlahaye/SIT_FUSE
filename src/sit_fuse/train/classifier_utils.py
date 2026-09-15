@@ -22,13 +22,22 @@ import yaml
 from sklearn.base import BaseEstimator
 from sklearn.model_selection import GroupKFold, GroupShuffleSplit, StratifiedKFold, cross_val_predict
 
+from sklearn.ensemble import (
+    HistGradientBoostingClassifier,
+    RandomForestClassifier,
+)
 
 from sklearn.base import clone
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, confusion_matrix
-from sklearn.pipeline import Pipeline
+
+from sklearn.pipeline import Pipeline as SklearnPipeline
+
+from imblearn.over_sampling import RandomOverSampler
+from imblearn.pipeline import Pipeline as ImbPipeline
+
 from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeClassifier
 
@@ -37,134 +46,6 @@ from sklearn.tree import DecisionTreeClassifier
 LOG = logging.getLogger("sit-fuse-utils")
 DEFAULT_NODATA = -9999.0
 EPS = 1e-8
-
-
-def subsample_training_rows(
-    train_df: pd.DataFrame,
-    cfg: Dict,
-) -> pd.DataFrame:
-    """
-    Optionally cap the number of pixel samples used for model fitting.
-
-    Sampling occurs only after the holdout split, so holdout data are never
-    sampled into training. When stratified=True, the sampled data preserve
-    approximate label proportions. When group_balanced=True, sampling first
-    gives each group (for example, acquisition day/pair_id) equal opportunity
-    to contribute, then samples within each group by class.
-    """
-    sampling_cfg = cfg.get("training_sampling", {})
-    max_samples = sampling_cfg.get("max_samples")
-
-    if max_samples is None:
-        return train_df.reset_index(drop=True)
-
-    max_samples = int(max_samples)
-    if max_samples <= 0:
-        raise ValueError("training_sampling.max_samples must be a positive integer.")
-
-    if len(train_df) <= max_samples:
-        return train_df.reset_index(drop=True)
-
-    label_col = sampling_cfg.get("label_column", cfg.get("label_column", "label"))
-    group_col = sampling_cfg.get("group_column", cfg.get("group_column", "pair_id"))
-    stratified = bool(sampling_cfg.get("stratified", True))
-    group_balanced = bool(sampling_cfg.get("group_balanced", False))
-    random_state = int(sampling_cfg.get("random_state", cfg.get("random_state", 42)))
-
-    if label_col not in train_df.columns:
-        raise ValueError(f"Sampling label column {label_col!r} is not present.")
-
-    rng = np.random.RandomState(random_state)
-
-    def _sample_frame(frame: pd.DataFrame, n: int) -> pd.DataFrame:
-        if n >= len(frame):
-            return frame
-        if not stratified:
-            return frame.sample(n=n, random_state=int(rng.randint(0, 2**31 - 1)))
-
-        class_counts = frame[label_col].value_counts(dropna=False)
-        raw_targets = class_counts / class_counts.sum() * n
-        targets = np.floor(raw_targets).astype(int)
-        remainder = n - int(targets.sum())
-
-        if remainder > 0:
-            fractional = (raw_targets - targets).sort_values(ascending=False)
-            for class_value in fractional.index[:remainder]:
-                targets.loc[class_value] += 1
-
-        selected = []
-        for class_value, target_n in targets.items():
-            class_frame = frame[frame[label_col] == class_value]
-            selected.append(
-                class_frame.sample(
-                    n=min(int(target_n), len(class_frame)),
-                    random_state=int(rng.randint(0, 2**31 - 1)),
-                )
-            )
-
-        result = pd.concat(selected, ignore_index=True)
-
-        # Fill any shortfall caused by very small classes without replacement.
-        if len(result) < n:
-            remainder_frame = frame.drop(index=result.index, errors="ignore")
-            if not remainder_frame.empty:
-                needed = min(n - len(result), len(remainder_frame))
-                result = pd.concat(
-                    [
-                        result,
-                        remainder_frame.sample(
-                            n=needed,
-                            random_state=int(rng.randint(0, 2**31 - 1)),
-                        ),
-                    ],
-                    ignore_index=True,
-                )
-
-        return result
-
-    if not group_balanced:
-        sampled = _sample_frame(train_df, max_samples)
-        return sampled.sample(
-            frac=1.0,
-            random_state=random_state,
-        ).reset_index(drop=True)
-
-    if group_col not in train_df.columns:
-        raise ValueError(
-            f"group_balanced sampling requested but group column {group_col!r} is not present."
-        )
-
-    groups = list(train_df.groupby(group_col, sort=False))
-    if not groups:
-        raise ValueError("No groups available for group-balanced sampling.")
-
-    # Allocate an approximately equal budget per group, then distribute leftovers.
-    base_n, remainder = divmod(max_samples, len(groups))
-    sampled_parts = []
-    for i, (_, group_frame) in enumerate(groups):
-        group_budget = base_n + (1 if i < remainder else 0)
-        if group_budget <= 0:
-            continue
-        sampled_parts.append(_sample_frame(group_frame, min(group_budget, len(group_frame))))
-
-    sampled = pd.concat(sampled_parts, ignore_index=True)
-
-    # Groups with fewer samples than their assigned budget may leave capacity.
-    if len(sampled) < max_samples:
-        used_indices = sampled.index
-        remaining = train_df.drop(index=used_indices, errors="ignore")
-        if not remaining.empty:
-            fill_n = min(max_samples - len(sampled), len(remaining))
-            sampled = pd.concat(
-                [sampled, _sample_frame(remaining, fill_n)],
-                ignore_index=True,
-            )
-
-    return sampled.sample(
-        frac=1.0,
-        random_state=random_state,
-    ).reset_index(drop=True)
-
 
 
 def canonicalize_dates(values: pd.Series, column_name: str) -> pd.Series:
@@ -532,9 +413,12 @@ class FeatureBuilder:
         annotation_arr: np.ndarray | None = None,
     ) -> pd.DataFrame:
         cluster_fill = self.cluster_nodata if self.cluster_nodata is not None else DEFAULT_NODATA
-        valid = np.ones(cluster_arr.shape, dtype=bool)
+
+        print("HERE NODATA", cluster_fill, self.annotation_nodata, self.cluster_nodata, DEFAULT_NODATA)
+
+        valid = np.isfinite(cluster_arr)
         if self.cluster_nodata is not None:
-            valid &= cluster_arr != self.cluster_nodata
+            valid &= cluster_arr != cluster_fill
         valid &= ~np.isnan(cluster_arr)
 
         if self.annotation_nodata is not None:
@@ -610,29 +494,141 @@ class FeatureBuilder:
 
         df = pd.DataFrame({k: np.asarray(v).ravel() for k, v in data.items()})
         df = df[df["is_valid"]].drop(columns=["is_valid"]).reset_index(drop=True)
+
+
+
         return df
+
+def build_oversampler(cfg: Dict):
+    """
+    Return an optional RandomOverSampler configured from YAML.
+
+    Oversampling is performed only during estimator fitting when this sampler
+    is placed inside an imblearn Pipeline. It never modifies CV validation
+    folds or the final holdout set.
+
+    YAML examples:
+
+      oversampling:
+        enabled: true
+        sampling_strategy: 0.10
+
+      oversampling:
+        enabled: true
+        sampling_strategy:
+          1: 50000
+    """
+    over_cfg = cfg.get("oversampling", {})
+
+    if not over_cfg.get("enabled", False):
+        return None
+
+    sampling_strategy = over_cfg.get("sampling_strategy", "minority")
+
+    return RandomOverSampler(
+        sampling_strategy=sampling_strategy,
+        random_state=int(cfg.get("random_state", 42)),
+    )
+
 
 def build_models(cfg: Dict) -> Dict[str, Pipeline]:
     rs = int(cfg.get("random_state", 42))
+    sampler = build_oversampler(cfg)
+
+
+    def make_pipeline(steps):
+        """
+        Use imblearn Pipeline only when oversampling is enabled.
+        """
+        if sampler is None:
+            return SklearnPipeline(steps)
+
+        sampler_copy = RandomOverSampler(
+            sampling_strategy=cfg.get("oversampling", {}).get(
+                "sampling_strategy",
+                "minority",
+            ),
+            random_state=rs,
+        )
+
+        return ImbPipeline([
+            *steps[:-1],
+            ("oversample", sampler_copy),
+            steps[-1],
+        ])
+
+
     models = {
-        "logistic_regression": Pipeline([
+        "logistic_regression": make_pipeline([
             ("imputer", SimpleImputer(strategy="median")),
             ("scaler", StandardScaler()),
             ("clf", LogisticRegression(max_iter=1000, class_weight="balanced", random_state=rs)),
         ]),
-        "decision_tree": Pipeline([
+        "decision_tree": make_pipeline([
             ("imputer", SimpleImputer(strategy="median")),
-            ("clf", DecisionTreeClassifier(max_depth=5, min_samples_leaf=20, class_weight="balanced", random_state=rs)),
+            ("clf", DecisionTreeClassifier(max_depth=cfg.get("decision_tree", {}).get("max_depth", 7),
+                                           min_samples_leaf=cfg.get("decision_tree", {}).get("min_samples_leaf", 100),
+                                           class_weight=cfg.get("decision_tree", {}).get("class_weight", "balanced"),
+                                           random_state=rs,
+                                           min_samples_split=cfg.get("decision_tree", {}).get("min_samples_split", 200), 
+                                           max_features=cfg.get("decision_tree", {}).get("max_features", "sqrt"), 
+                                           ccp_alpha=cfg.get("decision_tree", {}).get("ccp_alpha", 0.00001))
+            ),
         ]),
-        "random_forest": Pipeline([
+        "random_forest": make_pipeline([
             ("imputer", SimpleImputer(strategy="median")),
             ("clf", RandomForestClassifier(
-                n_estimators=100,
-                max_depth=8,
-                min_samples_leaf=10,
-                class_weight="balanced_subsample",
-                n_jobs=-1,
+                n_estimators=cfg.get("random_forest", {}).get("n_estimators", 400),
+                max_depth=cfg.get("random_forest", {}).get("max_depth", 10),
+                min_samples_leaf=cfg.get("random_forest", {}).get("min_samples_leaf", 50),
+                min_samples_split= cfg.get("random_forest", {}).get("min_samples_split", 100),
+                class_weight=cfg.get("random_forest", {}).get("class_weight", "balanced_subsample"),
+                bootstrap= cfg.get("random_forest", {}).get("bootstrap", True),
+                max_features=cfg.get("random_forest", {}).get("max_features", "sqrt"),
+                max_samples=cfg.get("random_forest", {}).get("max_samples", 0.7),
+                n_jobs=cfg.get("random_forest", {}).get("n_jobs", -1),
                 random_state=rs
+            )),
+        ]),
+        "hist_gradient_boosting": make_pipeline([
+            ("imputer", SimpleImputer(strategy="median")),
+            ("clf", HistGradientBoostingClassifier(
+                learning_rate=float(
+                    cfg.get("hist_gradient_boosting", {}).get("learning_rate", 0.08)
+                ),
+                max_iter=int(
+                    cfg.get("hist_gradient_boosting", {}).get("max_iter", 300)
+                ),
+                max_leaf_nodes=int(
+                    cfg.get("hist_gradient_boosting", {}).get("max_leaf_nodes", 31)
+                ),
+                l2_regularization=float(
+                    cfg.get("hist_gradient_boosting", {}).get("l2_regularization", 1.0)
+                ),
+                early_stopping=bool(
+                    cfg.get("hist_gradient_boosting", {}).get("early_stopping", True)
+                ),
+                validation_fraction=float(
+                    cfg.get("hist_gradient_boosting", {}).get(
+                        "validation_fraction",
+                        0.1,
+                    )
+                ),
+                class_weight=cfg.get(
+                    "hist_gradient_boosting",
+                    {},
+                    ).get("class_weight", "balanced"),
+                
+                n_iter_no_change=int(
+                    cfg.get("hist_gradient_boosting", {}).get(
+                        "n_iter_no_change",
+                        20,
+                    )
+                ),
+                tol=float(
+                    cfg.get("hist_gradient_boosting", {}).get("tol", 1e-4)
+                ),
+                random_state=rs,
             )),
         ]),
     }
@@ -765,6 +761,242 @@ def get_training_matchups(cfg: Dict[str, Any]) -> List[Dict[str, Any]]:
     ]
 
 
+def load_yaml(path: Path | str) -> dict[str, Any]:
+    """
+    Load a YAML configuration file safely.
+
+    Parameters
+    ----------
+    path
+        YAML file path.
+
+    Returns
+    -------
+    dict
+        Parsed YAML mapping.
+    """
+    path = Path(path)
+
+    if not path.exists():
+        raise FileNotFoundError(f"YAML file does not exist: {path}")
+
+    with path.open("r", encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+
+    if data is None:
+        return {}
+
+    if not isinstance(data, dict):
+        raise ValueError(
+            f"YAML root must be a mapping/dictionary: {path}. "
+            f"Got {type(data).__name__}."
+        )
+
+    return data
+
+
+def load_json(path: Path | str) -> dict[str, Any]:
+    """
+    Load a JSON file and require a top-level dictionary.
+
+    Parameters
+    ----------
+    path
+        JSON file path.
+
+    Returns
+    -------
+    dict
+        Parsed JSON object.
+    """
+    path = Path(path)
+
+    if not path.exists():
+        raise FileNotFoundError(f"JSON file does not exist: {path}")
+
+    with path.open("r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    if not isinstance(data, dict):
+        raise ValueError(
+            f"JSON root must be an object/dictionary: {path}. "
+            f"Got {type(data).__name__}."
+        )
+
+    return data
+
+
+def _canonicalize_config_value(value: Any) -> Any:
+    """
+    Normalize nested config values for stable comparison.
+
+    Lists retain order because feature/scales/window ordering can be
+    semantically meaningful. Dictionaries are normalized recursively with
+    sorted keys. Path-like objects are converted to strings.
+    """
+    if isinstance(value, dict):
+        return {
+            str(key): _canonicalize_config_value(value[key])
+            for key in sorted(value, key=lambda key: str(key))
+        }
+
+    if isinstance(value, (list, tuple)):
+        return [_canonicalize_config_value(item) for item in value]
+
+    if isinstance(value, Path):
+        return str(value)
+
+    if hasattr(value, "item"):
+        try:
+            return value.item()
+        except (ValueError, TypeError):
+            pass
+
+    return value
+
+
+def compare_feature_signatures(
+    expected_signature: dict[str, Any] | None,
+    observed_signature: dict[str, Any] | None,
+) -> list[str]:
+    """
+    Compare canonical feature signatures from training and inference.
+
+    Returns a list of mismatch descriptions. An empty list means the
+    signatures are equivalent.
+
+    Examples of returned values:
+      [
+        "missing at inference: scales",
+        "unexpected at inference: neighborhood_windows",
+        "value mismatch: hash_bins "
+        "(training=4096, inference=16384)",
+      ]
+    """
+    expected = _canonicalize_config_value(expected_signature or {})
+    observed = _canonicalize_config_value(observed_signature or {})
+
+    differences: list[str] = []
+
+    def compare_recursive(
+        expected_value: Any,
+        observed_value: Any,
+        prefix: str = "",
+    ) -> None:
+        if isinstance(expected_value, dict) and isinstance(observed_value, dict):
+            expected_keys = set(expected_value)
+            observed_keys = set(observed_value)
+
+            for key in sorted(expected_keys - observed_keys):
+                field = f"{prefix}.{key}".lstrip(".")
+                differences.append(f"missing at inference: {field}")
+
+            for key in sorted(observed_keys - expected_keys):
+                field = f"{prefix}.{key}".lstrip(".")
+                differences.append(f"unexpected at inference: {field}")
+
+            for key in sorted(expected_keys & observed_keys):
+                field = f"{prefix}.{key}".lstrip(".")
+                compare_recursive(
+                    expected_value[key],
+                    observed_value[key],
+                    field,
+                )
+            return
+
+        if expected_value != observed_value:
+            differences.append(
+                f"value mismatch: {prefix} "
+                f"(training={expected_value!r}, "
+                f"inference={observed_value!r})"
+            )
+
+    compare_recursive(expected, observed)
+    return differences
+
+
+def enforce_feature_order(
+    df: pd.DataFrame,
+    expected_feature_columns: list[str],
+) -> pd.DataFrame:
+    """
+    Validate and reorder a feature DataFrame to training-time feature order.
+
+    Parameters
+    ----------
+    df
+        DataFrame containing candidate model features.
+    expected_feature_columns
+        Ordered feature names saved during training.
+
+    Returns
+    -------
+    pd.DataFrame
+        Copy of df restricted to expected feature columns and ordered exactly
+        as during training.
+
+    Raises
+    ------
+    ValueError
+        If training feature names are duplicated or input columns are missing.
+    """
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError(
+            "enforce_feature_order expects a pandas DataFrame, "
+            f"received {type(df).__name__}."
+        )
+
+    if not expected_feature_columns:
+        raise ValueError(
+            "Training summary does not contain any expected feature columns."
+        )
+
+    expected = [str(column) for column in expected_feature_columns]
+
+    duplicated_expected = sorted(
+        {
+            column
+            for column in expected
+            if expected.count(column) > 1
+        }
+    )
+
+    if duplicated_expected:
+        raise ValueError(
+            "Training feature list contains duplicate names: "
+            f"{duplicated_expected}"
+        )
+
+    observed_columns = [str(column) for column in df.columns]
+    observed_set = set(observed_columns)
+
+    missing = [column for column in expected if column not in observed_set]
+
+    if missing:
+        raise ValueError(
+            "Inference features do not include all training features. "
+            f"Missing {len(missing)} column(s): {missing}"
+        )
+
+    # Copy prevents callers from modifying their original metadata-bearing
+    # DataFrame accidentally after feature selection.
+    ordered = df.loc[:, expected].copy()
+
+    non_numeric = [
+        column
+        for column in expected
+        if not pd.api.types.is_numeric_dtype(ordered[column])
+    ]
+
+    if non_numeric:
+        raise ValueError(
+            "Non-numeric inference feature columns found: "
+            f"{non_numeric}. Encode or convert them before model inference."
+        )
+
+    return ordered
+
+
 
 def build_training_dataset(
     cfg: Dict[str, Any],
@@ -812,10 +1044,10 @@ def build_training_dataset(
         )
 
 
-        print(annotation_arr, annotation_arr.min(), annotation_arr.max())
+        print(cluster_arr)
         annotation_profile["nodata"] = cfg.get("features").get("cluster_nodata")
-        annotation_arr[np.where((annotation_arr <= 1) & (annotation_arr >= -2))] = 0
-        annotation_arr[np.where(annotation_arr >= 2)] = 1
+        annotation_arr[np.where((annotation_arr <= 0) & (annotation_arr >= -2))] = 0
+        annotation_arr[np.where(annotation_arr >= 1)] = 1
         print(annotation_arr, annotation_arr.min(), annotation_arr.max())
 
         (
@@ -1195,22 +1427,491 @@ def train_bootstrap_ensemble(
 
     return paths
 
+def sample_no_fire_by_group(
+    df: pd.DataFrame,
+    label_column: str = "label",
+    group_column: str = "hms_date",
+    positive_label=1,
+    negative_label=0,
+    negative_per_positive: int = 50,
+    random_state: int = 42,
+    keep_all_negative_only_groups: bool = False,
+) -> pd.DataFrame:
+    """
+    Retain all positive samples and randomly downsample negative samples
+    independently within each group.
+
+    Intended for sparse binary fire labels:
+      positive_label = fire
+      negative_label = no-fire
+
+    Groups without positives are omitted by default because they can dominate
+    the final training table. Set keep_all_negative_only_groups=True to retain
+    them unchanged.
+    """
+    if negative_per_positive <= 0:
+        raise ValueError("negative_per_positive must be > 0.")
+
+    required_columns = {label_column, group_column}
+    missing = required_columns - set(df.columns)
+    if missing:
+        raise KeyError(
+            f"Cannot downsample no-fire samples; missing columns: "
+            f"{sorted(missing)}"
+        )
+
+    sampled_parts = []
+    rng = np.random.RandomState(random_state)
+
+    for group_value, group_df in df.groupby(group_column, dropna=False):
+        positives = group_df.loc[
+            group_df[label_column] == positive_label
+        ]
+        negatives = group_df.loc[
+            group_df[label_column] == negative_label
+        ]
+
+        other_labels = group_df.loc[
+            ~group_df[label_column].isin([positive_label, negative_label])
+        ]
+
+        if positives.empty:
+            if keep_all_negative_only_groups:
+                sampled_parts.append(group_df)
+            continue
+
+        n_negative_target = min(
+            len(negatives),
+            negative_per_positive * len(positives),
+        )
+
+        if n_negative_target > 0:
+            group_seed = int(rng.randint(0, np.iinfo(np.int32).max))
+
+            sampled_negatives = negatives.sample(
+                n=n_negative_target,
+                replace=False,
+                random_state=group_seed,
+            )
+        else:
+            sampled_negatives = negatives.iloc[0:0]
+
+        sampled_parts.extend([
+            positives,
+            sampled_negatives,
+            other_labels,
+        ])
+
+        LOG.debug(
+            "Group=%s: positives=%d, negatives=%d, retained_negatives=%d",
+            group_value,
+            len(positives),
+            len(negatives),
+            len(sampled_negatives),
+        )
+
+    if not sampled_parts:
+        raise ValueError(
+            "No samples remain after no-fire downsampling. "
+            "Check positive_label, negative_label, and group_column."
+        )
+
+    sampled_df = pd.concat(sampled_parts, axis=0, ignore_index=True)
+
+    sampled_df = sampled_df.sample(
+        frac=1.0,
+        random_state=random_state,
+    ).reset_index(drop=True)
+
+    n_before = len(df)
+    n_after = len(sampled_df)
+
+    LOG.info(
+        "No-fire sampling reduced training table from %d to %d rows "
+        "(%.2f%% retained).",
+        n_before,
+        n_after,
+        100.0 * n_after / n_before,
+    )
+
+    return sampled_df
+
+
+
+def sample_multiclass_by_group(
+    df: pd.DataFrame,
+    label_column: str = "label",
+    group_column: str = "hms_date",
+    max_samples_per_class: dict | None = None,
+    random_state: int = 42,
+    keep_unspecified_classes: bool = True,
+) -> pd.DataFrame:
+    """
+    Randomly downsample each class independently within each group.
+
+    max_samples_per_class maps class label -> maximum retained samples
+    per group. Classes with fewer samples are preserved fully.
+
+    Example:
+        {
+            0: 50000,
+            1: 25000,
+            2: 25000,
+            3: 25000,
+        }
+
+    This performs no synthetic oversampling. It only reduces overrepresented
+    classes while retaining all available samples below the specified cap.
+    """
+    if not max_samples_per_class:
+        raise ValueError(
+            "max_samples_per_class must be a non-empty mapping."
+        )
+
+    required_columns = {label_column, group_column}
+    missing = required_columns - set(df.columns)
+    if missing:
+        raise KeyError(
+            f"Cannot sample multiclass data; missing columns: "
+            f"{sorted(missing)}"
+        )
+
+    normalized_caps = {
+        str(label): int(max_count)
+        for label, max_count in max_samples_per_class.items()
+    }
+
+    if any(cap <= 0 for cap in normalized_caps.values()):
+        raise ValueError(
+            "Every max_samples_per_class value must be positive."
+        )
+
+    rng = np.random.RandomState(random_state)
+    sampled_parts = []
+
+    for group_value, group_df in df.groupby(group_column, dropna=False):
+        print("HERE GROUP", group_value)
+        for label_value, class_df in group_df.groupby(label_column, dropna=False):
+            print("HERE LABEL", label_value)
+            label_key = str(int(label_value))
+
+            print(label_key, normalized_caps.keys(), label_key not in normalized_caps)
+
+            if label_key not in normalized_caps:
+                if keep_unspecified_classes:
+                    sampled_parts.append(class_df)
+                continue
+
+            max_count = normalized_caps[label_key]
+
+            if len(class_df) <= max_count:
+                sampled_parts.append(class_df)
+                continue
+
+            class_seed = int(rng.randint(0, np.iinfo(np.int32).max))
+
+            sampled_parts.append(
+                class_df.sample(
+                    n=max_count,
+                    replace=False,
+                    random_state=class_seed,
+                )
+            )
+
+            LOG.debug(
+                "Group=%s, class=%s: retained %d of %d samples.",
+                group_value,
+                label_value,
+                max_count,
+                len(class_df),
+            )
+
+    if not sampled_parts:
+        raise ValueError(
+            "No samples remain after multiclass sampling."
+        )
+
+    sampled_df = pd.concat(sampled_parts, axis=0, ignore_index=True)
+
+    return sampled_df.sample(
+        frac=1.0,
+        random_state=random_state,
+    ).reset_index(drop=True)
+
+
+def sample_training_data(
+    train_df: pd.DataFrame,
+    cfg: Dict,
+) -> pd.DataFrame:
+    """
+    Optionally apply binary fire sampling or multi-class sampling.
+
+    YAML:
+      sampling:
+        enabled: true
+        mode: binary_negative_sampling
+
+    or:
+
+      sampling:
+        enabled: true
+        mode: multiclass_cap
+    """
+    sampling_cfg = cfg.get("sampling", {})
+
+    if not sampling_cfg.get("enabled", False):
+        return train_df
+
+    mode = str(
+        sampling_cfg.get("mode", "binary_negative_sampling")
+    ).lower()
+
+    label_column = sampling_cfg.get(
+        "label_column",
+        cfg.get("label_column", "label"),
+    )
+    group_column = sampling_cfg.get(
+        "group_column",
+        cfg.get("group_column", "pair_id"),
+    )
+    random_state = int(cfg.get("random_state", 42))
+
+    if mode == "binary_negative_sampling":
+        return sample_no_fire_by_group(
+            df=train_df,
+            label_column=label_column,
+            group_column=group_column,
+            positive_label=sampling_cfg.get("positive_label", 1),
+            negative_label=sampling_cfg.get("negative_label", 0),
+            negative_per_positive=int(
+                sampling_cfg.get("negative_per_positive", 50)
+            ),
+            random_state=random_state,
+            keep_all_negative_only_groups=bool(
+                sampling_cfg.get(
+                    "keep_all_negative_only_groups",
+                    False,
+                )
+            ),
+        )
+
+    if mode == "multiclass_cap":
+        return sample_multiclass_by_group(
+            df=train_df,
+            label_column=label_column,
+            group_column=group_column,
+            max_samples_per_class=sampling_cfg[
+                "max_samples_per_class"
+            ],
+            random_state=random_state,
+            keep_unspecified_classes=bool(
+                sampling_cfg.get(
+                    "keep_unspecified_classes",
+                    True,
+                )
+            ),
+        )
+
+    raise ValueError(
+        f"Unsupported sampling.mode='{mode}'. "
+        "Supported values are: binary_negative_sampling, multiclass_cap."
+    )
+
+
+
+
+def cap_total_samples_stratified(
+    df: pd.DataFrame,
+    total_max_samples: int | None,
+    label_column: str,
+    group_column: str,
+    random_state: int = 42,
+) -> pd.DataFrame:
+    """
+    Cap total rows while approximately preserving the joint distribution
+    across (group, class). Every non-empty stratum retains at least one row.
+    """
+    if total_max_samples is None:
+        return df
+
+    total_max_samples = int(total_max_samples)
+
+    if total_max_samples <= 0:
+        raise ValueError("total_max_samples must be positive.")
+
+    if len(df) <= total_max_samples:
+        return df.reset_index(drop=True)
+
+    strata_sizes = (
+        df.groupby([group_column, label_column], dropna=False)
+        .size()
+        .rename("n")
+        .reset_index()
+    )
+
+    n_strata = len(strata_sizes)
+
+    if total_max_samples < n_strata:
+        raise ValueError(
+            f"total_max_samples={total_max_samples} is smaller than the "
+            f"number of non-empty (group, label) strata={n_strata}. "
+            "Increase total_max_samples or reduce the grouping resolution."
+        )
+
+    strata_sizes["raw_target"] = (
+        total_max_samples * strata_sizes["n"] / strata_sizes["n"].sum()
+    )
+
+    strata_sizes["target_n"] = np.floor(
+        strata_sizes["raw_target"]
+    ).astype(int)
+
+    # Preserve at least one example from every active group/class stratum.
+    strata_sizes["target_n"] = strata_sizes["target_n"].clip(lower=1)
+
+    remaining = total_max_samples - int(strata_sizes["target_n"].sum())
+
+    if remaining > 0:
+        strata_sizes["remainder"] = (
+            strata_sizes["raw_target"] - strata_sizes["target_n"]
+        )
+
+        for idx in strata_sizes.sort_values(
+            "remainder",
+            ascending=False,
+        ).index[:remaining]:
+            strata_sizes.loc[idx, "target_n"] += 1
+
+    elif remaining < 0:
+        excess = abs(remaining)
+
+        removable = strata_sizes.sort_values(
+            "target_n",
+            ascending=False,
+        )
+
+        for idx in removable.index:
+            if excess <= 0:
+                break
+
+            current = int(strata_sizes.loc[idx, "target_n"])
+
+            if current > 1:
+                strata_sizes.loc[idx, "target_n"] -= 1
+                excess -= 1
+
+    targets = {
+        (row[group_column], row[label_column]): int(row["target_n"])
+        for _, row in strata_sizes.iterrows()
+    }
+
+    rng = np.random.RandomState(random_state)
+    sampled_parts = []
+
+    for (group_value, label_value), subset in df.groupby(
+        [group_column, label_column],
+        dropna=False,
+    ):
+        target_n = targets[(group_value, label_value)]
+
+        if len(subset) <= target_n:
+            sampled_parts.append(subset)
+        else:
+            sampled_parts.append(
+                subset.sample(
+                    n=target_n,
+                    replace=False,
+                    random_state=int(
+                        rng.randint(0, np.iinfo(np.int32).max)
+                    ),
+                )
+            )
+
+    out = pd.concat(sampled_parts, ignore_index=True)
+
+    # The rounding routine can leave a small difference. Trim only from
+    # strata that have more than one retained row.
+    if len(out) > total_max_samples:
+        out = out.sample(
+            n=total_max_samples,
+            replace=False,
+            random_state=random_state,
+        )
+
+    return out.sample(
+        frac=1.0,
+        random_state=random_state,
+    ).reset_index(drop=True)
+
+
+
+
+
+
+
 def train_and_save(df: pd.DataFrame, cfg: Dict, output_dir: Path) -> None:
     feats = feature_columns(df)
     label_col = cfg.get("label_column", "label")
     group_col = cfg.get("group_column", "pair_id")
-    train_df, test_df = holdout_split(df, cfg)
+
+    source_cfg = cfg.get("data_source", {})
+    holdout_csv_path = source_cfg.get("holdout_csv_path")
+
+    if holdout_csv_path:
+        holdout_csv_path = Path(holdout_csv_path)
+
+        if not holdout_csv_path.exists():
+            raise FileNotFoundError(
+                f"Configured holdout CSV does not exist: {holdout_csv_path}"
+            )
+
+        train_df = df.reset_index(drop=True)
+        test_df = pd.read_csv(holdout_csv_path).reset_index(drop=True)
+
+        LOG.info(
+            "Using explicit CSV split: %d train rows, %d holdout rows.",
+            len(train_df),
+            len(test_df),
+        )
+    else:
+        train_df, test_df = holdout_split(df, cfg)
+
 
     pre_sample_count = len(train_df)
-    train_df = subsample_training_rows(train_df, cfg)
-    LOG.info(
-        "Training sample count: %d -> %d after optional subsampling.",
-        pre_sample_count,
-        len(train_df),
+
+    # Downsample only after the date/group holdout split. The holdout dataset must
+    # remain unchanged so its metrics represent natural fire/no-fire prevalence.
+    train_df = sample_training_data(train_df, cfg)
+
+    sampling_cfg = cfg.get("sampling", {})
+
+    train_df = cap_total_samples_stratified(
+        df=train_df,
+        total_max_samples=sampling_cfg.get("total_max_samples"),
+        label_column=sampling_cfg.get(
+            "label_column",
+            cfg.get("label_column", "label"),
+        ),
+        group_column=sampling_cfg.get(
+            "group_column",
+            cfg.get("group_column", "pair_id"),
+        ),
+        random_state=int(cfg.get("random_state", 42)),
     )
 
-    X_train, y_train, groups_train = train_df[feats], train_df[label_col], train_df[group_col]
+ 
+    log_class_balance(train_df, label_col, "Post-sampling training")
+
+    if not test_df.empty:
+        log_class_balance(test_df, label_col, "Holdout")
+ 
+    X_train = train_df[feats]
+    y_train = train_df[label_col]
+    groups_train = train_df[group_col]
+
     models = build_models(cfg)
+
+
     metrics = {}
     bootstrap_manifest = {}
 
@@ -1253,11 +1954,28 @@ def train_and_save(df: pd.DataFrame, cfg: Dict, output_dir: Path) -> None:
             "bootstrap_manifest": bootstrap_manifest,
             "label_column": label_col,
             "group_column": group_col,
+            "negative_sampling": cfg.get("negative_sampling", {}),
         },
         "metrics": metrics,
     })
 
 
+def canonical_feature_signature(features_cfg: dict[str, Any]) -> dict[str, Any]:
+    return _canonicalize_config_value(features_cfg or {})
+
+
+def log_class_balance(
+    df: pd.DataFrame,
+    label_column: str,
+    label: str,
+) -> None:
+    counts = df[label_column].value_counts(dropna=False).to_dict()
+
+    LOG.info(
+        "%s class counts: %s",
+        label,
+        counts,
+    )
 
 
 
