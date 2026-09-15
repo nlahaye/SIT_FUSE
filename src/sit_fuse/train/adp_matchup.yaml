@@ -1,0 +1,132 @@
+# =============================================================================
+# SIT-FUSE ↔ ADP Smoke Matchup Generator
+#
+# Run:
+#   python build_sit_fuse_adp_smoke_matchups.py adp_smoke_matchups.yaml
+#
+# ADP smoke filename format expected by this configuration:
+#   smoke_YYYYMMDDTHHMMSSZ.tif
+#
+# Example:
+#   smoke_20240728T000501Z.tif
+# =============================================================================
+
+# The temporal search range for both SIT-FUSE and ADP smoke files.
+# All timestamps are interpreted as UTC.
+time_range:
+  start: "2024-07-23T00:00:00Z"
+  end: "2024-07-31T23:59:59Z"
+
+# -----------------------------------------------------------------------------
+# Context-free SIT-FUSE cluster-raster outputs
+# -----------------------------------------------------------------------------
+sit_fuse:
+  # Root directory searched recursively for SIT-FUSE GeoTIFF files.
+  directory: /data/nlahaye/output/Learnergy/SF_TEMPO_PARK/
+
+  patterns:
+    # Must contain exactly one capture group holding the scene timestamp.
+    #
+    # This generic pattern finds a timestamp anywhere in the filename, such as:
+    # TEMPO...20240728T000501Z...fullgeo.tif
+    timestamp_patterns:
+      - "(?i)(\\d{8}T\\d{6}Z)"
+
+  context_free_filters:
+    # Include only final, georeferenced SIT-FUSE cluster products.
+    #
+    # Adjust this pattern to the stable final-product marker in your file names.
+    # The following is suitable for names ending in ".fullgeo.tif".
+    include_patterns:
+      - "(?i)full_geo\\.tif$"
+
+    # Exclude files that may be colocated in the same source directory but are
+    # not the context-free discrete SIT-FUSE cluster raster.
+    exclude_patterns:
+      - "(?i)Contour"
+      - "(?i)smoke"
+      - "(?i)ImFill"
+      - "(?i)Edged"
+      - "(?i)merged"
+      - "(?i)fire"
+      #- "(?i)entropy"
+      #- "(?i)margin"
+      #- "(?i)aleatoric"
+      #- "(?i)epistemic"
+
+# -----------------------------------------------------------------------------
+# Timestamped ADP smoke truth rasters
+# -----------------------------------------------------------------------------
+adp_smoke:
+  # Root directory searched recursively for ADP smoke GeoTIFFs.
+  directory: /home/nlahaye/SIT_FUSE/src/sit_fuse/preprocessing/data_pull/tempo_adp_out/rasters/
+
+  patterns:
+    # Only files beginning with "smoke_" are accepted as ADP smoke truth.
+    include_patterns:
+      - "(?i)^smoke_"
+
+    # Must have exactly one capture group for YYYYMMDDTHHMMSSZ.
+    #
+    # Matches:
+    #   smoke_20240728T000501Z.tif
+    #   smoke_20240728T000501Z.tiff
+    timestamp_patterns:
+      - "(?i)^smoke_(\\d{8}T\\d{6}Z)\\.tiff?$"
+
+# -----------------------------------------------------------------------------
+# Temporal matching policy
+# -----------------------------------------------------------------------------
+matching:
+  # Maximum allowed absolute time offset between a SIT-FUSE scene timestamp and
+  # the selected ADP smoke truth raster timestamp.
+  #
+  # 900 seconds = 15 minutes.
+  #
+  # Use a tighter value, such as 300 seconds, if ADP smoke output is generated
+  # near the same cadence as the SIT-FUSE/TEMPO inputs. Use a larger tolerance
+  # only when the ADP product cadence warrants it.
+  max_time_difference_seconds: 900
+
+  # True means one ADP smoke raster may supervise multiple neighboring
+  # SIT-FUSE acquisitions. This is normally appropriate for high-frequency
+  # satellite scenes and avoids artificial unmatched samples.
+  allow_adp_reuse: true
+
+  # The pair ID is used by downstream grouped holdout and grouped
+  # cross-validation.
+  #
+  # Recommended:
+  # - adp_timestamp: keeps all SIT-FUSE scenes paired with one ADP raster in
+  #   the same group, reducing truth-image leakage between folds.
+  #
+  # Other valid values:
+  # - adp_day
+  # - sit_fuse_timestamp
+  # - sit_fuse_day
+  group_by: adp_timestamp
+
+# -----------------------------------------------------------------------------
+# Base classifier configuration
+# -----------------------------------------------------------------------------
+classifier_config:
+  # Existing classifier YAML with feature, model, split, and output settings.
+  #
+  # The matchup generator will copy this file, replace/add the `matchups`
+  # section, and write the completed classifier config to output.classifier_yaml.
+  base_yaml: ./basic_clssifier.yaml
+
+# -----------------------------------------------------------------------------
+# Output products from this matchup generator
+# -----------------------------------------------------------------------------
+output:
+  # Classifier-ready YAML. This is the file you pass to the classifier training
+  # script after confirming paths and feature settings.
+  classifier_yaml: .//adp_smoke_classifier_matchups.yaml
+
+  # Audit table containing matched, unmatched, and skipped files.
+  audit_csv: .//adp_smoke_matchups_audit.csv
+
+  # Top-level or dotted YAML location in the generated classifier config where
+  # matchup records are written.
+  matchup_key: matchups
