@@ -160,3 +160,17 @@ cython_debug/
 #.idea/
 .idea/
 .DS_Store
+
+# Experiment outputs (checkpoints, logs, generated figures) -- not source, shouldn't be tracked
+experiments/*/encoder/
+experiments/*/lightning_logs/
+experiments/*/*.ckpt
+experiments/*/*.png
+experiments/*/*.pkl
+# RTDBN_DC (IIC clustering head) writes one directory deeper than the
+# patterns above reach -- experiments/<config>/full_model/*.ckpt and its
+# own lightning_logs/ were previously untracked-but-NOT-ignored, so a plain
+# `git add -A` would have staged large checkpoint blobs. Also catches the
+# .OLD_MINMAX_BACKUP directories the StandardScaler-fix audit created.
+experiments/*/full_model/
+experiments/*.OLD_MINMAX_BACKUP/
