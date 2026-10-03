@@ -1,0 +1,548 @@
+
+data:
+ tile: False
+ num_loader_workers: 10
+ val_percent: 0.1
+ scale_data: True
+ pixel_padding: 1
+ number_channels: 6
+ fill_value: -999999.0
+ valid_min:  -8000.0
+ valid_max: 100000000
+ subset_count: 1
+ output_subset_count: 10
+ reader_type: "zarr_to_numpy"
+ reader_kwargs:
+  none: "none"
+  #mask_shp: "/data/nlahaye/remoteSensing/Lakes/glwd_1.shp"
+  #mask_oceans: True
+ chan_dim: 0
+ delete_chans: []
+ transform_default:
+  chans: []
+  transform: []
+
+
+ files_train: [
+#"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t0.zarr",
+#"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t4.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t7.zarr",
+#"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t2.zarr",
+#"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t20.zarr",
+#"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t25.zarr",
+#"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t11.zarr",
+#"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t60.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t75.zarr",
+#"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t120.zarr",
+#"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t121.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t122.zarr",
+#"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t123.zarr",
+#"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t124.zarr",
+#"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t125.zarr",
+#"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t126.zarr",
+#"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t127.zarr",
+#"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t128.zarr",
+#"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t129.zarr",
+#"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t12.zarr",
+#"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t130.zarr",
+#"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t131.zarr",
+#"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t132.zarr",
+#"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t133.zarr",
+#"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t134.zarr",
+#"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t135.zarr",
+#"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t136.zarr",
+#"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t137.zarr",
+#"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t138.zarr",
+#"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t250.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t255.zarr",
+#"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t300.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t304.zarr",
+
+
+
+]
+
+ files_test: [
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t0.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t100.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t101.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t102.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t103.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t104.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t105.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t106.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t107.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t108.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t109.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t10.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t110.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t111.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t112.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t113.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t114.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t115.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t116.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t117.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t118.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t119.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t11.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t120.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t121.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t122.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t123.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t124.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t125.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t126.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t127.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t128.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t129.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t12.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t130.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t131.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t132.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t133.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t134.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t135.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t136.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t137.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t138.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t139.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t13.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t140.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t141.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t142.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t143.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t144.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t145.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t146.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t147.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t148.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t149.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t14.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t150.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t151.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t152.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t153.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t154.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t155.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t156.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t157.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t158.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t159.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t15.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t160.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t161.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t162.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t163.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t164.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t165.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t166.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t167.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t168.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t169.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t16.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t170.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t171.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t172.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t173.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t174.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t175.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t176.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t177.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t178.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t179.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t17.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t180.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t181.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t182.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t183.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t184.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t185.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t186.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t187.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t188.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t189.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t18.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t190.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t191.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t192.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t193.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t194.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t195.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t196.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t197.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t198.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t199.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t19.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t1.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t200.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t201.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t202.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t203.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t204.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t205.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t206.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t207.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t208.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t209.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t20.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t210.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t211.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t212.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t213.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t214.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t215.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t216.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t217.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t218.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t219.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t21.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t220.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t221.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t222.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t223.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t224.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t225.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t226.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t227.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t228.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t229.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t22.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t230.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t231.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t232.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t233.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t234.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t235.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t236.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t237.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t238.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t239.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t23.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t240.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t241.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t242.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t243.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t244.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t245.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t246.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t247.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t248.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t249.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t24.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t250.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t251.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t252.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t253.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t254.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t255.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t256.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t257.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t258.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t259.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t25.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t260.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t261.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t262.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t263.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t264.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t265.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t266.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t267.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t268.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t269.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t26.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t270.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t271.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t272.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t273.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t274.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t275.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t276.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t277.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t278.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t279.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t27.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t280.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t281.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t282.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t283.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t284.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t285.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t286.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t287.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t288.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t289.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t28.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t290.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t291.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t292.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t293.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t294.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t295.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t296.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t297.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t298.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t299.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t29.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t2.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t300.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t301.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t302.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t303.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t304.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t305.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t306.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t307.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t308.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t309.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t30.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t310.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t311.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t312.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t313.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t314.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t315.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t316.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t317.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t318.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t319.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t31.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t320.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t321.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t322.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t323.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t324.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t325.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t326.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t327.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t328.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t329.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t32.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t330.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t331.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t332.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t333.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t334.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t335.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t336.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t337.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t338.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t339.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t33.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t340.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t341.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t342.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t343.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t344.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t345.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t346.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t347.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t348.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t349.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t34.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t350.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t351.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t352.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t353.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t354.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t355.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t356.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t357.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t358.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t359.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t35.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t360.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t361.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t362.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t363.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t364.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t365.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t366.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t367.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t368.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t369.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t36.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t370.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t371.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t372.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t373.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t374.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t375.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t376.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t377.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t378.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t379.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t37.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t380.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t381.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t382.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t383.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t384.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t385.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t386.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t387.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t388.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t389.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t38.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t390.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t391.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t392.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t393.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t394.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t395.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t396.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t397.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t39.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t3.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t40.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t41.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t42.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t43.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t44.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t45.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t46.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t47.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t48.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t49.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t4.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t50.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t51.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t52.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t53.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t54.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t55.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t56.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t57.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t58.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t59.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t5.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t60.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t61.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t62.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t63.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t64.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t65.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t66.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t67.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t68.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t69.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t6.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t70.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t71.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t72.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t73.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t74.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t75.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t76.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t77.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t78.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t79.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t7.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t80.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t81.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t82.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t83.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t84.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t85.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t86.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t87.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t88.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t89.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t8.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t90.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t91.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t92.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t93.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t94.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t95.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t96.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t97.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t98.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t99.zarr",
+"/data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t9.zarr",
+]
+
+
+scaler:
+ name: "standard" 
+
+output:
+ out_dir: "/data/nlahaye/output/Learnergy/COP_SHARK_DEMO/"
+ generate_intermediate_output: False
+ generate_train_output: True
+
+dbn:
+ model_type: ["gaussian_selu", "gaussian_selu"]
+ dbn_arch: [2000, 1000] #[250, 500, 2000] #, 2000]
+ gibbs_steps: [1,1] #, 7, 7] #, 10] #, 25]
+ temp: [1.0, 1.0] #, 1.0, 1.0] ##[0.9, 0.75, 0.5] #, 1.0] #, 0.5] #, 0.5] 
+ normalize_learnergy: [False, True]
+ batch_normalize: [False, False]
+
+encoder_type: "dbn"
+encoder:
+ tiled: False
+ tune_scaler: False
+ subset_training: 2000000
+ overwrite_model: False
+ training:
+  learning_rate: [0.00001, 0.00001]
+  momentum: [0.95,0.95]
+  weight_decay: [0.0001, 0.0001]
+  nesterov_accel: [True, True]
+  batch_size: 128
+  epochs: [100,30]
+  accelerator: "gpu"
+  devices: 1
+  gradient_clip_val: 0.1
+  precision: "16-mixed"
+  save_dir: "wandb_encoder"
+  stratify_data:
+   kmeans: True
+
+
+logger:
+ use_wandb: True
+ log_model: True
+ log_out_dir: "wandb_dbn"
+ project: "SIT-FUSE"
+
+cluster:
+ gauss_noise_stdev:  [0.01]
+ lambda: 1.0
+ num_classes: 800
+ training:
+  learning_rate: 0.0001
+  batch_size: 100
+  epochs: 30
+  accelerator: "gpu"
+  devices: 1
+  gradient_clip_val: 0.1
+  precision: "16-mixed"
+  save_dir: "wandb_full_model"
+
+ heir:
+  tiers: 1
+  gauss_noise_stdev:  [0.01]
+  lambda: 1.0
+  num_classes: 5
+  training:
+   accelerator: "gpu"
+   devices: 1
+   gradient_clip_val: 0.1
+   precision: "16-mixed"
+   save_dir: "wandb_dbn_full_model_heir"
+   batch_size: 100
+   min_samples: 1000
+   learning_rate: 0.0001
+   batch_size: 1000
+   epochs: 30
+
+
+
+
+
+
+
+
