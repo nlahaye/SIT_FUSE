@@ -11,7 +11,7 @@ pytorch lightning model for temporal RTDBN + IIC clustering head.
 '''
 class RTDBN_DC(pl.LightningModule):
     def __init__(self, pretrained_model, num_classes, lr=1e-3,
-                 weight_decay=0, number_heads=1):
+                 weight_decay=0, number_heads=1, noise_stdev=0.01, lamb=1.0):
         super().__init__()
         self.save_hyperparameters(ignore=['pretrained_model'])
         self.num_classes = num_classes
@@ -19,17 +19,18 @@ class RTDBN_DC(pl.LightningModule):
         self.lr = lr
         self.weight_decay = weight_decay
         self.pretrained_model = pretrained_model
+        self.noise_stdev = noise_stdev
+        self.lamb = lamb
 
         n_hidden = self.pretrained_model.n_hidden[-1]
         self.mlp_head = MultiPrototypes(n_hidden, self.num_classes, self.number_heads)
 
         self.criterion = IID_loss
-        self.rng = np.random.default_rng(None)
+        # Seeded rng for the IIC augmented-pair noise, for reproducibility.
+        self.rng = np.random.default_rng(42)
 
     def _encode(self, x):
-        """
-        Encodes temporal sequences to fixed-length embeddings.
-        """
+        """Encodes temporal sequences to fixed-length embeddings."""
         h = x
         for model in self.pretrained_model.models:
             h = model.forward(h)  # (batch, seq_len, n_hidden_i)
@@ -42,38 +43,38 @@ class RTDBN_DC(pl.LightningModule):
         return x
 
     def training_step(self, batch, batch_idx):
-        # batch: (batch, seq_len, n_visible)
-        x = batch
+        x, _ = batch
         y = self._encode(x)
 
         y2 = y.clone() + torch.from_numpy(
-            self.rng.normal(0.0, 0.01, y.shape)
+            self.rng.normal(0.0, self.noise_stdev, y.shape)
         ).type(y.dtype).to(y.device)
 
         y = self.mlp_head(y)[0]
         y2 = self.mlp_head(y2)[0]
 
-        loss = self.criterion(y, y2)[0]
+        loss = self.criterion(y, y2, lamb=self.lamb)[0]
         self.log('train_loss', loss, sync_dist=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
-        x = batch
+        x, _ = batch
         y = self._encode(x)
 
         y2 = y.clone() + torch.from_numpy(
-            self.rng.normal(0.0, 0.01, y.shape)
+            self.rng.normal(0.0, self.noise_stdev, y.shape)
         ).type(y.dtype).to(y.device)
 
         y = self.mlp_head(y)[0]
         y2 = self.mlp_head(y2)[0]
 
-        loss = self.criterion(y, y2)[0]
+        loss = self.criterion(y, y2, lamb=self.lamb)[0]
         self.log('val_loss', loss, sync_dist=True)
         return loss
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
-        return self(batch)
+        x, _ = batch
+        return self(x)
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(

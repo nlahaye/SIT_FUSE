@@ -8,6 +8,8 @@ from learnergy.models.temporal.rt_variance_gaussian_rbm import RTVarianceGaussia
 '''
 pytorch lightning model for temporal RTRBM encoder.
 '''
+
+
 class RTDBN_PL(pl.LightningModule):
     def __init__(
             self,
@@ -31,12 +33,12 @@ class RTDBN_PL(pl.LightningModule):
         self.nesterov_accel = nesterov_accel
         self.decay = decay
         self.warmup_epochs = warmup_epochs
-        self._epoch_count = 0
 
         self.register_module("current_rbm", self.model)
         if self.previous_layers is not None:
             for i in range(len(self.previous_layers)):
-                self.register_module("previous_layer_rbm_" + str(i), self.previous_layers[i])
+                self.register_module(
+                    "previous_layer_rbm_" + str(i), self.previous_layers[i])
 
     def forward(self, x):
         # x: (batch, seq_len, n_visible)
@@ -48,6 +50,7 @@ class RTDBN_PL(pl.LightningModule):
             for mod in range(len(self.previous_layers)):
                 batch = self.previous_layers[mod](batch)
 
+        batch, _ = batch  # unpack (sequence, target) tuple
         batch_size, seq_len, n_visible = batch.shape
 
         total_loss = torch.tensor(0.0, device=batch.device)
@@ -86,6 +89,7 @@ class RTDBN_PL(pl.LightningModule):
             for mod in range(len(self.previous_layers)):
                 batch = self.previous_layers[mod](batch)
 
+        batch, _ = batch  # unpack (sequence, target) tuple
         batch_size, seq_len, n_visible = batch.shape
 
         total_loss = torch.tensor(0.0, device=batch.device)
@@ -121,21 +125,40 @@ class RTDBN_PL(pl.LightningModule):
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         return self(batch)
 
-    def on_train_epoch_end(self):
-        self._epoch_count += 1
-        if self._epoch_count == self.warmup_epochs:
-            if hasattr(self.model, 'sigma'):
-                self.model.sigma.requires_grad_(True)
+    def on_train_epoch_start(self):
+        # Re-applied at the start of every epoch (idempotent) rather than
+        # toggled once via a hand-rolled counter. self.current_epoch is
+        # Lightning's own trainer-managed epoch index, correctly restored
+        # by trainer.fit(..., ckpt_path=...) before the training loop
+        # resumes -- so this is self-healing across a resume, unlike a
+        # plain Python counter (which isn't part of any checkpoint state)
+        # or configure_optimizers' unconditional freeze (which re-runs,
+        # and would otherwise re-freeze sigma even after warmup on resume).
+        if hasattr(self.model, 'sigma'):
+            self.model.sigma.requires_grad_(self.current_epoch >= self.warmup_epochs)
+
+    def on_train_batch_end(self, outputs, batch, batch_idx):
+        # Sigma clamp: this class runs its own loop, not fit_subseries.
+        if hasattr(self.model, 'sigma'):
+            with torch.no_grad():
+                self.model.sigma.data.clamp_(min=0.1, max=10.0)
 
     def on_validation_epoch_end(self):
         os.makedirs(self.save_dir, exist_ok=True)
-        torch.save(self.model.state_dict(), os.path.join(self.save_dir, "rtdbn.ckpt"))
+        torch.save(self.model.state_dict(), os.path.join(
+            self.save_dir, "rtdbn.ckpt"))
 
     def configure_optimizers(self):
+        # Sets the initial (pre-warmup) frozen state; on_train_epoch_start
+        # is what's actually authoritative once training begins (it
+        # re-applies the correct state every epoch based on
+        # self.current_epoch, so it self-corrects on a resumed run too).
         if hasattr(self.model, 'sigma'):
             self.model.sigma.requires_grad_(False)
+        # Pass all parameters -- optimizer snapshots param_groups at
+        # construction, so sigma must be included even while frozen.
         return torch.optim.SGD(
-            filter(lambda p: p.requires_grad, self.model.parameters()),
+            self.model.parameters(),
             lr=self.lr,
             momentum=self.momentum,
             weight_decay=self.decay,

@@ -1,6 +1,6 @@
 # Machine Learning Approach
 
-SIT-FUSE combines self-supervised representation learning with self-supervised segmentation. The below subpages describe what options are available and how each piece works.
+SIT-FUSE combines self-supervised representation learning with self-supervised segmentation. Representation learning now includes temporal capabilities (RTRBMs and RTDBNs; see the RBMs and DBNs page) in addition to the original per-frame encoders. The below subpages describe what options are available and how each piece works.
 
 
 

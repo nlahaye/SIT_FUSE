@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 300" width="760" height="300" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#555"/>
+    </marker>
+  </defs>
+
+  <!-- Timestep t-1 -->
+  <g>
+    <circle cx="90" cy="80" r="26" fill="#fde2c8" stroke="#c97b2e" stroke-width="1.5"/>
+    <text x="90" y="85" text-anchor="middle" font-size="14">h(t-1)</text>
+    <circle cx="90" cy="200" r="26" fill="#cfe0fb" stroke="#3b6bc9" stroke-width="1.5"/>
+    <text x="90" y="205" text-anchor="middle" font-size="14">v(t-1)</text>
+    <line x1="90" y1="174" x2="90" y2="106" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  </g>
+
+  <!-- Timestep t -->
+  <g>
+    <circle cx="370" cy="80" r="26" fill="#fde2c8" stroke="#c97b2e" stroke-width="1.5"/>
+    <text x="370" y="85" text-anchor="middle" font-size="14">h(t)</text>
+    <circle cx="370" cy="200" r="26" fill="#cfe0fb" stroke="#3b6bc9" stroke-width="1.5"/>
+    <text x="370" y="205" text-anchor="middle" font-size="14">v(t)</text>
+    <line x1="370" y1="174" x2="370" y2="106" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  </g>
+
+  <!-- Timestep t+1 -->
+  <g>
+    <circle cx="650" cy="80" r="26" fill="#fde2c8" stroke="#c97b2e" stroke-width="1.5"/>
+    <text x="650" y="85" text-anchor="middle" font-size="14">h(t+1)</text>
+    <circle cx="650" cy="200" r="26" fill="#cfe0fb" stroke="#3b6bc9" stroke-width="1.5"/>
+    <text x="650" y="205" text-anchor="middle" font-size="14">v(t+1)</text>
+    <line x1="650" y1="174" x2="650" y2="106" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  </g>
+
+  <!-- Recurrent connections W' -->
+  <line x1="116" y1="80" x2="344" y2="80" stroke="#b23b3b" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="230" y="65" text-anchor="middle" font-size="14" fill="#b23b3b">W'</text>
+  <line x1="396" y1="80" x2="624" y2="80" stroke="#b23b3b" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="510" y="65" text-anchor="middle" font-size="14" fill="#b23b3b">W'</text>
+
+  <!-- W labels on vertical connections -->
+  <text x="105" y="145" font-size="12" fill="#555">W</text>
+  <text x="385" y="145" font-size="12" fill="#555">W</text>
+  <text x="665" y="145" font-size="12" fill="#555">W</text>
+
+  <text x="380" y="265" text-anchor="middle" font-size="13" fill="#333">
+    Each hidden layer h(t) carries information forward through a single learned recurrent
+  </text>
+  <text x="380" y="283" text-anchor="middle" font-size="13" fill="#333">
+    weight matrix W', turning a stack of independent RBMs into one temporal model (RTRBM).
+  </text>
+</svg>

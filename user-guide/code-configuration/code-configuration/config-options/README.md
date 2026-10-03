@@ -35,6 +35,10 @@ data: Options for reading in data. Detailed in page linked below.
 [dbn-specific-config-options.md](dbn-specific-config-options.md)
 {% endcontent-ref %}
 
+{% content-ref url="rtdbn-specific-config-options.md" %}
+[rtdbn-specific-config-options.md](rtdbn-specific-config-options.md)
+{% endcontent-ref %}
+
 {% content-ref url="byol-specific-config-options.md" %}
 [byol-specific-config-options.md](byol-specific-config-options.md)
 {% endcontent-ref %}
