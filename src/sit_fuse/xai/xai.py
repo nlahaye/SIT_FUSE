@@ -9,6 +9,7 @@ required before exporting such information to foreign countries or providing acc
 
 # General Imports
 import argparse
+import json
 from timeshap.plot import plot_global_report
 from timeshap.explainer.global_methods import calc_global_explanations
 import shap
@@ -214,15 +215,33 @@ def save_shap(shap_values, filename):
         pickle.dump(shap_values, f)
 
 
-def explain(f, dataset: np.ndarray, background: np.ndarray, link, output_names, out_dir, explanation_fname="explanation.pkl"):
+def explain(f, dataset: np.ndarray, background: np.ndarray, link, output_names, out_dir, explanation_fname="explanation.pkl", nsamples="auto", rs=SEED):
 
     print("Calculating shap values...")
     if link not in ['identity', 'logit']:
         link = 'identity'
     explainer = shap.KernelExplainer(
-        f, background, link=link, output_names=output_names, algorithm="deep")
+        f, background, link=link)
     print(dataset.shape, dataset.min(), dataset.max(), dataset.mean())
-    explanation = explainer(dataset)
+    # KernelExplainer's callable API does not forward the coalition budget.
+    random_state = np.random.get_state()
+    try:
+        np.random.seed(rs)
+        values = explainer.shap_values(dataset, nsamples=nsamples)
+    finally:
+        np.random.set_state(random_state)
+    if isinstance(values, list):
+        values = values[0] if len(values) == 1 else np.stack(values, axis=-1)
+    values = np.asarray(values)
+    if values.ndim == 3 and values.shape[-1] == 1:
+        values = values[..., 0]
+    base_shape = (len(dataset),) if values.ndim == 2 else (len(dataset), values.shape[-1])
+    explanation = shap.Explanation(
+        values=values,
+        base_values=np.broadcast_to(np.asarray(explainer.expected_value).squeeze(), base_shape),
+        data=dataset,
+        output_names=list(output_names) if values.ndim == 3 else None,
+    )
     save_shap(explanation, os.path.join(out_dir, explanation_fname))
 
     return explanation
@@ -243,22 +262,100 @@ def rtdbn_windows_to_timeshap_long(data3d: np.ndarray):
     return data2d, schema
 
 
-def make_rtdbn_cluster_score_fn(model, cluster_id, device):
-    """Wraps RTDBN_DC's (N, num_classes) output into the (N, 1) per-cluster
-    score function TimeSHAP requires. Double-softmaxes to match generate_output_rtdbn()."""
+def xai_options(yml_conf, **overrides):
+    options = {
+        "max_samples_per_cluster": 200,
+        "max_windows_per_cluster": 200,
+        "batch_size": 512,
+        "max_evals": None,
+        "seed": SEED,
+    }
+    options.update({key: value for key, value in yml_conf.get("xai", {}).items()
+                    if key in options})
+    options.update({key: value for key, value in overrides.items()
+                    if key in options and value is not None})
+    for key in options:
+        if options[key] is not None:
+            options[key] = int(options[key])
+    for key in ("max_samples_per_cluster", "max_windows_per_cluster"):
+        if options[key] < 0:
+            raise ValueError(f"xai.{key} must be nonnegative (0 means all).")
+    for key in ("batch_size", "max_evals"):
+        if options[key] is not None and options[key] <= 0:
+            raise ValueError(f"xai.{key} must be positive.")
+    if options["seed"] < 0 or options["seed"] >= 2**32:
+        raise ValueError("xai.seed must be in [0, 2**32).")
+    return options
+
+
+def sample_cluster_indices(labels, max_per_cluster, seed=SEED):
+    """Keep rare clusters and deterministically sample larger clusters; 0 keeps all."""
+    if max_per_cluster < 0:
+        raise ValueError("max_per_cluster must be nonnegative.")
+    labels = np.asarray(labels).reshape(-1)
+    rng = np.random.default_rng(seed)
+    selected = []
+    for label in np.unique(labels):
+        inds = np.flatnonzero(labels == label)
+        if max_per_cluster and len(inds) > max_per_cluster:
+            inds = rng.choice(inds, size=max_per_cluster, replace=False)
+        selected.extend(inds)
+    return np.sort(np.asarray(selected, dtype=np.int64))
+
+
+def prepare_explanation_model(model, device):
+    model.eval()
+    # Hierarchical heads live in ordinary dictionaries, not registered modules.
+    for tier in getattr(model, "clust_tree", {}).values():
+        for head in tier.values():
+            if isinstance(head, torch.nn.Module):
+                head.to(device)
+                head.eval()
+
+
+def make_batched_output_fn(model, device, batch_size=512, temporal=False):
+    """Bound device memory while retaining hierarchical labels or RTDBN probabilities."""
+    if batch_size <= 0:
+        raise ValueError("batch_size must be positive.")
+    prepare_explanation_model(model, device)
+
     def f(x):
-        t = torch.from_numpy(x).float().to(device)
+        outputs = []
         with torch.no_grad():
-            logits = model(t)
-            probs = torch.nn.functional.softmax(logits, dim=1)
-        return probs[:, cluster_id:cluster_id + 1].detach().cpu().numpy().astype(np.float64)
+            for start in range(0, len(x), batch_size):
+                t = torch.from_numpy(np.ascontiguousarray(x[start:start + batch_size])).to(device)
+                if temporal:
+                    output = torch.nn.functional.softmax(model(t.float()), dim=1)
+                else:
+                    _, output, _, _ = model.forward(t, return_embed=False)
+                outputs.append(output.detach().cpu().numpy())
+        if not outputs:
+            width = model.num_classes if temporal else 1
+            return np.empty((0, width), dtype=np.float32)
+        return np.concatenate(outputs, axis=0)
     return f
 
 
-def explain_rtdbn(yml_conf, max_windows_per_cluster=200, nsamples=500, rs=42):
+def make_rtdbn_cluster_score_fn(model, cluster_id, device, batch_size=512):
+    """Wraps RTDBN_DC's (N, num_classes) output into the (N, 1) per-cluster
+    score function TimeSHAP requires. Double-softmaxes to match generate_output_rtdbn()."""
+    predict = make_batched_output_fn(model, device, batch_size, temporal=True)
+
+    def f(x):
+        return predict(x)[:, cluster_id:cluster_id + 1].astype(np.float64)
+    return f
+
+
+def explain_rtdbn(yml_conf, max_windows_per_cluster=None, nsamples=None, rs=None, batch_size=None):
     """Mirrors main()'s per-cluster loop;
     writes CSVs and HTML reports to out_dir/rtdbn_timeshap/. Requires shap<=0.42.1
     (see pyproject.toml)."""
+    options = xai_options(yml_conf, max_windows_per_cluster=max_windows_per_cluster,
+                          max_evals=nsamples, seed=rs, batch_size=batch_size)
+    max_windows_per_cluster = options["max_windows_per_cluster"]
+    nsamples = options["max_evals"] or 500
+    rs = options["seed"]
+    batch_size = options["batch_size"]
     out_dir = yml_conf["output"]["out_dir"]
     encoder_dir = os.path.join(out_dir, "encoder")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -278,31 +375,27 @@ def explain_rtdbn(yml_conf, max_windows_per_cluster=200, nsamples=500, rs=42):
     n_visible = int(yml_conf["rtdbn"]["n_visible"])
 
     all_windows = test_ds.data_full
-    with torch.no_grad():
-        all_probs = torch.nn.functional.softmax(
-            model(torch.from_numpy(all_windows).float().to(device)), dim=1
-        )
-        predicted_labels = torch.argmax(all_probs, dim=1).cpu().numpy()
+    if len(all_windows) == 0:
+        raise ValueError("No held-out windows available for TimeSHAP.")
+    predict = make_batched_output_fn(model, device, batch_size, temporal=True)
+    predicted_labels = np.argmax(predict(all_windows), axis=1)
 
     baseline = np.zeros((1, 1, n_visible))
     shap_out_dir = os.path.join(out_dir, "rtdbn_timeshap")
     os.makedirs(shap_out_dir, exist_ok=True)
 
-    rng = np.random.default_rng(rs)
+    selected = sample_cluster_indices(predicted_labels, max_windows_per_cluster, rs)
+    np.save(os.path.join(shap_out_dir, "sample_indices.npy"), selected)
     for cluster_id in range(num_classes):
-        inds = np.where(predicted_labels == cluster_id)[0]
+        inds = selected[predicted_labels[selected] == cluster_id]
         if len(inds) == 0:
             print(f"No windows assigned to cluster {cluster_id}, skipping.")
             continue
-        if len(inds) > max_windows_per_cluster:
-            inds = rng.choice(
-                inds, size=max_windows_per_cluster, replace=False)
-
         windows = all_windows[inds]
         data2d, schema = rtdbn_windows_to_timeshap_long(windows)
         model_features = schema[2:]
 
-        f = make_rtdbn_cluster_score_fn(model, cluster_id, device)
+        f = make_rtdbn_cluster_score_fn(model, cluster_id, device, batch_size)
 
         event_dict = {"rs": rs, "nsamples": nsamples}
         feature_dict = {"rs": rs, "nsamples": nsamples}
@@ -343,19 +436,15 @@ def main(**kwargs):
         masker = kwargs['masker']
     else:
         masker = 'uniform_fill'
-    if 'max_evals' in kwargs:
-        max_evals = kwargs['max_evals']
-    else:
-        max_evals = 2 * 100**2 + 1
-    if 'batch_size' in kwargs:
-        batch_size = kwargs['batch_size']
-    else:
-        batch_size = 50
+    options = xai_options(yml_conf, **kwargs)
 
     if yml_conf.get("encoder_type") == "rtdbn":
         # RTDBN needs TimeSHAP, not the spatial KernelExplainer path below.
-        explain_rtdbn(yml_conf)
-        return
+        return explain_rtdbn(
+            yml_conf, max_windows_per_cluster=options["max_windows_per_cluster"],
+            nsamples=options["max_evals"], rs=options["seed"],
+            batch_size=options["batch_size"],
+        )
 
     out_dir = yml_conf['output']['out_dir']
     clusters = yml_conf['cluster']['num_classes']
@@ -369,7 +458,19 @@ def main(**kwargs):
         yml_conf, yml_conf["data"]["files_test"][0])
 
     # Load model and scaler
-    model = get_model(yml_conf, data.data_full.shape[1]).cuda()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = get_model(yml_conf, data.data_full.shape[1]).to(device)
+    get_output = make_batched_output_fn(model, device, options["batch_size"])
+    if len(data.data_full) == 0:
+        raise ValueError("No samples available for SHAP.")
+    output = get_output(data.data_full)
+    predicted_labels = (np.argmax(output, axis=1) if output.shape[1] > 1
+                        else output.reshape(-1))
+    selected = sample_cluster_indices(
+        predicted_labels, options["max_samples_per_cluster"], options["seed"])
+    dat = data.data_full[selected]
+    output = output[selected]
+    os.makedirs(out_dir, exist_ok=True)
 
     # Subset? (yes: (0:200, 0:600))
     # row_min, row_max = 0, 200
@@ -391,27 +492,32 @@ def main(**kwargs):
     overwrite = False  # True
     link = "identity"  # 'logit'
     background_type = 'zero'
-    background = get_background(background_type, data.data_full)
+    background = get_background(background_type, dat)
 
     # ============================== EXPLANATION ===============================
 
     labels = [x for x in range(clusters)]
     label_names = map(str, labels)
 
-    def get_output(x):
-        _, output, _, _ = model.forward(torch.from_numpy(
-            x).to(model.encoder.device), return_embed=False)
-        output = output.detach().cpu().numpy()
-        return output
-
-    # f = lambda x: (model.forward(torch.from_numpy(x).to(model.encoder.device)).detach().cpu().numpy())
-    if not overwrite and os.path.exists(os.path.join(out_dir, "explanation_kmeans_background.pkl")) and os.path.exists(os.path.join(out_dir, "shap_values_kmeans_background.npz")):
+    explanation_path = os.path.join(out_dir, "explanation_kmeans_background.pkl")
+    values_path = os.path.join(out_dir, "shap_values_kmeans_background.npz")
+    indices_path = os.path.join(out_dir, "explanation_sample_indices.npy")
+    settings_path = os.path.join(out_dir, "explanation_settings.json")
+    settings = dict(options, input_shape=list(data.data_full.shape),
+                    input_file=yml_conf["data"]["files_test"][0])
+    cache_matches = False
+    if all(os.path.exists(path) for path in
+           (explanation_path, values_path, indices_path, settings_path)):
+        with open(settings_path) as f:
+            cache_matches = json.load(f) == settings
+        cache_matches = cache_matches and np.array_equal(np.load(indices_path), selected)
+    if not overwrite and cache_matches:
 
         print("LOADING SHAP FILES")
-        explanation = np.load(os.path.join(
-            out_dir, "explanation_kmeans_background.pkl"), allow_pickle=True)
-        shap_values = np.array(np.load(os.path.join(
-            out_dir, "shap_values_kmeans_background.npz"), allow_pickle=True))
+        with open(explanation_path, "rb") as f:
+            explanation = pickle.load(f)
+        with open(values_path, "rb") as f:
+            shap_values = pickle.load(f)
 
     else:
         # print("HERE", data.data_full.shape, data.data_full[0:10000].shape)
@@ -424,12 +530,15 @@ def main(**kwargs):
 
         # Also compute with kmeans background
         # background = get_background('kmeans', data.data_full[0:10000], n_samples=1000)
-        explanation = explain(get_output, data.data_full, background, link=link,
+        explanation = explain(get_output, dat, background, link=link,
                               output_names=label_names, out_dir=out_dir,
-                              explanation_fname="explanation_kmeans_background.pkl")
+                              explanation_fname="explanation_kmeans_background.pkl",
+                              nsamples=options["max_evals"] or "auto", rs=options["seed"])
         shap_values = explanation.values
-        save_shap(shap_values, os.path.join(
-            out_dir, "shap_values_kmeans_background.npz"))
+        save_shap(shap_values, values_path)
+        np.save(indices_path, selected)
+        with open(settings_path, "w") as f:
+            json.dump(settings, f)
 
     print("Shap values shape: ", np.array(shap_values).shape)
     print("HERE")
@@ -445,13 +554,11 @@ def main(**kwargs):
     # feature_names = ["chan_" + str(i) for i in range(data.data_full.shape[1])]
 
     plot_by_freq = False  # True
-    output = get_output(data.data_full)
     labels_by_freq = most_frequent_labels(output)
     print("Most significant labels: ", labels_by_freq)
 
     padding = yml_conf['data']['pixel_padding']
     tile_size = padding*2 + 1
-    dat = data.data_full
     if tile_size > 1:
         dat = dat.reshape((shap_values.shape[0], int(
             shap_values.shape[1] / (tile_size**2)), tile_size, tile_size))
@@ -466,6 +573,7 @@ def main(**kwargs):
         shap_values = np.moveaxis(shap_values, 1, 2)
         shap_values = shap_values.reshape(
             (shap_values.shape[0]*shap_values.shape[1], shap_values.shape[2]))
+        output = np.repeat(output, tile_size**2, axis=0)
 
         # dat = np.max(dat, axis=(2,3)).reshape((shap_values.shape[0], shap_values.shape[1]))
         # shap_values = np.max(shap_values, axis=(2,3)).reshape((shap_values.shape[0], shap_values.shape[1]))
@@ -498,15 +606,20 @@ if __name__ == '__main__':
     parser.add_argument("-y", "--yaml", nargs='?',
                         help="YAML file for cluster discretization.")
     parser.add_argument("-m", "--masker", nargs='?', help="Masker type.")
-    parser.add_argument("-e", "--max-evals", nargs='?',
-                        help="Number of evaluations of underlying model.")
-    parser.add_argument("-b", "--batch-size", nargs='?',
-                        help="Batch size for explanation.")
+    parser.add_argument("-e", "--max-evals", type=int,
+                        help="Coalition samples per SHAP/TimeSHAP explanation.")
+    parser.add_argument("-b", "--batch-size", type=int,
+                        help="Maximum inference batch size (default: 512).")
+    parser.add_argument("--max-samples-per-cluster", type=int,
+                        help="Spatial samples per predicted cluster (default: 200; 0: all).")
+    parser.add_argument("--max-windows-per-cluster", type=int,
+                        help="RTDBN windows per predicted cluster (default: 200; 0: all).")
+    parser.add_argument("--seed", type=int, help="Sampling seed (default: 42).")
     args = parser.parse_args()
     from timeit import default_timer as timer
     start = timer()
     # TODO: update params
-    main(yaml=args.yaml)
+    main(**vars(args))
     end = timer()
     print(end - start)  # Time in seconds, e.g. 5.38091952400282
 
