@@ -9,6 +9,7 @@ required before exporting such information to foreign countries or providing acc
 
 # General Imports
 import argparse
+import hashlib
 import json
 from timeshap.plot import plot_global_report
 from timeshap.explainer.global_methods import calc_global_explanations
@@ -504,7 +505,22 @@ def main(**kwargs):
     indices_path = os.path.join(out_dir, "explanation_sample_indices.npy")
     settings_path = os.path.join(out_dir, "explanation_settings.json")
     settings = dict(options, input_shape=list(data.data_full.shape),
-                    input_file=yml_conf["data"]["files_test"][0])
+                    input_file=yml_conf["data"]["files_test"][0],
+                    input_dtype=dat.dtype.str,
+                    input_digest=hashlib.sha256(np.ascontiguousarray(dat).tobytes()).hexdigest(),
+                    config_digest=hashlib.sha256(
+                        json.dumps(yml_conf, sort_keys=True, default=str).encode()).hexdigest())
+    save_dir = out_dir
+    logger = yml_conf.get("logger", {})
+    if logger.get("use_wandb"):
+        save_dir = os.path.join(save_dir, logger["log_out_dir"])
+    checkpoints = {}
+    for directory in ("encoder", "full_model", "full_model_heir"):
+        for path in sorted(glob(os.path.join(save_dir, directory, "**", "*"), recursive=True)):
+            if os.path.isfile(path) and path.endswith((".ckpt", ".pkl", ".pt", ".pth")):
+                stat = os.stat(path)
+                checkpoints[path] = [stat.st_size, stat.st_mtime_ns]
+    settings["checkpoints"] = checkpoints
     cache_matches = False
     if all(os.path.exists(path) for path in
            (explanation_path, values_path, indices_path, settings_path)):

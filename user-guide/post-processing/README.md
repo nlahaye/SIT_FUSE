@@ -42,8 +42,9 @@ uses the first configured test file; RTDBN uses held-out test windows.
 Existing output names and directories are retained. Spatial selected row indices
 are saved in `explanation_sample_indices.npy`, with settings in
 `explanation_settings.json`; RTDBN indices are in
-`rtdbn_timeshap/sample_indices.npy`. Spatial caches are regenerated when these
-settings or indices differ (including legacy caches without sampling metadata).
+`rtdbn_timeshap/sample_indices.npy`. Spatial caches are regenerated when settings,
+indices, sampled input content, configuration, or checkpoint sizes/timestamps
+differ (including legacy caches without sampling metadata).
 The legacy `kmeans_background` filenames still refer to a zero baseline, and
 `shap_values_kmeans_background.npz` remains pickle-serialized for compatibility.
 

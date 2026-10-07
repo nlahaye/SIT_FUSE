@@ -274,6 +274,30 @@ class XAITest(unittest.TestCase):
         self.assertEqual(values.shape, (1800, 2))
         self.assertEqual(samples.shape, values.shape)
 
+    def test_cache_invalidates_changed_data_configuration_and_checkpoints(self):
+        conf = self.conf(max_samples_per_cluster=0)
+        self.read_yaml.return_value = conf
+        data = np.ones((3, 2), dtype=np.float32)
+        self.dataset.return_value = SimpleNamespace(data_full=data), None
+        self.get_model.return_value = Model(self.torch)
+        checkpoint = self.out / "full_model/deep_cluster.ckpt"
+        checkpoint.parent.mkdir()
+        checkpoint.write_bytes(b"first checkpoint")
+        kernel = self.kernel()
+        with patch.object(self.xai, "save_summary_plot"):
+            self.xai.main(yaml="config")
+            data *= 2  # Same shape, selected indices and predicted labels.
+            self.xai.main(yaml="config")
+            self.assertEqual(kernel.shap_values.call_count, 2)
+            conf["data"]["fill_value"] = -99
+            self.xai.main(yaml="config")
+            self.assertEqual(kernel.shap_values.call_count, 3)
+            checkpoint.write_bytes(b"updated checkpoint")
+            self.xai.main(yaml="config")
+            self.assertEqual(kernel.shap_values.call_count, 4)
+            self.xai.main(yaml="config")
+            self.assertEqual(kernel.shap_values.call_count, 4)
+
     def setup_temporal(self):
         data = np.arange(-16, 16, dtype=np.float32).reshape(8, 2, 2)
         self.splits.return_value = None, None, SimpleNamespace(data_full=data)
