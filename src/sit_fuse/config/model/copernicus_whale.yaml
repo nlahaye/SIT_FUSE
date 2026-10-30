@@ -265,4 +265,11 @@ cluster:
    epochs: 30
 
 
+xai:
+  max_samples_per_cluster: 200
+  max_windows_per_cluster: 200
+  batch_size: 512
+  seed: 42
+  max_evals: 500
+
 

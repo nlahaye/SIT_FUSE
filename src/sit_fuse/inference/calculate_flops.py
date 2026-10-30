@@ -27,7 +27,6 @@ from sit_fuse.datasets.dataset_utils import get_prediction_dataset
 from sit_fuse.models.deep_cluster.heir_dc import Heir_DC
 from sit_fuse.utils import read_yaml
 from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes
-from sit_fuse.train.pretrain_rtdbn_dc import load_trained_rtdbn_dc
 
 from tqdm import tqdm
 
@@ -388,7 +387,7 @@ def get_model(yml_conf, n_visible):
 
         encoder.load_state_dict(torch.load(enc_ckpt_path))
 
-        encoder.eval()
+        #encoder.eval()
 
     elif encoder_type is not None and encoder_type == "byol":
         save_dir_byol = yml_conf["output"]["out_dir"]
@@ -419,16 +418,16 @@ def get_model(yml_conf, n_visible):
         elif model_type == "DCE":
             m1 = DeepConvEncoder(in_chans)
             m1.load_state_dict(torch.load(encoder_ckpt_path))
-            m1 = m1.eval()
+            #m1 = m1.eval()
             output_dim = in_chans*8*tile_size*tile_size
             m2 =  MultiPrototypes(output_dim, num_classes, 1)
-            m2.eval()
+            #m2.eval()
             encoder = m1 #torch.nn.Sequential(m1, m2)
  
 
         for param in encoder.parameters():
             param.requires_grad = False
-        encoder.eval()
+        #encoder.eval()
 
     elif encoder_type is not None and encoder_type == "pca":
         encoder = PCAEncoder()
@@ -447,44 +446,20 @@ def get_model(yml_conf, n_visible):
     model = Heir_DC(None, pretrained_model_path=ckpt_path, num_classes=num_classes_heir, yml_conf=yml_conf, \
         encoder_type=encoder_type, encoder=encoder, clust_tree_ckpt = heir_ckpt_path, generate_labels = generate_labels)
     #summary(model=encoder, input_size=(1, 34, 64, 64), col_names=['input_size', 'output_size', 'num_params', 'trainable'])
-    model.eval()
+    #model.eval()
 
-    for key in model.clust_tree["1"].keys():
-        if model.clust_tree["1"][key] is not None:
-            model.clust_tree["1"][key].eval()
+    #for key in model.clust_tree["1"].keys():
+    #    if model.clust_tree["1"][key] is not None:
+    #        model.clust_tree["1"][key].eval()
           
     return model
 
 
 
-def calculate_flops_rtdbn(yml_conf):
-    """RTDBN-specific FLOPs entrypoint. RTDBN_DC takes (batch, seq_len, n_visible)
-    windows rather than the flat (batch, n_features) input the Heir_DC path above
-    profiles, so this builds a dummy tensor of that shape instead of reusing
-    run_inference()'s in-loop calculate_flops() call (which also assumes a
-    Heir_DC-shaped model via the 'clust_tree' attribute check).
-    """
-    model = load_trained_rtdbn_dc(yml_conf)
-
-    if torch.cuda.is_available():
-        model = model.cuda()
-        model.pretrained_model = model.pretrained_model.cuda()
-
-    seq_len = int(yml_conf["data"]["seq_len"])
-    n_visible = int(yml_conf["rtdbn"]["n_visible"])
-    input_shape = (1, seq_len, n_visible)
-
-    flops, macs, params = calculate_flops(model=model, input_shape=input_shape, output_as_string=True, output_precision=4)
-    print("FLOPs:%s   MACs:%s   Params:%s \n" % (flops, macs, params))
-
 
 def main(yml_fpath):
 
     yml_conf = read_yaml(yml_fpath)
-
-    if yml_conf.get("encoder_type") == "rtdbn":
-        calculate_flops_rtdbn(yml_conf)
-        return
 
     test_fnames = yml_conf["data"]["files_test"]
     train_fnames = yml_conf["data"]["files_train"]

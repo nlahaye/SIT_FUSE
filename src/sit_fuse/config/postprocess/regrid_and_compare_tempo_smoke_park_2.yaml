@@ -653,3 +653,7 @@ sit_fuse_maps: [
 #"/data/nlahaye/output/Learnergy/SF_TEMPO_PARK/TEMPO_RAD_L1_V03_20240731T144556Z_S006G09.tif.clust.data_160388clusters.zarr.smoke.tif.Contours.tif",
 ]
 
+
+write_diff_rasters: True
+diff_rasters_dir: "./diff_rasters/"
+

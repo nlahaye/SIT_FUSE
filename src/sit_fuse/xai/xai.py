@@ -11,11 +11,7 @@ required before exporting such information to foreign countries or providing acc
 import argparse
 import hashlib
 import json
-from timeshap.plot import plot_global_report
-from timeshap.explainer.global_methods import calc_global_explanations
 import shap
-from sit_fuse.datasets.rtdbn_data_utils import build_rtdbn_splits
-from sit_fuse.train.pretrain_rtdbn_dc import load_trained_rtdbn_dc
 from sit_fuse.utils import read_yaml
 from sit_fuse.inference.generate_output import get_model
 from sit_fuse.datasets.dataset_utils import get_prediction_dataset
@@ -201,13 +197,27 @@ def save_summary_plot(out_dir, shap_values, X, label, feature_names):
     print(f"Saving {os.path.join(out_dir, filename)}...")
     print(feature_names)
     p = shap.plots.violin(shap_values, features=X,
-                          feature_names=feature_names, plot_type="layered_violin")
+                          feature_names=feature_names)
     # p = shap.summary_plot(shap_values, show=False, color_bar=True, feature_names=feature_names) #feature_names=feature_names, show=False, color_bar=True)
     plt.savefig(os.path.join(out_dir, filename),
                 bbox_inches='tight', pad_inches=0.2, dpi=400)
     plt.clf()
     plt.cla()
     plt.close()
+
+    #shap.plots.waterfall(shap_values)
+    #plt.savefig(os.path.join(out_dir, f"shap_waterfall_plot_{label}.png"), bbox_inches='tight', pad_inches=0.2, dpi=400)
+    
+    #plt.clf()
+    #plt.cla()
+    #plt.close()
+
+    #shap.plots.beeswarm(shap_values, order=np.abs(shap_values).max(0))
+    #plt.savefig(os.path.join(out_dir, f"shap_beeswarm_plot_{label}.png"), bbox_inches='tight', pad_inches=0.2, dpi=400)
+
+    #plt.clf()
+    #plt.cla()
+    #plt.close()
 
 
 def save_shap(shap_values, filename):
@@ -246,21 +256,6 @@ def explain(f, dataset: np.ndarray, background: np.ndarray, link, output_names, 
     save_shap(explanation, os.path.join(out_dir, explanation_fname))
 
     return explanation
-
-
-def rtdbn_windows_to_timeshap_long(data3d: np.ndarray):
-    """Reshapes (N, seq_len, n_visible) windows into TimeSHAP's long-format
-    2D array (entity_col + time_col + features) -- avoids a crash in
-    TimeSHAP's global explainer when entity_col=None."""
-    n_windows, seq_len, n_features = data3d.shape
-    entity_ids = np.repeat(np.arange(n_windows), seq_len)
-    time_ids = np.tile(np.arange(seq_len), n_windows)
-    flat_features = data3d.reshape(n_windows * seq_len, n_features)
-    data2d = np.concatenate(
-        [entity_ids[:, None], time_ids[:, None], flat_features], axis=1
-    ).astype(np.float64)
-    schema = ["entity", "time"] + [f"feat_{j}" for j in range(n_features)]
-    return data2d, schema
 
 
 def xai_options(yml_conf, **overrides):
@@ -337,94 +332,6 @@ def make_batched_output_fn(model, device, batch_size=512, temporal=False):
     return f
 
 
-def make_rtdbn_cluster_score_fn(model, cluster_id, device, batch_size=512):
-    """Wraps RTDBN_DC's (N, num_classes) output into the (N, 1) per-cluster
-    score function TimeSHAP requires. Double-softmaxes to match generate_output_rtdbn()."""
-    predict = make_batched_output_fn(model, device, batch_size, temporal=True)
-
-    def f(x):
-        return predict(x)[:, cluster_id:cluster_id + 1].astype(np.float64)
-    return f
-
-
-def explain_rtdbn(yml_conf, max_windows_per_cluster=None, nsamples=None, rs=None, batch_size=None):
-    """Mirrors main()'s per-cluster loop;
-    writes CSVs and HTML reports to out_dir/rtdbn_timeshap/. Requires shap<=0.42.1
-    (see pyproject.toml)."""
-    options = xai_options(yml_conf, max_windows_per_cluster=max_windows_per_cluster,
-                          max_evals=nsamples, seed=rs, batch_size=batch_size)
-    max_windows_per_cluster = options["max_windows_per_cluster"]
-    nsamples = options["max_evals"] or 500
-    rs = options["seed"]
-    batch_size = options["batch_size"]
-    out_dir = yml_conf["output"]["out_dir"]
-    encoder_dir = os.path.join(out_dir, "encoder")
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    model = load_trained_rtdbn_dc(yml_conf)
-    model = model.to(device)
-    model.pretrained_model = model.pretrained_model.to(device)
-
-    _, _, test_ds = build_rtdbn_splits(
-        yml_conf, scaler_in_path=os.path.join(encoder_dir, "scaler.pkl")
-    )
-    if test_ds is None:
-        raise ValueError(
-            "No held-out test split configured (data.test_percent) -- TimeSHAP explanations need held-out windows.")
-
-    num_classes = yml_conf["cluster"]["num_classes"]
-    n_visible = int(yml_conf["rtdbn"]["n_visible"])
-
-    all_windows = test_ds.data_full
-    if len(all_windows) == 0:
-        raise ValueError("No held-out windows available for TimeSHAP.")
-    predict = make_batched_output_fn(model, device, batch_size, temporal=True)
-    predicted_labels = np.argmax(predict(all_windows), axis=1)
-
-    baseline = np.zeros((1, 1, n_visible))
-    shap_out_dir = os.path.join(out_dir, "rtdbn_timeshap")
-    os.makedirs(shap_out_dir, exist_ok=True)
-
-    selected = sample_cluster_indices(predicted_labels, max_windows_per_cluster, rs)
-    np.save(os.path.join(shap_out_dir, "sample_indices.npy"), selected)
-    for cluster_id in range(num_classes):
-        inds = selected[predicted_labels[selected] == cluster_id]
-        if len(inds) == 0:
-            print(f"No windows assigned to cluster {cluster_id}, skipping.")
-            continue
-        windows = all_windows[inds]
-        data2d, schema = rtdbn_windows_to_timeshap_long(windows)
-        model_features = schema[2:]
-
-        f = make_rtdbn_cluster_score_fn(model, cluster_id, device, batch_size)
-
-        event_dict = {"rs": rs, "nsamples": nsamples}
-        feature_dict = {"rs": rs, "nsamples": nsamples}
-
-        print(f"Explaining cluster {cluster_id} ({len(inds)} windows)...")
-        # pruning=None: TimeSHAP's pruning has an edge-case bug (asserts
-        # pruning_idx < seq_len); not needed for these short windows anyway.
-        _, event_data, feat_data = calc_global_explanations(
-            f, data2d, None, event_dict, feature_dict,
-            baseline=baseline, model_features=model_features, schema=schema,
-            entity_col="entity", time_col="time",
-        )
-
-        event_data.to_csv(os.path.join(
-            shap_out_dir, f"cluster_{cluster_id}_event_shap.csv"), index=False)
-        feat_data.to_csv(os.path.join(
-            shap_out_dir, f"cluster_{cluster_id}_feature_shap.csv"), index=False)
-
-        _, plot = plot_global_report(
-            None, event_dict, feature_dict, None, event_data, feat_data)
-        plot_path = os.path.join(
-            shap_out_dir, f"cluster_{cluster_id}_timeshap_report.html")
-        plot.save(plot_path)
-        print(f"Saved cluster {cluster_id} TimeSHAP report to {plot_path}")
-
-    print(f"RTDBN TimeSHAP explanations written to {shap_out_dir}")
-    return shap_out_dir
-
 
 def main(**kwargs):
 
@@ -439,14 +346,6 @@ def main(**kwargs):
         masker = 'uniform_fill'
     options = xai_options(yml_conf, **kwargs)
 
-    if yml_conf.get("encoder_type") == "rtdbn":
-        # RTDBN needs TimeSHAP, not the spatial KernelExplainer path below.
-        return explain_rtdbn(
-            yml_conf, max_windows_per_cluster=options["max_windows_per_cluster"],
-            nsamples=options["max_evals"], rs=options["seed"],
-            batch_size=options["batch_size"],
-        )
-
     out_dir = yml_conf['output']['out_dir']
     clusters = yml_conf['cluster']['num_classes']
     fill_value = yml_conf['data']['fill_value']
@@ -456,7 +355,7 @@ def main(**kwargs):
     # loop over multiple files + subsample
     # Load train and test data
     data, _ = get_prediction_dataset(
-        yml_conf, yml_conf["data"]["files_test"][0])
+        yml_conf, yml_conf["data"]["files_train"])
 
     # Load model and scaler
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -556,6 +455,23 @@ def main(**kwargs):
         with open(settings_path, "w") as f:
             json.dump(settings, f)
 
+
+    """ 
+    shap.plots.waterfall(explanation)
+    plt.savefig(os.path.join(out_dir, f"shap_waterfall_plot.png"), bbox_inches='tight', pad_inches=0.2, dpi=400)
+
+    plt.clf()
+    plt.cla()
+    plt.close()
+
+    shap.plots.beeswarm(explanation)
+    plt.savefig(os.path.join(out_dir, f"shap_beeswarm_plot.png"), bbox_inches='tight', pad_inches=0.2, dpi=400)
+
+    plt.clf()
+    plt.cla()
+    plt.close()
+    """
+
     print("Shap values shape: ", np.array(shap_values).shape)
     print("HERE")
     print("Shap explanation shape: ", np.array(explanation).shape)
@@ -563,7 +479,7 @@ def main(**kwargs):
 
     # ================================ PLOTTING ================================
 
-    shap_out_dir = os.path.join(out_dir, "shap plots")
+    shap_out_dir = os.path.join(out_dir, "shap_plots")
     os.makedirs(shap_out_dir, exist_ok=True)
     print(shap_out_dir)
 

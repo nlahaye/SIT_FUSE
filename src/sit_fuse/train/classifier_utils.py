@@ -689,7 +689,7 @@ def normalize_training_matchup(
         or matchup.get("cluster_raster")
     )
     annotation_raster = (
-        matchup.get("truth_hms")
+        matchup.get("truth_hms") or matchup.get("truth_adp_smoke")
         or matchup.get("annotation_raster")
     )
 

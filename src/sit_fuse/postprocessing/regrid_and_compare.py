@@ -246,13 +246,13 @@ def compare_one_pair(sf_path, truth_path, other_path, cfg, outputs):
     truth["arr"] = truth["arr"].astype(np.int32)
 
     sf["arr"][np.where(np.isnan(sf["arr"]))] = -999999
-    sf["arr"][np.where(sf["arr"] < 0)] = 0 #-999999
+    sf["arr"][np.where(sf["arr"] < 0)] = -999999
 
     truth["arr"][np.where(np.isnan(truth["arr"]))] = -999999
     #truth["arr"][np.where(truth["arr"] == 1)] = 0
     #truth["arr"][np.where(truth["arr"] == 1)] = 0
     truth["arr"][np.where(truth["arr"] > 1)] = 1
-    truth["arr"][np.where(truth["arr"] < 0)] = 0 #-999999
+    truth["arr"][np.where(truth["arr"] < 0)] = -999999
 
     #truth["arr"] = truth["arr"].astype(np.int16)
     print("HERE MISMATCH", truth["arr"].min(), truth["arr"].max(), sf["arr"].min(), sf["arr"].max())

@@ -23,6 +23,11 @@ from typing import Any, Iterable
 
 import yaml
 
+try:
+    from sit_fuse.train.matchup_splits import finalize as finalize_splits
+except ImportError:  # running from the scripts directory
+    from matchup_splits import finalize as finalize_splits
+
 
 LOG = logging.getLogger("build-simple-classifier-matchups")
 GEOTIFF_SUFFIXES = {".tif", ".tiff"}
@@ -975,6 +980,10 @@ def main(config_path: str) -> None:
         cfg,
     )
 
+    # Encoder (DBN/cluster) train/test tracing + stratified classifier splits
+    matchups, split_summary = finalize_splits(
+        matchups, cfg, truth_field="truth_hms", truth_date_field="hms_date", log=LOG)
+
     for item in sit_fuse_skipped:
         audit.append({
             "sit_fuse_path": item["path"],
@@ -1018,6 +1027,8 @@ def main(config_path: str) -> None:
         matchups=matchups,
         generator_cfg=cfg,
     )
+    if split_summary is not None:
+        classifier_cfg.setdefault("matchup_metadata", {})["splits"] = split_summary
 
     classifier_yaml_path = Path(cfg["output"]["classifier_yaml"])
     audit_csv_path = Path(cfg["output"]["audit_csv"])
