@@ -80,8 +80,17 @@ def validate_config(cfg: dict) -> dict:
     if footprint_scale <= 0:
         raise ValueError("raster.footprint_scale must be positive.")
 
-    fill_value = float(raster_cfg.get("fill_value", 0.0))
+    # Grid cells with no ADP observation (outside the swath, night, cloud,
+    # snow/ice, bad/missing QC) get fill_value, tagged as the GeoTIFF nodata.
+    # It must differ from the labels (0 = no smoke, 1 = smoke); 255 by default.
+    fill_value = float(raster_cfg.get("fill_value", 255.0))
+    nodata = float(raster_cfg.get("nodata", fill_value))
     dtype = str(raster_cfg.get("dtype", "float32"))
+    if fill_value in (0.0, 1.0):
+        print(f"[warn] raster.fill_value={fill_value:g} equals a smoke label; unobserved cells "
+              "will be indistinguishable from observed 'no smoke' / 'smoke'.")
+    if np.dtype(dtype).kind == "u" and fill_value < 0:
+        raise ValueError(f"raster.fill_value {fill_value:g} does not fit dtype {dtype}")
 
     product = str(cfg["product"]).lower()
     valid_products = {
@@ -102,6 +111,19 @@ def validate_config(cfg: dict) -> dict:
     if smoke_conf not in allowed_conf or dust_conf not in allowed_conf:
         raise ValueError("quality confidence must be one of null, high, medium, low, high_medium, all")
 
+    # Which ADP pixels count as unobserved (written as fill_value) rather
+    # than observed "no smoke". Smoke = 1 is kept wherever detected, including
+    # the above-cloud UV-AAI call-back, unless excluded by smoke_confidence.
+    unobserved = quality.get("unobserved", ["fill", "qc_bad", "cloud", "snowice"])
+    unobserved = [str(u).lower() for u in (unobserved or [])]
+    bad = set(unobserved) - {"fill", "qc_bad", "cloud", "snowice"}
+    if bad:
+        raise ValueError(f"quality.unobserved entries must be fill, qc_bad, cloud, snowice; got {sorted(bad)}")
+    # Smoke pixels outside smoke_confidence: 'unobserved' (fill) or 'negative' (0).
+    below_conf = str(quality.get("below_confidence", "unobserved")).lower()
+    if below_conf not in {"unobserved", "negative"}:
+        raise ValueError("quality.below_confidence must be unobserved or negative")
+
     combine = cfg.get("combine", None)
     if combine not in {None, "max", "sum", "count", "mean"}:
         raise ValueError("combine must be one of null, max, sum, count, mean")
@@ -112,7 +134,10 @@ def validate_config(cfg: dict) -> dict:
         "bbox": bbox,
         "resolution_deg": resolution_deg,
         "fill_value": fill_value,
+        "nodata": nodata,
         "dtype": dtype,
+        "unobserved": unobserved,
+        "below_confidence": below_conf,
         "product": product,
         "smoke_confidence": smoke_conf,
         "dust_confidence": dust_conf,
@@ -205,18 +230,49 @@ def confidence_mask_from_qc(qc: np.ndarray, kind: str, requested: str | None) ->
     return np.ones(qc.shape, dtype=bool)
 
 
-def build_product_array(ds: xr.Dataset, product: str, smoke_conf: str | None, dust_conf: str | None) -> np.ndarray:
+def smoke_tristate(ds: xr.Dataset, smoke_conf: str | None, unobserved=("fill", "qc_bad", "cloud", "snowice"),
+                   below_confidence: str = "unobserved") -> np.ndarray:
+    """ADP smoke as 1 (smoke), 0 (observed, no smoke), NaN (unobserved).
+
+    NaN pixels are skipped by rasterize_swath_points, so grid cells covered
+    only by unobserved pixels receive raster.fill_value."""
+    smoke = ds["/product/smoke"].values.astype(np.float32)
+    qc = ds["/quality_diagnostic_flags/qc_flag"].values
+    qc_valid = np.isfinite(qc) if np.issubdtype(np.asarray(qc).dtype, np.floating) else np.ones(qc.shape, bool)
+    qc_int = np.where(qc_valid, qc, 0).astype(np.int16)
+    is_smoke = smoke == 1
+    unobs = np.zeros(smoke.shape, dtype=bool)
+    if "fill" in unobserved:
+        # decoded _FillValue (NaN) or any value outside the 0/1 flag range
+        unobs |= ~np.isin(smoke, (0.0, 1.0))
+    if "qc_bad" in unobserved:
+        # qc_flag bits 2-3 (smoke confidence) == 11: bad/missing (smoke or not)
+        unobs |= ~qc_valid | (((qc_int >> 2) & 0b11) == 3)
+    for name in ("cloud", "snowice"):
+        key = f"/product/{name}"
+        if name in unobserved and key in ds:
+            flag = ds[key].values
+            unobs |= (np.nan_to_num(flag.astype(np.float32), nan=0.0) == 1) & ~is_smoke
+    # smoke detected above cloud (UV-AAI call-back) stays smoke: cloud/snowice
+    # mark only non-smoke pixels unobserved
+    arr = np.where(unobs, np.nan, np.where(is_smoke, 1.0, 0.0)).astype(np.float32)
+    if smoke_conf not in (None, "all"):
+        low = is_smoke & ~confidence_mask_from_qc(qc_int, "smoke", smoke_conf)
+        arr[low] = np.nan if below_confidence == "unobserved" else 0.0
+    n = arr.size
+    print(f"ADP smoke: smoke={np.sum(arr == 1) / n:.4f} no_smoke={np.sum(arr == 0) / n:.4f} "
+          f"unobserved={np.isnan(arr).sum() / n:.4f}")
+    return arr
+
+
+def build_product_array(ds: xr.Dataset, product: str, smoke_conf: str | None, dust_conf: str | None,
+                        unobserved=("fill", "qc_bad", "cloud", "snowice"),
+                        below_confidence: str = "unobserved") -> np.ndarray:
     lat = ds["/geolocation/latitude"].values
     shape = lat.shape
 
     if product == "smoke":
-        smoke = ds["/product/smoke"].values.astype(np.float32)
-        print("HERE SMOKE", smoke.min(), smoke.max(), smoke.mean())
-        qc = ds["/quality_diagnostic_flags/qc_flag"].values
-        conf_mask = confidence_mask_from_qc(qc, "smoke", smoke_conf)
-        print(qc.min(), qc.max(), qc.mean(), conf_mask.min(), conf_mask.max())
-        arr = smoke #np.where((smoke == 1) & conf_mask, 1.0, np.nan)
-        return arr.reshape(shape)
+        return smoke_tristate(ds, smoke_conf, unobserved, below_confidence).reshape(shape)
 
     if product == "dust_mask":
         dust = ds["/product/dust"].values.astype(np.float32)
@@ -428,7 +484,8 @@ def rasterize_swath_points(
 
 
 
-def write_geotiff(arr: np.ndarray, bbox: tuple[float, float, float, float], resolution_deg: float, out_path: Path, dtype: str):
+def write_geotiff(arr: np.ndarray, bbox: tuple[float, float, float, float], resolution_deg: float, out_path: Path,
+                  dtype: str, nodata: float | None = 255.0):
     width, height, transform = make_grid(bbox, resolution_deg)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -443,7 +500,7 @@ def write_geotiff(arr: np.ndarray, bbox: tuple[float, float, float, float], reso
         crs="EPSG:4326",
         transform=transform,
         compress="lzw",
-        nodata=0,
+        nodata=nodata,
     ) as dst:
         dst.write(arr.astype(dtype), 1)
 
@@ -471,6 +528,7 @@ def process_one_file(
                     "/geolocation/longitude": (("y", "x"), lon),
                     "/product/smoke": prod["smoke"],
                     "/product/dust": prod["dust"],
+                    **{f"/product/{v}": prod[v] for v in ("cloud", "snowice") if v in prod},
                     #"/product/saai": prod["saai"],
                     #"/product/uv_aai": prod["uv_aai"],
                     #"/product/deepblue_aai": prod["deepblue_aai"],
@@ -484,6 +542,8 @@ def process_one_file(
                 product=cfg["product"],
                 smoke_conf=cfg["smoke_confidence"],
                 dust_conf=cfg["dust_confidence"],
+                unobserved=cfg["unobserved"],
+                below_confidence=cfg["below_confidence"],
             )
 
     agg = "max" # if "mask" in cfg["product"] else "mean"
@@ -491,7 +551,7 @@ def process_one_file(
     print("HERE extraced datasets")
 
 
-    print("PRIOR TO RASTERIZE", value_arr.min(), value_arr.max())
+    print("PRIOR TO RASTERIZE", np.nanmin(value_arr), np.nanmax(value_arr))
     raster = rasterize_swath_points(
         lon=lon,
         lat=lat,
@@ -507,38 +567,33 @@ def process_one_file(
 
     out_name = f"{cfg['product']}_{timestamp:%Y%m%dT%H%M%SZ}.tif"
     out_path = cfg["outdir"] / "rasters" / out_name
-    return write_geotiff(raster, cfg["bbox"], cfg["resolution_deg"], out_path, cfg["dtype"])
+    return write_geotiff(raster, cfg["bbox"], cfg["resolution_deg"], out_path, cfg["dtype"], cfg["nodata"])
 
 
-def combine_rasters(paths: list[Path], out_path: Path, method: str):
+def combine_rasters(paths: list[Path], out_path: Path, method: str, nodata: float = 255.0):
+    """Binary smoke composite: 1 where any granule saw smoke, 0 where at
+    least one granule observed no smoke and none saw smoke, nodata where no
+    granule observed the cell."""
     arrays = []
     meta = None
 
     for p in paths:
         with rasterio.open(p) as src:
-            arrays.append(src.read(1).astype(np.float32))
+            a = src.read(1).astype(np.float32)
+            nd = src.nodata if src.nodata is not None else nodata
+            arrays.append(np.where(a == nd, np.nan, a))
             if meta is None:
                 meta = src.meta.copy()
 
     stack = np.stack(arrays, axis=0)
-
-    #if method == "sum":
-    #    combined = stack.sum(axis=0)
-    #elif method == "count":
-    #    combined = (stack != 0).sum(axis=0).astype(np.float32)
-    #elif method == "mean":
-    #    masked = np.where(stack == 0, np.nan, stack)
-    #    combined = np.nanmean(masked, axis=0)
-    #    combined = np.where(np.isfinite(combined), combined, 0).astype(np.float32)
-    #else:
-    combined = stack.max(axis=0)
-
-    combined[np.where(combined > 0.0)] = 1.0
-    combined[np.where(combined < 1.0)] = 0.0
+    observed = np.isfinite(stack).any(axis=0)
+    combined = np.where(observed, (np.nan_to_num(stack, nan=0.0) > 0).any(axis=0), 0).astype(np.float32)
+    combined[~observed] = nodata
+    meta.update(nodata=nodata)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with rasterio.open(out_path, "w", **meta) as dst:
-        dst.write(combined.astype(np.int32), 1)
+        dst.write(combined.astype(meta["dtype"]), 1)
 
     return out_path
 
@@ -583,7 +638,7 @@ def main():
             / "combined"
             / f"{cfg['product']}_{cfg['start']:%Y%m%dT%H%M%SZ}_{cfg['end']:%Y%m%dT%H%M%SZ}_{cfg['combine']}.tif"
         )
-        combine_rasters(raster_paths, combined, cfg["combine"])
+        combine_rasters(raster_paths, combined, cfg["combine"], cfg["nodata"])
         print(f"[ok] combined raster -> {combined}")
 
 

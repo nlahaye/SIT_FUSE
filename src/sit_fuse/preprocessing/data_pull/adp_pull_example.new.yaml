@@ -1,0 +1,40 @@
+# pull_adp.py example config (keys unchanged except the raster nodata and
+# quality.unobserved / quality.below_confidence additions).
+
+time_range:
+  start: "2024-07-23T00:00:00Z"
+  end:   "2024-08-15T23:59:59Z"
+
+bbox:
+  min_lon: -123.5
+  min_lat: 38.5
+  max_lon: -119.5
+  max_lat: 41.5
+
+product: smoke
+
+raster:
+  resolution_deg: 0.05
+  footprint_scale: 0.55
+  fill_value: 255     # NEW default (was 0): unobserved cells; must not be 0 or 1
+  # nodata: 255       # GeoTIFF nodata tag; defaults to fill_value (was hard-coded 0)
+  dtype: float32
+
+quality:
+  smoke_confidence: null      # null/all, high, medium, low, high_medium
+  dust_confidence: null
+  # ADP pixels written as unobserved instead of "no smoke":
+  #   fill    smoke not 0/1 (decoded _FillValue)
+  #   qc_bad  qc_flag smoke-confidence bits 2-3 == 11 (bad/missing)
+  #   cloud   product/cloud == 1 and smoke == 0
+  #   snowice product/snowice == 1 and smoke == 0
+  unobserved: [fill, qc_bad, cloud, snowice]
+  below_confidence: unobserved   # smoke outside smoke_confidence -> unobserved | negative
+
+combine: null        # any value -> combined_*.tif (1 smoke / 0 observed no smoke / nodata)
+
+output:
+  outdir: /home/nlahaye/SIT_FUSE/src/sit_fuse/preprocessing/data_pull/tempo_adp_out
+  keep_nc: true
+
+overwrite: true      # rasters must be regenerated with the new fill

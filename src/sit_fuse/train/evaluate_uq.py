@@ -37,7 +37,12 @@ Label levels (target.label_levels): every headline metric at the primary
 level (all primary-reference labels) and at the consensus level (negatives
 only where the consensus references confirm them), with bootstrap CIs for
 both, plus the two conflict strata (primary negative / consensus positive and
-the reverse) summarized by predicted probability and uncertainty.
+the reverse) summarized by predicted probability and uncertainty. The
+consensus level is assessed only on scenes where the consensus references are
+observed (all of them when require_all_observed), and is skipped with the
+reason and a coverage report when none are attached, fewer than
+evaluation.consensus_level.min_scenes scenes are covered, or fewer than
+min_negative_pixels consensus negatives exist.
 Bootstrap: percentile CIs over split_group resamples for headline metrics;
 paired differences vs evaluation.reference_model on identical resamples.
 
@@ -117,14 +122,64 @@ def _target_cfg(cfg, name=None):
 LEVEL_KEY = "consensus_level"   # d["refs"] key: primary labels at the consensus level
 
 
+def level_coverage(d, levels):
+    """Consensus references observed in a pixel sample, and whether the sample
+    can be assessed at the consensus level (all of them observed when
+    require_all_observed, otherwise any)."""
+    seen = [n for n in levels.names if n in d["refs"] and (d["refs"][n] >= 0).any()]
+    ok = len(seen) == len(levels.names) if levels.require_all_observed else bool(seen)
+    return ok, seen
+
+
 def add_level_reference(d, levels):
-    """Add primary labels at the consensus level to a pixel sample (in place)."""
+    """Add primary labels at the consensus level to a pixel sample (in place).
+
+    Scenes without the consensus references attached/observed get no
+    consensus-level labels at all; otherwise their primary positives alone
+    would enter the consensus level and bias it toward positives."""
     prim = d["refs"]["primary"]
+    covered, seen = level_coverage(d, levels)
+    d["level_covered"], d["level_refs_seen"] = covered, seen
+    if not covered:
+        d["refs"]["_cons"] = np.full(prim.size, -1)
+        d["refs"][LEVEL_KEY] = np.full(prim.size, -1)
+        return d
     labels = [d["refs"].get(n, np.full(prim.size, -1)) for n in levels.names]
     cons = combine_consensus(labels, levels.require_all_observed)
     d["refs"]["_cons"] = cons
     d["refs"][LEVEL_KEY] = levels.level_reference(prim, levels.levels(prim, cons), "consensus")
     return d
+
+
+def level_guard(parts, scenes_attached, levels, ev):
+    """Coverage of the consensus references over the evaluated scenes, and the
+    reason to skip the consensus level (None when it can be assessed)."""
+    gcfg = ev.get("consensus_level", {}) or {}
+    min_scenes = int(gcfg.get("min_scenes", 1))
+    min_neg = int(gcfg.get("min_negative_pixels", 100))
+    covered = [p for p in parts if p.get("level_covered")]
+    neg = levels.negative_class
+    n_neg = int(sum((p["refs"][LEVEL_KEY] == neg).sum() for p in covered))
+    attached = sorted({k for a in scenes_attached for k in a})
+    cov = {"n_scenes": len(parts), "n_scenes_covered": len(covered),
+           "require_all_observed": levels.require_all_observed,
+           "consensus_negative_pixels": n_neg,
+           "scenes_with_reference_attached": {n: int(sum(n in a for a in scenes_attached))
+                                              for n in levels.names},
+           "scenes_with_reference_observed": {n: int(sum(n in p.get("level_refs_seen", ()) for p in parts))
+                                              for n in levels.names},
+           "attached_not_configured": [k for k in attached if k not in levels.names],
+           "min_scenes": min_scenes, "min_negative_pixels": min_neg}
+    reason = None
+    if not any(cov["scenes_with_reference_attached"].values()):
+        reason = (f"no consensus reference ({', '.join(levels.names)}) is attached to any evaluated scene"
+                  + (f"; attached references are {cov['attached_not_configured']}"
+                     if cov["attached_not_configured"] else ""))
+    elif len(covered) < min_scenes:
+        reason = f"{len(covered)} scene(s) have the consensus references observed (< min_scenes={min_scenes})"
+    elif n_neg < min_neg:
+        reason = f"{n_neg} consensus negative pixels (< min_negative_pixels={min_neg})"
+    return covered, cov, reason
 
 
 def conflict_strata(d, levels, C):
@@ -855,6 +910,7 @@ def evaluate_model(cfg, model):
     eval_dir.mkdir(parents=True, exist_ok=True)
 
     per_scene, parts, per_counts, boot_parts, excl_counts = [], [], [], {}, []
+    scenes_attached = []
     levels = LabelLevels(cfg)
     for s in scenes:
         if not s.get("truth"):
@@ -866,6 +922,7 @@ def evaluate_model(cfg, model):
             continue
         if levels:
             add_level_reference(d, levels)
+            scenes_attached.append(set(s.get("additional_references") or {}))
         d["meta"] = {k: str(s.get(k, "")) for k in BREAKDOWNS + ("split_group",)}
         parts.append(d)
         boot_parts.setdefault(d["meta"]["split_group"], []).append(
@@ -895,8 +952,10 @@ def evaluate_model(cfg, model):
             row[f"mean_{u}"] = float(np.nanmean(a[m]))
         if levels:
             ml = d["refs"][LEVEL_KEY] >= 0
+            row["consensus_level_covered"] = bool(d["level_covered"])
+            row["consensus_refs_observed"] = ";".join(d["level_refs_seen"])
             row["consensus_level_pixels"] = int(ml.sum())
-            if ml.any():
+            if d["level_covered"] and ml.any():
                 hl = hard_metrics(d["pred"][ml], d["refs"][LEVEL_KEY][ml], d["w"][ml], C)
                 row["consensus_level_target_macro_iou"] = hl["target_macro_iou"]
                 row["consensus_level_error_rate"] = float(np.average(
@@ -923,21 +982,41 @@ def evaluate_model(cfg, model):
     scene_df.to_csv(eval_dir / "per_scene_metrics.csv", index=False)
 
     # multi-reference and consensus
+    level_ok = False
     if levels:
-        o_lvl, _ = evaluate_block(allp, LEVEL_KEY, C, thr, target_error, full=True)
-        neg = levels.negative_class
-        prim, lv = allp["refs"]["primary"], allp["refs"][LEVEL_KEY]
-        summary["by_label_level"] = {
-            "definition": levels.describe(),
-            "primary": headline(summary["overall"]),
-            "consensus": headline(o_lvl),
-            "primary_negative_pixels": int((prim == neg).sum()),
-            "consensus_negative_pixels": int((lv == neg).sum()),
-            "conflicts": conflict_strata(allp, levels, C),
-        }
-        summary["consensus_level_detail"] = o_lvl
-        if o_lvl is None:
-            LOG.warning("Consensus level: too few pixels (are %s attached to the evaluated scenes?)", levels.names)
+        covered, cov, reason = level_guard(parts, scenes_attached, levels, ev)
+        o_lvl = None
+        if reason is None:
+            sub = concat(covered)
+            o_lvl, _ = evaluate_block(sub, LEVEL_KEY, C, thr, target_error, full=True)
+            if o_lvl is None:
+                reason = "fewer than 10 consensus-level pixels on the covered scenes"
+        if reason is not None:
+            LOG.warning("Consensus level skipped: %s. Attach the consensus references with "
+                        "attach_references.py --add NAME=MATCHUPS (NAME must match "
+                        "target.label_levels.consensus_references).", reason)
+            summary["by_label_level"] = {"skipped": reason, "definition": levels.describe(),
+                                         "coverage": cov}
+        else:
+            level_ok = True
+            neg = levels.negative_class
+            prim, lv = sub["refs"]["primary"], sub["refs"][LEVEL_KEY]
+            o_prim_cov, _ = evaluate_block(sub, "primary", C, thr, target_error, full=True)
+            summary["by_label_level"] = {
+                "definition": levels.describe(),
+                "coverage": cov,
+                "primary": headline(summary["overall"]),
+                "primary_covered_scenes": headline(o_prim_cov),
+                "consensus": headline(o_lvl),
+                "primary_negative_pixels": int((prim == neg).sum()),
+                "consensus_negative_pixels": int((lv == neg).sum()),
+                "conflicts": conflict_strata(sub, levels, C),
+            }
+            summary["consensus_level_detail"] = o_lvl
+            if len(covered) < len(parts):
+                LOG.warning("Consensus level assessed on %d of %d scenes (consensus references "
+                            "not observed on the rest); compare with primary_covered_scenes.",
+                            len(covered), len(parts))
     extra = sorted(k for k in allp["refs"] if k not in ("primary", LEVEL_KEY, "_cons"))
     if extra:
         summary["by_reference"] = {}
@@ -1008,9 +1087,14 @@ def evaluate_model(cfg, model):
     reps = None
     if B > 0 and len(boot_parts) >= 2:
         reps = group_bootstrap(boot_parts, C, thr, target_error, B, seed)
-        if levels:
-            lr = group_bootstrap(boot_parts, C, thr, target_error, B, seed, ref_key=LEVEL_KEY)
-            reps = pd.concat([reps, lr.add_prefix("consensus_level_")], axis=1)
+        if level_ok:
+            cgroups = {p["meta"]["split_group"] for p in parts if p.get("level_covered")}
+            if len(cgroups) >= 2:
+                lr = group_bootstrap({g: boot_parts[g] for g in cgroups}, C, thr, target_error,
+                                     B, seed, ref_key=LEVEL_KEY)
+                reps = pd.concat([reps, lr.add_prefix("consensus_level_")], axis=1)
+            else:
+                LOG.warning("Consensus-level CIs need >= 2 covered evaluation groups; skipped.")
         reps.to_csv(eval_dir / "bootstrap_replicates.csv", index=False)
         summary["bootstrap_ci"] = {"level": float(bcfg.get("ci_level", 0.9)), "n_resamples": B,
                                    "unit": "split_group",
@@ -1040,7 +1124,7 @@ def main():
     for m in models:
         s, r, g = evaluate_model(cfg, m)
         row = {"model": m, **headline(s["overall"])}
-        if s.get("by_label_level"):
+        if (s.get("by_label_level") or {}).get("consensus"):
             row.update({f"consensus_level_{k}": v for k, v in s["by_label_level"]["consensus"].items()})
         for k, v in (s.get("bootstrap_ci", {}).get("metrics", {}) or {}).items():
             row[f"{k}_lo"], row[f"{k}_hi"] = v["lo"], v["hi"]

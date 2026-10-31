@@ -1,0 +1,65 @@
+# =============================================================================
+# SIT-FUSE <-> VIIRS Deep Blue aerosol-type smoke matchups (consensus reference)
+#
+# Run (same generator as ADP; only the config differs):
+#   python adp_matchup_generator.py viirs_matchup.yaml
+#
+# Input rasters (pull_viirs_aerosol_type.py):
+#   viirs_smoke_YYYYMMDDTHHMMSSZ_<PLATFORM>.tif   1 smoke / 0 not smoke / 255 unobserved
+#
+# Splits and excluded-cluster filtering are NOT applied here: this file is only
+# attached to the ADP matchups with
+#   python attach_references.py adp_smoke_classifier_matchups.yaml adp_multi_ref.yaml \
+#       --add viirs_aerosol_smoke=viirs_smoke_classifier_matchups.yaml
+# and every record inherits the ADP record's split.
+# =============================================================================
+
+time_range:                          # same range as adp_matchup.yaml
+  start: "2024-07-23T00:00:00Z"
+  end: "2024-07-31T23:59:59Z"
+
+sit_fuse:                            # identical to adp_matchup.yaml
+  directory: /data/nlahaye/output/Learnergy/SF_TEMPO_PARK/
+  patterns:
+    timestamp_patterns:
+      - "(?i)(\\d{8}T\\d{6}Z)"
+  context_free_filters:
+    include_patterns:
+      - "(?i)full_geo\\.tif$"
+    exclude_patterns:
+      - "(?i)Contour"
+      - "(?i)smoke"
+      - "(?i)ImFill"
+      - "(?i)Edged"
+      - "(?i)merged"
+      - "(?i)fire"
+
+# The generator's reference block is named adp_smoke; here it points at VIIRS.
+adp_smoke:
+  directory: /data/nlahaye/viirs_aerdb_out/rasters/
+  patterns:
+    include_patterns:
+      - "(?i)^viirs_smoke_"
+    timestamp_patterns:
+      - "(?i)^viirs_smoke_(\\d{8}T\\d{6}Z)_[A-Z0-9]+\\.tiff?$"
+
+matching:
+  # VIIRS overpasses are ~19:40-22:20 UTC over the Park fire; TEMPO scans are
+  # hourly. 1800 s pairs each overpass with the nearest scans on either side;
+  # tighten for fast-moving plumes, widen to reach more scans.
+  max_time_difference_seconds: 1800
+  allow_adp_reuse: true              # one overpass may serve several TEMPO scans
+  group_by: adp_timestamp
+
+classifier_config:
+  base_yaml: ./basic_clssifier.yaml
+
+output:
+  classifier_yaml: .//viirs_smoke_classifier_matchups.yaml
+  audit_csv: .//viirs_smoke_matchups_audit.csv
+  matchup_key: matchups
+
+encoder_split:
+  enabled: false                     # splits come from the ADP matchup file
+classifier_split:
+  enabled: false
