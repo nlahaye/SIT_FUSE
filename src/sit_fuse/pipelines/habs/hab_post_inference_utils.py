@@ -276,16 +276,17 @@ def update_config_zonal_hist(config_dict, yml_conf, gtiff_list, instrument, spec
     config_dict["data"]["label_gtiffs"] = label_gtiff_final
     
     config_dict["output"]["out_dir"] = os.path.dirname(full_file_list[0])
-    config_dict["output"]["class_name"] = "tiered_hab_" + USE_KEY_FNAME_MAP[species_run]
+    config_dict["output"]["class_name"] = "tiered_hab_" + instrument + "_" + USE_KEY_FNAME_MAP[species_run]
 
     if no_heir:
         config_dict["output"]["class_name"] = config_dict["output"]["class_name"] + "_no_heir"
 
     return config_dict
 
-def update_config_class_compare(config_dict, out_dir, species_run, no_heir = False):
 
-    fname_str = os.path.join(out_dir, "tiered_hab_" +  USE_KEY_FNAME_MAP[species_run])
+def update_config_class_compare(config_dict, out_dir, instrument, species_run, no_heir = False):
+
+    fname_str = os.path.join(out_dir, "tiered_hab_" +  instrument + "_" + USE_KEY_FNAME_MAP[species_run])
     if no_heir:
         fname_str = fname_str + "_no_heir"
     fname_str = fname_str + "_hist_dict.pkl"
@@ -467,7 +468,7 @@ def run_multi_tier_class_compare(yml_conf, species_run):
 
             #Generate config
             config_dict = copy.deepcopy(YAML_TEMPLATE_HEIR_CLASS_COMPARE)
-            config_dict = update_config_class_compare(config_dict, out_dir, species_run, no_heir = True)
+            config_dict = update_config_class_compare(config_dict, out_dir, instrument, species_run, no_heir = True)
 
             #Dump to file
             config_fname = build_config_fname_class_comp(config_dir, instrument, with_trop = trop)
