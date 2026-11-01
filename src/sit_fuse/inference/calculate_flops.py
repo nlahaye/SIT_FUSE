@@ -347,7 +347,7 @@ def get_model(yml_conf, n_visible):
         encoder_type=yml_conf["encoder_type"]
 
     encoder = None
-    if encoder_type is not None and  "dbn" in encoder_type:
+    if encoder_type is not None and  "dbn" in encoder_type and encoder_type != "rtdbn":
         model_type = tuple(yml_conf["dbn"]["model_type"])
         dbn_arch = tuple(yml_conf["dbn"]["dbn_arch"])
         gibbs_steps = tuple(yml_conf["dbn"]["gibbs_steps"])
@@ -387,7 +387,7 @@ def get_model(yml_conf, n_visible):
 
         encoder.load_state_dict(torch.load(enc_ckpt_path))
 
-        encoder.eval()
+        #encoder.eval()
 
     elif encoder_type is not None and encoder_type == "byol":
         save_dir_byol = yml_conf["output"]["out_dir"]
@@ -418,16 +418,16 @@ def get_model(yml_conf, n_visible):
         elif model_type == "DCE":
             m1 = DeepConvEncoder(in_chans)
             m1.load_state_dict(torch.load(encoder_ckpt_path))
-            m1 = m1.eval()
+            #m1 = m1.eval()
             output_dim = in_chans*8*tile_size*tile_size
             m2 =  MultiPrototypes(output_dim, num_classes, 1)
-            m2.eval()
+            #m2.eval()
             encoder = m1 #torch.nn.Sequential(m1, m2)
  
 
         for param in encoder.parameters():
             param.requires_grad = False
-        encoder.eval()
+        #encoder.eval()
 
     elif encoder_type is not None and encoder_type == "pca":
         encoder = PCAEncoder()
@@ -446,13 +446,14 @@ def get_model(yml_conf, n_visible):
     model = Heir_DC(None, pretrained_model_path=ckpt_path, num_classes=num_classes_heir, yml_conf=yml_conf, \
         encoder_type=encoder_type, encoder=encoder, clust_tree_ckpt = heir_ckpt_path, generate_labels = generate_labels)
     #summary(model=encoder, input_size=(1, 34, 64, 64), col_names=['input_size', 'output_size', 'num_params', 'trainable'])
-    model.eval()
+    #model.eval()
 
-    for key in model.clust_tree["1"].keys():
-        if model.clust_tree["1"][key] is not None:
-            model.clust_tree["1"][key].eval()
+    #for key in model.clust_tree["1"].keys():
+    #    if model.clust_tree["1"][key] is not None:
+    #        model.clust_tree["1"][key].eval()
           
     return model
+
 
 
 

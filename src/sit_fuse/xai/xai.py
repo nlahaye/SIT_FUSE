@@ -7,35 +7,37 @@ applicable U.S. export laws and regulations. User has the responsibility to obta
 required before exporting such information to foreign countries or providing access to foreign persons.
 """
 
-#General Imports
+# General Imports
+import argparse
+import hashlib
+import json
+import shap
+from sit_fuse.utils import read_yaml
+from sit_fuse.inference.generate_output import get_model
+from sit_fuse.datasets.dataset_utils import get_prediction_dataset
+from sit_fuse.models.deep_cluster.dbn_dc import DBN_DC
+from sit_fuse.models.deep_cluster.ijepa_dc import IJEPA_DC
+from sit_fuse.models.deep_cluster.dc import DeepCluster
+import torch.optim as opt
+import torch
+from joblib import load
+import pickle
+import matplotlib.pyplot as plt
 import os
 from glob import glob
 import numpy as np
-import matplotlib 
+import matplotlib
 matplotlib.use("Agg")
-import  matplotlib.pyplot as plt
 
-#Serialization
-import pickle
-from joblib import load
+# Serialization
 
 
-#ML Imports
-import torch
-import torch.optim as opt 
+# ML Imports
 
-from sit_fuse.models.deep_cluster.dc import DeepCluster
-from sit_fuse.models.deep_cluster.ijepa_dc import IJEPA_DC
-from sit_fuse.models.deep_cluster.dbn_dc import DBN_DC
-from sit_fuse.datasets.dataset_utils import get_prediction_dataset
-from sit_fuse.inference.generate_output import get_model
-from sit_fuse.utils import read_yaml
 
-#from torch.nn.parallel import DistributedDataParallel as DDP
-import shap
+# from torch.nn.parallel import DistributedDataParallel as DDP
 
-#Input Parsing
-import argparse
+# Input Parsing
 
 SEED = 42
 
@@ -48,8 +50,8 @@ torch.backends.cudnn.enabled = True
 # TODO: Parallel process shap values
 
 
-def load_model(yml_conf, n_visible = None):
-    
+def load_model(yml_conf, n_visible=None):
+
     num_loader_workers = int(yml_conf["data"]["num_loader_workers"])
     val_percent = int(yml_conf["data"]["val_percent"])
     batch_size = yml_conf["cluster"]["training"]["batch_size"]
@@ -59,15 +61,17 @@ def load_model(yml_conf, n_visible = None):
     save_dir = yml_conf["output"]["out_dir"]
     use_wandb_logger = yml_conf["logger"]["use_wandb"]
     if use_wandb_logger:
-        save_dir = os.path.join(yml_conf["output"]["out_dir"], yml_conf["logger"]["log_out_dir"])
-    ckpt_path = os.path.join(os.path.join(save_dir, "full_model"), "deep_cluster.ckpt")
-    ckpt_path_heir = os.path.join(os.path.join(save_dir, "full_model_heir"), "full_model_heir.ckpt")
-   
+        save_dir = os.path.join(
+            yml_conf["output"]["out_dir"], yml_conf["logger"]["log_out_dir"])
+    ckpt_path = os.path.join(os.path.join(
+        save_dir, "full_model"), "deep_cluster.ckpt")
+    ckpt_path_heir = os.path.join(os.path.join(
+        save_dir, "full_model_heir"), "full_model_heir.ckpt")
 
     model = None
-    
+
     if os.path.exists(ckpt_path_heir):
-         model = Heir_DC.load_from_checkpoint(ckpt_path_heir)
+        model = Heir_DC.load_from_checkpoint(ckpt_path_heir)
     else:
         if "encoder_type" in yml_conf:
             if yml_conf["encoder_type"] == "dbn":
@@ -75,11 +79,9 @@ def load_model(yml_conf, n_visible = None):
             elif yml_conf["encoder_type"] == "ijepa":
                 model = IJEPA_DC.load_from_checkpoint(ckpt_path)
         else:
-             model = DeepCluster.load_from_checkpoint(ckpt_path)
-
+            model = DeepCluster.load_from_checkpoint(ckpt_path)
 
     return final_model
-
 
 
 def wrap(x):
@@ -87,7 +89,7 @@ def wrap(x):
     Reshapes from (channel, row, col) to (# pixels, channel) or (N_samples, N_features)
     """
     x = np.array(x)
-    orig_shape =  x.shape
+    orig_shape = x.shape
     x = np.moveaxis(x, 0, 2)
     x = np.reshape(x, (x.shape[0] * x.shape[1], x.shape[2]))
     print(f"Wrapped {orig_shape} to {x.shape}.")
@@ -103,7 +105,7 @@ def unwrap(x, shape):
     Returns:
         Reshaped array.
     """
-    # TODO: Support chan_dim != 0 
+    # TODO: Support chan_dim != 0
     orig_shape = x.shape
     print(orig_shape)
     x = np.reshape(x, (shape[1], shape[2], shape[0]))
@@ -122,35 +124,34 @@ def filled_array(x, fill=0.):
 
 
 def forward_numpy(x, model):
-        """Performs a forward pass over the data.
+    """Performs a forward pass over the data.
 
-        Args:
-            x: An input np.ndarray that will be converted to a tensor for computing the forward pass.
+    Args:
+        x: An input np.ndarray that will be converted to a tensor for computing the forward pass.
 
-        Returns:
-            (np.ndarray): An array containing the DBN's outputs.
-        """
-        numpy_to_torch_dtype_dict = {
-            np.dtype(np.bool)        : torch.bool,
-            np.dtype(np.uint8)       : torch.uint8,
-            np.dtype(np.int8)        : torch.int8,
-            np.dtype(np.int16)       : torch.int16,
-            np.dtype(np.int32)       : torch.int32,
-            np.dtype(np.int64)       : torch.int64,
-            np.dtype(np.float16)     : torch.float16,
-            np.dtype(np.float32)     : torch.float32,
-            np.dtype(np.float64)     : torch.float64,
-            np.dtype(np.complex64)   : torch.complex64,
-            np.dtype(np.complex128)  : torch.complex128
-        }
+    Returns:
+        (np.ndarray): An array containing the DBN's outputs.
+    """
+    numpy_to_torch_dtype_dict = {
+        np.dtype(np.bool): torch.bool,
+        np.dtype(np.uint8): torch.uint8,
+        np.dtype(np.int8): torch.int8,
+        np.dtype(np.int16): torch.int16,
+        np.dtype(np.int32): torch.int32,
+        np.dtype(np.int64): torch.int64,
+        np.dtype(np.float16): torch.float16,
+        np.dtype(np.float32): torch.float32,
+        np.dtype(np.float64): torch.float64,
+        np.dtype(np.complex64): torch.complex64,
+        np.dtype(np.complex128): torch.complex128
+    }
 
-        dt = numpy_to_torch_dtype_dict[x.dtype]
-        t = torch.from_numpy(x).cuda()
-        y = model.forward(t)
-        y = y.detach().cpu().numpy()
+    dt = numpy_to_torch_dtype_dict[x.dtype]
+    t = torch.from_numpy(x).cuda()
+    y = model.forward(t)
+    y = y.detach().cpu().numpy()
 
-        return y
-
+    return y
 
 
 def most_frequent_labels(data):
@@ -160,10 +161,9 @@ def most_frequent_labels(data):
     Returns: 
         Array of labels (# labels) sorted by frequency of occurence
     """
-   
 
     if data.shape[1] > 1:
-        labels = np.argmax(data, axis = 1)
+        labels = np.argmax(data, axis=1)
     else:
         labels = data.astype(np.int32)
     unique_labels, frequency = np.unique(labels, return_counts=True)
@@ -171,15 +171,13 @@ def most_frequent_labels(data):
     sorted_by_freq = unique_labels[sorted_indexes]
 
     return sorted_by_freq
-        
 
 
-def dims_from_indices(indices, n_channels, chan_dim = 0):
+def dims_from_indices(indices, n_channels, chan_dim=0):
     t = np.moveaxis(np.transpose(indices), chan_dim, 0)
     dims = (n_channels, np.max(t[1]) + 1, np.max(t[2]) + 1)
     np.moveaxis(dims, 0, chan_dim)
     return dims
-
 
 
 def get_background(background_type, data: np.ndarray, n_samples=None):
@@ -188,23 +186,38 @@ def get_background(background_type, data: np.ndarray, n_samples=None):
     elif background_type == "sample":
         background = shap.sample(data, n_samples)
     elif background_type == "zero":
-        background = np.zeros((1,data.shape[1]), dtype=data.dtype)
+        background = np.zeros((1, data.shape[1]), dtype=data.dtype)
     else:
         background = data
     return background
 
 
-
-def save_summary_plot(out_dir, shap_values, X, label, feature_names): 
-    filename = f"shap_summary_plot_{label}.png"  
+def save_summary_plot(out_dir, shap_values, X, label, feature_names):
+    filename = f"shap_summary_plot_{label}.png"
     print(f"Saving {os.path.join(out_dir, filename)}...")
     print(feature_names)
-    p = shap.plots.violin(shap_values, features=X, feature_names=feature_names, plot_type="layered_violin")
-    #p = shap.summary_plot(shap_values, show=False, color_bar=True, feature_names=feature_names) #feature_names=feature_names, show=False, color_bar=True)
-    plt.savefig(os.path.join(out_dir, filename), bbox_inches='tight', pad_inches=0.2, dpi=400)
+    p = shap.plots.violin(shap_values, features=X,
+                          feature_names=feature_names)
+    # p = shap.summary_plot(shap_values, show=False, color_bar=True, feature_names=feature_names) #feature_names=feature_names, show=False, color_bar=True)
+    plt.savefig(os.path.join(out_dir, filename),
+                bbox_inches='tight', pad_inches=0.2, dpi=400)
     plt.clf()
     plt.cla()
     plt.close()
+
+    #shap.plots.waterfall(shap_values)
+    #plt.savefig(os.path.join(out_dir, f"shap_waterfall_plot_{label}.png"), bbox_inches='tight', pad_inches=0.2, dpi=400)
+    
+    #plt.clf()
+    #plt.cla()
+    #plt.close()
+
+    #shap.plots.beeswarm(shap_values, order=np.abs(shap_values).max(0))
+    #plt.savefig(os.path.join(out_dir, f"shap_beeswarm_plot_{label}.png"), bbox_inches='tight', pad_inches=0.2, dpi=400)
+
+    #plt.clf()
+    #plt.cla()
+    #plt.close()
 
 
 def save_shap(shap_values, filename):
@@ -213,23 +226,115 @@ def save_shap(shap_values, filename):
         pickle.dump(shap_values, f)
 
 
+def explain(f, dataset: np.ndarray, background: np.ndarray, link, output_names, out_dir, explanation_fname="explanation.pkl", nsamples="auto", rs=SEED):
 
-def explain(f, dataset: np.ndarray, background: np.ndarray, link, output_names, out_dir, explanation_fname="explanation.pkl"):
-        
     print("Calculating shap values...")
     if link not in ['identity', 'logit']:
         link = 'identity'
-    explainer = shap.KernelExplainer(f, background, link=link, output_names=output_names, algorithm="deep")
+    explainer = shap.KernelExplainer(
+        f, background, link=link)
     print(dataset.shape, dataset.min(), dataset.max(), dataset.mean())
-    explanation = explainer(dataset)
+    # KernelExplainer's callable API does not forward the coalition budget.
+    random_state = np.random.get_state()
+    try:
+        np.random.seed(rs)
+        values = explainer.shap_values(dataset, nsamples=nsamples)
+    finally:
+        np.random.set_state(random_state)
+    if isinstance(values, list):
+        values = values[0] if len(values) == 1 else np.stack(values, axis=-1)
+    values = np.asarray(values)
+    if values.ndim == 3 and values.shape[-1] == 1:
+        values = values[..., 0]
+    base_shape = (len(dataset),) if values.ndim == 2 else (len(dataset), values.shape[-1])
+    explanation = shap.Explanation(
+        values=values,
+        base_values=np.broadcast_to(np.asarray(explainer.expected_value).squeeze(), base_shape),
+        data=dataset,
+        output_names=list(output_names) if values.ndim == 3 else None,
+    )
     save_shap(explanation, os.path.join(out_dir, explanation_fname))
-        
+
     return explanation
+
+
+def xai_options(yml_conf, **overrides):
+    options = {
+        "max_samples_per_cluster": 200,
+        "max_windows_per_cluster": 200,
+        "batch_size": 512,
+        "max_evals": None,
+        "seed": SEED,
+    }
+    options.update({key: value for key, value in yml_conf.get("xai", {}).items()
+                    if key in options})
+    options.update({key: value for key, value in overrides.items()
+                    if key in options and value is not None})
+    for key in options:
+        if options[key] is not None:
+            options[key] = int(options[key])
+    for key in ("max_samples_per_cluster", "max_windows_per_cluster"):
+        if options[key] < 0:
+            raise ValueError(f"xai.{key} must be nonnegative (0 means all).")
+    for key in ("batch_size", "max_evals"):
+        if options[key] is not None and options[key] <= 0:
+            raise ValueError(f"xai.{key} must be positive.")
+    if options["seed"] < 0 or options["seed"] >= 2**32:
+        raise ValueError("xai.seed must be in [0, 2**32).")
+    return options
+
+
+def sample_cluster_indices(labels, max_per_cluster, seed=SEED):
+    """Keep rare clusters and deterministically sample larger clusters; 0 keeps all."""
+    if max_per_cluster < 0:
+        raise ValueError("max_per_cluster must be nonnegative.")
+    labels = np.asarray(labels).reshape(-1)
+    rng = np.random.default_rng(seed)
+    selected = []
+    for label in np.unique(labels):
+        inds = np.flatnonzero(labels == label)
+        if max_per_cluster and len(inds) > max_per_cluster:
+            inds = rng.choice(inds, size=max_per_cluster, replace=False)
+        selected.extend(inds)
+    return np.sort(np.asarray(selected, dtype=np.int64))
+
+
+def prepare_explanation_model(model, device):
+    model.eval()
+    # Hierarchical heads live in ordinary dictionaries, not registered modules.
+    for tier in getattr(model, "clust_tree", {}).values():
+        for head in tier.values():
+            if isinstance(head, torch.nn.Module):
+                head.to(device)
+                head.eval()
+
+
+def make_batched_output_fn(model, device, batch_size=512, temporal=False):
+    """Bound device memory while retaining hierarchical labels or RTDBN probabilities."""
+    if batch_size <= 0:
+        raise ValueError("batch_size must be positive.")
+    prepare_explanation_model(model, device)
+
+    def f(x):
+        outputs = []
+        with torch.no_grad():
+            for start in range(0, len(x), batch_size):
+                t = torch.from_numpy(np.ascontiguousarray(x[start:start + batch_size])).to(device)
+                if temporal:
+                    output = torch.nn.functional.softmax(model(t.float()), dim=1)
+                else:
+                    _, output, _, _ = model.forward(t, return_embed=False)
+                outputs.append(output.detach().cpu().numpy())
+        if not outputs:
+            width = model.num_classes if temporal else 1
+            return np.empty((0, width), dtype=np.float32)
+        return np.concatenate(outputs, axis=0)
+    return f
 
 
 
 def main(**kwargs):
-    
+
     # TODO: Finish argparse params
     if 'yaml' in kwargs:
         yml_conf = read_yaml(kwargs['yaml'])
@@ -237,123 +342,176 @@ def main(**kwargs):
         raise Exception('No yaml path specified.')
     if 'masker' in kwargs:
         masker = kwargs['masker']
-    else: 
+    else:
         masker = 'uniform_fill'
-    if 'max_evals' in kwargs:
-        max_evals = kwargs['max_evals']
-    else:
-        max_evals =  2 * 100**2 + 1
-    if 'batch_size' in kwargs:
-        batch_size = kwargs['batch_size']
-    else:
-        batch_size = 50
-    
+    options = xai_options(yml_conf, **kwargs)
+
     out_dir = yml_conf['output']['out_dir']
     clusters = yml_conf['cluster']['num_classes']
     fill_value = yml_conf['data']['fill_value']
     n_channels = yml_conf['data']['number_channels']
     chan_dim = yml_conf['data']['chan_dim']
-    
-    #loop over multiple files + subsample
+
+    # loop over multiple files + subsample
     # Load train and test data
-    data, _ = get_prediction_dataset(yml_conf, yml_conf["data"]["files_test"][0])
+    data, _ = get_prediction_dataset(
+        yml_conf, yml_conf["data"]["files_train"])
 
     # Load model and scaler
-    model = get_model(yml_conf, data.data_full.shape[1]).cuda()
-    
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = get_model(yml_conf, data.data_full.shape[1]).to(device)
+    get_output = make_batched_output_fn(model, device, options["batch_size"])
+    if len(data.data_full) == 0:
+        raise ValueError("No samples available for SHAP.")
+    output = get_output(data.data_full)
+    predicted_labels = (np.argmax(output, axis=1) if output.shape[1] > 1
+                        else output.reshape(-1))
+    selected = sample_cluster_indices(
+        predicted_labels, options["max_samples_per_cluster"], options["seed"])
+    dat = data.data_full[selected]
+    output = output[selected]
+    os.makedirs(out_dir, exist_ok=True)
+
     # Subset? (yes: (0:200, 0:600))
-    #row_min, row_max = 0, 200
-    #col_min, col_max = 0, 600
-    #new_dims = np.moveaxis(np.array([n_channels, row_max, col_max]), 0, chan_dim)
-    
-    #if row_min and col_min and row_max and col_max:
+    # row_min, row_max = 0, 200
+    # col_min, col_max = 0, 600
+    # new_dims = np.moveaxis(np.array([n_channels, row_max, col_max]), 0, chan_dim)
+
+    # if row_min and col_min and row_max and col_max:
     #    data_train = data_train[:,row_min:row_max,col_min:col_max]
     #    data_test = data_test[:,row_min:row_max,col_min:col_max]
-    
-    #print("Data: ", data_test.shape)
-        
-    # Preprocess data 
-    #data_train = scaler.transform(wrap(data_train))
-    #data_test = scaler.transform(wrap(data_test))
-    #print("Model input: ", data_test.shape)
-    
+
+    # print("Data: ", data_test.shape)
+
+    # Preprocess data
+    # data_train = scaler.transform(wrap(data_train))
+    # data_test = scaler.transform(wrap(data_test))
+    # print("Model input: ", data_test.shape)
+
     # Set explain params
-    overwrite = False #True
-    link = "identity" #'logit'
+    overwrite = False  # True
+    link = "identity"  # 'logit'
     background_type = 'zero'
-    background = get_background(background_type, data.data_full)
-    
+    background = get_background(background_type, dat)
+
     # ============================== EXPLANATION ===============================
-    
+
     labels = [x for x in range(clusters)]
     label_names = map(str, labels)
-  
-    def get_output(x):
-        _, output, _, _ = model.forward(torch.from_numpy(x).to(model.encoder.device), return_embed=False)
-        output = output.detach().cpu().numpy()
-        return output
-  
-    #f = lambda x: (model.forward(torch.from_numpy(x).to(model.encoder.device)).detach().cpu().numpy()) 
-    if not overwrite and os.path.exists(os.path.join(out_dir, "explanation_kmeans_background.pkl")) and os.path.exists(os.path.join(out_dir, "shap_values_kmeans_background.npz")):
+
+    explanation_path = os.path.join(out_dir, "explanation_kmeans_background.pkl")
+    values_path = os.path.join(out_dir, "shap_values_kmeans_background.npz")
+    indices_path = os.path.join(out_dir, "explanation_sample_indices.npy")
+    settings_path = os.path.join(out_dir, "explanation_settings.json")
+    settings = dict(options, input_shape=list(data.data_full.shape),
+                    input_file=yml_conf["data"]["files_test"][0],
+                    input_dtype=dat.dtype.str,
+                    input_digest=hashlib.sha256(np.ascontiguousarray(dat).tobytes()).hexdigest(),
+                    config_digest=hashlib.sha256(
+                        json.dumps(yml_conf, sort_keys=True, default=str).encode()).hexdigest())
+    save_dir = out_dir
+    logger = yml_conf.get("logger", {})
+    if logger.get("use_wandb"):
+        save_dir = os.path.join(save_dir, logger["log_out_dir"])
+    checkpoints = {}
+    for directory in ("encoder", "full_model", "full_model_heir"):
+        for path in sorted(glob(os.path.join(save_dir, directory, "**", "*"), recursive=True)):
+            if os.path.isfile(path) and path.endswith((".ckpt", ".pkl", ".pt", ".pth")):
+                stat = os.stat(path)
+                checkpoints[path] = [stat.st_size, stat.st_mtime_ns]
+    settings["checkpoints"] = checkpoints
+    cache_matches = False
+    if all(os.path.exists(path) for path in
+           (explanation_path, values_path, indices_path, settings_path)):
+        with open(settings_path) as f:
+            cache_matches = json.load(f) == settings
+        cache_matches = cache_matches and np.array_equal(np.load(indices_path), selected)
+    if not overwrite and cache_matches:
 
         print("LOADING SHAP FILES")
-        explanation = np.load(os.path.join(out_dir, "explanation_kmeans_background.pkl"), allow_pickle=True)
-        shap_values = np.array(np.load(os.path.join(out_dir, "shap_values_kmeans_background.npz"), allow_pickle=True))   
-    
-    else:
-        #print("HERE", data.data_full.shape, data.data_full[0:10000].shape)
-        ## Compute with zero background
-        #explanation = explain(get_output, data.data_full[0:10000], background, link=link, 
-        #                    output_names=label_names, out_dir=out_dir, 
-        #                    explanation_fname="explanation_zero_background.pkl")
-        #shap_values = explanation.values
-        #save_shap(shap_values, os.path.join(out_dir, "shap_values_zero_background.npz"))
-    
-        # Also compute with kmeans background 
-        #background = get_background('kmeans', data.data_full[0:10000], n_samples=1000)
-        explanation = explain(get_output, data.data_full, background, link=link, 
-                            output_names=label_names, out_dir=out_dir, 
-                            explanation_fname="explanation_kmeans_background.pkl")
-        shap_values = explanation.values
-        save_shap(shap_values, os.path.join(out_dir, "shap_values_kmeans_background.npz"))
+        with open(explanation_path, "rb") as f:
+            explanation = pickle.load(f)
+        with open(values_path, "rb") as f:
+            shap_values = pickle.load(f)
 
-    
+    else:
+        # print("HERE", data.data_full.shape, data.data_full[0:10000].shape)
+        # Compute with zero background
+        # explanation = explain(get_output, data.data_full[0:10000], background, link=link,
+        #                    output_names=label_names, out_dir=out_dir,
+        #                    explanation_fname="explanation_zero_background.pkl")
+        # shap_values = explanation.values
+        # save_shap(shap_values, os.path.join(out_dir, "shap_values_zero_background.npz"))
+
+        # Also compute with kmeans background
+        # background = get_background('kmeans', data.data_full[0:10000], n_samples=1000)
+        explanation = explain(get_output, dat, background, link=link,
+                              output_names=label_names, out_dir=out_dir,
+                              explanation_fname="explanation_kmeans_background.pkl",
+                              nsamples=options["max_evals"] or "auto", rs=options["seed"])
+        shap_values = explanation.values
+        save_shap(shap_values, values_path)
+        np.save(indices_path, selected)
+        with open(settings_path, "w") as f:
+            json.dump(settings, f)
+
+
+    """ 
+    shap.plots.waterfall(explanation)
+    plt.savefig(os.path.join(out_dir, f"shap_waterfall_plot.png"), bbox_inches='tight', pad_inches=0.2, dpi=400)
+
+    plt.clf()
+    plt.cla()
+    plt.close()
+
+    shap.plots.beeswarm(explanation)
+    plt.savefig(os.path.join(out_dir, f"shap_beeswarm_plot.png"), bbox_inches='tight', pad_inches=0.2, dpi=400)
+
+    plt.clf()
+    plt.cla()
+    plt.close()
+    """
+
     print("Shap values shape: ", np.array(shap_values).shape)
     print("HERE")
-    print("Shap explanation shape: ", np.array(explanation).shape)  
+    print("Shap explanation shape: ", np.array(explanation).shape)
     print("HERE2")
 
     # ================================ PLOTTING ================================
-    
-    shap_out_dir = os.path.join(out_dir, "shap plots")
+
+    shap_out_dir = os.path.join(out_dir, "shap_plots")
     os.makedirs(shap_out_dir, exist_ok=True)
     print(shap_out_dir)
-    
-    #feature_names = ["chan_" + str(i) for i in range(data.data_full.shape[1])]
-     
-    plot_by_freq = False #True
-    output = get_output(data.data_full)
+
+    # feature_names = ["chan_" + str(i) for i in range(data.data_full.shape[1])]
+
+    plot_by_freq = False  # True
     labels_by_freq = most_frequent_labels(output)
     print("Most significant labels: ", labels_by_freq)
-   
+
     padding = yml_conf['data']['pixel_padding']
     tile_size = padding*2 + 1
-    dat = data.data_full
-    if tile_size > 1: 
-        dat = dat.reshape((shap_values.shape[0], int(shap_values.shape[1] / (tile_size**2)), tile_size, tile_size))
+    if tile_size > 1:
+        dat = dat.reshape((shap_values.shape[0], int(
+            shap_values.shape[1] / (tile_size**2)), tile_size, tile_size))
         dat = dat.reshape((dat.shape[0], dat.shape[1], -1))
-        dat = np.moveaxis(dat, 1,2)
+        dat = np.moveaxis(dat, 1, 2)
         dat = dat.reshape((dat.shape[0]*dat.shape[1], dat.shape[2]))
 
-        shap_values = shap_values.reshape((shap_values.shape[0], int(shap_values.shape[1] / (tile_size**2)), tile_size, tile_size))
-        shap_values = shap_values.reshape((shap_values.shape[0], shap_values.shape[1], -1))       
-        shap_values = np.moveaxis(shap_values, 1,2)
-        shap_values = shap_values.reshape((shap_values.shape[0]*shap_values.shape[1], shap_values.shape[2]))
+        shap_values = shap_values.reshape((shap_values.shape[0], int(
+            shap_values.shape[1] / (tile_size**2)), tile_size, tile_size))
+        shap_values = shap_values.reshape(
+            (shap_values.shape[0], shap_values.shape[1], -1))
+        shap_values = np.moveaxis(shap_values, 1, 2)
+        shap_values = shap_values.reshape(
+            (shap_values.shape[0]*shap_values.shape[1], shap_values.shape[2]))
+        output = np.repeat(output, tile_size**2, axis=0)
 
-        #dat = np.max(dat, axis=(2,3)).reshape((shap_values.shape[0], shap_values.shape[1]))
-        #shap_values = np.max(shap_values, axis=(2,3)).reshape((shap_values.shape[0], shap_values.shape[1]))
+        # dat = np.max(dat, axis=(2,3)).reshape((shap_values.shape[0], shap_values.shape[1]))
+        # shap_values = np.max(shap_values, axis=(2,3)).reshape((shap_values.shape[0], shap_values.shape[1]))
 
-    feature_names = np.array(["chan_" + str(i) for i in range(shap_values.shape[1])])
+    feature_names = np.array(["chan_" + str(i)
+                             for i in range(shap_values.shape[1])])
 
     print("HERE SHAP VALUES", shap_values.shape)
     if plot_by_freq:
@@ -362,53 +520,62 @@ def main(**kwargs):
             if len(inds) < 1:
                 continue
 
-            save_summary_plot(out_dir, shap_values[inds,:], dat[inds,:], label, feature_names)
+            save_summary_plot(
+                out_dir, shap_values[inds, :], dat[inds, :], label, feature_names)
     else:
         for label in labels:
             inds = np.where(output == label)[0]
             if len(inds) < 1:
                 continue
 
-            save_summary_plot(out_dir, shap_values[inds,:], dat[inds,:], label, feature_names)
-            
+            save_summary_plot(
+                out_dir, shap_values[inds, :], dat[inds, :], label, feature_names)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # TODO: remove nargs='?' from -y switch
-    parser.add_argument("-y", "--yaml", nargs='?', help="YAML file for cluster discretization.")
+    parser.add_argument("-y", "--yaml", nargs='?',
+                        help="YAML file for cluster discretization.")
     parser.add_argument("-m", "--masker", nargs='?', help="Masker type.")
-    parser.add_argument("-e", "--max-evals", nargs='?', help="Number of evaluations of underlying model.")
-    parser.add_argument("-b", "--batch-size", nargs='?', help="Batch size for explanation.")
-    args = parser.parse_args()    
+    parser.add_argument("-e", "--max-evals", type=int,
+                        help="Coalition samples per SHAP/TimeSHAP explanation.")
+    parser.add_argument("-b", "--batch-size", type=int,
+                        help="Maximum inference batch size (default: 512).")
+    parser.add_argument("--max-samples-per-cluster", type=int,
+                        help="Spatial samples per predicted cluster (default: 200; 0: all).")
+    parser.add_argument("--max-windows-per-cluster", type=int,
+                        help="RTDBN windows per predicted cluster (default: 200; 0: all).")
+    parser.add_argument("--seed", type=int, help="Sampling seed (default: 42).")
+    args = parser.parse_args()
     from timeit import default_timer as timer
     start = timer()
     # TODO: update params
-    main(yaml=args.yaml)
+    main(**vars(args))
     end = timer()
-    print(end - start) # Time in seconds, e.g. 5.38091952400282
+    print(end - start)  # Time in seconds, e.g. 5.38091952400282
 
-    #cleanup_ddp()
+    # cleanup_ddp()
 
 
 # def get_masker(masker, shape, fill):
 #     """
 #         args:
 #             masker: string id of desired masker
-#             shape: int tuple dimensions (bands, rows, cols) of data 
-#             fill: fill/no-data value for model  
+#             shape: int tuple dimensions (bands, rows, cols) of data
+#             fill: fill/no-data value for model
 #     """
-    
+
 #     img_dims = shape
 #     print("Image masker shape: ", img_dims)
-    
+
 #     if shape[0] == 1:
 #         partition_scheme = 0
 #     else:
 #         partition_scheme = 1
-        
+
 #     print("Partition scheme: ", partition_scheme)
-    
+
 #     if masker == 'masker_inpaint_telea':
 #         return shap.maskers.Image("inpaint_telea", img_dims, partition_scheme=partition_scheme)
 #     if masker == 'masker_inpaint_ns':

@@ -221,11 +221,21 @@ class Heir_DC(pl.LightningModule):
     def forward(self, x, perturb = False, train=False, return_embed=False):
         #TODO fix for multi-head
 
+
+        
+
+        if isinstance(x, list):
+            x = torch.cat(x, dim=0)
+            #tile_size = x[0].shape[0]
+            #dt = x[0].dtype
+        #else:
         tile_size = x.shape[0]
+
         if x.ndim > 2:
             tile_size = x.shape[2]
 
         dt = x.dtype
+
         y = self.pretrained_model.forward(x)
         #print(y.shape, "Y_SHAPE")
  
@@ -633,6 +643,7 @@ def get_state_dict(clust_tree, lab_full):
 def load_model(clust_tree, n_visible, model, state_dict, device, ijepa=False, num_classes=100):
         lab_full = state_dict["labels"]
         pytorch_total_params = 0
+        tmp_params = 0
         for lab1 in clust_tree.keys():
             if lab1 == "0":
                 continue
@@ -646,8 +657,10 @@ def load_model(clust_tree, n_visible, model, state_dict, device, ijepa=False, nu
                     #else:
                     clust_tree[lab1][lab2] = MultiPrototypes(n_visible, model.num_classes, model.number_heads).to(device)
                     clust_tree[lab1][lab2].load_state_dict(state_dict[lab1][lab2]["model"])
-                    pytorch_total_params = pytorch_total_params + sum(p.numel() for p in model.parameters())
+                    tmp_params = tmp_params + sum(p.numel() for p in clust_tree[lab1][lab2].parameters())
+        pytorch_total_params = pytorch_total_params + sum(p.numel() for p in model.parameters())
         print("PARAMS 2", pytorch_total_params)
+        print("PARAMS 3", tmp_params)
         return clust_tree, lab_full
 
 

@@ -488,7 +488,7 @@ for i in range(len(tiffs)):
     dat = gdal.Open(tiff)
  
     #x = dat.ReadAsArray()[[1823,1043,900],:,:]
-    x = dat.ReadAsArray()[[606, 464, 313],:,:]
+    x = dat.ReadAsArray()[[606, 464, 313],:,:] #UV Bands
     print(x.shape)
 
     geoTransform = dat.GetGeoTransform()

@@ -30,6 +30,7 @@ from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes
 from tqdm import tqdm
 
 import argparse
+import csv
 import os
 import numpy as np
 import sys
@@ -104,9 +105,11 @@ def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled 
                     output, embed  = mdl.forward(dat_dev, return_embed=return_embed)
                 else:
                     output = mdl.forward(dat_dev)
-
-                output_prob = torch.max(torch.nn.functional.softmax(output, dim=1), dim=1).values 
-                output = torch.argmax(torch.nn.functional.softmax(output, dim=1), dim=1)
+ 
+                torch.max(output, dim=1).values 
+                output = torch.argmax(output, dim=1)
+                #output_prob = torch.max(torch.nn.functional.softmax(output, dim=1), dim=1).values 
+                #output = torch.argmax(torch.nn.functional.softmax(output, dim=1), dim=1)
                 #print("HERE", output.shape, torch.unique(output))
             end_time = time.time()
             inference_times.append(end_time - start_time)
@@ -343,7 +346,7 @@ def get_model(yml_conf, n_visible):
         encoder_type=yml_conf["encoder_type"]
 
     encoder = None
-    if encoder_type is not None and  "dbn" in encoder_type:
+    if encoder_type is not None and  "dbn" in encoder_type and encoder_type != "rtdbn":
         model_type = tuple(yml_conf["dbn"]["model_type"])
         dbn_arch = tuple(yml_conf["dbn"]["dbn_arch"])
         gibbs_steps = tuple(yml_conf["dbn"]["gibbs_steps"])
@@ -449,6 +452,7 @@ def get_model(yml_conf, n_visible):
             model.clust_tree["1"][key].eval()
           
     return model
+
 
 
 

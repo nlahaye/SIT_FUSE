@@ -1,0 +1,48 @@
+reuse_context: False #True
+
+prob: False
+#no_heir: True
+no_heir: False 
+validation_only: True
+config_dir: "D:\\Users\\charlotte.rhoads\\Desktop\\HAB\\SIT_FUSE\\src\\sit_fuse\\config/"
+geo_zarr: "Z:\\2026\\Summer\\Southern California Bight HABs\\cal_coast_geo.zarr"
+ 
+insitu_file: "Z:\\2026\\Summer\\Southern California Bight HABs\\in_situ_nick_data\\combined_full.csv" #HAB_S_CA_Combined.csv" #combined_full.csv"
+insitu_matchup_circle_max_radius: [0.09]
+start_date: "2024-03-06"
+end_date: "2025-04-01" #"2025-12-31"
+clusters: 120000
+
+roi: "california"
+
+final_product_dir: "Z:\\2026\\Summer\\Southern California Bight HABs\\validation_testrun/"
+ 
+instruments: 
+ pace:
+   no_trop: 
+      "out_dir": "Z:\\2026\\Summer\\Southern California Bight HABs\\Context_Free_Products\\PACE_OCI_context_free_layer_2/"
+ s3a: 
+  no_trop:  
+      "out_dir": "Z:\\2026\\Summer\\Southern California Bight HABs\\Context_Free_Products\\S3A_OLCI_context_free_layer_2/"
+ s3b:
+  no_trop:  
+      "out_dir": "Z:\\2026\\Summer\\Southern California Bight HABs\\Context_Free_Products\\S3B_OLCI_context_free_layer_2/"
+ jpss1:
+  no_trop:  
+      "out_dir": "Z:\\2026\\Summer\\Southern California Bight HABs\\Context_Free_Products\\JPSS1_VIIRS_context_free_layer_2/"
+ jpss2:
+  no_trop:  
+      "out_dir": "Z:\\2026\\Summer\\Southern California Bight HABs\\Context_Free_Products\\JPSS2_VIIRS_context_free_layer_2/"
+ modis:
+  no_trop:  
+      "out_dir": "Z:\\2026\\Summer\\Southern California Bight HABs\\Context_Free_Products\\AQUA_MODIS_context_free_layer_2/"
+ snpp:
+  no_trop:  
+      "out_dir": "Z:\\2026\\Summer\\Southern California Bight HABs\\Context_Free_Products\\SNPP_VIIRS_context_free_layer_2/"
+ #troposif: No SIF data for 2024-2025 cases
+ #goes18:  
+ # no_trop: 
+ #'     "out_dir": "/data/nlahaye/output/Learnergy/GOES18_ABI_ONLY_S_CA/"
+
+
+run_resample: False 

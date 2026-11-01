@@ -4,6 +4,28 @@ description: >-
   example config for each encoder type.
 cover: ../../../.gitbook/assets/Screenshot 2024-04-23 at 9.07.28 PM.png
 coverY: -245.8125
+layout:
+  width: default
+  cover:
+    visible: true
+    size: hero
+    mask: none
+  title:
+    visible: true
+  description:
+    visible: true
+  tableOfContents:
+    visible: true
+  outline:
+    visible: true
+  pagination:
+    visible: true
+  metadata:
+    visible: true
+  tags:
+    visible: true
+  actions:
+    visible: true
 ---
 
 # Training and Dataset Generation

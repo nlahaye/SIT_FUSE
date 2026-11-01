@@ -1,0 +1,22 @@
+# Step 1: SIT-FUSE head export (run in the SIT-FUSE environment)
+sit_fuse_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/tempo_park_st_bb.yaml   # same YAML used for training/inference
+output_dir: /data/nlahaye/output/Learnergy/SF_TEMPO_PARK/UQ
+files: null                 # explicit input list (highest priority)
+# Export exactly the inputs referenced by the matchup generator output
+# (sit_fuse_input; covers files_train and files_test scenes). output_dir must
+# equal head_outputs.directory in the generator YAML.
+matchup_file: output_multi_adp_hms.yaml #/home/nlahaye/SIT_FUSE/src/sit_fuse/train/adp_smoke_classifier_matchups.yaml  # e.g. /data/nlahaye/experiments/hms_context_free/hms_smoke_classifier_matchups.yaml
+matchup_splits: [dev, calibration, holdout]
+input_lists: [files_test]   # used when files and matchup_file are null
+head_export:
+  top_k_parent: 5
+  top_k_child: 3
+  n_parent_ranks: 2         # evaluate child heads for the top-2 parents (<= top_k_parent)
+  batch_size: 10000
+georef:
+  reference_geotiffs: null  # list aligned with files; null/[] or per-entry null -> fall back to input files
+  use_input_files: auto     # auto | true | false: when no reference is given, use the input file grid,
+                            # then data.geo_reader_type lat/lon from the SIT-FUSE YAML
+  latlon_order: auto        # auto | lat_lon | lon_lat (e.g., emit_geo returns [lon, lat])
+  n_gcps: 20                # GCPs per axis for swath (non-regular) lat/lon
+  subset_inds: null         # list aligned with files, [r0, r1, c0, c1] or []

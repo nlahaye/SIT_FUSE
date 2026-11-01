@@ -5,6 +5,28 @@ description: >-
 cover: >-
   ../../../.gitbook/assets/https___cdn.cnn.com_cnnnext_dam_assets_181110074810-15-california-wildfires-1109.jpg
 coverY: 0
+layout:
+  width: default
+  cover:
+    visible: true
+    size: hero
+    mask: none
+  title:
+    visible: true
+  description:
+    visible: true
+  tableOfContents:
+    visible: true
+  outline:
+    visible: true
+  pagination:
+    visible: true
+  metadata:
+    visible: true
+  tags:
+    visible: true
+  actions:
+    visible: true
 ---
 
 # Combination, Collocation, and Resampling
