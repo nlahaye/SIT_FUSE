@@ -17,6 +17,8 @@ import yaml
 from rasterio.transform import from_origin
 
 
+# NOAA STAR research archive (request-only since 2026; returns 403 without
+# access). Override with source.base_url, or use source.mode: local.
 BASE_URL = "https://www.star.nesdis.noaa.gov/pub/smcd/TEMPO_latest/ADP/"
 
 
@@ -124,6 +126,15 @@ def validate_config(cfg: dict) -> dict:
     if below_conf not in {"unobserved", "negative"}:
         raise ValueError("quality.below_confidence must be unobserved or negative")
 
+    # Where netCDFs come from: remote (list + download, reusing files already
+    # in raw_nc) or local (only netCDFs already on disk; nothing downloaded).
+    source = cfg.get("source", {}) or {}
+    mode = str(source.get("mode", "remote")).lower()
+    if mode not in {"remote", "local"}:
+        raise ValueError("source.mode must be remote or local")
+    outdir = Path(cfg["output"]["outdir"])
+    local_dirs = [Path(p) for p in (source.get("local_dirs") or [outdir / "raw_nc"])]
+
     combine = cfg.get("combine", None)
     if combine not in {None, "max", "sum", "count", "mean"}:
         raise ValueError("combine must be one of null, max, sum, count, mean")
@@ -143,17 +154,24 @@ def validate_config(cfg: dict) -> dict:
         "dust_confidence": dust_conf,
         "combine": combine,
         "overwrite": bool(cfg.get("overwrite", False)),
-        "outdir": Path(cfg["output"]["outdir"]),
+        "source_mode": mode,
+        "base_url": str(source.get("base_url", BASE_URL)),
+        "local_dirs": local_dirs,
+        "outdir": outdir,
         "keep_nc": bool(cfg["output"].get("keep_nc", True)),
         "footprint_scale": footprint_scale,
     }
 
 
-def list_daily_files(day: dt.date) -> list[tuple[dt.datetime, str]]:
-    day_url = urljoin(BASE_URL, f"{day:%Y%m%d}/")
+def list_daily_files(day: dt.date, base_url: str = BASE_URL) -> list[tuple[dt.datetime, str]]:
+    day_url = urljoin(base_url, f"{day:%Y%m%d}/")
     r = requests.get(day_url, timeout=60)
     if r.status_code == 404:
         return []
+    if r.status_code in (401, 403):
+        raise RuntimeError(f"HTTP {r.status_code} listing {day_url}: the archive is not publicly "
+                           "readable. Use source.mode: local (or --local-only) to process "
+                           "netCDFs already on disk, or set source.base_url to an endpoint you can access.")
     r.raise_for_status()
 
     matches = FILENAME_RE.finditer(r.text)
@@ -171,10 +189,30 @@ def list_daily_files(day: dt.date) -> list[tuple[dt.datetime, str]]:
     return sorted(results, key=lambda x: x[0])
 
 
-def filter_files_in_time_range(start: dt.datetime, end: dt.datetime) -> list[tuple[dt.datetime, str]]:
+def list_local_files(dirs: list[Path], start: dt.datetime, end: dt.datetime) -> list[tuple[dt.datetime, Path]]:
+    """ADP netCDFs already on disk (searched recursively), filtered to the
+    time range the same way as the remote listing (by date). Duplicate file
+    names keep the first directory listed."""
+    found: dict[str, tuple[dt.datetime, Path]] = {}
+    for d in dirs:
+        if not d.is_dir():
+            print(f"[warn] local netCDF directory not found: {d}")
+            continue
+        for p in sorted(d.rglob("*.nc")):
+            m = FILENAME_RE.fullmatch(p.name)
+            if not m or p.name in found:
+                continue
+            ts = dt.datetime.strptime(m.group("ts"), "%Y%m%dT%H%M%S")
+            if start.date() <= ts.date() <= end.date():
+                found[p.name] = (ts, p)
+    return sorted(found.values(), key=lambda x: x[0])
+
+
+def filter_files_in_time_range(start: dt.datetime, end: dt.datetime,
+                               base_url: str = BASE_URL) -> list[tuple[dt.datetime, str]]:
     files = []
     for day in daterange(start, end):
-        daily = list_daily_files(day)
+        daily = list_daily_files(day, base_url)
         for ts, url in daily:
             if start.date() <= ts.date() <= end.date():
                 files.append((ts, url))
@@ -603,12 +641,28 @@ def main():
         description="Pull TEMPO-ABI ADP data using a YAML config."
     )
     parser.add_argument("config", type=Path, help="Path to YAML config file")
+    parser.add_argument("--local-only", action="store_true",
+                        help="only process netCDFs already on disk (source.local_dirs, default "
+                             "<outdir>/raw_nc); no listing or downloads")
+    parser.add_argument("--nc-dir", type=Path, action="append", default=None,
+                        help="local netCDF directory (repeatable; replaces source.local_dirs)")
     args = parser.parse_args()
 
     cfg_raw = load_config(args.config)
     cfg = validate_config(cfg_raw)
+    if args.local_only:
+        cfg["source_mode"] = "local"
+    if args.nc_dir:
+        cfg["local_dirs"] = args.nc_dir
 
-    files = filter_files_in_time_range(cfg["start"], cfg["end"])
+    local = cfg["source_mode"] == "local"
+    if local:
+        files = list_local_files(cfg["local_dirs"], cfg["start"], cfg["end"])
+        print(f"[local] {len(files)} ADP netCDFs in {', '.join(map(str, cfg['local_dirs']))}")
+        if not cfg["keep_nc"]:
+            print("[local] output.keep_nc=false ignored: local netCDFs are never deleted")
+    else:
+        files = filter_files_in_time_range(cfg["start"], cfg["end"], cfg["base_url"])
     if not files:
         print("No files found in requested time range.")
         sys.exit(0)
@@ -617,14 +671,16 @@ def main():
 
     for ts, url in files:
         try:
-            nc_name = Path(url).name
-            local_nc = cfg["outdir"] / "raw_nc" / f"{ts:%Y%m%d}" / nc_name
-            download_file(url, local_nc, overwrite=cfg["overwrite"])
+            if local:
+                local_nc = Path(url)
+            else:
+                local_nc = cfg["outdir"] / "raw_nc" / f"{ts:%Y%m%d}" / Path(url).name
+                download_file(url, local_nc, overwrite=cfg["overwrite"])
             out_raster = process_one_file(local_nc, cfg, ts)
             raster_paths.append(out_raster)
             print(f"[ok] processed {ts} -> {out_raster}")
 
-            if not cfg["keep_nc"] and local_nc.exists():
+            if not local and not cfg["keep_nc"] and local_nc.exists():
                 local_nc.unlink()
 
         except Exception as e:
