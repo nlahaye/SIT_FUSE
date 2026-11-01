@@ -1,0 +1,20 @@
+clusters: 120000
+clusters_dir: /mnt/data1/HAB_COMBINED_2024_2025_SPLIT/S3B_OLCI_no_trop/
+end_date: '2025-02-28'
+global_max: 10000000
+input_file_type: S3B_OLCI_ERRNT_no_heir
+output_key: s3b_pDA_no_heir
+radius_degrees:
+- 0.09
+ranges:
+- 0
+- 0.1
+- 1
+- 10
+- 100
+- 1000
+- 10000000
+save_hists: true
+start_date: '2024-03-01'
+use_key: pDA
+xl_fname: /mnt/data1/la_hab_data/combined_full_071426.csv

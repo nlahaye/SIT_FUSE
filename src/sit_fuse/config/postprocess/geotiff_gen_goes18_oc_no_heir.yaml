@@ -1,0 +1,22 @@
+context:
+  apply_context: true
+  background_class: 1
+  clusters:
+  - []
+  - []
+  - []
+  - []
+  - []
+  - []
+  compare_truth: false
+  generate_union: false
+  name: alexandrium_bloom
+data:
+  clust_reader_type: zarr_to_numpy
+  cluster_fnames: &id001 []
+  create_separate: false
+  gtiff_data: *id001
+  reader_kwargs:
+    no_arg: no_arg
+  subset_inds: []
+gen_from_geotiffs: true

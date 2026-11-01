@@ -1,0 +1,13 @@
+dirname: /mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/MERGED_TEST_10082025/JPSS2_VIIRS
+fname_str: pseudo_nitzschia_seriata_bloom
+gen_daily: false
+gen_monthly: true
+input_paths:
+- ''
+- ''
+- /mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/JPSS2_VIIRS_no_trop
+max_class: 5
+max_dqi: 2
+num_classes: 6
+out_dir: /mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/MERGED_TEST_10082025/JPSS2_VIIRS
+re_index: 3

@@ -1,0 +1,10 @@
+fname_str: DAY.particulate_domoic_acid.tif
+gen_daily: true
+gen_monthly: false
+input_paths:
+- ''
+- ''
+- /mnt/data1/HAB_COMBINED_2024_2025_SPLIT/AQUA_MODIS_no_trop
+num_classes: 6
+out_dir: /mnt/data1/HAB_COMBINED_2024_2025_SPLIT/MERGED_TEST_FULL_2/AQUA_MODIS
+re_index: 12

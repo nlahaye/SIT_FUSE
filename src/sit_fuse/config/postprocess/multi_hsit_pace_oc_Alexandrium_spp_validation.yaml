@@ -1,0 +1,18 @@
+clusters: 120000
+clusters_dir: /mnt/data/HAB_COMBINED_RUNS/MERGED_TEST_10082025/PACE_OCI
+end_date: '2025-12-31'
+global_max: 10000000
+input_file_type: daily_alexandrium
+radius_degrees:
+- 0.09
+ranges:
+- 0
+- 1000
+- 10000
+- 100000
+- 1000000
+- 10000000
+- 100000000
+start_date: '2024-01-01'
+use_key: Alexandrium_spp
+xl_fname: /mnt/data/la_hab_data/combined_full.csv

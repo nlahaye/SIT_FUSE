@@ -1,0 +1,40 @@
+
+
+start_lon: 32.0
+end_lon: 44.0
+start_lat: 12.0
+end_lat: 29.0
+
+geo_zarr: 
+ oc_geo_fpattern: "/mnt/data/gulf_of_mex_geo.zarr"
+ out_dir: "/mnt/data/"
+ out_uid: "gulf_of_mex_geo"
+ 
+
+sif_dir: "/mnt/data/TROPOSIF/"
+train_min_date: "20180101"
+train_max_date: "20190530"
+
+roi: "gulf_of_mexico"
+output: "/mnt/data/HAB_MODEL_WEIGHTS/GOM/"
+
+config_dir: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/"
+
+
+instruments:
+
+ #JPSS2_VIIRS:
+ # no_trop:
+ #  run_preprocess_and_scale: True
+ #  input_oc_dir: "/mnt/data/REFLECTANCES/JPSS2_VIIRS/"
+ #  input_oc_re:  '(JPSS2_VIIRS\.(\d{8})\.L3m\.DAY\.)RRS.*\.4km.*nc'
+
+ JPSS1_VIIRS:
+  no_trop:
+   run_preprocess_and_scale: False
+   input_oc_dir: "/mnt/data/REFLECTANCES/JPSS1_VIIRS/"
+   input_oc_re: '(JPSS1_VIIRS\.(\d{8})\.L3m\.DAY\.)RRS.*\.4km.*nc'
+
+
+
+

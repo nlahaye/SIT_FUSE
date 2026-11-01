@@ -1,0 +1,20 @@
+clusters: 120000
+clusters_dir: /mnt/data1/HAB_COMBINED_2024_2025_SPLIT/JPSS2_VIIRS_no_trop/
+end_date: '2025-02-28'
+global_max: 10000000
+input_file_type: JPSS2_VIIRS
+output_key: jpss2_Pseudo_nitzschia_delicatissima_group
+radius_degrees:
+- 0.09
+ranges:
+- 0
+- 1000
+- 10000
+- 100000
+- 1000000
+- 10000000
+- 100000000
+save_hists: true
+start_date: '2024-03-01'
+use_key: Pseudo_nitzschia_delicatissima_group
+xl_fname: /mnt/data1/la_hab_data/combined_full_071426.csv

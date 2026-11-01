@@ -1,0 +1,10 @@
+fname_str: DAY.alexandrium_bloom.tif
+gen_daily: true
+gen_monthly: false
+input_paths:
+- ''
+- ''
+- /mnt/data/HAB_COMBINED_RUNS/PACE_OCI_no_trop
+num_classes: 6
+out_dir: /mnt/data/HAB_COMBINED_RUNS/MERGED_TEST_10082025/PACE_OCI
+re_index: 5

@@ -1,0 +1,123 @@
+cluster:
+  gauss_noise_stdev:
+  - 0.01
+  heir:
+    gauss_noise_stdev:
+    - 0.01
+    lambda: 1.0
+    num_classes: 100
+    tiers: 1
+    training:
+      accelerator: gpu
+      batch_size: 1000
+      devices: 1
+      epochs: 30
+      gradient_clip_val: 0.1
+      learning_rate: 0.0001
+      min_samples: 1000
+      precision: 16-mixed
+      save_dir: wandb_dbn_full_model_heir
+  lambda: 1.0
+  num_classes: 800
+  training:
+    accelerator: gpu
+    batch_size: 1000
+    devices: 1
+    epochs: 30
+    gradient_clip_val: 0.1
+    learning_rate: 0.0001
+    precision: 16-mixed
+    save_dir: wandb_full_model
+data:
+  chan_dim: 0
+  delete_chans: []
+  files_test: []
+  files_train: []
+  fill_value: -999.0
+  num_loader_workers: 10
+  number_channels: 5
+  output_subset_count: 1
+  pixel_padding: 1
+  reader_kwargs:
+    end_lat: 38.94
+    end_lon: -116.0
+    mask_oceans: true
+    nrt: true
+    start_lat: 30.0
+    start_lon: -128.0
+  reader_type: s3_oc
+  scale_data: true
+  subset_count: 1
+  tile: false
+  tile_size:
+  - 3
+  - 3
+  - 32
+  tile_step:
+  - 1
+  - 1
+  - 32
+  transform_default:
+    chans: []
+    transform: []
+  val_percent: 0.1
+  valid_max: 64000000
+  valid_min: -30000.0
+dbn:
+  batch_normalize:
+  - false
+  - false
+  dbn_arch:
+  - 2000
+  - 1000
+  gibbs_steps:
+  - 1
+  - 1
+  model_type:
+  - gaussian_selu
+  - gaussian_selu
+  normalize_learnergy:
+  - false
+  - true
+  temp:
+  - 1.0
+  - 1.0
+encoder:
+  overwrite_model: false
+  subset_training: 2000000
+  tiled: false
+  training:
+    accelerator: gpu
+    batch_size: 128
+    devices: 1
+    epochs: 30
+    gradient_clip_val: 0.1
+    learning_rate:
+    - 1.0e-05
+    - 1.0e-05
+    momentum:
+    - 0.95
+    - 0.95
+    nesterov_accel:
+    - true
+    - true
+    precision: 16-mixed
+    save_dir: wandb_encoder
+    stratify_data:
+      kmeans: true
+    weight_decay:
+    - 0.0001
+    - 0.0001
+  tune_scaler: false
+encoder_type: dbn
+logger:
+  log_model: true
+  log_out_dir: wandb_dbn
+  project: SIT-FUSE
+  use_wandb: true
+output:
+  generate_intermediate_output: true
+  generate_train_output: true
+  out_dir: /mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/S3B_OLCI_no_trop
+scaler:
+  name: standard
