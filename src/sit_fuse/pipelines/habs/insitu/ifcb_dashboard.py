@@ -3,7 +3,10 @@ California IFCB Network (https://ifcb.caloos.org, WHOI ifcbdb dashboard API)
 -> CalHABMAP-format cells/L.
 
 Per bin:
-  /api/export_metadata/{dataset}      bin list (pid, sample_time, ml_analyzed, lat, lon, depth, skip)
+  /api/export_metadata/{dataset}?start_date=&end_date=&include_skip=false
+                                      bin list, requested in monthly chunks (the
+                                      unbounded export streams the full archive
+                                      slowly and the server drops the connection) (pid, sample_time, ml_analyzed, lat, lon, depth, skip)
   /{dataset}/{pid}_class_scores.csv   per-ROI classifier scores
   /data/{pid}_features.csv            per-ROI morphology (RepresentativeWidth, MinorAxisLength, EquivDiameter)
 Concentration = (ROIs assigned to class) / ml_analyzed * 1000  [cells/L, ROI-based].
@@ -22,16 +25,22 @@ Caveats encoded as provenance/sigma, not hidden:
 from __future__ import annotations
 
 import io
+import logging
+import time
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from sit_fuse.pipelines.habs.insitu.calhabmap_format import DEFAULT_SIGMA_DEX, to_calhabmap
 
 DASHBOARD = "https://ifcb.caloos.org"
+USER_AGENT = "SIT-FUSE-HAB-insitu/1.0 (+https://github.com/nasa-jpl/SIT_FUSE)"
+log = logging.getLogger(__name__)
 
 # dataset -> (Location_Code shared with the co-located CalHABMAP pier, so the
 # leakage-safe split groups pier microscopy and IFCB together)
@@ -95,50 +104,107 @@ DEFAULTS = {
     "size_classes_um": [2, 20, 200],   # extra_IFCB_nano (2-20 um ESD), extra_IFCB_micro (20-200 um)
     "keep_class_columns": False,   # write extra_ifcb_<class> for every class
     "cache_dir": None,
+    "max_bins_per_day": None,      # e.g. 6 -> evenly subsample bins per site-day (each bin = 2 requests)
+    "chunk_months": 1,             # metadata request span
+    "request_delay_s": 0.1,        # pause between requests
+    "retries": 5,                  # per request, exponential backoff on dropped connections / 429 / 5xx
+    "timeout_s": 180,
 }
 
 
 class IFCBDashboard:
-    def __init__(self, base: str = DASHBOARD, timeout: int = 120, cache_dir: str | None = None):
-        self.base, self.timeout = base.rstrip("/"), timeout
+    def __init__(self, base: str = DASHBOARD, timeout: int = 180, cache_dir: str | None = None,
+                 retries: int = 5, delay: float = 0.1, chunk_months: int = 1):
+        self.base, self.timeout, self.delay, self.chunk = base.rstrip("/"), timeout, delay, chunk_months
         self.cache = Path(cache_dir) if cache_dir else None
         if self.cache:
             self.cache.mkdir(parents=True, exist_ok=True)
         self.s = requests.Session()
+        self.s.headers.update({"User-Agent": USER_AGENT})
+        retry = Retry(total=retries, connect=retries, read=retries, status=retries, backoff_factor=2.0,
+                      status_forcelist=(429, 500, 502, 503, 504), allowed_methods=("GET",),
+                      respect_retry_after_header=True, raise_on_status=False)
+        self.s.mount("https://", HTTPAdapter(max_retries=retry))
+        self.s.mount("http://", HTTPAdapter(max_retries=retry))
 
-    def _csv(self, path: str) -> pd.DataFrame | None:
+    def _get(self, path: str, params: dict | None = None) -> requests.Response | None:
+        url = f"{self.base}/{path.lstrip('/')}"
+        for attempt in range(2):   # one extra fresh-connection attempt after urllib3 retries
+            try:
+                r = self.s.get(url, params=params, timeout=self.timeout)
+                time.sleep(self.delay)
+                return r
+            except (requests.ConnectionError, requests.Timeout) as e:
+                log.warning("IFCB request failed (%s) %s %s", e.__class__.__name__, url, params or "")
+                self.s.close()
+                time.sleep(10 * (attempt + 1))
+        return None
+
+    def _csv(self, path: str, params: dict | None = None) -> pd.DataFrame | None:
+        f = None
         if self.cache:
-            f = self.cache / path.strip("/").replace("/", "__")
+            key = path.strip("/").replace("/", "__")
+            if params:
+                key += "__" + "_".join(f"{k}-{v}" for k, v in sorted(params.items()))
+            f = self.cache / key
             if f.exists():
-                return pd.read_csv(f)
-        r = self.s.get(f"{self.base}/{path.lstrip('/')}", timeout=self.timeout)
+                return pd.read_csv(f) if f.stat().st_size else None
+        r = self._get(path, params)
+        if r is None:
+            return None                     # transient failure: not cached, retried next run
         if not r.ok or not r.text.strip():
+            if f is not None and r.status_code == 404:
+                f.write_text("")            # empty query (e.g. no bins that month)
             return None
-        if self.cache:
+        if f is not None:
             f.write_text(r.text)
         return pd.read_csv(io.StringIO(r.text))
 
     def datasets(self) -> list[str]:
-        return self.s.get(f"{self.base}/api/list_datasets", timeout=self.timeout).json()["datasets"]
+        r = self._get("api/list_datasets")
+        return r.json()["datasets"] if r is not None and r.ok else []
 
     def bins(self, dataset: str, start=None, end=None) -> pd.DataFrame:
-        m = self._csv(f"api/export_metadata/{dataset}")
-        if m is None or m.empty:
+        if start is None:
+            start = "2016-01-01"            # California IFCB Network archive start
+        t0 = pd.Timestamp(start).tz_localize(None).normalize()
+        t1 = (pd.Timestamp(end).tz_localize(None) if end is not None else pd.Timestamp.now("UTC").tz_localize(None))
+        parts = []
+        a = t0
+        while a < t1:
+            b = min(a + pd.DateOffset(months=self.chunk), t1)
+            # server end_date is inclusive (+1 day); trim to [start, end) below
+            m = self._csv(f"api/export_metadata/{dataset}",
+                          {"start_date": a.strftime("%Y-%m-%d"),
+                           "end_date": (b - pd.Timedelta("1D")).strftime("%Y-%m-%d"),
+                           "include_skip": "false"})
+            if m is not None and not m.empty:
+                parts.append(m)
+            a = b
+        if not parts:
             return pd.DataFrame()
+        m = pd.concat(parts, ignore_index=True).drop_duplicates("pid")
         m["sample_time"] = pd.to_datetime(m["sample_time"], utc=True, errors="coerce")
-        if start is not None:
-            m = m[m["sample_time"] >= pd.Timestamp(start, tz="UTC")]
-        if end is not None:
-            m = m[m["sample_time"] < pd.Timestamp(end, tz="UTC")]
+        m = m[(m["sample_time"] >= t0.tz_localize("UTC")) & (m["sample_time"] < t1.tz_localize("UTC"))]
         if "skip" in m:
             m = m[pd.to_numeric(m["skip"], errors="coerce").fillna(0) == 0]
-        return m.reset_index(drop=True)
+        return m.sort_values("sample_time").reset_index(drop=True)
 
     def class_scores(self, dataset: str, pid: str):
         return self._csv(f"{dataset}/{pid}_class_scores.csv")
 
     def features(self, pid: str):
         return self._csv(f"data/{pid}_features.csv")
+
+
+def _subsample_per_day(meta: pd.DataFrame, k: int) -> pd.DataFrame:
+    """Keep k bins per day, evenly spaced in time (cruise datasets are left intact by caller)."""
+    day = meta["sample_time"].dt.floor("D")
+    keep = []
+    for _, g in meta.groupby(day):
+        idx = np.unique(np.linspace(0, len(g) - 1, min(k, len(g))).round().astype(int))
+        keep.append(g.iloc[idx])
+    return pd.concat(keep) if keep else meta
 
 
 def bin_counts(scores: pd.DataFrame, feats: pd.DataFrame | None, cfg: dict[str, Any]) -> dict[str, float]:
@@ -200,19 +266,24 @@ def pull_ifcb(datasets: list[str], start, end, cfg: dict[str, Any] | None = None
               location_codes: dict[str, str] | None = None, max_bins: int | None = None) -> pd.DataFrame:
     cfg = {**DEFAULTS, **(cfg or {})}
     codes = {**IFCB_PIER_CODES, **(location_codes or {})}
-    api = IFCBDashboard(cache_dir=cfg.get("cache_dir"))
+    api = IFCBDashboard(timeout=cfg["timeout_s"], cache_dir=cfg.get("cache_dir"), retries=cfg["retries"],
+                        delay=cfg["request_delay_s"], chunk_months=cfg["chunk_months"])
     rows = []
     for ds in datasets:
         meta = api.bins(ds, start, end)
         if meta.empty:
+            log.warning("IFCB %s: no bins in %s - %s", ds, start, end)
             continue
         meta = meta[pd.to_numeric(meta["ml_analyzed"], errors="coerce") >= cfg["min_ml_analyzed"]]
         if cfg["aggregate"] == "window":
             h0, h1 = cfg["window_utc_hours"]
             hr = meta["sample_time"].dt.hour
             meta = meta[(hr >= h0) & (hr < h1)]
+        if cfg.get("max_bins_per_day") and ds not in CRUISE_DATASETS:
+            meta = _subsample_per_day(meta, int(cfg["max_bins_per_day"]))
         if max_bins:
             meta = meta.head(max_bins)
+        log.info("IFCB %s: %d bins", ds, len(meta))
         for _, b in meta.iterrows():
             sc = api.class_scores(ds, b["pid"])
             if sc is None or sc.empty:
