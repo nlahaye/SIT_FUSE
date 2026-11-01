@@ -7,12 +7,12 @@ description: >-
 # Config Options
 
 <pre data-full-width="true"><code><strong>encoder_type: The type of encoder used in the model architecture. 
-</strong>    Valid values are "dbn", "ijepa", and "byol".
+</strong>    Valid values are "dbn", "rtdbn", "ijepa", and "byol".
     
 encoder: Options that are shared across encoder types. 
     Specifics are detailed in page linked below.
     
-&#x3C;encoder type specific sections>: Sections named "dbn:", "byol:", and "ijepa:"
+&#x3C;encoder type specific sections>: Sections named "dbn:", "rtdbn:", "byol:", and "ijepa:"
     are only needed relative to the encoder_type selected above. Each type has its
     own page linked below.
     
