@@ -87,6 +87,12 @@ def run_hab_post_inference_pipeline(yml_conf):
             yml_conf["validation"] = {}
         yml_conf["validation"][run] = validation_output
 
+    # Optional probabilistic / UQ products, evaluation and multi-sensor fusion
+    if yml_conf.get("run_uq", False) and "uq" in yml_conf:
+        from sit_fuse.pipelines.habs.uq.hab_uq_pipeline import run_hab_uq_pipeline
+        stages = tuple(yml_conf["uq"].get("stages", ["train", "evaluate", "infer", "fuse"]))
+        yml_conf["uq_summary"] = run_hab_uq_pipeline(yml_conf, stages)
+
     out_fname = os.path.join(yml_conf["final_product_dir"], "final_output")
     os.makedirs(out_fname, exist_ok=True)
 
