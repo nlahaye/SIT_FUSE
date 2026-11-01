@@ -1,8 +1,9 @@
 clusters: 120000
-clusters_dir: Z:\2026\Summer\Southern California Bight HABs\Context_Free_Products\AQUA_MODIS_context_free_layer_2/
-end_date: '2025-04-01'
+clusters_dir: /mnt/data1/HAB_COMBINED_2024_2025_SPLIT/AQUA_MODIS_no_trop/
+end_date: '2025-02-28'
 global_max: 10000000
 input_file_type: AQUA_MODIS
+output_key: modis_Pseudo_nitzschia_seriata_group
 radius_degrees:
 - 0.09
 ranges:
@@ -13,6 +14,7 @@ ranges:
 - 1000000
 - 10000000
 - 100000000
-start_date: '2024-03-06'
+save_hists: true
+start_date: '2024-03-01'
 use_key: Pseudo_nitzschia_seriata_group
-xl_fname: Z:\2026\Summer\Southern California Bight HABs\in_situ_nick_data\combined_full.csv
+xl_fname: /mnt/data1/la_hab_data/combined_full_071426.csv

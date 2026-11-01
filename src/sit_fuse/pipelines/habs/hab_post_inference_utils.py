@@ -69,9 +69,9 @@ def build_config_fname_multi_hist(config_dir, instrument, species_run, no_heir =
     return config_fname
 
 
-def build_config_fname_gtiff_gen(config_dir, instrument, no_heir = True, with_trop = False, is_final = False):
+def build_config_fname_gtiff_gen(config_dir, instrument, species_run, no_heir = True, with_trop = False, is_final = False):
 
-    config_fname = os.path.join(config_dir, "postprocess", "geotiff_gen_" + instrument + "_oc")
+    config_fname = os.path.join(config_dir, "postprocess", "geotiff_gen_" + instrument + "_oc_" + species_run)
     if with_trop:
         config_fname = config_fname + "_trop"
     if no_heir:
@@ -83,9 +83,9 @@ def build_config_fname_gtiff_gen(config_dir, instrument, no_heir = True, with_tr
     return config_fname
 
 
-def build_config_fname_zonal_hist(config_dir, instrument, with_trop = False):
+def build_config_fname_zonal_hist(config_dir, instrument, species_run, with_trop = False):
 
-    config_fname = os.path.join(config_dir, "postprocess", "zonal_histogram_" + instrument + "_oc")
+    config_fname = os.path.join(config_dir, "postprocess", "zonal_histogram_" + instrument + "_oc_" + species_run)
     if with_trop:
         config_fname = config_fname + "_trop"
 
@@ -184,7 +184,7 @@ def update_config_cf_gtiff_gen(fdir, config, instrument, geo_zarr_path, proba = 
 
 
  
-def update_config_multi_hist(out_dir, config_dict, yml_conf, instrument, species_key, no_heir = True, validation = False):
+def update_config_multi_hist(out_dir, config_dict, yml_conf, instrument, species_key, no_heir = True, validation = False, save_hists = False):
 
     config_dict["xl_fname"] = yml_conf["insitu_file"]
     config_dict["radius_degrees"] = yml_conf["insitu_matchup_circle_max_radius"]
@@ -201,8 +201,13 @@ def update_config_multi_hist(out_dir, config_dict, yml_conf, instrument, species
     elif validation:
         config_dict["input_file_type"] =  'daily' + VALIDATION_INSTRUMENT_SUFFIX[species_key]
         
-
-    
+    config_dict["save_hists"] = save_hists
+    config_dict["output_key"] = instrument + "_" + species_key
+    if no_heir:
+        config_dict["output_key"] = config_dict["output_key"] + "_no_heir"
+    if validation:
+        config_dict["output_key"] = config_dict["output_key"] + "_validation"
+ 
     return config_dict
 
 
@@ -271,16 +276,17 @@ def update_config_zonal_hist(config_dict, yml_conf, gtiff_list, instrument, spec
     config_dict["data"]["label_gtiffs"] = label_gtiff_final
     
     config_dict["output"]["out_dir"] = os.path.dirname(full_file_list[0])
-    config_dict["output"]["class_name"] = "tiered_hab_" + USE_KEY_FNAME_MAP[species_run]
+    config_dict["output"]["class_name"] = "tiered_hab_" + instrument + "_" + USE_KEY_FNAME_MAP[species_run]
 
     if no_heir:
         config_dict["output"]["class_name"] = config_dict["output"]["class_name"] + "_no_heir"
 
     return config_dict
 
-def update_config_class_compare(config_dict, out_dir, species_run, no_heir = False):
 
-    fname_str = os.path.join(out_dir, "tiered_hab_" +  USE_KEY_FNAME_MAP[species_run])
+def update_config_class_compare(config_dict, out_dir, instrument, species_run, no_heir = False):
+
+    fname_str = os.path.join(out_dir, "tiered_hab_" +  instrument + "_" + USE_KEY_FNAME_MAP[species_run])
     if no_heir:
         fname_str = fname_str + "_no_heir"
     fname_str = fname_str + "_hist_dict.pkl"
@@ -462,7 +468,7 @@ def run_multi_tier_class_compare(yml_conf, species_run):
 
             #Generate config
             config_dict = copy.deepcopy(YAML_TEMPLATE_HEIR_CLASS_COMPARE)
-            config_dict = update_config_class_compare(config_dict, out_dir, species_run, no_heir = True)
+            config_dict = update_config_class_compare(config_dict, out_dir, instrument, species_run, no_heir = True)
 
             #Dump to file
             config_fname = build_config_fname_class_comp(config_dir, instrument, with_trop = trop)
@@ -511,7 +517,7 @@ def run_multi_tier_zonal_histogram(yml_conf, species_run):
                 yml_conf["instruments"][instrument][key]["heir"]["cf_gtiffs"], instrument, species_run, no_heir=True)
 
             #Dump to file
-            config_fname = build_config_fname_zonal_hist(config_dir, instrument, with_trop = trop)
+            config_fname = build_config_fname_zonal_hist(config_dir, instrument, species_run, with_trop = trop)
             with open(config_fname, 'w') as fle:
                 yaml.dump(config_dict, fle)
 
@@ -561,7 +567,7 @@ def run_geotiff_generation(yml_conf, classes, species_run, is_final = False):
             config_dict = update_config_gtiff_gen(config_dict, yml_conf["instruments"][instrument][key]["heir"]["cf_gtiffs"], cls, species_run, no_heir = False)
             
             #Dump to file
-            config_fname = build_config_fname_gtiff_gen(config_dir, instrument, no_heir = False, with_trop = trop, is_final = is_final) 
+            config_fname = build_config_fname_gtiff_gen(config_dir, instrument, species_run, no_heir = False, with_trop = trop, is_final = is_final) 
             with open(config_fname, 'w') as fle:
                 yaml.dump(config_dict, fle)          
 
@@ -584,7 +590,7 @@ def run_geotiff_generation(yml_conf, classes, species_run, is_final = False):
                         classes[instrument][key]["no_heir"]["classes"], species_run, no_heir = True)
   
                 #Dump to file
-                config_fname = build_config_fname_gtiff_gen(config_dir, instrument, no_heir = True, with_trop = trop, is_final = is_final)
+                config_fname = build_config_fname_gtiff_gen(config_dir, instrument, species_run, no_heir = True, with_trop = trop, is_final = is_final)
                 with open(config_fname, 'w') as fle:
                     yaml.dump(config_dict, fle)
 
@@ -691,7 +697,7 @@ def run_context_assignment(yml_conf, species_run):
             elif 'pDA' in species_run or 'domoic'  in species_run:
                 config_dict["ranges"] = copy.deepcopy(DOMOIC_ACID_RANGES)
 
-            config_dict = update_config_multi_hist(instrument_dict[instrument][key]["out_dir"], config_dict, yml_conf, instrument, species_run, no_heir = False)
+            config_dict = update_config_multi_hist(instrument_dict[instrument][key]["out_dir"], config_dict, yml_conf, instrument, species_run, no_heir = False, save_hists=True)
  
             config_fname = build_config_fname_multi_hist(config_dir, instrument, species_run, no_heir = False, with_trop = trop)
             classes_heir, _ = run_multi_hist(config_dict, instrument_dict[instrument][key]["out_dir"])
@@ -707,7 +713,7 @@ def run_context_assignment(yml_conf, species_run):
                     config_dict["ranges"] = copy.deepcopy(ALEXANDRIUM_RANGES)
                 elif 'pDA' in species_run or 'domoic'  in species_run:
                     config_dict["ranges"] = copy.deepcopy(DOMOIC_ACID_RANGES)
-                config_dict = update_config_multi_hist(instrument_dict[instrument][key]["out_dir"], config_dict, yml_conf, instrument, species_run, no_heir = True)
+                config_dict = update_config_multi_hist(instrument_dict[instrument][key]["out_dir"], config_dict, yml_conf, instrument, species_run, no_heir = True, save_hists=True)
 
                 classes_no_heir, _ = run_multi_hist(config_dict, instrument_dict[instrument][key]["out_dir"]) 
                 classes[instrument][key]["no_heir"]["classes"] = classes_no_heir
@@ -753,7 +759,7 @@ def run_validation(yml_conf, species_run):
             out_dir = os.path.join(out_dir, append)
 
             config_dict = update_config_multi_hist(out_dir, config_dict, yml_conf, instrument, species_run,\
-                 no_heir = False, validation = True)
+                 no_heir = False, validation = True, save_hists = False)
 
             config_fname = build_config_fname_multi_hist(config_dir, instrument, species_run, no_heir = False, with_trop = trop, validation=True)
             _, hists = run_multi_hist(config_dict, instrument_dict[instrument][key]["out_dir"])
@@ -815,7 +821,7 @@ def merge_class_sets(yml_conf, species_run, classes, iter2_classes):
 
     full_class_set = {"init_classes" : classes, "iter2_classes" : iter2_classes, "final_classes" : final_class_set}
 
-    with open(os.path.join(config_dir, "class_set_dict.yaml"), 'w') as fle:
+    with open(os.path.join(config_dir, "class_set_dict_" + species_run + "yaml"), 'w') as fle:
         yaml.dump(full_class_set, fle)
 
     return final_class_set

@@ -24,9 +24,10 @@ from pyresample.utils.rasterio import get_area_def_from_raster
 INST_SUBDIRS = {
 "modis" : "AQUA_MODIS",
 "jpss1" : "JPSS1_VIIRS",
-"pace" : "PACE",
-"s3a" : "S3A",
-"s3b" : "S3B",
+"jpss2" : "JPSS2_VIIRS",
+"pace" : "PACE_OCI",
+"s3a" : "S3A_OLCI_ERRNT",
+"s3b" : "S3B_OLCI_ERRNT",
 "snpp" : "SNPP_VIIRS"
 }
 
@@ -36,16 +37,16 @@ PRODUCT_RE = {
 #"total" : "(\d{8})_DAY\.total_phytoplankton\.tif"
 } 
 
-SF_BASE_DIR = "/mnt/data/HAB_Data_SIT_FUSE/MERGED_HAB_20250225_S_CA/"
+SF_BASE_DIR = "/mnt/data1/HAB_COMBINED_2024_2025_SPLIT/MERGED_TEST_FULL_2/" #HAB_Data_SIT_FUSE/MERGED_HAB_20250225_S_CA/"
 
 CHARM_FILES = [
-"/mnt/data/CHARM/charmForecast0day_LonPM180.nc",
-"/mnt/data/CHARM/wvcharmV3_0day_LonPM180.nc"
+#"/mnt/data1/CHARM/charmForecast0day_LonPM180.nc",
+"/mnt/data1/CHARM/wvcharmV3_0day_LonPM180.nc"
 ]
 
 CHARM_AREA_DEF = "/mnt/data/CHARM/charmForecast0day_LonPM180.tif"
 
-DT_RANGE = [datetime.strptime("20180621", "%Y%m%d"), datetime.strptime("20251231", "%Y%m%d")]
+DT_RANGE = [datetime.strptime("20180601", "%Y%m%d"), datetime.strptime("20251231", "%Y%m%d")]
 
 LON_BOUNDS = [-127.5, -117.0]
 LAT_BOUNDS = [31.285, 37.0]
@@ -195,12 +196,12 @@ def run_comparison():
                 break
 
     charm_data, data_arr, time_arr = regrid_and_bin_charm(CHARM_FILES[0], sf_fname)
-    charm_data_pace, da_pace, time_arr_pace = regrid_and_bin_charm(CHARM_FILES[1], sf_fname)
+    charm_data_pace, da_pace, time_arr_pace = regrid_and_bin_charm(CHARM_FILES[0], sf_fname)
  
     hist_by_concentration = {}
     hist_by_inst = {}
     hist_total = {}
-    instrument_order = ["modis", "snpp", "jpss1", "s3a", "s3b", "pace"]
+    instrument_order = ["modis", "snpp", "jpss1", "s3a", "s3b", "pace", "jpss2"]
     product_order = ["pnd", "pns"] #, "total"]
 
 
@@ -270,8 +271,31 @@ def run_comparison():
                         precision = tp_count  / (tp_count + fp_count)
                         recall = tp_count  / (tp_count + fn_count)
                         f1 = 2 * ((precision*recall) / (precision + recall))
-                        hist_by_concentration[product][1]["f1"].append(f1)
-                        hist_by_concentration[product][1]["count"].append(total_count)
+                    elif total_count > 0:
+                        f1 = 0.0 
+
+                    print("HERE F1", np.count_nonzero(((sf_data_comp >= 0) & (charm_arr_comp >= 0))),  tp_count, fp_count, fn_count, precision, recall, f1, prod, tm_str, inst)
+
+                    hist_by_concentration[product][1]["f1"].append(f1)
+                    hist_by_concentration[product][1]["count"].append(total_count)
+
+                    #tp_count =  np.count_nonzero(((sf_data_comp == 1) & (charm_arr_comp == 1)))
+                    #fp_count = np.count_nonzero(((sf_data_comp == 1) & (charm_arr_comp == 0)))
+                    #fn_count = np.count_nonzero(((sf_data_comp == 0) & (charm_arr_comp == 1)))
+                    #total_count = tp_count + fn_count
+                    #print("HERE F12-P", tp_count, fp_count, fn_count, prod, tm_str, inst)
+                    #if total_count > 0 and tp_count > 0:
+                    #    precision = tp_count  / (tp_count + fp_count)
+                    #    recall = tp_count  / (tp_count + fn_count)
+                    #    f1 = 2 * ((precision*recall) / (precision + recall))
+                    #elif total_count > 0:
+                    #    f1 = 0.0
+
+                    #    print("HERE F12", tp_count, fp_count, fn_count, precision, recall, f1, prod, tm_str, inst)
+
+                    #    hist_by_concentration[product][1]["f1"].append(f1)
+                    #    hist_by_concentration[product][1]["count"].append(total_count)
+
 
                     for j in range(2,7): #concentration_levels
                         #sf_data_comp = copy.deepcopy(sf_data_binned)
@@ -286,21 +310,21 @@ def run_comparison():
                         #sf_data_comp[inds2] = -1
                         #charm_arr_comp[inds2] = -1
 
-                        tp_count =  np.count_nonzero(((sf_data_comp == 0) & (charm_arr_comp == 0)))
-                        fp_count = np.count_nonzero(((sf_data_comp == 0) & (charm_arr_comp == 1)))
-                        fn_count = np.count_nonzero(((sf_data_comp == 1) & (charm_arr_comp == 0)))
+                        #tp_count =  np.count_nonzero(((sf_data_comp == 0) & (charm_arr_comp == 0)))
+                        #fp_count = np.count_nonzero(((sf_data_comp == 0) & (charm_arr_comp == 1)))
+                        #fn_count = np.count_nonzero(((sf_data_comp == 1) & (charm_arr_comp == 0)))
                         
-                        total_count = tp_count + fn_count 
-                        if total_count == 0 or tp_count == 0:
-                            if fn_count > 0:
-                                hist_by_concentration[product][j]["f1"].append(0.0)
-                                hist_by_concentration[product][j]["count"].append(total_count)
-                            continue
-                        precision = tp_count  / (tp_count + fp_count)
-                        recall = tp_count  / (tp_count + fn_count)
-                        f1 = 2 * ((precision*recall) / (precision + recall))
-                        hist_by_concentration[product][j]["f1"].append(f1)
-                        hist_by_concentration[product][j]["count"].append(total_count)
+                        #total_count = tp_count + fn_count 
+                        #if total_count == 0 or tp_count == 0:
+                        #    if fn_count > 0:
+                        #        hist_by_concentration[product][j]["f1"].append(0.0)
+                        #        hist_by_concentration[product][j]["count"].append(total_count)
+                        #    continue
+                        #precision = tp_count  / (tp_count + fp_count)
+                        #recall = tp_count  / (tp_count + fn_count)
+                        #f1 = 2 * ((precision*recall) / (precision + recall))
+                        #hist_by_concentration[product][j]["f1"].append(f1)
+                        #hist_by_concentration[product][j]["count"].append(total_count)
 
                         
                         tp_count =  np.count_nonzero(((sf_data_comp == 1) & (charm_arr_comp == 1)))
@@ -402,12 +426,15 @@ def run_comparison():
         print(prod, np.average(hist_total[prod]["f1"], weights=hist_total[prod]["count"]))
         #print(hist_total[prod]["f1"])
         for instrument in instrument_order:
-            print(instrument, prod, np.average(hist_by_inst[instrument][prod]["f1"], weights=hist_by_inst[instrument][prod]["count"]))
+            if sum(hist_by_inst[instrument][prod]["count"]) > 0:
+                print(instrument, prod, np.average(hist_by_inst[instrument][prod]["f1"], weights=hist_by_inst[instrument][prod]["count"]), np.sum(hist_by_inst[instrument][prod]["count"]))
+            else:
+                print(instrument, prod, 0.0)
             #print(hist_by_inst[instrument][prod]["f1"])
         for n in range(1,7):
             if sum(hist_by_concentration[prod][n]["count"]) < 1:
                 continue
-            print(prod, n, np.average(hist_by_concentration[prod][n]["f1"], weights=hist_by_concentration[prod][n]["count"]))      
+            print(prod, n, np.average(hist_by_concentration[prod][n]["f1"], weights=hist_by_concentration[prod][n]["count"]), np.sum(hist_by_concentration[prod][n]["count"]))      
         
 
 

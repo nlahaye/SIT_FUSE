@@ -1,0 +1,20 @@
+clusters: 120000
+clusters_dir: /mnt/data/HAB_Data_SIT_FUSE/MERGED_HAB_20250225/AQUA_MODIS/  
+#/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/MERGED_TEST_10082025_NEW/AQUA_MODIS/  
+#/mnt/data/HAB_Data_SIT_FUSE/MERGED_HAB_20250225_S_CA/AQUA_MODIS/ 
+end_date: '2019-12-31'
+global_max: 10000000
+input_file_type: daily_karenia_brevis #daily_pseudo_nitzschia_delicatissima
+radius_degrees:
+- 0.09
+ranges:
+- 0
+- 1000
+- 10000
+- 100000
+- 1000000
+- 10000000
+- 100000000
+start_date: '2018-01-01'
+use_key: Karenia_Brevis #Karenia_brevis #Pseudo_nitzschia_delicatissima_group
+xl_fname: /mnt/data/W_FL_Karenia_brevis_abundance_2002-2021.04.05.updated.csv #New_FL_HAB_Karenia_Brevis.csv #la_hab_data/combined_full.csv

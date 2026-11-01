@@ -1,0 +1,13 @@
+
+start_lon: -125.45
+end_lon: -101.98
+start_lat: 31.31
+end_lat: 49.01
+
+
+config_dir: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/"
+
+
+input_dir: "/mnt/data3/TEMPO/RAD_L1_V03/"
+ 
+

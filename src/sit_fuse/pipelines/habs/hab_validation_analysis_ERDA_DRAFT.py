@@ -81,10 +81,12 @@ def build_confusion_matrix(rows: List[Any]) -> Optional[np.ndarray]:
         if not isinstance(entry, tuple) or len(entry) < 3:
             continue
 
+        print(entry)
+
         raw_bin = entry[2]
         if not isinstance(raw_bin, (int, float, np.integer, np.floating)):
             continue
-        bin_index = int(round(float(raw_bin) / 1000.0))
+        bin_index = int(round(float(raw_bin) / 1000.0) - 1)
 
         vector = np.asarray(entry[0], dtype=float).ravel()
         if vector.size == 0:
@@ -140,6 +142,10 @@ def bin_scores_with_support(matrix: np.ndarray) -> Dict[int, Any]:
 def per_bin_f1_from_confusion_matrix(matrix: np.ndarray) -> Dict[int, float]:
     """F1 score for each severity class, keyed by bin index.
     """
+<<<<<<< HEAD
+
+=======
+>>>>>>> 8560b4b4517afcef0a9fd56a1a83833ecc3634ce
     return {j: scores["f1"] for j, scores in bin_scores_with_support(matrix).items()}
 
 
@@ -172,10 +178,20 @@ def collect_grouped_series(payload: Dict[str, Any]) -> Dict[str, Dict[str, List[
         "severity": {label: [] for label in XLABEL_SEVERITY},
         "severity_weighted": {label: [] for label in XLABEL_SEVERITY},
     }
+<<<<<<< HEAD
+
+
+
+ 
+    validation_payload = payload["validation"]
+    for product_name, product_data in validation_payload.items():
+        if not isinstance(product_data, dict) or product_name == 'pDA':
+=======
  
     validation_payload = payload["validation"]
     for product_name, product_data in validation_payload.items():
         if not isinstance(product_data, dict):
+>>>>>>> 8560b4b4517afcef0a9fd56a1a83833ecc3634ce
             continue
  
         for instrument_name, instrument_data in product_data.items():
@@ -202,6 +218,12 @@ def collect_grouped_series(payload: Dict[str, Any]) -> Dict[str, Dict[str, List[
                     grouped["instrument_weighted"].setdefault(instrument_name, []).append(weighted_score)
  
                 for bin_index, bin_score in per_bin_f1_from_confusion_matrix(confusion_matrix).items():
+<<<<<<< HEAD
+
+                    print(bin_index, bin_score, "HERE")     
+
+=======
+>>>>>>> 8560b4b4517afcef0a9fd56a1a83833ecc3634ce
                     if 0 <= bin_index < len(XLABEL_SEVERITY):
                         label = XLABEL_SEVERITY[bin_index]
                     else:
@@ -308,4 +330,8 @@ def main() -> None:
  
  
 if __name__ == "__main__":
+<<<<<<< HEAD
     main()
+=======
+    main()
+>>>>>>> 8560b4b4517afcef0a9fd56a1a83833ecc3634ce

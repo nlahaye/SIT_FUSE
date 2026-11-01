@@ -4,7 +4,7 @@ gen_monthly: false
 input_paths:
 - ''
 - ''
-- Z:\2026\Summer\Southern California Bight HABs\Context_Free_Products\AQUA_MODIS_context_free_layer_2
+- /mnt/data1/HAB_COMBINED_2024_2025_SPLIT/AQUA_MODIS_no_trop
 num_classes: 6
-out_dir: Z:\2026\Summer\Southern California Bight HABs\validation_testrun2/AQUA_MODIS
+out_dir: /mnt/data1/HAB_COMBINED_2024_2025_SPLIT/MERGED_TEST_FULL_2/AQUA_MODIS
 re_index: 6
