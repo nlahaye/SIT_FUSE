@@ -13,8 +13,12 @@ sensor (or pooled across sensors), reusing sit_fuse.train.sf_uq_utils:
                    replaced by measurement-uncertainty soft labels
   4. classifier    classifier_utils.build_models (+ expand_soft_targets)
   5. members       forest trees or group-bootstrap refits (epistemic spread)
-  6. calibration   ProbabilityCalibrator (prior correction + temperature) on
-                   sample-level linear-pooled probabilities, per sensor
+  6. calibration   ProbabilityCalibrator (prior correction + temperature, optional
+                   label-noise transition) on sample-level linear-pooled
+                   probabilities, per sensor with pooled fallback; raw vs
+                   calibrated ECE/RPS/NLL stored in bundle["skill"][s]["calibration"].
+                   Calibration/test rows can be restricted to encoder-unseen
+                   dates (uq.splits.encoder_unseen_eval)
   7. selective     select_selective_threshold on calibration samples
   8. skill         per-sensor proper scores on calibration samples (used as
                    fusion weights in hab_multisensor_fusion)
@@ -241,6 +245,61 @@ def skill_summary(P: np.ndarray, y: np.ndarray, w: np.ndarray, P_clim: np.ndarra
 # Driver
 # ---------------------------------------------------------------------------
 
+def split_config(hab_yml: dict[str, Any]) -> dict[str, Any]:
+    """uq.splits, plus the encoder training window when splits.encoder_unseen_eval."""
+    cfg = dict(hab_yml.get("uq", {}).get("splits") or {})
+    if cfg.pop("encoder_unseen_eval", False) and not cfg.get("encoder_train_window"):
+        if hab_yml.get("train_min_date") and hab_yml.get("train_max_date"):
+            cfg["encoder_train_window"] = [hab_yml["train_min_date"], hab_yml["train_max_date"]]
+        else:
+            LOG.warning("splits.encoder_unseen_eval set but train_min_date/train_max_date missing")
+    return cfg
+
+
+def make_calibrator(cal_cfg: dict[str, Any], fit: dict[str, Any], C: int) -> ProbabilityCalibrator:
+    """
+    As the fire/smoke ProbabilityCalibrator setup: prior correction (undo class
+    balancing toward the training-target prior), then temperature / platt /
+    isotonic, optionally with a label-noise transition matrix
+    (calibration.noise_correction: {enabled, transition: CxC}; T[k][j] =
+    P(observed bin j | true bin k), e.g. from replicate or method-comparison
+    samples). 'estimate' is not available for HAB (no consensus reference).
+    """
+    pc = cal_cfg.get("prior_correction", True) and fit["pi_train"] is not None
+    nc = cal_cfg.get("noise_correction", {}) or {}
+    noise_T = None
+    if nc.get("enabled", False):
+        T = nc.get("transition")
+        if isinstance(T, str):
+            raise ValueError("calibration.noise_correction.transition must be a CxC matrix for HAB")
+        noise_T = np.asarray(T, dtype=float)
+        if noise_T.shape != (C, C):
+            raise ValueError(f"noise_correction.transition shape {noise_T.shape} != ({C}, {C})")
+        margin = float(nc.get("min_diagonal_margin", 0.2))
+        off = noise_T - np.diag(np.diag(noise_T))
+        if np.any(np.diag(noise_T) - off.max(1) < margin):
+            raise ValueError("noise_correction.transition is near-uninformative (diagonal margin)")
+    return ProbabilityCalibrator(cal_cfg.get("method", "temperature"),
+                                 pi_train=fit["pi_train"] if pc else None,
+                                 pi_true=fit["pi_target"] if pc else None,
+                                 noise_T=noise_T)
+
+
+def calibration_diagnostics(P_raw, Q, y, w, C, n_bins=10) -> dict[str, float]:
+    """Raw vs calibrated class-wise ECE / RPS / NLL on the calibration rows."""
+    from sit_fuse.train.sf_uq_utils import reliability_table
+    Y = np.eye(C)[y]
+    wn = np.asarray(w, float)
+
+    def block(P):
+        eces = [reliability_table(P[:, c], Y[:, c], wn, n_bins=n_bins)[1] for c in range(C)]
+        ww = wn / max(wn.sum(), EPS)
+        return {"classwise_ece": float(np.nanmean(eces)),
+                "rps": float((ww * ranked_probability_score(P, y)).sum()),
+                "nll": float((ww * -np.log(np.clip(P[np.arange(len(y)), y], EPS, 1))).sum())}
+    return {"raw": block(P_raw), "calibrated": block(Q)}
+
+
 def train_species(hab_yml: dict[str, Any], use_key: str, out_dir: str | Path,
                   samples: pd.DataFrame | None = None, matchups: dict | None = None) -> dict[str, Any]:
     uq = hab_yml["uq"]
@@ -262,7 +321,7 @@ def train_species(hab_yml: dict[str, Any], use_key: str, out_dir: str | Path,
         ins = load_insitu(uq.get("insitu_file", hab_yml.get("insitu_file")),
                           max_depth_m=uq.get("max_depth_m", 1.0),
                           start_date=uq.get("start_date"), end_date=uq.get("end_date"))
-        samples = assign_splits(species_frame(ins, spec), uq.get("splits"))
+        samples = assign_splits(species_frame(ins, spec), split_config(hab_yml))
 
     rows_all, counts_all = [], {}
     enc_by_sensor = {}
@@ -303,6 +362,10 @@ def train_species(hab_yml: dict[str, Any], use_key: str, out_dir: str | Path,
     sel_key = min(trials, key=lambda k: trials[k][4])
     fits, calibrators, selective, skill, cal_score = trials[sel_key]
     model_selection = {k: float(v[4]) for k, v in trials.items()}
+    missing = [s for s in used if calibrators.get(s) is None and calibrators.get("_pooled") is None]
+    if missing and cal_cfg.get("require", True):
+        raise RuntimeError(f"{use_key}: no calibrator for {missing} (no calibration matchups and no "
+                           "pooled fallback); set calibration.require: false to allow raw probabilities")
     LOG.info("%s model selection (calibration RPS): %s -> %s", use_key, model_selection, sel_key)
 
     bundle = {
@@ -352,12 +415,7 @@ def _calibrate(df, fits, used, scope, feat_cols, C, cal_cfg, uq, pi_true):
         raw[s] = (Ps, meta, key)
 
     def make(key):
-        f = fits[key]
-        pc = cal_cfg.get("prior_correction", True) and f["pi_train"] is not None
-        # undo class balancing toward the (unweighted) training-target prior
-        return ProbabilityCalibrator(cal_cfg.get("method", "temperature"),
-                                     pi_train=f["pi_train"] if pc else None,
-                                     pi_true=f["pi_target"] if pc else None)
+        return make_calibrator(cal_cfg, fits[key], C)
 
     if raw:
         Pp = np.vstack([v[0] for v in raw.values()])
@@ -377,6 +435,8 @@ def _calibrate(df, fits, used, scope, feat_cols, C, cal_cfg, uq, pi_true):
         selective[s] = select_selective_threshold(u, err, w, target_error=sel_cfg.get("target_error"),
                                                   target_coverage=sel_cfg.get("target_coverage", 0.8))
         skill[s] = skill_summary(Q, y, w, pi_true)
+        skill[s]["calibration"] = calibration_diagnostics(Ps, Q, y, w, C)
+        skill[s]["calibrator_source"] = "sensor" if len(y) >= min_cal else "pooled"
         scores.append(skill[s]["rps"] * len(y)); wts.append(len(y))
     score = float(np.sum(scores) / max(np.sum(wts), 1)) if wts else np.inf
     return calibrators, selective, skill, score

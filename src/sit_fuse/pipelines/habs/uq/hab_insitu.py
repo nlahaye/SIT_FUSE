@@ -104,7 +104,15 @@ def assign_splits(df: pd.DataFrame, cfg: dict[str, Any] | None = None) -> pd.Dat
       test_years: [2024]      optional temporal holdout (overrides fractions)
       seed: 13
       n_folds: 5              cross-fit folds over train groups
-    Adds split_group, split, fold columns.
+      encoder_train_window: [YYYYMMDD, YYYYMMDD]   optional SIT-FUSE encoder
+                              training dates (train_min_date/train_max_date).
+                              Samples inside it are moved to `train`, so the
+                              calibration and test splits only contain scenes
+                              the encoder never saw (as the fire/smoke
+                              calibration_groups mode). Matters most for
+                              head-output / MC / OOD features, which are
+                              in-distribution by construction on those scenes.
+    Adds split_group, split, fold (and encoder_seen when a window is given).
     """
     cfg = cfg or {}
     block = cfg.get("block", "30D")
@@ -140,4 +148,13 @@ def assign_splits(df: pd.DataFrame, cfg: dict[str, Any] | None = None) -> pd.Dat
         fold.append(int(_stable_unit(g, seed + 1) * n_folds))
     out["split"] = split
     out["fold"] = fold
+    win = cfg.get("encoder_train_window")
+    if win:
+        lo, hi = (pd.Timestamp(str(w)) for w in win)
+        dt = pd.to_datetime(out["Datetime"])
+        if getattr(dt.dt, "tz", None) is not None:
+            dt = dt.dt.tz_localize(None)
+        seen = (dt.dt.normalize() >= lo) & (dt.dt.normalize() <= hi)
+        out["encoder_seen"] = seen.to_numpy()
+        out.loc[seen & out["split"].isin(["calibration", "test"]), "split"] = "train"
     return out

@@ -1137,17 +1137,25 @@ def select_feature_columns(df: pd.DataFrame, features_cfg: dict[str, Any]) -> li
       assignment_ensemble assign_vote_c, assign_vote_soft_c, assign_vote_var
       neighborhood        nbr_r* head-statistic means/stds, top-n label fractions
       neighborhood_context nbr_r*_sa_c, nbr_r*_vote_c
-    Raw cluster IDs are never used as numeric features.
+      encoder_mc          mc_* MC input-noise bands (HAB head export, optional)
+      encoder_ood         ood_* embedding-distance bands (HAB head export, optional)
+    Raw cluster IDs are never used as numeric features. Head files without the
+    optional mc_* / ood_* bands simply contribute no columns to those groups.
     """
     groups = set(features_cfg.get("groups", [
         "cluster_structure", "representation", "head_topk_probs", "agreement",
-        "soft_assignment", "assignment_ensemble", "neighborhood", "neighborhood_context"]))
+        "soft_assignment", "assignment_ensemble", "neighborhood", "neighborhood_context",
+        "encoder_mc", "encoder_ood"]))
     cols = []
     for c in df.columns:
         if is_id_column(c) or not pd.api.types.is_numeric_dtype(df[c]):
             continue
         if c.startswith(CLUSTER_STRUCTURE_PREFIXES) or "_delta_r" in c:
             g = "cluster_structure"
+        elif c.startswith("mc_"):
+            g = "encoder_mc"
+        elif c.startswith("ood_"):
+            g = "encoder_ood"
         elif c.startswith("nbr_r"):
             g = "neighborhood_context" if ("_sa_" in c or "_vote_" in c) else "neighborhood"
         elif c.startswith(("sa_parent_", "sa_joint_")):

@@ -32,6 +32,20 @@ def run_hab_post_inference_pipeline(yml_conf):
     print("Running Context-Free Geotiff Generation")
     yml_conf = run_context_free_geotiff_generation(yml_conf) 
 
+    # Optional encoder-side probabilistic outputs (hab_inference_pipeline):
+    # head distributions (+ MC input noise, embedding OOD) on the same grid as
+    # the context-free GeoTIFFs. Existing *.head_outputs.tif are kept, so this
+    # is a no-op when hab_inference_pipeline already ran with run_head_export.
+    if yml_conf.get("run_head_export", False):
+        from sit_fuse.pipelines.habs.hab_inference_pipeline import run_head_output_export, validate_head_outputs
+        print("Running Head Output Export")
+        run_head_output_export(yml_conf)
+        hx = yml_conf.get("head_export", {})
+        if hx.get("validate", True):
+            print("Validating head outputs against context-free GeoTIFFs")
+            yml_conf["head_export_validation"] = validate_head_outputs(
+                yml_conf, min_agreement=float(hx.get("min_joint_agreement", 0.99)))
+
     out_dir = yml_conf["final_product_dir"]
  
     if "validation_only" not in yml_conf or yml_conf["validation_only"] is False: 

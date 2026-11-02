@@ -88,7 +88,7 @@ def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled 
         if use_gpu:
             dat_dev, lab_dev = data[0].cuda(), data[1].cuda()
         else:
-            dat_dev, lab_dev = data[0].cuda(), data[1].cuda()
+            dat_dev, lab_dev = data[0], data[1]
 
         with torch.no_grad():
             start_time = time.time() 
@@ -122,7 +122,7 @@ def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled 
  
         if use_gpu == True:
             output = output.detach().cpu()
-            output_prob = output_prob.detach().cpu()
+            output_prob = output_prob.detach().cpu() if output_prob is not None else None
 
         dat_dev = dat_dev.detach().cpu()
         lab_dev = lab_dev.detach().cpu()

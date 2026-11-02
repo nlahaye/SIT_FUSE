@@ -103,6 +103,32 @@ def summarize_probabilities(Q: np.ndarray, members: np.ndarray | None, spec, sel
     return out
 
 
+# features that only exist in head_outputs.tif with MC / OOD bands (label_only
+# synthesizes the standard head bands, but not these)
+HEAD_ONLY_PREFIXES = ("mc_", "ood_")
+
+
+def scene_calibrator(bundle: dict[str, Any], sensor: str):
+    """Sensor calibrator, pooled fallback; refuse raw probabilities unless allowed."""
+    cal = bundle["calibrators"].get(sensor) or bundle["calibrators"].get("_pooled")
+    if cal is None and bundle["uq_cfg"].get("calibration", {}).get("require", True):
+        raise RuntimeError(f"{bundle['species']}/{sensor}: bundle has no calibrator "
+                           "(calibration.require: true)")
+    return cal
+
+
+def check_feature_coverage(bundle: dict[str, Any], columns) -> None:
+    """
+    A bundle trained on head-output features must not be applied to label-only
+    scenes (missing columns would silently become 0 and void the calibration).
+    """
+    have = set(columns)
+    missing = [c for c in bundle["feature_columns"] if c not in have and c.startswith(HEAD_ONLY_PREFIXES)]
+    if missing and not bundle["uq_cfg"].get("allow_missing_features", False):
+        raise ValueError(f"scene lacks {len(missing)} head-output features the model was trained on "
+                         f"(e.g. {missing[:3]}); export head outputs or retrain with input_mode label_only")
+
+
 def predict_frame(bundle: dict[str, Any], sensor: str, feat: pd.DataFrame,
                   chunk: int = 20000) -> dict[str, np.ndarray]:
     C = bundle["n_classes"]
@@ -110,7 +136,7 @@ def predict_frame(bundle: dict[str, Any], sensor: str, feat: pd.DataFrame,
     enc = bundle["encoders"][sensor]
     key = "pooled" if bundle["model_scope"] == "pooled" else sensor
     fit = bundle["fits"][key]
-    cal = bundle["calibrators"].get(sensor) or bundle["calibrators"].get("_pooled")
+    cal = scene_calibrator(bundle, sensor)
     sel = bundle["selective"].get(sensor, {}).get("threshold")
     fcfg = bundle["uq_cfg"].get("features", {})
     cols = bundle["feature_columns"]
@@ -118,6 +144,8 @@ def predict_frame(bundle: dict[str, Any], sensor: str, feat: pd.DataFrame,
     for s0 in range(0, len(feat), chunk):
         f = enc.transform(feat.iloc[s0:s0 + chunk].assign(sensor=sensor), fcfg)
         f = add_sensor_columns(f, bundle["sensors"])
+        if s0 == 0:
+            check_feature_coverage(bundle, f.columns)
         for c in cols:
             if c not in f.columns:
                 f[c] = 0.0
@@ -137,6 +165,15 @@ def predict_frame(bundle: dict[str, Any], sensor: str, feat: pd.DataFrame,
     return {k: np.concatenate([p[k] for p in pieces]) for k in pieces[0]}
 
 
+def _describe(cal):
+    if cal is None:
+        return "none"
+    try:
+        return cal.describe()
+    except Exception:  # pragma: no cover
+        return type(cal).__name__
+
+
 def run_scene(bundle: dict[str, Any], sensor: str, date, search_dirs, out_dir,
               invalid: InvalidClusters | None = None) -> str | None:
     uq = bundle["uq_cfg"]
@@ -148,7 +185,11 @@ def run_scene(bundle: dict[str, Any], sensor: str, date, search_dirs, out_dir,
     feat, valid = scene_feature_frame(bands, prof, uq.get("features", {}), pair, ref=None, invalid=invalid)
     if feat.empty:
         return None
-    vals = predict_frame(bundle, sensor, feat)
+    try:
+        vals = predict_frame(bundle, sensor, feat)
+    except ValueError as e:
+        LOG.warning("%s %s skipped: %s", sensor, date, e)
+        return None
     H, W = valid.shape
     rows, cols = feat["row"].to_numpy(), feat["col"].to_numpy()
     arrays = {}
@@ -167,6 +208,8 @@ def run_scene(bundle: dict[str, Any], sensor: str, date, search_dirs, out_dir,
             "date": str(pd.Timestamp(date).date()), "source_product": src, "input_mode": mode,
             "bin_edges": list(spec.edges), "units": spec.units, "created": utcnow_iso(),
             "model_bundle": bundle.get("path", ""), "selective": bundle["selective"].get(sensor),
+            "calibrator": _describe(scene_calibrator(bundle, sensor)),
+            "calibration_diagnostics": (bundle.get("skill", {}).get(sensor) or {}).get("calibration"),
             "layer_descriptions": {k: next((d for p, d in LAYER_DESCRIPTIONS.items() if k.startswith(p)), k)
                                    for k in arrays}}
     write_band_stack(path, arrays, prof, tags=tags, nodata=NODATA)
