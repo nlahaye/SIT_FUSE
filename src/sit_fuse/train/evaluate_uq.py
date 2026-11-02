@@ -46,6 +46,11 @@ min_negative_pixels consensus negatives exist.
 Bootstrap: percentile CIs over split_group resamples for headline metrics;
 paired differences vs evaluation.reference_model on identical resamples.
 
+Scenes without a primary reference (e.g. a new event with no ADP): when no
+evaluated scene has a truth raster, a reference-free summary is written
+instead (per_scene_reference_free.csv; pooled uncertainty, predicted
+fraction, selective retention, shift tests).
+
 Usage:
     python evaluate_uq.py uq_config.yaml [--models random_forest soft_assignment ...]
 """
@@ -748,6 +753,53 @@ def disagreement_test(d):
     return out
 
 
+def reference_free_summary(manifest, scenes, prefix, layer_dir, C, cfg, ev, rng, model, thr, splits, eval_dir):
+    """Evaluation for scenes without a primary reference (e.g. a new event with
+    no ADP): per-scene and pooled uncertainty, predicted target fraction and
+    selective retention, plus the shift tests. No reference-based metrics."""
+    n_px = int(ev.get("shift_pixels_per_scene", 5000))
+    rows, samples, pooled = [], [], {}
+    for s in scenes:
+        sc = load_scene(s, prefix, layer_dir, C, cfg, with_refs=False)
+        d = subsample(sample_scene(sc, None, rng, C), n_px, rng)
+        meta = {k: s.get(k) for k in BREAKDOWNS}
+        samples.append((meta, d["unc"]))
+        row = {"pair_id": s["pair_id"], **meta, "n_valid": int(sc["valid"].sum())}
+        for c in range(1, C):
+            row[f"predicted_class{c}_fraction"] = float(np.mean(d["pred"] == c)) if d["pred"].size else np.nan
+            row[f"mean_p{c}"] = float(np.mean(d["P"][:, c])) if d["P"].size else np.nan
+        if d["flag"] is not None and d["flag"].size:
+            row["selective_retained_fraction"] = float(np.nanmean(d["flag"]))
+        for u, a in d["unc"].items():
+            row[f"mean_{u}"] = float(np.nanmean(a)) if np.isfinite(a).any() else np.nan
+            pooled.setdefault(u, []).append(a[np.isfinite(a)])
+        rows.append(row)
+    scene_df = pd.DataFrame(rows)
+    scene_df.to_csv(eval_dir / "per_scene_reference_free.csv", index=False)
+    qs = (0.05, 0.25, 0.5, 0.75, 0.95)
+    unc = {}
+    for u, arrs in pooled.items():
+        a = np.concatenate(arrs) if arrs else np.array([])
+        if a.size:
+            unc[u] = {"mean": float(a.mean()), **{f"q{int(q * 100):02d}": float(np.quantile(a, q)) for q in qs}}
+    summary = {"model": model, "threshold": thr, "splits": splits, "reference_free": True,
+               "n_scenes": 0, "n_scenes_inferred": len(scenes), "overall": None,
+               "skipped_reference_metrics": "no evaluated scene has a primary reference (truth) raster",
+               "uncertainty": unc,
+               "predicted_fraction": {k: float(scene_df[k].mean()) for k in scene_df
+                                      if k.startswith("predicted_class")},
+               "areas": {"scene_areas_csv": str(layer_dir / "scene_areas.csv")}}
+    if "selective_retained_fraction" in scene_df:
+        summary["selective_retained_fraction"] = float(scene_df["selective_retained_fraction"].mean())
+    tests = ev.get("shift_tests", DEFAULT_SHIFT_TESTS)
+    if tests:
+        summary["shift_tests"] = shift_tests(samples, tests)
+    save_json(eval_dir / "eval_summary.json", summary)
+    LOG.warning("%s: no evaluated scene has a reference raster; wrote reference-free summary "
+                "(uncertainty, predicted fraction, shift tests) to %s", model, eval_dir)
+    return summary
+
+
 def shift_tests(shift_samples, tests):
     """shift_samples: list of (scene meta, {layer: sample array})."""
     out = {}
@@ -909,6 +961,10 @@ def evaluate_model(cfg, model):
     eval_dir = Path(ev.get("output_dir", out / "evaluation")) / model
     eval_dir.mkdir(parents=True, exist_ok=True)
 
+    if not any(s.get("truth") for s in scenes):
+        return reference_free_summary(manifest, scenes, prefix, layer_dir, C, cfg, ev, rng,
+                                      model, thr, splits, eval_dir), None, None
+
     per_scene, parts, per_counts, boot_parts, excl_counts = [], [], [], {}, []
     scenes_attached = []
     levels = LabelLevels(cfg)
@@ -964,6 +1020,9 @@ def evaluate_model(cfg, model):
         LOG.info("%s: IoU=%.3f ECE=%.3f n=%d", s["pair_id"], row["target_macro_iou"],
                  row["classwise_ece"], row["n_pixels"])
 
+    if not parts:
+        raise ValueError(f"{model}: no evaluated scene has valid reference pixels "
+                         "(check target.value_map / nodata_values against the reference rasters).")
     scene_df = pd.DataFrame(per_scene)
     scene_df.to_csv(eval_dir / "per_scene_metrics.csv", index=False)
     allp = concat(parts)
@@ -1124,6 +1183,9 @@ def main():
     for m in models:
         s, r, g = evaluate_model(cfg, m)
         row = {"model": m, **headline(s["overall"])}
+        if s.get("reference_free"):
+            row.update({f"mean_{u}": v["mean"] for u, v in s["uncertainty"].items()})
+            row.update(s.get("predicted_fraction", {}))
         if (s.get("by_label_level") or {}).get("consensus"):
             row.update({f"consensus_level_{k}": v for k, v in s["by_label_level"]["consensus"].items()})
         for k, v in (s.get("bootstrap_ci", {}).get("metrics", {}) or {}).items():
