@@ -56,7 +56,7 @@ gradient_clip_val: Float (gradient clipping value).
 
 ## Data Options
 
-RTDBN data is read from a folder of per-episode NumPy files rather than the image-based readers described under [Data Config Options](data-config-options/). Each file is named `episode_*.npy` and holds a 2-D array of shape (timesteps, features). Overlapping windows of `seq_len` timesteps (stride of one timestep) are cut from each episode; windows never span two episodes, and episodes shorter than `seq_len` are skipped. The data is split into train, validation, and test sets by episode. A StandardScaler (zero mean, unit variance) is fit on the training episodes only for the "variance_gaussian" model type, and is saved to `encoder/scaler.pkl`.
+RTDBN data is read from a folder of per-episode NumPy files, and not the image-based readers described under [Data Config Options](data-config-options/). Each file is named `episode_*.npy` and holds a 2-D array of shape (timesteps, features). Overlapping windows of `seq_len` timesteps (stride of one timestep) are cut from each episode; windows never span two episodes, and episodes shorter than `seq_len` are skipped. The data is split into train, validation, and test sets by episode. A StandardScaler (zero mean, unit variance) is fit on the training episodes only for the "variance_gaussian" model type, and is saved to `encoder/scaler.pkl`.
 
 {% code fullWidth="true" %}
 ```

@@ -18,3 +18,5 @@
 #### **Final Thoughts**
 
 SIT-FUSE was built for satellite imagery, and this use case shows that its self-supervised and layer-wise training approach extends to sequential biomechanical data. In future work, larger and more varied cohorts and joint training with the IIC clustering head are natural next evaluations. To train an RTDBN on your own data, see the [RTDBN Training Command](../../user-guide/model-training/rtdbn-training-command.md) and [RTDBN-Specific Config Options](../../user-guide/code-configuration/code-configuration/config-options/rtdbn-specific-config-options.md) pages.
+
+A more extensive description of this work can be found in the preprint by Sharif and LaHaye (2026), which describes the RTRBM and RTDBN method and is listed in the [Bibliography](bibliography.md).

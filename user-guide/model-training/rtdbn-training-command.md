@@ -4,7 +4,7 @@ description: Command examples used to train RTDBN models
 
 # RTDBN Training Command
 
-RTDBN training uses its own scripts rather than the DBN scripts. The first script pre-trains the stacked RTRBM layers one layer at a time and saves the scaler and encoder weights; the second trains the deep clustering head on top of the frozen encoder. There is no heirarchichal deep clustering step.
+RTDBN training uses its own scripts instead of the DBN scripts. The first script pre-trains the stacked RTRBM layers one layer at a time and saves the scaler and encoder weights; the second trains the deep clustering head on top of the frozen encoder. There is no heirarchichal deep clustering step.
 
 See [RTDBN-Specific Config Options](../code-configuration/code-configuration/config-options/rtdbn-specific-config-options.md) for the YAML options and [Example RTDBN Config](../code-configuration/code-configuration/example-configs/example-rtdbn-config.md) for a full example.
 

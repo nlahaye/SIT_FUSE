@@ -22,7 +22,7 @@ Pollard, T., Moody, B. E., Lehman, L. H., Gow, B. J., Fernandes, C., Xie, C., Jo
 
 Roder, M., & de Rosa, G. (2020). Learnergy: Energy-based machine learners [Computer software]. [https://github.com/gugarosa/learnergy](https://github.com/gugarosa/learnergy)
 
-Sharif, W., & LaHaye, N. (2026). Recurrent temporal restricted Boltzmann machines for self-supervised representation learning and clustering of biomechanical movement sequences. arXiv. [https://arxiv.org/abs/2610.24829](https://arxiv.org/abs/2610.24829)
+Sharif, W., & LaHaye, N. (2026). Recurrent Temporal Restricted Boltzmann Machines as Unsupervised Encoders for Biomechanical Movement Sequences. arXiv. [https://arxiv.org/abs/2610.24829](https://arxiv.org/abs/2610.24829)
 
 Sukhbaatar, S., Makino, T., Aihara, K., & Chikayama, T. (2011). Robust generation of dynamical patterns in human motion by a deep belief nets. In _Proceedings of the Asian Conference on Machine Learning_ (Vol. 20, pp. 231-246). PMLR.
 

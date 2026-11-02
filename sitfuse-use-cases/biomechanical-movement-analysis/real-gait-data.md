@@ -4,7 +4,7 @@
 
 #### **Data Acquisition**
 
-1. To test the embeddings outside simulation, we used two independent public human gait datasets, each with the task of classifying walking speed (three classes) from windows of joint angles.
+1. To test the embeddings outside simulation, we used two public human gait datasets, each with the task of classifying walking speed (three classes) from windows of joint angles.
 2. **Cohort 1** contains 57 subjects walking at three speeds (0.5, 0.75, and 1.0 m/s), with 66 joint-angle channels derived from inertial sensors at 60 Hz (Katmah et al., 2026; Pollard et al., 2026).
 3. **Cohort 2** is the dataset of Bailey et al. (2021), released through SimTK: 14 healthy adults walking on a treadmill at 70%, 100%, and 130% of their preferred speed, with joint angles from IMU-driven inverse kinematics. We kept the 18 rotational channels that vary by more than one degree and dropped the first five seconds of each trial.
 
