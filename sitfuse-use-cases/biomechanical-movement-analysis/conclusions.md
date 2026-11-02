@@ -29,6 +29,6 @@ For movement data, the self-supervised RTRBM extension of SIT-FUSE produces repr
 
 #### **Final Thoughts**
 
-SIT-FUSE was built for satellite imagery, and this use case shows that the same self-supervised and layer-wise training approach can be applied to a very different type of data. These results are preliminary. The next step is a replication on additional subjects from the dataset, and results should be reported both with and without per-subject standardization. To train an RTDBN on your own data, see the [Training Command](../../user-guide/model-training/training-command-examples.md) and [RTDBN-Specific Config Options](../../user-guide/code-configuration/code-configuration/config-options/rtdbn-specific-config-options.md) pages.
+SIT-FUSE was built for satellite imagery, and this use case shows that the same self-supervised and layer-wise training approach can be applied to a very different type of data. These results are preliminary. The next step is a replication on additional subjects from the dataset, and results should be reported both with and without per-subject standardization. To train an RTDBN on your own data, see the [RTDBN Training Command](../../user-guide/model-training/rtdbn-training-command.md) and [RTDBN-Specific Config Options](../../user-guide/code-configuration/code-configuration/config-options/rtdbn-specific-config-options.md) pages.
 
 This work builds on the preprint by Sharif and LaHaye (2026), which describes the RTRBM and RTDBN method and is listed in the [Bibliography](bibliography.md).

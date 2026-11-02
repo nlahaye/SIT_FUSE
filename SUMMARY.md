@@ -75,6 +75,7 @@
     * [Training Dataset Preprocessing](user-guide/model-training/training-dataset-preprocessing-examples/README.md)
       * [Code configuration](user-guide/model-training/training-dataset-preprocessing-examples/code-configuration.md)
     * [Training Command](user-guide/model-training/training-command-examples.md)
+    * [RTDBN Training Command](user-guide/model-training/rtdbn-training-command.md)
     * [Full Training Example](user-guide/model-training/training-summary.md)
   * [Model Inference](user-guide/model-inference/README.md)
     * [Inference Pipeline](user-guide/model-inference/inference-pipeline/README.md)

@@ -1,6 +1,6 @@
 # RTDBN-Specific Config Options
 
-RTDBN training supports any number of stacked layers via greedy layer-wise pre-training; see [RTDBN Inference Command](../../../model-inference/rtdbn-inference-command.md) for running inference, FLOPs, and XAI once a model is trained, and [Training Command](../../../model-training/training-command-examples.md) for the training scripts. A full example is available at [Example RTDBN Config](../example-configs/example-rtdbn-config.md).
+RTDBN training supports any number of stacked layers via greedy layer-wise pre-training; see [RTDBN Inference Command](../../../model-inference/rtdbn-inference-command.md) for running inference, FLOPs, and XAI once a model is trained, and [RTDBN Training Command](../../../model-training/rtdbn-training-command.md) for the training scripts. A full example is available at [Example RTDBN Config](../example-configs/example-rtdbn-config.md).
 
 {% code fullWidth="true" %}
 ```
