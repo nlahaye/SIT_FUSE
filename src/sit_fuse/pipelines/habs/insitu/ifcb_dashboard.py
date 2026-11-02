@@ -109,14 +109,19 @@ DEFAULTS = {
     "request_delay_s": 0.1,        # pause between requests
     "retries": 5,                  # per request, exponential backoff on dropped connections / 429 / 5xx
     "timeout_s": 180,
+    "cache_only": False,           # True -> no network; use only bins already in cache_dir
+    "require_features": True,      # cache_only: skip bins whose features file was never cached
 }
 
 
 class IFCBDashboard:
     def __init__(self, base: str = DASHBOARD, timeout: int = 180, cache_dir: str | None = None,
-                 retries: int = 5, delay: float = 0.1, chunk_months: int = 1):
+                 retries: int = 5, delay: float = 0.1, chunk_months: int = 1, cache_only: bool = False):
         self.base, self.timeout, self.delay, self.chunk = base.rstrip("/"), timeout, delay, chunk_months
         self.cache = Path(cache_dir) if cache_dir else None
+        self.cache_only = cache_only
+        if cache_only and self.cache is None:
+            raise ValueError("cache_only requires cache_dir")
         if self.cache:
             self.cache.mkdir(parents=True, exist_ok=True)
         self.s = requests.Session()
@@ -140,15 +145,31 @@ class IFCBDashboard:
                 time.sleep(10 * (attempt + 1))
         return None
 
+    def _key(self, path: str, params: dict | None = None) -> Path | None:
+        if not self.cache:
+            return None
+        key = path.strip("/").replace("/", "__")
+        if params:
+            key += "__" + "_".join(f"{k}-{v}" for k, v in sorted(params.items()))
+        return self.cache / key
+
+    def is_cached(self, path: str, params: dict | None = None) -> bool:
+        f = self._key(path, params)
+        return f is not None and f.exists() and f.stat().st_size > 0
+
     def _csv(self, path: str, params: dict | None = None) -> pd.DataFrame | None:
-        f = None
-        if self.cache:
-            key = path.strip("/").replace("/", "__")
-            if params:
-                key += "__" + "_".join(f"{k}-{v}" for k, v in sorted(params.items()))
-            f = self.cache / key
-            if f.exists():
-                return pd.read_csv(f) if f.stat().st_size else None
+        f = self._key(path, params)
+        if f is not None and f.exists():
+            if not f.stat().st_size:
+                return None
+            try:
+                return pd.read_csv(f)
+            except (pd.errors.ParserError, pd.errors.EmptyDataError, UnicodeDecodeError):
+                log.warning("IFCB cache file unreadable (partial write?): %s", f.name)
+                if self.cache_only:
+                    return None
+        if self.cache_only:
+            return None
         r = self._get(path, params)
         if r is None:
             return None                     # transient failure: not cached, retried next run
@@ -160,6 +181,18 @@ class IFCBDashboard:
             f.write_text(r.text)
         return pd.read_csv(io.StringIO(r.text))
 
+    def _cached_month_chunks(self, dataset: str) -> list[tuple[pd.Timestamp, pd.Timestamp]]:
+        pre = f"api__export_metadata__{dataset}__"
+        out = []
+        for f in self.cache.glob(pre + "*"):
+            try:
+                a = pd.Timestamp(f.name.split("start_date-")[1][:10])
+                b = pd.Timestamp(f.name.split("end_date-")[1][:10])
+                out.append((a, b))
+            except (IndexError, ValueError):
+                continue
+        return sorted(out)
+
     def datasets(self) -> list[str]:
         r = self._get("api/list_datasets")
         return r.json()["datasets"] if r is not None and r.ok else []
@@ -170,7 +203,18 @@ class IFCBDashboard:
         t0 = pd.Timestamp(start).tz_localize(None).normalize()
         t1 = (pd.Timestamp(end).tz_localize(None) if end is not None else pd.Timestamp.now("UTC").tz_localize(None))
         parts = []
-        a = t0
+        if self.cache_only:
+            for a, b in self._cached_month_chunks(dataset):
+                if b < t0 or a >= t1:
+                    continue
+                m = self._csv(f"api/export_metadata/{dataset}",
+                              {"start_date": a.strftime("%Y-%m-%d"), "end_date": b.strftime("%Y-%m-%d"),
+                               "include_skip": "false"})
+                if m is not None and not m.empty:
+                    parts.append(m)
+            a = t1
+        else:
+            a = t0
         while a < t1:
             b = min(a + pd.DateOffset(months=self.chunk), t1)
             # server end_date is inclusive (+1 day); trim to [start, end) below
@@ -267,7 +311,8 @@ def pull_ifcb(datasets: list[str], start, end, cfg: dict[str, Any] | None = None
     cfg = {**DEFAULTS, **(cfg or {})}
     codes = {**IFCB_PIER_CODES, **(location_codes or {})}
     api = IFCBDashboard(timeout=cfg["timeout_s"], cache_dir=cfg.get("cache_dir"), retries=cfg["retries"],
-                        delay=cfg["request_delay_s"], chunk_months=cfg["chunk_months"])
+                        delay=cfg["request_delay_s"], chunk_months=cfg["chunk_months"],
+                        cache_only=bool(cfg.get("cache_only")))
     rows = []
     for ds in datasets:
         meta = api.bins(ds, start, end)
@@ -279,6 +324,15 @@ def pull_ifcb(datasets: list[str], start, end, cfg: dict[str, Any] | None = None
             h0, h1 = cfg["window_utc_hours"]
             hr = meta["sample_time"].dt.hour
             meta = meta[(hr >= h0) & (hr < h1)]
+        if api.cache_only:
+            # restrict to bins already downloaded *before* subsampling, so a cap that differs
+            # from the original run cannot select bins that were never fetched
+            pids = meta["pid"].astype(str).tolist()
+            ok = np.array([api.is_cached(f"{ds}/{p}_class_scores.csv") for p in pids], dtype=bool)
+            if cfg.get("require_features", True):
+                ok &= np.array([api.is_cached(f"data/{p}_features.csv") for p in pids], dtype=bool)
+            log.info("IFCB %s (cache only): %d of %d candidate bins cached", ds, int(ok.sum()), len(ok))
+            meta = meta[ok]
         if cfg.get("max_bins_per_day") and ds not in CRUISE_DATASETS:
             meta = _subsample_per_day(meta, int(cfg["max_bins_per_day"]))
         if max_bins:
