@@ -235,7 +235,7 @@ def tai93_to_utc(seconds: float) -> dt.datetime:
 
 def smoke_tristate(nc_path: Path, cfg: dict):
     """Per-pixel 1 / 0 / NaN (unobserved) plus lon, lat and scan time (TAI93)."""
-    with xr.open_dataset(nc_path, engine="netcdf4", mask_and_scale=False) as ds:
+    with xr.open_dataset(nc_path, engine="netcdf4", mask_and_scale=False, decode_timedelta=False) as ds:
         lat = ds["Latitude"].values.astype(np.float64)
         lon = ds["Longitude"].values.astype(np.float64)
         typ = ds[cfg["variable"]].values.astype(np.int32)

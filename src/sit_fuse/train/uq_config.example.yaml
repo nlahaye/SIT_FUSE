@@ -1,12 +1,12 @@
 # SIT-FUSE hierarchical-head UQ workflow (one config for steps 2-4)
-output_dir: /data/nlahaye/output/Learnergy/SF_TEMPO_PARK/UQ
+output_dir: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ
 random_state: 42
 
 data:
   # Classifier YAML written by the HMS / ADP / FDCC matchup generator with the
   # split section enabled (adds scene_id, head_outputs, split_group,
   # classifier_split, encoder_split, split_stratum, annotation_raster).
-  matchup_file: output_multi_adp_hms.yaml
+  matchup_file:  output_multi_adp_hms_viirs.yaml
   product: smoke
   include_splits: [dev, calibration, holdout]
 
@@ -167,7 +167,7 @@ evaluation:
   models: [random_forest, logistic_regression, hist_gradient_boosting,
            hard_assignment, soft_assignment, assignment_ensemble]
   splits: [holdout]          # evaluate only scenes unseen by encoder, classifier and calibrator
-  inference_dir_template: /data/nlahaye/output/Learnergy/SF_TEMPO_PARK/UQ/{model}
+  inference_dir_template: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ/inference/{model}
   max_pixels_per_scene: 300000  # subsample with compensating weights; null = all
   max_excluded_reference_fraction: 0.02   # warn if excluded clusters hold > 2% of reference target pixels
   reference_model: hard_assignment   # paired bootstrap differences vs this model

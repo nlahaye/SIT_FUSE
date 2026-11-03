@@ -1,11 +1,11 @@
 # Step 1: SIT-FUSE head export (run in the SIT-FUSE environment)
-sit_fuse_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/tempo_park_st_bb.yaml   # same YAML used for training/inference
-output_dir: /data/nlahaye/output/Learnergy/SF_TEMPO_PARK/UQ
+sit_fuse_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/tempo_v04_st_bb_2.yaml   # same YAML used for training/inference
+output_dir: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ
 files: null                 # explicit input list (highest priority)
 # Export exactly the inputs referenced by the matchup generator output
 # (sit_fuse_input; covers files_train and files_test scenes). output_dir must
 # equal head_outputs.directory in the generator YAML.
-matchup_file: output_multi_adp_hms.yaml #/home/nlahaye/SIT_FUSE/src/sit_fuse/train/adp_smoke_classifier_matchups.yaml  # e.g. /data/nlahaye/experiments/hms_context_free/hms_smoke_classifier_matchups.yaml
+matchup_file: output_multi_adp_hms_viirs.yaml #/home/nlahaye/SIT_FUSE/src/sit_fuse/train/adp_smoke_classifier_matchups.yaml  # e.g. /data/nlahaye/experiments/hms_context_free/hms_smoke_classifier_matchups.yaml
 matchup_splits: [dev, calibration, holdout]
 input_lists: [files_test]   # used when files and matchup_file are null
 head_export:

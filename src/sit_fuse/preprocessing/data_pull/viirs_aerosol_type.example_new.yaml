@@ -2,15 +2,23 @@
 # Use the SAME bbox, resolution_deg and footprint_scale as the pull_adp.py
 # config, so VIIRS, ADP and SIT-FUSE outputs share one grid.
 
-time_range:
-  start: "2024-07-23T00:00:00Z"
-  end:   "2024-08-15T23:59:59Z"
+#time_range:
+#  start: "2024-07-23T00:00:00Z"
+#  end:   "2024-08-15T23:59:59Z"
 
-bbox:                       # replace with the bbox from your ADP pull config
-  min_lon: -123.5
-  min_lat: 38.5
-  max_lon: -119.5
-  max_lat: 41.5
+#time_range:
+#  start: "2025-01-05T00:00:00Z"
+#  end: "2025-01-17T23:59:59Z"
+
+time_range:
+  start: "2026-07-01T00:00:00Z"
+  end: "2026-07-22T23:59:59Z"
+
+bbox:
+  min_lon: -125.45
+  min_lat: 31.31
+  max_lon: -101.98
+  max_lat: 49.01
 
 raster:
   resolution_deg: 0.05      # same as ADP; VIIRS DB pixels are ~6 km at nadir
@@ -43,12 +51,12 @@ overpass:
   min_observed_pixels: 1    # skip overpasses with fewer observed grid cells in bbox
 
 output:
-  outdir: /data/nlahaye/viirs_aerdb_out
+  outdir: ./viirs_aerdb_out
   prefix: viirs_smoke       # -> rasters/viirs_smoke_YYYYMMDDTHHMMSSZ_NOAA20.tif
   keep_nc: true
   write_granule_rasters: false
 
-auth:
-  token_env: EARTHDATA_TOKEN   # bearer token; falls back to ~/.netrc if unset
+#auth:
+#  #token_env: EARTHDATA_TOKEN   # bearer token; falls back to ~/.netrc if unset
 
-overwrite: false
+overwrite: true

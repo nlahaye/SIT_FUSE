@@ -284,8 +284,11 @@ def smoke_tristate(ds: xr.Dataset, smoke_conf: str | None, unobserved=("fill", "
         # decoded _FillValue (NaN) or any value outside the 0/1 flag range
         unobs |= ~np.isin(smoke, (0.0, 1.0))
     if "qc_bad" in unobserved:
-        # qc_flag bits 2-3 (smoke confidence) == 11: bad/missing (smoke or not)
-        unobs |= ~qc_valid | (((qc_int >> 2) & 0b11) == 3)
+        # qc_flag bits 2-3 (smoke confidence) == 11 marks a bad/missing smoke
+        # detection. Cloud-free non-smoke pixels also carry 11 (no detection,
+        # so no confidence), so the rule applies to smoke pixels only;
+        # an undecodable qc_flag still counts as unobserved everywhere.
+        unobs |= ~qc_valid | (is_smoke & (((qc_int >> 2) & 0b11) == 3))
     for name in ("cloud", "snowice"):
         key = f"/product/{name}"
         if name in unobserved and key in ds:

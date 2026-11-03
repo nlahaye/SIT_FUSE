@@ -56,10 +56,10 @@ matching:
 
 time_range:
   start: "2024-07-20T00:00:00Z"
-  end: "2024-07-31T23:59:59Z"
+  end: "2026-08-01T23:59:59Z"
 
 sit_fuse:
-  directory: "/data/nlahaye/output/Learnergy/SF_TEMPO_PARK/"
+  directory: "/data/nlahaye/output/Learnergy/SF_TEMPO_V04/"
 
   # Retain only context-free outputs. Tune these to your actual naming convention.
   context_free_filters:
@@ -115,7 +115,7 @@ output:
 encoder_split:
   enabled: true
   # SIT-FUSE encoder/cluster training YAML; data.files_train / data.files_test
-  sit_fuse_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/tempo_park_st_bb.yaml
+  sit_fuse_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/tempo_v04_st_bb_2.yaml
   # SIT-FUSE outputs are named basename(files_*[i][0]) + suffix; the longest
   # input basename prefixing the output name wins. key_patterns are a fallback
   # for renamed outputs (TEMPO granule key shown).
@@ -161,6 +161,7 @@ classifier_split:
     event_windows:
       - {name: park_fire_2024, start: "2024-07-20", end: "2024-08-15"}
       - {name: la_fires_2025,  start: "2025-01-06", end: "2025-01-31"}
+      - {name: oregon_fires_2026,  start: "2026-07-01", end: "2026-08-01"}
     by_product: false               # true for HMS runs with both smoke and fire
     positive_fraction:
       enabled: true                 # reads each truth raster once

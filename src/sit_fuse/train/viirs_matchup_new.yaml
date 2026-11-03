@@ -14,18 +14,37 @@
 # and every record inherits the ADP record's split.
 # =============================================================================
 
-time_range:                          # same range as adp_matchup.yaml
+# The temporal search range for both SIT-FUSE and ADP smoke files.
+# All timestamps are interpreted as UTC.
+time_range:
   start: "2024-07-23T00:00:00Z"
-  end: "2024-07-31T23:59:59Z"
+  end: "2026-08-01T23:59:59Z"
 
-sit_fuse:                            # identical to adp_matchup.yaml
-  directory: /data/nlahaye/output/Learnergy/SF_TEMPO_PARK/
+# -----------------------------------------------------------------------------
+# Context-free SIT-FUSE cluster-raster outputs
+# -----------------------------------------------------------------------------
+sit_fuse:
+  # Root directory searched recursively for SIT-FUSE GeoTIFF files.
+  directory: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/
+
   patterns:
+    # Must contain exactly one capture group holding the scene timestamp.
+    #
+    # This generic pattern finds a timestamp anywhere in the filename, such as:
+    # TEMPO...20240728T000501Z...fullgeo.tif
     timestamp_patterns:
       - "(?i)(\\d{8}T\\d{6}Z)"
+
   context_free_filters:
+    # Include only final, georeferenced SIT-FUSE cluster products.
+    #
+    # Adjust this pattern to the stable final-product marker in your file names.
+    # The following is suitable for names ending in ".fullgeo.tif".
     include_patterns:
       - "(?i)full_geo\\.tif$"
+
+    # Exclude files that may be colocated in the same source directory but are
+    # not the context-free discrete SIT-FUSE cluster raster.
     exclude_patterns:
       - "(?i)Contour"
       - "(?i)smoke"
@@ -33,10 +52,15 @@ sit_fuse:                            # identical to adp_matchup.yaml
       - "(?i)Edged"
       - "(?i)merged"
       - "(?i)fire"
+      #- "(?i)entropy"
+      #- "(?i)margin"
+      #- "(?i)aleatoric"
+      #- "(?i)epistemic"
+
 
 # The generator's reference block is named adp_smoke; here it points at VIIRS.
 adp_smoke:
-  directory: /data/nlahaye/viirs_aerdb_out/rasters/
+  directory: /home/nlahaye/SIT_FUSE/src/sit_fuse/preprocessing/data_pull/viirs_aerdb_out/rasters/
   patterns:
     include_patterns:
       - "(?i)^viirs_smoke_"
@@ -63,3 +87,60 @@ encoder_split:
   enabled: false                     # splits come from the ADP matchup file
 classifier_split:
   enabled: false
+
+# -----------------------------------------------------------------------------
+# Encoder (DBN / cluster) split tracing + stratified classifier splits
+# Append to any of: classifier_matchups.yaml (HMS), adp_matchup.yaml (ADP),
+# fdcc_matchup.yaml (FDCC). Implemented in matchup_splits.py.
+# -----------------------------------------------------------------------------
+encoder_split:
+  enabled: true
+  # SIT-FUSE encoder/cluster training YAML; data.files_train / data.files_test
+  sit_fuse_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/tempo_v04_st_bb_2.yaml
+  # SIT-FUSE outputs are named basename(files_*[i][0]) + suffix; the longest
+  # input basename prefixing the output name wins. key_patterns are a fallback
+  # for renamed outputs (TEMPO granule key shown).
+  key_patterns:
+    - "(\\d{8}T\\d{6}Z_S\\d{3}G\\d{2})"
+  # Dates of encoder-training inputs (used for the temporal buffer)
+  date_pattern: "(\\d{8})T\\d{6}Z"
+  unmatched_policy: drop            # drop | unknown (unknown is never calibration/holdout)
+  encoder_train_policy: dev         # dev: may train classifiers; exclude: drop entirely
+
+classifier_split:
+  enabled: true
+  group_by: date                    # date | block (block_days-wide windows)
+  block_days: 3
+  # Groups within buffer_days of any encoder-training date are not used for
+  # calibration/holdout (multi-day plumes, adjacent swaths). buffer_policy:
+  # dev (use for classifier training) | exclude
+  buffer_days: 0
+  buffer_policy: dev
+  holdout_fraction: 0.25            # of eligible (encoder_test, unbuffered) groups
+  calibration_fraction: 0.2
+  min_holdout_groups_per_stratum: 1      # strata with >= 2 eligible groups
+  min_calibration_groups_per_stratum: 1  # strata with >= 3 eligible groups
+  random_state: 42
+  stratify:
+    # Strata = event window (else year-month) [x product] [x positive-fraction bin]
+    event_windows:
+      - {name: park_fire_2024, start: "2024-07-20", end: "2024-08-15"}
+      - {name: la_fires_2025,  start: "2025-01-06", end: "2025-01-31"}
+      - {name: oregon_fires_2026,  start: "2026-07-01", end: "2026-08-01"}
+    by_product: false               # true for HMS runs with both smoke and fire
+    positive_fraction:
+      enabled: true                 # reads each truth raster once
+      positive_values: null         # null -> value > 0; e.g. [1, 2, 3] for HMS density
+      nodata_values: [-1]
+      n_bins: 2                     # quantile bins over eligible groups
+
+# Expected export_head_outputs.py rasters (same directory as its output_dir)
+head_outputs:
+  directory: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ/
+  suffix: .head_outputs.tif
+
+# Add to the existing `output:` block:
+#   split_csv: /data/nlahaye/experiments/hms_context_free/matchup_splits.csv
+             
+
+
