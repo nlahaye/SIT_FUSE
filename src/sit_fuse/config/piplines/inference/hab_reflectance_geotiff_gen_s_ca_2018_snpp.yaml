@@ -1,0 +1,49 @@
+
+
+output: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
+
+instruments:
+ SNPP_VIIRS:
+  no_trop:
+      training_config: "/home/nlahaye/SIT_FUSE/src/sit_fuse//config/model/hab_training/snpp_viirs_only_n_ca_multi_layer_pl.yaml"
+      input_dir: "/mnt/data/REFLECTANCES/SNPP_VIIRS/"
+      output_dir: "/mnt/data/HAB_COMBINED_RUNS/"
+      input_pattern: "SNPP_VIIRS*nc"
+      input_clip_re: "RRS.*nc"
+      input_oc_dir: "/mnt/data/REFLECTANCES/SNPP_VIIRS/"
+      input_oc_re: '(SNPP_VIIRS\.(\d{8})\.L3m\.DAY\.)RRS.*\.4km.*nc'
+      run_preprocess_and_scale: False
+ 
+
+
+run_inference: False
+
+post_inference_config: "/home/nlahaye/SIT_FUSE/src/sit_fuse//config/piplines/habs/hab_reflectance_geotiff_gen_s_ca_2018_snpp.yaml"
+
+run_uids:
+ PACE_OCI: "pace_oci_s_ca"
+ SNPP_VIIRS: "snpp_viirs_s_ca"
+ AQUA_MODIS: "aqua_modis_s_ca"
+ S3A_OLCI: "s3a_olci_s_ca"
+ S3B_OLCI: "s3b_olci_s_ca"
+ JPSS1_VIIRS: "jpss1_viirs_s_ca"
+ JPSS2_VIIRS: "jpss2_viirs_s_ca"
+
+
+
+run_uid: "aqua_modis_s_ca"
+
+config_dir: "../../config/"
+
+reuse_gtiffs: False
+update_inputs: False
+
+train_min_date: "20180101"
+train_max_date: "20181201"
+output: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
+
+roi: "ca"
+
+no_heir: True
+
+

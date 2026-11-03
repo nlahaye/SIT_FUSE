@@ -1,0 +1,12 @@
+
+
+
+data:
+ clust_fnames: [
+"/data/nlahaye/SIT_FUSE_Geo/GOES_TEMPO_DATA/OR_ABI-L1b-RadC-M6C01_G18_s20242081836177_e20242081838550_c20242081838590.tif.clust.data_79499clusters.zarr.full_geo.tif"
+]
+
+ contour_fnames: [
+"/data/nlahaye/SIT_FUSE_Geo/GOES_TEMPO_DATA/OR_ABI-L1b-RadC-M6C01_G18_s20242081836177_e20242081838550_c20242081838590.tif.clust.data_79499clusters.zarr.full_geo.smoke.tif.Contours.tif"
+]
+

@@ -5,7 +5,7 @@ import argparse
 
 from sit_fuse.utils import read_yaml
 
-from sit_fuse.pipelines.habs.hab_training_utils import run_data_preprocessing, run_model_training
+from sit_fuse.pipelines.habs.hab_training_utils import run_data_preprocessing, run_model_training, gen_geo_zarr_oc_daily
 
 
 def run_hab_training_pipeline(yml_conf):

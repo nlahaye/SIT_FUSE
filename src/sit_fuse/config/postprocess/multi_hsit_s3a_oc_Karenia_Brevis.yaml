@@ -1,0 +1,20 @@
+clusters: 120000
+clusters_dir: /mnt/data/HAB_DATA_KB_NEW/S3A_OLCI_no_trop/
+end_date: '2025-12-31'
+global_max: 10000000
+input_file_type: S3A_OLCI_ERRNT
+radius_degrees:
+- 0.01125
+- 0.0225
+- 0.045
+ranges:
+- 0
+- 1000
+- 10000
+- 100000
+- 1000000
+- 10000000
+- 100000000
+start_date: '2018-01-01'
+use_key: Karenia_Brevis
+xl_fname: /mnt/data/W_FL_Karenia_brevis_abundance_2002-2021.04.05.updated.csv

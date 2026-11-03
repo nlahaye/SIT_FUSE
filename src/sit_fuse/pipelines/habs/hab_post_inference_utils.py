@@ -136,7 +136,7 @@ def find_gtiffs(fdir, instrument, proba = False, no_heir = True):
                 mtch_prob_no_heir = re.search(re_prob_no_heir, fle)
                 if mtch_prob_no_heir and no_heir:
                     out["output_files"].append(os.path.join(root, fle)) 
-                elif not_no_heir and mtch_prob_no_heir is None and mtch_prob:
+                elif not no_heir and mtch_prob_no_heir is None and mtch_prob:
                     out["output_files"].append(os.path.join(root, fle))
     
     return out
@@ -171,7 +171,7 @@ def update_config_cf_gtiff_gen(fdir, config, instrument, geo_zarr_path, proba = 
                     config["low_res"]["data"]["geo_filenames"].append(geo_zarr_path) 
                     out_path = os.path.join(root, mtch_prob_no_heir.group(1)) + ".no_heir.proba.tif"
                     config["output_files"].append(out_path)
-                elif not_no_heir and mtch_prob_no_heir is None and mtch_prob:
+                elif not no_heir and mtch_prob_no_heir is None and mtch_prob:
                     config["low_res"]["data"]["filenames"].append(os.path.join(root, fle))
                     config["low_res"]["data"]["geo_filenames"].append(geo_zarr_path)
                     out_path = os.path.join(root, mtch_prob.group(1)) + ".proba.tif"

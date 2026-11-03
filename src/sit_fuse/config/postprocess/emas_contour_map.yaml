@@ -1,0 +1,10 @@
+
+data:
+ clust_fnames: [
+"/data/nlahaye/SIT_FUSE_Geo/eMAS_REDO/eMASL1B_19916_17_20190817_0006_0020_V03.tif.clust.data_78995clusters.zarr.full_geo.tif.full_geo.tif"
+]
+
+ contour_fnames: [
+"/data/nlahaye/SIT_FUSE_Geo/eMAS_REDO/eMASL1B_19916_17_20190817_0006_0020_V03.tif.clust.data_78995clusters.zarr.full_geo.tif.smoke.tif.Contours.tif"
+]
+

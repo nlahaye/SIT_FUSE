@@ -1,0 +1,47 @@
+fusion:
+  area_id: HAB Coastal
+  description: Generating HAB GeoTiffs
+  final_resolution: 0.055
+  projection_id: 4326
+  projection_proj4:
+    datum: WGS84
+    proj: longlat
+  projection_units: degrees
+  resample_epsilon: 1.6
+  resample_n_neighbors: 64
+  resample_n_procs: 10
+  resample_radius: 5000
+  use_bilinear: false
+high_res:
+  data:
+    chan_dim: 0
+    filenames: []
+    geo_coord_dim: 2
+    geo_filenames: []
+    geo_lat_index: 0
+    geo_lon_index: 1
+    geo_reader_kwargs:
+      no_arg: no_arg
+    geo_reader_type: zarr_to_numpy
+    reader_kwargs:
+      no_arg: no_arg
+    reader_type: zarr_to_numpy
+    valid_max: 99999999999
+    valid_min: 0.0
+low_res:
+  data:
+    chan_dim: 2
+    filenames: []
+    geo_coord_dim: 2
+    geo_filenames: []
+    geo_lat_index: 0
+    geo_lon_index: 1
+    geo_reader_kwargs:
+      no_arg: no_arg
+    geo_reader_type: zarr_to_numpy
+    reader_kwargs:
+      none: None
+    reader_type: zarr_to_numpy
+    valid_max: 99999999999
+    valid_min: -100.0
+output_files: []

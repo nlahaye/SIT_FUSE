@@ -1,0 +1,71 @@
+# In-situ HAB reference augmentation (python -m sit_fuse.pipelines.habs.insitu.pull_insitu_hab -y <this>)
+out_dir: /mnt/data1/habs/insitu_augmented
+start: "2018-01-01"
+end: "2026-10-01"
+bbox: [-135.0, 30.0, -116.0, 49.0] 
+
+
+
+# cross-source dedup (same Location_Code / date / method): earlier entries win
+priority: [combined_full, calhabmap_erddap, ifcb_dashboard, seabass_pace_pax, nwfsc_2015,
+           plumes_and_blooms, calcofi_venrick, cce_lter_fcm]
+
+sources:
+  - kind: existing
+    name: combined_full
+    path: /mnt/data1/la_hab_data/combined_full_071426.csv
+
+  - kind: calhabmap_erddap          # SCCOOS ERDDAP, extends piers to present
+    name: calhabmap_erddap
+    datasets: [HABs-ScrippsPier, HABs-NewportBeachPier, HABs-SantaMonicaPier, HABs-StearnsWharf,
+               HABs-CalPolyPier, HABs-MorroBayBackBay, HABs-MorroBayFrontBay, HABs-SantaCruzWharf,
+               HABs-MontereyWharf]
+
+  - kind: ifcb_dashboard            # CA IFCB Network, https://ifcb.caloos.org
+    name: ifcb_dashboard
+    datasets: [scripps-pier-ifcb-151, scripps-pier-ifcb-158, scripps-pier-ifcb-183, del-mar-mooring,
+               newport-beach-pier, stearns-wharf, santa-cruz-municipal-wharf, mbari-power-buoy,
+               calcofi-cruises-ctd, calcofi-cruises-underway, plumes-and-blooms-cruises,
+               cce-lter-process-cruises-ifcb-151]
+    options:
+      aggregate: window             # pool fixed-site bins within the satellite window
+      window_utc_hours: [16, 24]    # 09-17 PDT: covers S3 (~18 UTC) and VIIRS/PACE/MODIS (~20-22 UTC)
+      pn_width_split_um: 3.0 
+      pn_cell_length_um: null       # set (e.g. 70) to convert PN chain ROIs to cells
+      score_threshold: 0.0 
+      cache_dir: /data/habs/ifcb_cache
+      max_bins_per_day: 6           # evenly spaced bins per site-day (null = all; each bin = 2 requests)
+      chunk_months: 1               # metadata requested per month (full-archive export gets dropped)
+      request_delay_s: 0.1 
+      retries: 5
+      timeout_s: 180 
+
+
+  - kind: seabass_dir               # PACE-PAX (Shearwater HPLC/FCM/IFCB, SBCR HPLC), downloaded with Earthdata login
+    name: seabass_pace_pax
+    path: /data/seabass/PACE-PAX
+    kinds: [hplc, ifcb, fcm]
+    enabled: false
+
+  - kind: calcofi_venrick           # region-pooled, cruise-month resolution (priors / shift checks only)
+    name: calcofi_venrick
+    start: "1996-01-01"
+    enabled: true
+
+  - kind: calcofi_picoplankton      # CCE-LTER FCM, number/mL -> cells/L (extra_* columns)
+    name: cce_lter_fcm
+    max_depth_m: 1
+
+  - kind: local_table               # NWFSC 2015 DA event (download from the NWFSC table)
+    name: nwfsc_2015
+    enabled: false
+    path: /data/habs/nwfsc/2015_west_coast_domoic_acid_event_seawater_data.csv
+    method: lm_settled
+    time: {column: SAMPLE_DATE, tz: UTC}
+    location_code: {column: STATION, prefix: NWFSC_}
+    columns: {LATITUDE: latitude, LONGITUDE: longitude, DEPTH_M: depth,
+              PN_LARGE_CELLS_L: Pseudo_nitzschia_seriata_group,
+              PN_SMALL_CELLS_L: Pseudo_nitzschia_delicatissima_group, PDA_NG_L: pDA}
+    scale: {pDA: 0.001}             # ng/L -> ng/mL
+    max_depth_m: 1
+    # column names are placeholders: check the downloaded header

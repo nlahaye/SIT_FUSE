@@ -1,0 +1,4 @@
+dbf: true
+dbf_list:
+- - /mnt/data1/HAB_COMBINED_2024_2025_SPLIT/JPSS1_VIIRS_no_trop/tiered_hab_jpss1_total_phytoplankton_no_heir_hist_dict.pkl
+dbf_percentage_thresh: 0.51

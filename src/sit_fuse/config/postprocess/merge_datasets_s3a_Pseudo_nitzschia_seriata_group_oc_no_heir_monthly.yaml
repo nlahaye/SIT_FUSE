@@ -1,0 +1,13 @@
+dirname: /mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/MERGED_TEST_10082025/S3A_OLCI_ERRNT_no_heir
+fname_str: no_heir.pseudo_nitzschia_seriata_bloom
+gen_daily: false
+gen_monthly: true
+input_paths:
+- ''
+- ''
+- /mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/S3A_OLCI_no_trop
+max_class: 5
+max_dqi: 2
+num_classes: 6
+out_dir: /mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/MERGED_TEST_10082025/S3A_OLCI_ERRNT_no_heir
+re_index: 7

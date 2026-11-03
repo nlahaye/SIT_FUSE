@@ -21,8 +21,8 @@ from skimage.util import view_as_windows
 from copy import deepcopy
 import datetime
 from pprint import pprint
-
-
+import joblib
+import pickle
 
 
 def build_lookup_dict(labels, lookup):
@@ -46,7 +46,7 @@ def build_final_list(lookup, final_lst):
 
 def run_multi_hist(yml_conf, output_dir):
 
-    output_dir = os.path.join("HISTOGRAMS", output_dir)
+    #output_dir = os.path.join("HISTOGRAMS", output_dir)
     os.makedirs(output_dir, exist_ok=True)
 
     #Run 
@@ -121,6 +121,15 @@ def run_multi_hist(yml_conf, output_dir):
         arr_init[i] = sorted(arr_init[i])  
     print(arr_init)
 
+    print("HERE", 'save_hists' in yml_conf, yml_conf['save_hists'])
+    print(output_dir,  yml_conf["output_key"])
+ 
+    if 'save_hists' in yml_conf and yml_conf['save_hists']:
+        out_fname = os.path.join(output_dir, yml_conf["output_key"] + ".pkl")
+
+        with open(out_fname, 'wb') as fle:
+            joblib.dump(hists, fle, protocol=pickle.HIGHEST_PROTOCOL)        
+
     #pprint(hists)
     #print(labels)
     #print(final_lst)
@@ -128,12 +137,15 @@ def run_multi_hist(yml_conf, output_dir):
 
  
 def run_multi_hist_outside(yml_fpath):
-    yaml_base = os.path.splitext(os.path.basename(yml_fpath))[0]
+
+    #yaml_base = os.path.splitext(os.path.basename(yml_fpath))[0]
+    yaml_dir = "./HISTOGRAMS/"
+
 
     #Translate config to dictionary 
     yml_conf = read_yaml(yml_fpath)
 
-    run_multi_hist(yml_conf, yaml_base)
+    run_multi_hist(yml_conf, yaml_dir)
 
 if __name__ == '__main__':
 

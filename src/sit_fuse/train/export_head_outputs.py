@@ -41,12 +41,20 @@ from sit_fuse.datasets.dataset_utils import get_prediction_dataset
 from sit_fuse.inference.generate_output import prep_model
 from sit_fuse.utils import get_read_func, read_yaml
 
-from sf_uq_utils import (
-    FORMAT_VERSION,
-    HEAD_NODATA,
-    head_band_names,
-    write_band_stack,
-)
+try:  # package import (pipelines); bare import kept for script use from train/
+    from sit_fuse.train.sf_uq_utils import (
+        FORMAT_VERSION,
+        HEAD_NODATA,
+        head_band_names,
+        write_band_stack,
+    )
+except ImportError:  # pragma: no cover
+    from sf_uq_utils import (
+        FORMAT_VERSION,
+        HEAD_NODATA,
+        head_band_names,
+        write_band_stack,
+    )
 
 LOG = logging.getLogger("export-head-outputs")
 
@@ -104,9 +112,12 @@ def _summaries(P: torch.Tensor, k: int):
 
 
 @torch.no_grad()
-def head_distributions(model, x: torch.Tensor, cfg: dict) -> np.ndarray | None:
+def head_distributions(model, x: torch.Tensor, cfg: dict, return_aux: bool = False):
     """
     Returns (N_pixels, n_bands) float32 in head_band_names() order.
+    return_aux=True also returns the full root-head probabilities P (N, n_parent)
+    and encoder embeddings E (N, D) as torch tensors, so callers (e.g. the HAB
+    inference pipeline: MC input noise, embedding OOD) need no second forward.
     """
     Kp = int(cfg.get("top_k_parent", 5))
     Kc = int(cfg.get("top_k_child", 3))
@@ -173,7 +184,10 @@ def head_distributions(model, x: torch.Tensor, cfg: dict) -> np.ndarray | None:
             cols += [child_ids[r, :, j].float(), child_ps[r, :, j]]
         cols += [child_mass[r]]
     cols += [c_max, c_margin, c_ent, joint_prob]
-    return torch.stack(cols, dim=1).cpu().numpy().astype(np.float32)
+    rows = torch.stack(cols, dim=1).cpu().numpy().astype(np.float32)
+    if return_aux:
+        return rows, P, E
+    return rows
 
 
 # ---------------------------------------------------------------------------

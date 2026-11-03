@@ -1,0 +1,72 @@
+
+
+
+
+
+instruments:
+ #pace:
+ # no_trop:
+ #  training_config: ""
+ #  context_config: ""
+ #  input_dir: ""
+ #s3a:
+ # no_trop:
+ #     training_config: ""
+ #     context_config: ""
+ #     input_dir: ""
+ #s3b:
+ # no_trop:
+ #     training_config: ""
+ #     context_config: ""
+ #     input_dir: ""
+ #jpss1:
+ # no_trop:
+ #     training_config: ""
+ #     context_config: ""
+ #     input_dir: ""
+ #JPSS1_VIIRS:
+ # no_trop:
+ #     training_config: "/home/nlahaye/SIT_FUSE/src/sit_fuse//config/model/train_model_JPSS1_VIIRS.yaml"
+ #     input_dir: "/mnt/data/REFLECTANCES/JPSS1_VIIRS/"
+ #     output_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
+ #     input_pattern: "JPSS1_VIIRS*nc"
+ #     input_clip_re: "RRS.*nc"
+ #     input_oc_dir: "/mnt/data/REFLECTANCES/JPSS1_VIIRS/" #TODO fix
+ #     input_oc_re: '(JPSS1_VIIRS\.(\d{8})\.L3m\.DAY\.)RRS.*\.4km.*nc'
+ #     run_preprocess_and_scale: False
+ #snpp:
+ # no_trop:
+ #     training_config: ""
+ #     context_config: ""
+ #     input_dir: ""
+ #troposif: No SIF data for 2024-2025 cases
+  GOES18_ABI:
+    no_trop:
+      training_config: "../../model/train_model_GOES_18_ABI.yaml"
+      context_config: ""     
+      output_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/GOES_18/"
+      input_pattern: "OR_ABI*tif"
+      #input_clip_re: ""
+      input_dir: "/mnt/data/GOES_18_COASTAL/"
+      input_oc_dir: "/mnt/data/GOES_18_COASTAL/"
+      input_oc_re:  '(OR_ABI.*G18_s(\d{13}).*tif)'
+      run_preprocess_and_scale: False
+      run_preprocess: False 
+
+post_inference_config: "/home/nlahaye/SIT_FUSE/src/sit_fuse//config/piplines/habs/hab_reflectance_geotiff_gen_s_ca_2024_goes.yaml"
+ 
+run_uid: "goes_poc_s_ca"
+
+config_dir: "../../config/"
+
+reuse_gtiffs: False
+update_inputs: False
+
+train_min_date: "20250101"
+train_max_date: "20251231"
+output: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/GOES_18/"
+
+roi: "ca"
+
+
+
