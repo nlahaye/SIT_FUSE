@@ -1,0 +1,89 @@
+# =============================================================================
+# FIRMS fire fronts: pull (pull_firms_fire_fronts.py) + rasterize
+# (rasterize_fire_fronts.py). Both scripts read this file.
+#
+#   python pull_firms_fire_fronts.py firms_fire_fronts.example.yaml
+#   python rasterize_fire_fronts.py  firms_fire_fronts.example.yaml
+#
+# Coverage of the FEDS fire-front layers (VEDA OGC API, no key):
+#   2018-2021 archive, 2025-01 -> 2025-03 NRT snapshot, 2025-03 -> present NRT
+#   large fires. Other years (e.g. Park fire 2024): enable `firms` below and
+#   derive fronts from VIIRS detections.
+# =============================================================================
+
+time_range:
+  start: "2025-01-07T00:00:00Z"
+  end: "2025-01-31T23:59:59Z"
+
+bbox:                       # same bbox as the SIT-FUSE scenes (LA fires shown)
+  min_lon: -119.2
+  min_lat: 33.7
+  max_lon: -117.6
+  max_lat: 34.6
+
+output:
+  outdir: ./firms_fire_fronts_out
+  vector_formats: [parquet, gpkg]   # parquet = GeoParquet; gpkg for QGIS builds without Parquet
+
+overwrite: false
+
+# -----------------------------------------------------------------------------
+# FEDS VIIRS modeled fire perimeters / active fire fronts
+# -----------------------------------------------------------------------------
+feds:
+  enabled: true
+  api_url: https://openveda.cloud/api/features
+  layers: [fireline, perimeter, newfirepix]
+  collections: auto          # or {fireline: [public.eis_fire_lf_fireline_nrt], ...}
+  page_limit: 1000
+  time_pad_hours: 12         # query pad around time_range (steps are 12-h labels)
+  # Estimated overpass time per step: t_date + LST hour - lon/15 h
+  # (AM = night VIIRS overpass ~01:30 LST, PM = day overpass ~13:30 LST)
+  overpass_lst_hours: {AM: 1.5, PM: 13.5}
+
+# -----------------------------------------------------------------------------
+# FIRMS active fire detections (fronts derived in the rasterizer)
+# -----------------------------------------------------------------------------
+firms:
+  enabled: false
+  api_url: https://firms.modaps.eosdis.nasa.gov/api/area/csv
+  map_key_env: FIRMS_MAP_KEY
+  # Science-quality archive (*_SP) for past fires; *_NRT for the last months.
+  sources: [VIIRS_SNPP_SP, VIIRS_NOAA20_SP, VIIRS_NOAA21_SP]
+  day_range: 5               # API maximum
+  request_pause_seconds: 0.5
+  local_csv: []              # FIRMS archive-download CSVs, e.g. ["./firms/fire_archive_SV-C2_*.csv"]
+  local_source_name: null    # firms_source label for local CSVs (default: file stem)
+  min_confidence: nominal    # low | nominal | high (MODIS: <30 low, 30-79 nominal, >=80 high)
+  include_night: true
+  overpass_gap_minutes: 20   # detections of one satellite closer than this = one overpass
+
+# -----------------------------------------------------------------------------
+# Rasterizer
+# -----------------------------------------------------------------------------
+raster:
+  outdir: null               # default <output.outdir>/rasters
+  prefix: fire_front
+  products: [feds]           # feds | firms (both allowed)
+  resolution_deg: 0.0025     # ~250 m; the matchup generator aggregates to the scene grid
+  fill_value: 255
+  classes: {front: 1, interior: 2, negative: 0}
+  # Where 0 (no front reported) is written; outside it is NoData.
+  #   ring - within ring_km of the step's fire geometry (default)
+  #   bbox - the whole bbox (assumes the overpass saw it all, cloud free)
+  #   none - positive-only reference (like HMS)
+  negative_zone: ring
+  ring_km: 25
+  feds:
+    front_buffer_m: 375      # half-width around the fire line (VIIRS I-band pixel)
+    include_newfirepix: true # new pixels of the step are front as well
+    newfirepix_size_m: 375
+    interior: true           # perimeter area not on the front -> classes.interior
+    perimeter_persist_hours: 72
+  firms:
+    front_mode: new          # new: pixels new vs. lookback = front, others interior | all
+    lookback_hours: 24
+    min_prior_gap_minutes: 30  # prior detections must be this much older (excludes the same overpass;
+                               # SNPP and NOAA-20 overpasses are ~50 min apart)
+    new_distance_m: 750      # a detection is new if no prior detection is within this distance
+    min_confidence: nominal

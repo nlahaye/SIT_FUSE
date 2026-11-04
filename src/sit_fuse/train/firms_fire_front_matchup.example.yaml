@@ -1,0 +1,128 @@
+# =============================================================================
+# SIT-FUSE <-> FIRMS fire-front matchups
+#
+#   python firms_fire_front_matchup_generator.py firms_fire_front_matchup.example.yaml
+#
+# Input: fire_front_index.csv from rasterize_fire_fronts.py. Each matched
+# scene gets its own truth raster on the scene grid (band 1 label, band 2
+# front fraction %): 1 front, 2 fire-affected not front, 0 no front reported,
+# 255 NoData.
+# =============================================================================
+
+time_range:
+  start: "2025-01-07T00:00:00Z"
+  end: "2025-01-31T23:59:59Z"
+
+sit_fuse:                    # same block as adp_matchup.yaml
+  directory: /data/nlahaye/output/Learnergy/SF_TEMPO_LA/
+  patterns:
+    timestamp_patterns:
+      - "(?i)(\\d{8}T\\d{6}Z)"
+  context_free_filters:
+    include_patterns:
+      - "(?i)full_geo\\.tif$"
+    exclude_patterns:
+      - "(?i)Contour"
+      - "(?i)smoke"
+      - "(?i)ImFill"
+      - "(?i)Edged"
+      - "(?i)merged"
+      - "(?i)fire"
+
+fire_fronts:
+  index_csv: /home/nlahaye/SIT_FUSE/src/sit_fuse/preprocessing/data_pull/firms_fire_fronts_out/rasters/fire_front_index.csv
+  sources: [feds, firms]     # filter on the index `source` column
+  tags: null                 # e.g. [FEDS-PM] to use only daytime FEDS steps
+  require_front: true        # skip fire-front rasters without any front cell
+  search_pad_seconds: 86400
+  classes: {front: 1, interior: 2, negative: 0}   # as raster.classes in the pull config
+  fill_value: 255
+
+matching:
+  # previous - latest front at or before the scene (causal; default)
+  # nearest  - closest in time either side;  next - first front after the scene
+  policy: previous
+  # FEDS steps are 12 h apart and FIRMS VIIRS overpasses ~2 per day per
+  # satellite, so daytime TEMPO scenes are typically 0-12 h after the front.
+  # Record-level offsets are kept (time_offset_seconds, signed_offset_seconds)
+  # for later filtering.
+  max_time_difference_seconds: 43200
+  prefer_source: [firms, feds]   # when both have a candidate in the window
+  # pair_id grouping: front_timestamp (all scenes sharing one front raster) |
+  # front_day | sit_fuse_timestamp | sit_fuse_day
+  group_by: front_timestamp
+
+scene_grid:
+  truth_dir: /data/nlahaye/output/sitfuse_uq/fire_front_truth
+  front_min_fraction: 0.0    # front if more than this fraction of the scene pixel is front
+  interior_min_fraction: 0.0
+  min_valid_fraction: 0.5    # below this the pixel is NoData (unless it holds front)
+  drop_scenes_without_front: false
+  overwrite: false
+
+classifier_config:
+  base_yaml: ./basic_clssifier.yaml
+
+output:
+  classifier_yaml: ./firms_fire_front_classifier_matchups.yaml
+  audit_csv: ./firms_fire_front_matchups_audit.csv
+  split_csv: ./firms_fire_front_matchup_splits.csv
+  matchup_key: matchups
+
+# --- encoder / classifier splits (matchup_splits.py), as in adp_matchup.yaml ---
+encoder_split:
+  enabled: true
+  sit_fuse_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/tempo_park_st_bb.yaml
+  key_patterns:
+    - "(\\d{8}T\\d{6}Z_S\\d{3}G\\d{2})"
+  date_pattern: "(\\d{8})T\\d{6}Z"
+  unmatched_policy: drop
+  encoder_train_policy: dev
+
+classifier_split:
+  enabled: true
+  group_by: date
+  buffer_days: 0
+  observing_day:
+    time_pattern: '(\d{8}T\d{6})Z'
+    day_start_utc_hour: 6
+  # One FEDS step / FIRMS overpass can supervise scenes on both sides of the
+  # observing-day boundary; link them so one front raster never spans partitions.
+  link_shared_truth: true
+  buffer_policy: dev
+  holdout_fraction: 0.25
+  calibration_fraction: 0.2
+  min_holdout_groups_per_stratum: 1
+  min_calibration_groups_per_stratum: 1
+  min_holdout_groups_total: 1
+  min_calibration_groups_total: 1
+  reserve_dev_group: auto
+  random_state: 42
+  stratify:
+    event_windows:
+      - {name: park_fire_2024, start: "2024-07-20", end: "2024-08-15"}
+      - {name: la_fires_2025,  start: "2025-01-06", end: "2025-01-31"}
+    by_product: false
+    positive_fraction:
+      enabled: true
+      positive_values: [1]          # front only
+      nodata_values: [255]
+      label_values: [0, 1, 2]
+      raster_nodata: auto
+      n_bins: 2
+
+head_outputs:
+  directory: /data/nlahaye/output/sitfuse_uq/head_outputs
+  suffix: .head_outputs.tif
+
+# invalid_clusters: same block as adp_matchup.yaml (optional)
+
+# --- UQ config (uq_config.yaml) target for these matchups ---------------------
+# target:
+#   classes: [0, 1]
+#   value_map: {0: 0, 1: 1, 2: 0}   # fire-affected-not-front as background;
+#                                   # use {0: 0, 1: 1} to drop it (unmapped: nodata)
+#                                   # or classes [0, 1, 2] with {0: 0, 1: 1, 2: 2}
+#   unmapped: nodata
+#   nodata_values: [255]
+#   raster_nodata: auto
