@@ -70,7 +70,9 @@ FEDS_AUTO = (
     ("public.eis_fire_snapshot_{layer}_nrt", "2025-01-01", "2025-12-31T23:59:59"),
     ("public.eis_fire_lf_{layer}_nrt", "2025-03-01", None),
 )
-VIIRS_CONF = {"l": 0, "low": 0, "n": 1, "nominal": 1, "h": 2, "high": 2}
+VIIRS_CONF = {"l": 0, "low": 0, "n": 1, "nominal": 1, "m": 1, "medium": 1, "h": 2, "high": 2}  # Landsat: L/M/H
+# Nominal pixel size (km) when the CSV has no usable scan/track (Landsat scan/track are pixel indices)
+DEFAULT_PIXEL_KM = {"MODIS": 1.0, "VIIRS": 0.375, "LANDSAT": 0.03}
 CONF_LEVEL = {"low": 0, "nominal": 1, "high": 2}
 
 
@@ -238,7 +240,9 @@ def _norm_firms(df: pd.DataFrame, firms_source: str) -> pd.DataFrame:
     need = {"latitude", "longitude", "acq_date", "acq_time"}
     if not need <= set(df.columns):
         raise ValueError(f"FIRMS CSV missing columns {sorted(need - set(df.columns))}")
-    hhmm = df["acq_time"].astype(str).str.replace(":", "").str.zfill(4)
+    # acq_time: HHMM (MODIS/VIIRS), "HH:MM", or "HH:MM-SS" / "HH:MM:SS" (Landsat)
+    tod = df["acq_time"].astype(str).str.strip().str.split().str[-1].str.replace(r"\D", "", regex=True)
+    hhmm = tod.where(tod.str.len() <= 4, tod.str[:-2]).str.zfill(4).str[-4:]
     df["acq_time"] = pd.to_datetime(df["acq_date"].astype(str) + " " + hhmm, format="%Y-%m-%d %H%M", utc=True)
     conf = df.get("confidence", pd.Series(["n"] * len(df))).astype(str).str.strip().str.lower()
     num = pd.to_numeric(conf, errors="coerce")  # MODIS: 0-100
@@ -247,15 +251,22 @@ def _norm_firms(df: pd.DataFrame, firms_source: str) -> pd.DataFrame:
     df["confidence"] = conf
     df["confidence_level"] = lev.astype(int)
     df["firms_source"] = firms_source
-    if "instrument" not in df:
-        df["instrument"] = "MODIS" if "MODIS" in firms_source.upper() else "VIIRS"
+    src_u = str(firms_source).upper()
     if "satellite" not in df:
         df["satellite"] = firms_source
+    if "instrument" not in df:
+        landsat = "LANDSAT" in src_u or df["satellite"].astype(str).str.upper().str.match(r"^L[89]$").all()
+        df["instrument"] = "LANDSAT" if landsat else ("MODIS" if "MODIS" in src_u else "VIIRS")
+    df["instrument"] = df["instrument"].astype(str).str.upper().replace({"OLI": "LANDSAT"})
+    # Keep NRT/SP level for de-duplication of the same satellite across processing levels
+    df["firms_level"] = "SP" if src_u.endswith("_SP") else ("NRT" if src_u.endswith("_NRT") else "LOCAL")
     for c in ("scan", "track", "frp"):
         df[c] = pd.to_numeric(df.get(c, np.nan), errors="coerce")
-    default_px = np.where(df["instrument"].astype(str).str.upper().str.startswith("MODIS"), 1.0, 0.375)
-    df["scan"] = df["scan"].fillna(pd.Series(default_px, index=df.index))
-    df["track"] = df["track"].fillna(pd.Series(default_px, index=df.index))
+    default_px = df["instrument"].map(lambda i: next((v for k, v in DEFAULT_PIXEL_KM.items() if i.startswith(k)), 0.375))
+    is_ls = df["instrument"].str.startswith("LANDSAT")
+    df.loc[is_ls, ["scan", "track"]] = np.nan          # Landsat scan/track are OLI line/sample indices
+    df["scan"] = df["scan"].fillna(default_px)
+    df["track"] = df["track"].fillna(default_px)
     if "daynight" not in df:
         df["daynight"] = ""
     return df
@@ -329,11 +340,20 @@ def pull_firms(cfg: dict, local_only: bool = False) -> gpd.GeoDataFrame | None:
     if not fcfg.get("include_night", True):
         df = df[df.daynight.astype(str).str.upper() != "N"]
     df = df.drop_duplicates(subset=["latitude", "longitude", "acq_time", "satellite"])
+    if fcfg.get("prefer_standard_processing", True):
+        # Same satellite pulled as *_NRT and *_SP: keep SP on dates where SP has data
+        fam = df["firms_source"].astype(str).str.replace(r"_(NRT|SP)$", "", regex=True)
+        day = df["acq_time"].dt.floor("D")
+        has_sp = (df["firms_level"] == "SP").groupby([fam, day]).transform("any")
+        n0 = len(df)
+        df = df[~((df["firms_level"] == "NRT") & has_sp)]
+        if n0 - len(df):
+            LOG.info("FIRMS: dropped %d NRT detections superseded by SP", n0 - len(df))
     if df.empty:
         LOG.warning("FIRMS: no detections left after bbox / time / confidence filters")
         return None
     df = assign_overpasses(df, float(fcfg.get("overpass_gap_minutes", 20)))
-    keep = ["firms_source", "satellite", "instrument", "acq_time", "overpass_id", "overpass_time",
+    keep = ["firms_source", "firms_level", "satellite", "instrument", "acq_time", "overpass_id", "overpass_time",
             "confidence", "confidence_level", "frp", "scan", "track", "daynight", "latitude", "longitude"]
     g = gpd.GeoDataFrame(df[keep].copy(), geometry=gpd.points_from_xy(df.longitude, df.latitude), crs="EPSG:4326")
     g.insert(0, "layer", "detection")

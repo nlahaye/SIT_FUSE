@@ -48,8 +48,15 @@ firms:
   enabled: false
   api_url: https://firms.modaps.eosdis.nasa.gov/api/area/csv
   map_key_env: FIRMS_MAP_KEY
-  # Science-quality archive (*_SP) for past fires; *_NRT for the last months.
+  # Area API sources: LANDSAT_NRT (US/Canada, 30 m, 2022-06-20 on; no SP),
+  # MODIS_NRT/SP, VIIRS_SNPP_NRT/SP, VIIRS_NOAA20_NRT/SP, VIIRS_NOAA21_NRT/SP.
+  # Science-quality (*_SP) lags NRT by a few months; list both to cover the gap
+  # (NRT rows are dropped on dates where the same satellite has SP data).
   sources: [VIIRS_SNPP_SP, VIIRS_NOAA20_SP, VIIRS_NOAA21_SP]
+  # All instruments:
+  # sources: [LANDSAT_NRT, MODIS_SP, MODIS_NRT, VIIRS_SNPP_SP, VIIRS_SNPP_NRT,
+  #           VIIRS_NOAA20_SP, VIIRS_NOAA20_NRT, VIIRS_NOAA21_SP, VIIRS_NOAA21_NRT]
+  prefer_standard_processing: true
   day_range: 5               # API maximum
   request_pause_seconds: 0.5
   local_csv: []              # FIRMS archive-download CSVs, e.g. ["./firms/fire_archive_SV-C2_*.csv"]
