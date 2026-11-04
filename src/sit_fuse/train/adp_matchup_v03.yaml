@@ -15,14 +15,14 @@
 # All timestamps are interpreted as UTC.
 time_range:
   start: "2024-07-23T00:00:00Z"
-  end: "2024-07-31T23:59:59Z"
+  end: "2025-01-14T23:59:59Z"
 
 # -----------------------------------------------------------------------------
 # Context-free SIT-FUSE cluster-raster outputs
 # -----------------------------------------------------------------------------
 sit_fuse:
   # Root directory searched recursively for SIT-FUSE GeoTIFF files.
-  directory: /data/nlahaye/output/Learnergy/SF_TEMPO_PARK/
+  directory: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/
 
   patterns:
     # Must contain exactly one capture group holding the scene timestamp.
@@ -139,7 +139,7 @@ output:
 encoder_split:
   enabled: true
   # SIT-FUSE encoder/cluster training YAML; data.files_train / data.files_test
-  sit_fuse_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/tempo_park_st_bb.yaml
+  sit_fuse_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/tempo_v04_st_bb_2.yaml
   # SIT-FUSE outputs are named basename(files_*[i][0]) + suffix; the longest
   # input basename prefixing the output name wins. key_patterns are a fallback
   # for renamed outputs (TEMPO granule key shown).

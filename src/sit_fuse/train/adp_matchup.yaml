@@ -15,14 +15,14 @@
 # All timestamps are interpreted as UTC.
 time_range:
   start: "2024-07-23T00:00:00Z"
-  end: "2024-07-31T23:59:59Z"
+  end: "2025-01-14T23:59:59Z"
 
 # -----------------------------------------------------------------------------
 # Context-free SIT-FUSE cluster-raster outputs
 # -----------------------------------------------------------------------------
 sit_fuse:
   # Root directory searched recursively for SIT-FUSE GeoTIFF files.
-  directory: /data/nlahaye/output/Learnergy/SF_TEMPO_PARK/
+  directory: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/
 
   patterns:
     # Must contain exactly one capture group holding the scene timestamp.
@@ -218,7 +218,7 @@ invalid_clusters:
 #   num_child_classes: 200
 
 head_outputs:
-  directory: /data/nlahaye/output/sitfuse_uq/head_outputs
+  directory: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ/
   suffix: .head_outputs.tif
 
 # Add to the existing `output:` block:

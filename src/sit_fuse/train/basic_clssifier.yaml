@@ -1,4 +1,4 @@
-output_dir: /data/nlahaye/experiments/hms_context_free/models
+output_dir: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ/
 random_state: 42
 models:
 - logistic_regression

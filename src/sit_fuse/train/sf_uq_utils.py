@@ -206,6 +206,7 @@ def read_head_outputs(path) -> tuple[dict[str, np.ndarray], dict[str, Any], dict
     """Read a head-output GeoTIFF into {band_name: 2-D float32 array}."""
     import rasterio
 
+    print(path)
     with rasterio.open(path) as src:
         descriptions = list(src.descriptions)
         if any(d is None for d in descriptions):
