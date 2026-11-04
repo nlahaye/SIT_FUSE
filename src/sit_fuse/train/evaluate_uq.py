@@ -75,6 +75,7 @@ from sf_uq_utils import (
     OUT_NODATA,
     LabelLevels,
     combine_consensus,
+    conformal_group_key,
     reference_target_cfg,
     align_reference,
     decide,
@@ -647,6 +648,12 @@ def scene_reference_areas(scene, C, cfg):
     return {c: float(a[ref == c].sum()) for c in range(1, C)}
 
 
+def _conformal_q(scores, level):
+    n = len(scores)
+    k = min(n, int(np.ceil((n + 1) * level)))
+    return float(np.sort(scores)[k - 1])
+
+
 def conformal_area_intervals(manifest, scene_df, C, cfg, level=0.9):
     """
     Split-conformal scene-area intervals. Analytic (independent-pixel) and
@@ -654,7 +661,14 @@ def conformal_area_intervals(manifest, scene_df, C, cfg, level=0.9):
     the analytic SD is rescaled by q_hat, the conformal quantile of
     |A_ref - A_expected| / SD over calibration-split scenes, and the result is
     checked on the evaluated scenes:  A_expected +/- q_hat * SD.
+
+    evaluation.areas.conformal_group (optional) makes q_hat group-conditional
+    (Mondrian): one q_hat per group (e.g. fire event) with >= min_scenes
+    calibration scenes; other scenes use the pooled q_hat.
     """
+    acfg = (cfg.get("evaluation", {}) or {}).get("areas", {}) or {}
+    gcfg = acfg.get("conformal_group") or None
+    min_g = int((gcfg or {}).get("min_scenes", 10))
     cal = [s for s in manifest["scenes"] if s.get("classifier_split") == "calibration" and s.get("truth")
            and not s.get("skipped")
            and (s.get("areas") or {}).get("reference_valid")]
@@ -662,26 +676,57 @@ def conformal_area_intervals(manifest, scene_df, C, cfg, level=0.9):
     if len(cal) < 5:
         return {"skipped": f"needs >= 5 calibration scenes with inference outputs (found {len(cal)})"}
     ref_areas = [scene_reference_areas(s, C, cfg) for s in cal]
+    by_pid = {s["pair_id"]: s for s in manifest["scenes"]}
+    ev_keys = (scene_df["pair_id"].map(lambda p: conformal_group_key(by_pid.get(p, {}), gcfg))
+               if gcfg and "pair_id" in scene_df else None)
     for c in range(1, C):
-        sc, n = [], 0
+        sc, keys = [], []
         for s, ra in zip(cal, ref_areas):
             md = s["areas"]["reference_valid"].get(f"class_{c}")
             if md is None:
                 continue
             sc.append(abs(ra[c] - md["expected"]) / max(md["analytic_sd"], 1e-9))
+            keys.append(conformal_group_key(s, gcfg))
         n = len(sc)
         if n < 5:
             continue
-        k = min(n, int(np.ceil((n + 1) * level)))
-        q = float(np.sort(sc)[k - 1])
+        sc, keys = np.asarray(sc), np.asarray(keys, dtype=object)
+        q = _conformal_q(sc, level)
         d = {"level": level, "n_calibration": n, "q_hat": q}
+        groups = {}
+        if gcfg:
+            for g in sorted({k for k in keys if k is not None}):
+                m = keys == g
+                if m.sum() >= min_g:
+                    groups[g] = {"n_calibration": int(m.sum()), "q_hat": _conformal_q(sc[m], level)}
+                else:
+                    LOG.warning("Conformal group %s: %d calibration scenes (< %d); pooled q_hat used.",
+                                g, int(m.sum()), min_g)
+            d["group"] = {"column": gcfg.get("column", "split_stratum"), "sep": gcfg.get("sep"),
+                          "index": int(gcfg.get("index", 0)), "min_scenes": min_g}
+            d["groups"] = groups
         rc = [k_ for k_ in scene_df.columns if k_.startswith(f"c{c}_ref_area_")]
         if rc and f"c{c}_expected_area" in scene_df and f"c{c}_analytic_sd" in scene_df:
             e, sd, r = (scene_df[f"c{c}_expected_area"], scene_df[f"c{c}_analytic_sd"], scene_df[rc[0]])
-            lo, hi = np.maximum(0, e - q * sd), e + q * sd
+            qv = np.full(len(scene_df), q)
+            if groups and ev_keys is not None:
+                qv = ev_keys.map(lambda g: groups.get(g, {}).get("q_hat", q)).to_numpy(float)
+                scene_df[f"c{c}_conformal_group"] = ev_keys.where(ev_keys.isin(list(groups)), "pooled")
+            lo, hi = np.maximum(0, e - qv * sd), e + qv * sd
             scene_df[f"c{c}_conformal_lo"], scene_df[f"c{c}_conformal_hi"] = lo, hi
-            d["evaluated_coverage"] = float(((r >= lo) & (r <= hi)).mean())
+            covers = (r >= lo) & (r <= hi)
+            d["evaluated_coverage"] = float(covers.mean())
             d["mean_width"] = float((hi - lo).mean())
+            if groups and ev_keys is not None:
+                for g in groups:
+                    m = (ev_keys == g).to_numpy()
+                    if m.any():
+                        groups[g].update(evaluated_coverage=float(covers[m].mean()),
+                                         mean_width=float((hi - lo)[m].mean()), n_evaluated=int(m.sum()))
+                m = ~ev_keys.isin(list(groups)).to_numpy()
+                if m.any():
+                    d["pooled_fallback"] = {"n_evaluated": int(m.sum()),
+                                            "evaluated_coverage": float(covers[m].mean())}
         out[f"class_{c}"] = d
     return out
 

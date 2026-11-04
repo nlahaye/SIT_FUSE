@@ -1137,25 +1137,17 @@ def select_feature_columns(df: pd.DataFrame, features_cfg: dict[str, Any]) -> li
       assignment_ensemble assign_vote_c, assign_vote_soft_c, assign_vote_var
       neighborhood        nbr_r* head-statistic means/stds, top-n label fractions
       neighborhood_context nbr_r*_sa_c, nbr_r*_vote_c
-      encoder_mc          mc_* MC input-noise bands (HAB head export, optional)
-      encoder_ood         ood_* embedding-distance bands (HAB head export, optional)
-    Raw cluster IDs are never used as numeric features. Head files without the
-    optional mc_* / ood_* bands simply contribute no columns to those groups.
+    Raw cluster IDs are never used as numeric features.
     """
     groups = set(features_cfg.get("groups", [
         "cluster_structure", "representation", "head_topk_probs", "agreement",
-        "soft_assignment", "assignment_ensemble", "neighborhood", "neighborhood_context",
-        "encoder_mc", "encoder_ood"]))
+        "soft_assignment", "assignment_ensemble", "neighborhood", "neighborhood_context"]))
     cols = []
     for c in df.columns:
         if is_id_column(c) or not pd.api.types.is_numeric_dtype(df[c]):
             continue
         if c.startswith(CLUSTER_STRUCTURE_PREFIXES) or "_delta_r" in c:
             g = "cluster_structure"
-        elif c.startswith("mc_"):
-            g = "encoder_mc"
-        elif c.startswith("ood_"):
-            g = "encoder_ood"
         elif c.startswith("nbr_r"):
             g = "neighborhood_context" if ("_sa_" in c or "_vote_" in c) else "neighborhood"
         elif c.startswith(("sa_parent_", "sa_joint_")):
@@ -1550,9 +1542,26 @@ def decide(P, threshold=None):
     return np.where(1.0 - P[:, 0] >= threshold, tgt, 0)
 
 
+def _prevalence_threshold(score, is_pos, w, grid):
+    """Threshold whose weighted positive-call fraction best matches the
+    weighted reference prevalence (area-unbiased masks). Score returned is
+    -|predicted fraction - prevalence|."""
+    w = np.asarray(w, float)
+    target = float(w[is_pos].sum() / max(w.sum(), 1e-12))
+    best_t, best_s = 0.5, -np.inf
+    for t in grid:
+        s = -abs(float(w[score >= t].sum() / max(w.sum(), 1e-12)) - target)
+        if s > best_s:
+            best_t, best_s = float(t), s
+    return best_t, best_s
+
+
 def select_threshold_multiclass(P, ref, w, metric="iou", grid=None):
-    """Threshold on 1 - p0 maximizing target-class macro IoU/F1."""
+    """Threshold on 1 - p0 maximizing target-class macro IoU/F1, or matching
+    the reference non-background prevalence (metric='prevalence')."""
     grid = np.linspace(0.05, 0.95, 91) if grid is None else np.asarray(grid)
+    if metric == "prevalence":
+        return _prevalence_threshold(1.0 - P[:, 0], np.asarray(ref) != 0, w, grid)
     best_t, best_s = 0.5, -1.0
     for t in grid:
         m = hard_metrics(decide(P, t), ref, w, P.shape[1])
@@ -1563,7 +1572,10 @@ def select_threshold_multiclass(P, ref, w, metric="iou", grid=None):
 
 
 def select_threshold(P1, ref, w, metric="iou", grid=None):
+    """metric: iou | f1 (maximize on class 1) | prevalence (match class-1 prevalence)."""
     grid = np.linspace(0.05, 0.95, 91) if grid is None else np.asarray(grid)
+    if metric == "prevalence":
+        return _prevalence_threshold(np.asarray(P1), np.asarray(ref) == 1, w, grid)
     best_t, best_s = 0.5, -1.0
     for t in grid:
         pred = (P1 >= t).astype(int)
@@ -1681,6 +1693,21 @@ def pixel_area_km2(profile: dict[str, Any]) -> np.ndarray | None:
         return np.repeat(a[:, None], W, axis=1)
     unit = crs.linear_units_factor[1] if hasattr(crs, "linear_units_factor") else 1.0
     return np.full((H, W), abs(tr.a * tr.e - tr.b * tr.d) * unit ** 2 / 1e6)
+
+
+def conformal_group_key(scene, gcfg):
+    """Group key for group-conditional (Mondrian) conformal intervals, e.g.
+    split_stratum 'park_fire_2024|pos_q1' -> 'park_fire_2024' with sep '|'."""
+    if not gcfg:
+        return None
+    v = scene.get(gcfg.get("column", "split_stratum"))
+    if v is None or (isinstance(v, float) and np.isnan(v)) or str(v) in ("", "nan", "None"):
+        return None
+    v, sep = str(v), gcfg.get("sep")
+    if sep:
+        parts = v.split(sep)
+        v = parts[min(int(gcfg.get("index", 0)), len(parts) - 1)]
+    return v
 
 
 def select_selective_threshold(u, err, w, target_error=None, target_coverage=None):
