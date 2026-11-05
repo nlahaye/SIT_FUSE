@@ -19,6 +19,12 @@ Stages (per species in HAB_USE_KEYS[roi] or uq.species_run):
 
 from __future__ import annotations
 
+# Cap native thread pools (OpenMP/BLAS/MKL/joblib) before numpy/torch load
+# when run as a script; run_* functions re-apply via apply_compute_limits.
+if __name__ == "__main__":
+    from sit_fuse.compute_resources import limit_env_from_argv
+    limit_env_from_argv()
+
 import argparse
 import json
 import logging
@@ -32,6 +38,7 @@ import numpy as np
 import pandas as pd
 
 from sit_fuse.pipelines.habs.uq.hab_uq_common import instrument_dirs, species_spec
+from sit_fuse.compute_resources import apply_compute_limits, add_num_threads_arg, apply_num_threads_arg
 
 LOG = logging.getLogger("hab-uq-pipeline")
 
@@ -49,6 +56,9 @@ def run_hab_uq_pipeline(yml, stages=("train", "evaluate", "infer", "fuse")):
     from sit_fuse.pipelines.habs.uq.hab_uq_inference import run_inference
     from sit_fuse.pipelines.habs.uq.hab_multisensor_fusion import fuse_samples, run_fusion
 
+    # Matchups, sklearn classifiers (RandomForest n_jobs=-1 -> capped via
+    # LOKY_MAX_CPU_COUNT), calibration, per-day inference and fusion.
+    apply_compute_limits(yml)
     uq = yml["uq"]
     out_root = Path(uq.get("out_dir", os.path.join(yml["final_product_dir"], "uq")))
     summary = {}
@@ -168,6 +178,8 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("-y", "--yaml", required=True)
     ap.add_argument("--stages", default="train,evaluate,infer,fuse")
+    add_num_threads_arg(ap)
     a = ap.parse_args()
+    apply_num_threads_arg(a)
     from sit_fuse.utils import read_yaml
     run_hab_uq_pipeline(read_yaml(a.yaml), tuple(a.stages.split(",")))

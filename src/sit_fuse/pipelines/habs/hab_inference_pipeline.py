@@ -43,9 +43,21 @@ YAML (top level, all optional):
     ood: {enabled: false, stats_path: null, max_files: 30,
           max_pixels_per_file: 20000, shrinkage: 50.0}
     keep_no_geo: false
+  compute:                     CPU/GPU throttling (sit_fuse.compute_resources); applied
+    num_threads: medium        once for the whole run and merged over each model YAML's
+    pin_cpus: false            own compute: section (HAB keys win). --num-threads or
+    nice: 0                    SIT_FUSE_NUM_THREADS override num_threads.
+    use_gpu: auto
+    inference_batch_size: null cluster + head batches (head_export.batch_size wins for heads)
 """
 
 from __future__ import annotations
+
+# Cap native thread pools (OpenMP/BLAS/MKL/joblib) before numpy/torch load
+# when run as a script; run_* functions re-apply via apply_compute_limits.
+if __name__ == "__main__":
+    from sit_fuse.compute_resources import limit_env_from_argv
+    limit_env_from_argv()
 
 import argparse
 import copy
@@ -142,9 +154,23 @@ def head_output_name(instrument, entry) -> str:
 # Stage 1: standard SIT-FUSE cluster inference
 # ---------------------------------------------------------------------------
 
-def _cuda():
-    import torch
-    return torch.cuda.is_available()
+def _cuda(sf_yaml=None):
+    from sit_fuse.compute_resources import resolve_use_gpu
+    return resolve_use_gpu(sf_yaml)
+
+
+def _batch_size(sf_yaml, override=None):
+    """head_export.batch_size (override) > compute.inference_batch_size > default."""
+    if override:
+        return override
+    from sit_fuse.compute_resources import get_compute_conf
+    return get_compute_conf(sf_yaml).get("inference_batch_size")
+
+
+def merge_compute_conf(yml_conf, sf_yaml):
+    """Pipeline-level compute: over the model YAML's compute: (HAB YAML keys win)."""
+    from sit_fuse.compute_resources import merge_compute_conf as _merge
+    return _merge(yml_conf, sf_yaml)
 
 
 def cluster_outputs_exist(out_dir, base, no_heir) -> bool:
@@ -157,11 +183,14 @@ def cluster_outputs_exist(out_dir, base, no_heir) -> bool:
 def run_cluster_inference_scene(model, data, sf_yaml, out_dir, base, no_heir) -> None:
     from sit_fuse.inference.generate_output import generate_output
     tiled = bool(sf_yaml["data"].get("tile", False))
-    use_gpu = _cuda()
+    use_gpu = _cuda(sf_yaml)
+    batch_size = _batch_size(sf_yaml)
     if getattr(model, "clust_tree_ckpt", None) is not None:
-        generate_output(data, model, use_gpu, out_dir, base + ".clust.data", tiled=tiled)
+        generate_output(data, model, use_gpu, out_dir, base + ".clust.data", tiled=tiled,
+                        batch_size=batch_size)
     if no_heir:
-        generate_output(data, model.pretrained_model, use_gpu, out_dir, base + ".no_heir.clust.data", tiled=tiled)
+        generate_output(data, model.pretrained_model, use_gpu, out_dir, base + ".no_heir.clust.data", tiled=tiled,
+                        batch_size=batch_size)
 
 
 # ---------------------------------------------------------------------------
@@ -265,7 +294,7 @@ def fit_embedding_stats(model, sf_yaml, ood_cfg, load_dataset: Callable, seed=0)
             return None, None
         Es, Ps = [], []
         with torch.no_grad():
-            for xb in iter_batches(data, tiled):
+            for xb in iter_batches(data, tiled, _batch_size(sf_yaml, ood_cfg.get("batch_size"))):
                 x = xb.to(device=dev, dtype=torch.float32)
                 P = _root_probs(model, x)
                 E = _embed(model, x)
@@ -373,7 +402,11 @@ def run_instrument(yml_conf, instrument, key, stages, model=None, load_dataset=N
     inf = yml_conf.get("inference", {}) or {}
     ex = copy.deepcopy(yml_conf.get("head_export", {}) or {})
     cfg_path = model_config_path(yml_conf, instrument, key)
-    sf_yaml = _read_yaml(cfg_path)
+    sf_yaml = merge_compute_conf(yml_conf, _read_yaml(cfg_path))
+    from sit_fuse.compute_resources import apply_compute_limits
+    apply_compute_limits(sf_yaml)   # also covers injected models (prep_model not called)
+    if sf_yaml.get("compute", {}).get("inference_batch_size") and not ex.get("batch_size"):
+        ex["batch_size"] = sf_yaml["compute"]["inference_batch_size"]
     out_dir = instrument_out_dir(yml_conf, instrument, key, sf_yaml)
     sf_yaml["output"]["out_dir"] = out_dir
     os.makedirs(out_dir, exist_ok=True)
@@ -463,6 +496,10 @@ def run_hab_inference_pipeline(yml_conf, stages=None, **inject) -> dict[str, Any
         if yml_conf.get("run_head_export", False) and "heads" not in stages:
             stages.append("heads")
     stages = tuple(stages)
+    # Throttle once up front so dataset loading / georeferencing for every
+    # instrument run under the same limits (no-op if no compute: section).
+    from sit_fuse.compute_resources import apply_compute_limits
+    apply_compute_limits(yml_conf)
     out = {}
     for instrument, keys in yml_conf["instruments"].items():
         for key in keys:
@@ -482,6 +519,9 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("-y", "--yaml", required=True, help="HAB pipeline YAML")
     ap.add_argument("--stages", default=None, help="comma list of clusters,heads,ood_stats")
+    from sit_fuse.compute_resources import add_num_threads_arg, apply_num_threads_arg
+    add_num_threads_arg(ap)
     a = ap.parse_args()
+    apply_num_threads_arg(a)
     conf = _read_yaml(a.yaml)
     run_hab_inference_pipeline(conf, None if a.stages is None else a.stages.split(","))

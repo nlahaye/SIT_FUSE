@@ -1,5 +1,12 @@
 
+# Cap native thread pools (OpenMP/BLAS/MKL/joblib) before numpy/torch load
+# when run as a script; run_* functions re-apply via apply_compute_limits.
+if __name__ == "__main__":
+    from sit_fuse.compute_resources import limit_env_from_argv
+    limit_env_from_argv()
+
 from sit_fuse.utils import read_yaml
+from sit_fuse.compute_resources import apply_compute_limits, add_num_threads_arg, apply_num_threads_arg
 
 from sit_fuse.preprocessing.colocate_and_resample import resample_or_fuse_data
 
@@ -18,6 +25,9 @@ import argparse
 import pickle
 
 def run_hab_post_inference_pipeline(yml_conf):
+
+    # GeoTIFF generation, resampling, zonal histograms, validation (+ head export / UQ)
+    apply_compute_limits(yml_conf)
 
     #Run 
     roi = yml_conf["roi"]
@@ -122,7 +132,9 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-y", "--yaml", help="YAML file for fusion info.")
+    add_num_threads_arg(parser)
     args = parser.parse_args()
+    apply_num_threads_arg(args)
 
     #Translate config to dictionary 
     yml_conf = read_yaml(args.yaml)

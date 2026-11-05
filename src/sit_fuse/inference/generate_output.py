@@ -218,6 +218,77 @@ def generate_output(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tile
     plot_clusters(dat.targets_full, output_full.numpy(), os.path.join(out_dir, output_fle), output_prob, pixel_padding=1) 
 
 
+def _to_numpy(arr):
+    if arr is None:
+        return None
+    if torch.is_tensor(arr):
+        return arr.detach().cpu().numpy()
+    return np.asarray(arr)
+
+
+def _per_pixel_values(vals, n_pix, name):
+    """(N,), (N,1), (N,1,1)... -> (N,). Mirrors the old loop, which assigned vals[i] to one pixel."""
+    vals = vals[:n_pix]
+    if vals.shape[0] < n_pix:
+        raise IndexError("%s has %d rows but %d pixels were requested" % (name, vals.shape[0], n_pix))
+    vals = vals.reshape(n_pix, -1)
+    if vals.shape[1] != 1:
+        raise ValueError("%s must have one value per pixel for non-tiled output, got shape %s"
+                         % (name, str(vals.shape)))
+    return vals[:, 0]
+
+
+def _assign_pixels(coord, labels, prob, line_ind, samp_ind, pixel_padding):
+    """
+    Build the (label, probability) rasters from per-pixel predictions.
+
+    Vectorized equivalent of the original per-pixel loop:
+        data[coord[i,line_ind], coord[i,samp_ind]] = labels[i]
+    Duplicate coordinates (e.g. the rows run_inference appends to pad the last
+    batch) resolve to the *last* occurrence, exactly like the sequential loop.
+    NumPy does not guarantee an order for repeated fancy-index writes, so the
+    last occurrence per pixel is selected explicitly.
+    """
+    coord = _to_numpy(coord)
+    labels = _to_numpy(labels)
+    prob = _to_numpy(prob)
+
+    # targets_full is int16; widen so pixel arithmetic can't overflow.
+    lines = coord[:, line_ind].astype(np.int64)
+    samps = coord[:, samp_ind].astype(np.int64)
+
+    shape = (int(lines.max()) + 1 + pixel_padding, int(samps.max()) + 1 + pixel_padding)
+    data = np.zeros(shape) - 1   # -1 separates No Data from cluster 0
+    prob_data = np.zeros(shape)
+
+    n_pix = labels.shape[0]
+    if lines.shape[0] < n_pix:
+        raise IndexError("coord has %d rows but labels has %d" % (lines.shape[0], n_pix))
+    lines = lines[:n_pix]
+    samps = samps[:n_pix]
+
+    lab_vals = _per_pixel_values(labels, n_pix, "labels")
+    prob_vals = _per_pixel_values(prob, n_pix, "output_prob") if prob is not None else None
+
+    if n_pix == 0:
+        return data, prob_data
+
+    # Same negative-index wraparound / bounds behaviour as scalar indexing.
+    lines = np.where(lines < 0, lines + shape[0], lines)
+    samps = np.where(samps < 0, samps + shape[1], samps)
+    if lines.min() < 0 or samps.min() < 0:
+        raise IndexError("negative pixel coordinate out of range for raster of shape %s" % (shape,))
+
+    flat = lines * shape[1] + samps
+    _, first_in_reversed = np.unique(flat[::-1], return_index=True)
+    keep = (n_pix - 1) - first_in_reversed   # last occurrence of each pixel
+
+    data[lines[keep], samps[keep]] = lab_vals[keep]
+    if prob_vals is not None:
+        prob_data[lines[keep], samps[keep]] = prob_vals[keep]
+    return data, prob_data
+
+
 def plot_clusters(coord, output_data, output_basename, output_prob = None, pixel_padding=1):
 
         max_cluster = output_data.shape[1]
@@ -228,56 +299,48 @@ def plot_clusters(coord, output_data, output_basename, output_prob = None, pixel
         #    labels = np.argmax(output_data, axis = 1)
         #else:
         labels = output_data.astype(np.int32)
-        prob = output_prob
+        prob = _to_numpy(output_prob)
         max_cluster = labels.max() #TODO this better!!!
 
         #print(np.unique(labels).shape, "UNIQUE LABELS", np.unique(labels), coord.shape, output_data.shape)
 
         n_clusters_local = max_cluster - min_cluster
 
+        coord = _to_numpy(coord)
         data = []
         line_ind = 0
         samp_ind = 1
         if coord.shape[1] >  2:
             line_ind = 1
             samp_ind = 2
-        max_dim1 = max(coord[:,line_ind])
-        max_dim2 = max(coord[:,samp_ind])
-        strt_dim1 = 0
-        strt_dim2 = 0
 
-        #print(labels.shape, max_dim1, max_dim2, labels.ndim)
         #1 subtracted to separate No Data from areas that have cluster value 0.
         if labels.ndim <= 2:
-            data = np.zeros((((int)(max_dim1)+1+pixel_padding), ((int)(max_dim2)+pixel_padding+1))) - 1
-            prob_data =  np.zeros((((int)(max_dim1)+1+pixel_padding), ((int)(max_dim2)+pixel_padding+1)))
             labels = np.array(labels)
             print("ASSIGNING LABELS", min_cluster, max_cluster)
-            #print(data.shape, labels.shape, coord.shape)
-            for i in range(labels.shape[0]):
-                if prob is not None:
-                    prob_data[coord[i,line_ind], coord[i,samp_ind]] = prob[i]
-                data[coord[i,line_ind], coord[i,samp_ind]] = labels[i]
-                #print(data.shape, coord[i,1], coord[i,2], labels[i], max_dim1, max_dim2)
+            data, prob_data = _assign_pixels(coord, labels, prob, line_ind, samp_ind, pixel_padding)
     
         else:
-            prob_data =  np.zeros((((int)(max_dim1)+1+pixel_padding), ((int)(max_dim2)+pixel_padding+1)))
-            data = np.zeros((((int)(max_dim1)+1+pixel_padding), ((int)(max_dim2)+pixel_padding+1))) - 1
+            # Tiled output: one patch per row. Overlapping patches must be written
+            # in order (later tiles overwrite earlier ones), so this stays a loop
+            # over tiles (few iterations) rather than pixels.
+            lines = coord[:, line_ind].astype(np.int64)
+            samps = coord[:, samp_ind].astype(np.int64)
+            max_dim1 = int(lines.max())
+            max_dim2 = int(samps.max())
+            prob_data =  np.zeros(((max_dim1+1+pixel_padding), (max_dim2+pixel_padding+1)))
+            data = np.zeros(((max_dim1+1+pixel_padding), (max_dim2+pixel_padding+1))) - 1
             labels = np.array(labels)
-            #print("ASSIGNING LABELS", min_cluster, max_cluster)
-            #print(data.shape, labels.shape, coord.shape)
-            #print(data.shape, labels.shape, coord.shape)
             for i in range(labels.shape[0]):
-                #print(coord[i,line_ind], coord[i,samp_ind], data.shape, labels.shape)
-                #print(coord[i,line_ind], coord[i,samp_ind], coord[i], labels[i].shape, labels.shape)
-
-                max_line = min(data.shape[0],   coord[i,line_ind]+labels[i].shape[0])
-                max_samp = min(data.shape[1],   coord[i,samp_ind]+labels[i].shape[1])
+                l0 = lines[i]
+                s0 = samps[i]
+                max_line = min(data.shape[0],   l0+labels[i].shape[0])
+                max_samp = min(data.shape[1],   s0+labels[i].shape[1])
 
                 if prob is not None:
-                    prob_data[coord[i,line_ind]:max_line, coord[i,samp_ind]:max_samp] = prob[i, :max_line - coord[i,line_ind], :max_samp - coord[i,samp_ind]]
+                    prob_data[l0:max_line, s0:max_samp] = prob[i, :max_line - l0, :max_samp - s0]
 
-                data[coord[i,line_ind]:max_line, coord[i,samp_ind]:max_samp] = labels[i, :max_line - coord[i,line_ind], :max_samp - coord[i,samp_ind]] 
+                data[l0:max_line, s0:max_samp] = labels[i, :max_line - l0, :max_samp - s0] 
 
         print("FINISHED WITH LABEL ASSIGNMENT")
         print("FINAL DATA TO DASK")

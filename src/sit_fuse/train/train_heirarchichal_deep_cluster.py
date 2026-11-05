@@ -1,3 +1,9 @@
+# Cap native thread pools before numpy/torch load when run as a script
+# (DDP ranks re-run this file, so they pick it up too).
+if __name__ == '__main__':
+    from sit_fuse.compute_resources import limit_env_from_argv
+    limit_env_from_argv()
+
 import pytorch_lightning as pl
 import torch
 from pytorch_lightning.callbacks import (
@@ -22,6 +28,7 @@ from sit_fuse.datasets.sf_dataset import SFDataset
 from sit_fuse.datasets.sf_dataset_conv import SFDatasetConv
 from sit_fuse.datasets.dataset_utils import get_train_dataset_sf
 from sit_fuse.utils import read_yaml, get_output_shape
+from sit_fuse.compute_resources import apply_compute_limits, num_local_processes
 
 import wandb
 
@@ -310,7 +317,12 @@ def run_heir_training_outside(yml_fpath):
 
 def run_heir_training(yml_conf):
 
-    torch.set_num_threads(5)
+    # Thread/CPU throttling from the `compute:` YAML section (falls back to the
+    # previous hard-coded 5 threads when nothing is configured). Each DDP rank
+    # re-runs this, so the budget is split across ranks by default.
+    training = yml_conf["cluster"]["heir"]["training"]
+    apply_compute_limits(yml_conf, default_num_threads=5,
+        num_processes=num_local_processes(training.get("devices", 1), training.get("accelerator", "auto")))
 
     dataset = get_train_dataset_sf(yml_conf)
 
@@ -326,6 +338,11 @@ def run_heir_training(yml_conf):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-y", "--yaml", help="YAML file for DBN and output config.")
+    parser.add_argument("-n", "--num-threads", default=None,
+        help="CPU thread cap: int, negative int (all but N), fraction (0-1], or low/medium/high/max. "
+             "Overrides compute.num_threads in the YAML.")
     args = parser.parse_args()
+    if args.num_threads is not None:
+        os.environ["SIT_FUSE_NUM_THREADS"] = str(args.num_threads)  # inherited by DDP ranks
     run_heir_training_outside(args.yaml)
 

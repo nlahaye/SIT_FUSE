@@ -9,6 +9,7 @@ import re
 import yaml
 
 from sit_fuse.utils import read_oc_geo
+from sit_fuse.compute_resources import merge_compute_conf
 
 from sit_fuse.pipelines.habs.hab_training_constants import *
 from sit_fuse.pipelines.data_transform_and_prep.goes_combine_and_clip_pipeline import goes_combine_and_clip_pipeline
@@ -157,6 +158,13 @@ def update_training_config(yml_conf, config_dict, instrument, key):
     config_dict["dbn"]["dbn_arch"] = dbn_arch
 
     config_dict["output"]["out_dir"] = os.path.join(yml_conf["output"], instrument + "_" + key)
+
+    # Carry the pipeline's compute: section into the model YAML so training
+    # (run_heir_training) and later inference use the same limits.
+    merge_compute_conf(yml_conf, config_dict)
+    nlw = (config_dict.get("compute") or {}).get("num_loader_workers")
+    if nlw is not None:
+        config_dict["data"]["num_loader_workers"] = int(nlw)
 
     os.makedirs(config_dict["output"]["out_dir"], exist_ok=True)
 
