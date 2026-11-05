@@ -1,4 +1,11 @@
 from resource import *
+
+# Cap native thread pools (OpenMP/BLAS/MKL) *before* numpy/torch are imported
+# when run as a script. Library callers get the same limits via prep_model().
+if __name__ == '__main__':
+    from sit_fuse.compute_resources import limit_env_from_argv
+    limit_env_from_argv()
+
 import pytorch_lightning as pl
 import torch
 from torch.utils.data import DataLoader, TensorDataset
@@ -25,6 +32,7 @@ from sit_fuse.models.deep_cluster.pca_dc import PCA_DC
 from sit_fuse.datasets.dataset_utils import get_prediction_dataset
 from sit_fuse.models.deep_cluster.heir_dc import Heir_DC
 from sit_fuse.utils import read_yaml
+from sit_fuse.compute_resources import apply_compute_limits, resolve_use_gpu, get_compute_conf
 from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes
 
 from tqdm import tqdm
@@ -51,7 +59,7 @@ from sit_fuse.viz.CMAP import CMAP, CMAP_COLORS
 
 
 
-def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled = False, return_embed = False):
+def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled = False, return_embed = False, batch_size = None):
     output_full = None
     embed_full = None
     count = 0
@@ -61,6 +69,9 @@ def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled 
     output_batch_size = 10000 #10000 #10 #0 #1
     if tiled:
         output_batch_size = 5 #50
+    if batch_size is not None:
+        output_batch_size = int(batch_size)
+    pin_mem = pin_mem and use_gpu  # pinned host memory only helps GPU transfers
 
     output_sze = dat.data_full.shape[0]
     append_remainder = int(output_batch_size - (output_sze % output_batch_size))
@@ -199,9 +210,9 @@ def run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled 
 
 
 
-def generate_output(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled = False, return_embed = False):
+def generate_output(dat, mdl, use_gpu, out_dir, output_fle, pin_mem = True, tiled = False, return_embed = False, batch_size = None):
 
-    output_full, embed_full, output_prob = run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem, tiled, return_embed)
+    output_full, embed_full, output_prob = run_inference(dat, mdl, use_gpu, out_dir, output_fle, pin_mem, tiled, return_embed, batch_size)
 
     print("SAVING", os.path.join(out_dir, output_fle), dat.targets_full.shape, output_full.shape)
     plot_clusters(dat.targets_full, output_full.numpy(), os.path.join(out_dir, output_fle), output_prob, pixel_padding=1) 
@@ -464,6 +475,8 @@ def predict_outside(yml_fpath):
 
 
 def prep_model(yml_conf):
+    apply_compute_limits(yml_conf)  # thread/CPU throttling from the `compute:` YAML section
+
     test_fnames = yml_conf["data"]["files_test"]
     train_fnames = yml_conf["data"]["files_train"]
 
@@ -477,7 +490,7 @@ def prep_model(yml_conf):
 
     model = get_model(yml_conf, data.data_full.shape[1])
 
-    if torch.cuda.is_available():
+    if resolve_use_gpu(yml_conf):
  
         model = model.cuda()
 
@@ -509,7 +522,8 @@ def predict(yml_conf):
 
     tiled = yml_conf["data"]["tile"]
 
-    #TODO make use_gpu configurable
+    use_gpu = resolve_use_gpu(yml_conf)
+    batch_size = get_compute_conf(yml_conf).get("inference_batch_size")
     for i in range(len(test_fnames)):
         if isinstance(test_fnames[i], list):
             output_fle = os.path.basename(test_fnames[i][0])
@@ -520,9 +534,9 @@ def predict(yml_conf):
             print("SKIPPING", test_fnames[i], " No valid samples")
             continue
         if model.clust_tree_ckpt is not None:
-            generate_output(data, model, True, out_dir, output_fle + ".clust.data", tiled = tiled)
+            generate_output(data, model, use_gpu, out_dir, output_fle + ".clust.data", tiled = tiled, batch_size = batch_size)
         if generate_intermediate_output:
-            generate_output(data, model.pretrained_model, True, out_dir, output_fle + ".no_heir.clust.data", tiled = tiled)
+            generate_output(data, model.pretrained_model, use_gpu, out_dir, output_fle + ".no_heir.clust.data", tiled = tiled, batch_size = batch_size)
  
     if generate_train_output:
         for i in range(len(train_fnames)):
@@ -535,9 +549,9 @@ def predict(yml_conf):
             else:
                 output_fle = os.path.basename(train_fnames[i])
             if model.clust_tree_ckpt is not None:
-                generate_output(data, model, True, out_dir, output_fle + ".clust.data", tiled = tiled)
+                generate_output(data, model, use_gpu, out_dir, output_fle + ".clust.data", tiled = tiled, batch_size = batch_size)
             if generate_intermediate_output:
-                generate_output(data, model.pretrained_model, True, out_dir, output_fle + ".no_heir.clust.data", tiled = tiled)
+                generate_output(data, model.pretrained_model, use_gpu, out_dir, output_fle + ".no_heir.clust.data", tiled = tiled, batch_size = batch_size)
 
 def gen_embeddings_from_arr(yml_conf, data_arr, init_shape, gen_image_shaped = True, strat_inds = None):
 
@@ -559,8 +573,9 @@ def gen_embeddings(yml_conf, fname, gen_image_shaped = True):
     recon_lab = None
     if model.pretrained_model is not None:
         print("GENERATING EMBEDDING")
-        output, embed, _ = run_inference(data, model, torch.cuda.is_available(), yml_conf["output"]["out_dir"], output_file + ".clust.data", \
-                tiled = yml_conf["encoder"]["tiled"], return_embed =  True)
+        output, embed, _ = run_inference(data, model, resolve_use_gpu(yml_conf), yml_conf["output"]["out_dir"], output_file + ".clust.data", \
+                tiled = yml_conf["encoder"]["tiled"], return_embed =  True, \
+                batch_size = get_compute_conf(yml_conf).get("inference_batch_size"))
 
         if gen_image_shaped:
             recon_arr, recon_lab = conscruct_embed_image(embed, output, data.targets_full, init_shape = data.init_shape)
@@ -610,7 +625,12 @@ def conscruct_embed_image(embed, labels, coord, init_shape = []):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-y", "--yaml", help="YAML file for DBN and output config.")
+    parser.add_argument("-n", "--num-threads", default=None,
+        help="CPU thread cap: int, negative int (all but N), fraction (0-1], or low/medium/high/max. "
+             "Overrides compute.num_threads in the YAML.")
     args = parser.parse_args()
+    if args.num_threads is not None:
+        os.environ["SIT_FUSE_NUM_THREADS"] = str(args.num_threads)  # highest-priority override
     predict_outside(args.yaml)
 
     print(getrusage(RUSAGE_SELF))
