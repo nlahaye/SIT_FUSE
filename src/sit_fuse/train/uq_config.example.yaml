@@ -18,7 +18,7 @@ data:
 # The resolved list is part of the feature signature (changing it requires
 # retraining). Empty lists = no exclusion.
 invalid_clusters:
-  joint: [76.49]
+  joint: [76.49]                    # SIT-FUSE cluster GeoTIFF values (joint_label / 1000), e.g. [73.201, 48.054]
   joint_labels: []             # integer joint labels (export_head_outputs.py), e.g. [73201]
   parent: []                   # root-head cluster IDs; all children excluded, e.g. [12]
   geotiff_scale: 1000          # joint_label = round(value * geotiff_scale)
@@ -136,7 +136,13 @@ calibration:
     transition: estimate             # estimate | [[0.97, 0.03], [0.15, 0.85]]
     prior_counts: 1.0                # Dirichlet smoothing per cell (estimate)
     min_diagonal_margin: 0.2         # refuse near-uninformative matrices
-  threshold_metric: iou
+  # Decision threshold for pred_label, chosen on the calibration rows:
+  #   iou / f1    maximize class-1 IoU / F1 (tends to over-call smoke; area biased high)
+  #   prevalence  match the weighted reference prevalence (area-unbiased masks)
+  threshold_metric: prevalence
+  # Per-model override of threshold_metric (model or baseline name -> iou | f1 | prevalence)
+  threshold_metric_overrides:
+    hard_assignment: iou
 
 # Selective discrete product: uncertainty threshold chosen on the calibration
 # rows so that retained pixels have error <= target_error (or a fixed coverage)
@@ -150,11 +156,11 @@ selective:
 
 bootstrap_ensemble:
   enabled: true
-  models: [logistic_regression]
+  models: [logistic_regression]        # add hist_gradient_boosting for ensemble_* layers on the primary model
   n_models: 10
 
 inference:
-  model: random_forest
+  model: hist_gradient_boosting        # primary product model
   # scene_file defaults to data.matchup_file; splits filters classifier_split
   # (null = all scenes, e.g. for unlabeled production runs via a separate scene_file)
   splits: null                         # null = all matched scenes (dev scenes enable shift tests)
@@ -173,6 +179,15 @@ evaluation:
   reference_model: hard_assignment   # paired bootstrap differences vs this model
   bootstrap: {n_resamples: 200, ci_level: 0.9, max_pixels_per_scene: 5000}
   boundary: {tolerance_pixels: [1, 2]}
+  # consensus level: assessed only on scenes with the consensus references
+  # observed; skipped (with a coverage report) below these minimums
+  consensus_level: {min_scenes: 1, min_negative_pixels: 100}
+  # Scene-area intervals. conformal_group makes the conformal q_hat
+  # group-conditional (one per fire event: split_stratum before '|');
+  # groups with < min_scenes calibration scenes use the pooled q_hat.
+  areas:
+    interval_level: 0.9
+    conformal_group: {column: split_stratum, sep: "|", index: 0, min_scenes: 10}
   objects: {min_object_pixels: 9, min_overlap: 0.1}
   # target overrides per attached reference (attach_references.py names)
   references:
@@ -184,3 +199,34 @@ evaluation:
     - {name: summer_vs_winter, column: split_stratum, in: ["park_fire_2024|pos_q1"], out: ["la_fires_2025|pos_q1"]}
   shift_splits: null                 # scenes used for shift tests (null = all inferred)
   shift_pixels_per_scene: 5000
+
+# export_geo_products.py: GIS-ready products from inference outputs
+geo_export:
+  output_dir: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ/geo
+  # inference_dir_template: defaults to evaluation.inference_dir_template
+  # scene_file: defaults to inference.scene_file (scene_time, sit_fuse_context_free)
+  # evaluation_dir: defaults to evaluation.output_dir (joins per_scene_metrics.csv)
+  layers: [p_1, pred_label, pred_label_selective, selective_flag, confidence,
+           predictive_entropy, ensemble_mutual_information, ensemble_variance,
+           ensemble_p1_q05, ensemble_p1_q95, excluded_cluster_mask]
+  raster:
+    enabled: true
+    cog: true
+    dst_crs: null              # null: keep affine grids; GCP (swath) grids warp to EPSG:4326
+    resolution: null
+    resampling: nearest        # continuous layers; categorical always nearest
+  vectors:
+    enabled: true
+    crs: EPSG:4326
+    mask_layer: pred_label     # pred_label_selective drops abstentions
+    positive_value: 1
+    min_pixels: 4
+    summary_layers: [p_1, predictive_entropy, ensemble_mutual_information, ensemble_variance, selective_flag]
+    formats: [parquet, gpkg]
+  footprints: true
+  # conformal: expected area +/- q_hat * analytic SD (q_hat from the
+  # evaluation's area_interval_calibration.json); analytic lo/hi dropped.
+  # analytic | all | none are also accepted.
+  area_intervals: conformal
+  area_calibration: null       # default <evaluation.output_dir>/<model>/area_interval_calibration.json
+  pixels: {enabled: false, stride: 4}

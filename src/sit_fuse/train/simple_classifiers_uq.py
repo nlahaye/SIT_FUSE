@@ -520,16 +520,25 @@ def run(cfg):
                          "use label_level: primary or add calibration groups with consensus coverage.")
 
     thr_metric = ccfg.get("threshold_metric", "iou")
+    # Per-model override, e.g. {hard_assignment: iou}: discrete-score baselines
+    # cannot match prevalence (few distinct score levels).
+    thr_overrides = {str(k): str(v) for k, v in (ccfg.get("threshold_metric_overrides") or {}).items()}
+    unknown = sorted(set(thr_overrides) - set(names))
+    if unknown:
+        LOG.warning("threshold_metric_overrides: no such model(s) %s (available: %s)", unknown, list(names))
+    threshold_metrics = {}
     sel_cfg = cfg.get("selective", {}) or {}
     selective = {}
     for n in names:
         calibrators[n] = fit_calibrator(n, P_cal[n], Y_cal, w_cal, train_priors.get(n), cfg, noise_T)
         Pc = calibrators[n].transform(P_cal[n])
         ref_cal = cal_frame["ref_label"].to_numpy()
+        m_n = threshold_metrics[n] = thr_overrides.get(n, thr_metric)
         if C == 2:
-            thresholds[n], _ = select_threshold(Pc[:, 1], ref_cal, w_cal, thr_metric)
+            thresholds[n], _ = select_threshold(Pc[:, 1], ref_cal, w_cal, m_n)
         else:
-            thresholds[n], _ = select_threshold_multiclass(Pc, ref_cal, w_cal, thr_metric)
+            thresholds[n], _ = select_threshold_multiclass(Pc, ref_cal, w_cal, m_n)
+        LOG.info("Threshold %s: %.3f (%s)", n, thresholds[n], m_n)
         if sel_cfg.get("enabled", True):
             selective[n] = selective_rules(n, Pc, ref_cal, w_cal, cal_frame, thresholds.get(n),
                                            calibrators[n], final_models, boot_paths, feats, C,
@@ -613,6 +622,7 @@ def run(cfg):
             "calibrators_path": str(tdir / "calibrators.joblib"),
             "bootstrap_manifest": boot_paths,
             "thresholds": thresholds,
+            "threshold_metrics": threshold_metrics,
             "label_levels": levels.describe() if levels else None,
             "calibration_label_level": cal_level,
             "noise_correction": noise_info,
