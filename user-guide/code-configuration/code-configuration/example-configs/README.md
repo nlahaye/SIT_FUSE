@@ -4,6 +4,10 @@
 [example-dbn-config.md](example-dbn-config.md)
 {% endcontent-ref %}
 
+{% content-ref url="example-rtdbn-config.md" %}
+[example-rtdbn-config.md](example-rtdbn-config.md)
+{% endcontent-ref %}
+
 {% content-ref url="example-byol-config.md" %}
 [example-byol-config.md](example-byol-config.md)
 {% endcontent-ref %}
