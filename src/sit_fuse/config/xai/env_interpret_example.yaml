@@ -1,0 +1,64 @@
+# Interpretability block for a SIT-FUSE environmental-state config (e.g. config/model/copernicus_whale.yaml).
+# Paste the `xai:` block into the model config; the stability block is a separate file for cluster_stability.py.
+#
+#   python -m sit_fuse.xai.xai               -y copernicus_whale.yaml   # cluster SHAP (assigned-cluster log-prob)
+#   python -m sit_fuse.xai.shap_faithfulness -y copernicus_whale.yaml   # deletion/insertion, rank stability, permutation
+#   python -m sit_fuse.xai.cluster_interpret -y copernicus_whale.yaml   # profiles, maps, surrogate, fronts/eddies
+#   python -m sit_fuse.xai.cluster_stability -y whale_cluster_stability.yaml
+
+xai:
+  output_mode: assigned_logprob        # f_c(x) = log p(c | x) on samples assigned to c ("label" = legacy behaviour)
+  attribution_level: channel           # channel | channel_centre_surround | group | feature
+  background: kmeans                   # kmeans | sample | zero
+  n_background: 50
+  background_pool: 20000
+  max_samples_per_cluster: 200
+  min_cluster_samples: 10
+  max_clusters: 0                      # 0 = all clusters with >= min_cluster_samples
+  exact_max_players: 12                # exact Shapley up to 12 players, KernelSHAP above
+  data_split: train
+  seed: 42
+  # TODO: confirm order against the zarr channel order written by preprocess_copernicus.py
+  feature_names: [thetao, uo, vo, zooc, npp, chl]
+  feature_groups:                      # used when attribution_level = group (correlated variables move together)
+    currents: [uo, vo]
+    productivity: [zooc, npp, chl]
+  faithfulness:
+    n_curve_samples: 50
+    n_random_orders: 10
+    n_permutations: 5
+    top_k: 3
+    stability_backgrounds: [kmeans, sample, zero]
+    stability_seeds: [0, 1, 2]
+    stability_sample_sizes: [50, 100, 200]
+  interpret:
+    # One label raster per scene, in the same order as data_files (default: data.files_train).
+    label_files: []                    # TODO: <out_dir>/<scene>.clust.data_<K>clusters.zarr.full_geo.tif or .npy
+    variable_names: [thetao, uo, vo, zooc, npp, chl]
+    dates: []                          # optional, ISO date per scene (monthly frequency)
+    label_fill: -1
+    n_top_clusters: 30
+    min_cluster_pixels: 50
+    max_pixels_per_scene: 20000
+    surrogate_depths: [3, 4, 6]
+    n_splits: 5
+    external:
+      sst: thetao
+      front_percentile: 90
+      u: uo
+      v: vo
+      ow_threshold: 0.2
+      pixel_km: null                   # e.g. 9.25 for 1/12 degree at mid-latitudes; null = per-pixel units
+      masks: {}                        # e.g. {upwelling: [mask_t0.tif, ...]}
+
+# ---- whale_cluster_stability.yaml (separate file) ----
+# runs:
+#   seed0: [labels_seed0_t0.tif, labels_seed0_t1.tif]
+#   seed1: [labels_seed1_t0.tif, labels_seed1_t1.tif]
+#   seed2: [labels_seed2_t0.tif, labels_seed2_t1.tif]
+# scenes: [cop_env_whale_t0.zarr, cop_env_whale_t1.zarr]   # optional, for centroid matching
+# sit_fuse_config: copernicus_whale.yaml
+# variable_names: [thetao, uo, vo, zooc, npp, chl]
+# max_pixels: 500000
+# min_cluster_pixels: 50
+# out_dir: /path/to/xai/stability
