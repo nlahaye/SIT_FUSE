@@ -54,6 +54,7 @@ from sit_fuse.train.classifier_utils import (
     margin_uncertainty,
     normalize_feature_config,
     predictive_entropy as _predictive_entropy,
+    rasters_are_collocated,
     read_raster,
     save_json as _save_json,
 )
@@ -206,7 +207,6 @@ def read_head_outputs(path) -> tuple[dict[str, np.ndarray], dict[str, Any], dict
     """Read a head-output GeoTIFF into {band_name: 2-D float32 array}."""
     import rasterio
 
-    print(path)
     with rasterio.open(path) as src:
         descriptions = list(src.descriptions)
         if any(d is None for d in descriptions):
@@ -416,11 +416,40 @@ def resolve_reference_nodata(prof: dict[str, Any], target_cfg: dict[str, Any],
 
 def align_reference(truth_path, head_profile: dict[str, Any],
                     target_cfg: dict[str, Any]) -> np.ndarray:
-    """Collocate the reference to the head grid (classifier_utils, nearest)."""
+    """
+    Collocate the reference to the head grid.
+
+    target.reference_resampling (per reference via evaluation.references[name]
+    or label_levels.consensus_references[name]):
+      nearest  classifier_utils.collocate_annotation_to_cluster_grid (default)
+      max      scene_grid_truth.bucket_max: a head pixel is positive if any
+               reference subpixel inside it is positive (fine fire masks on
+               coarse scenes). reference_positive_values (ints or [lo, hi])
+               binarizes first; null = max of the raw values.
+               reference_min_valid_fraction gates negatives only.
+    References already on the head grid (e.g. scene_grid matchup truth) are
+    used as is in both modes.
+    """
     arr, prof = read_raster(Path(truth_path))
     sentinel, nod = resolve_reference_nodata(prof, target_cfg, truth_path)
-    arr, _, _ = collocate_annotation_to_cluster_grid(
-        arr.astype(np.float32), prof, head_profile, annotation_nodata=sentinel)
+    mode = str(target_cfg.get("reference_resampling", "nearest")).lower()
+    if mode not in ("nearest", "max"):
+        raise ValueError("target.reference_resampling must be nearest | max")
+    if mode == "max" and not rasters_are_collocated(prof, head_profile):
+        try:
+            from sit_fuse.train.scene_grid_truth import SceneGrid, bucket_max
+        except ImportError:  # scripts directory
+            from scene_grid_truth import SceneGrid, bucket_max
+        if prof.get("crs") is None:
+            raise ValueError(f"{truth_path}: reference_resampling: max needs a georeferenced reference")
+        arr, _, _ = bucket_max(arr, prof["transform"], prof["crs"], SceneGrid.from_profile(head_profile),
+                               nodata_values=nod,
+                               positive_values=target_cfg.get("reference_positive_values"),
+                               min_valid_fraction=float(target_cfg.get("reference_min_valid_fraction", 0.0)),
+                               fill=sentinel)
+    else:
+        arr, _, _ = collocate_annotation_to_cluster_grid(
+            arr.astype(np.float32), prof, head_profile, annotation_nodata=sentinel)
     nodata_mask = ~np.isfinite(arr)
     for v in nod:
         nodata_mask |= arr == float(v)

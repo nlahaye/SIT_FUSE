@@ -28,6 +28,10 @@ firms_fire_front_matchup_generator.py.
 
 Usage:
     python rasterize_fire_fronts.py firms_fire_fronts.example.yaml [--products feds firms]
+
+raster.products: auto (default) rasterizes every product whose vectors exist in
+the pull output; a product listed without vectors, or vectors not listed, are
+logged as warnings.
 """
 
 from __future__ import annotations
@@ -86,6 +90,11 @@ def read_layer(cfg, name):
                     g[c] = pd.to_datetime(g[c], utc=True)
             return g
     return None
+
+
+def _layer_exists(cfg, name):
+    d = vector_dir(cfg)
+    return any((d / f"{name}.{ext}").exists() for ext in ("parquet", "gpkg"))
 
 
 def write_tif(path, arr, grid, fill, tags):
@@ -235,7 +244,8 @@ def rasterize_firms(cfg, grid, utm, classes, fill, out_dir, prefix):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("config", type=Path)
-    ap.add_argument("--products", nargs="+", choices=["feds", "firms"], default=None)
+    ap.add_argument("--products", nargs="+", choices=["feds", "firms", "auto"], default=None,
+                    help="default raster.products, else auto (every product with vectors)")
     a = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     cfg = load_config(a.config)
@@ -248,7 +258,25 @@ def main(argv=None):
     utm = gpd.GeoSeries([box(*cfg["_bbox"])], crs="EPSG:4326").estimate_utm_crs()
     out_dir = Path(rcfg.get("outdir") or cfg["_outdir"] / "rasters")
     prefix = rcfg.get("prefix", "fire_front")
-    products = a.products or rcfg.get("products", ["feds", "firms"])
+    products = a.products or rcfg.get("products", "auto")
+    vdir = vector_dir(cfg)
+    have = {"feds": any(_layer_exists(cfg, f"feds_{n}") for n in ("fireline", "newfirepix")),
+            "firms": _layer_exists(cfg, "firms_detections")}
+    LOG.info("Vector dir %s: feds=%s firms=%s", vdir.resolve(), have["feds"], have["firms"])
+    if products == "auto" or products == ["auto"]:
+        products = [p for p, ok in have.items() if ok]
+    products = list(products)
+    for p in products:
+        if not have.get(p):
+            LOG.warning("raster.products includes %s but %s has no %s vectors (run pull_firms_fire_fronts.py "
+                        "with the same config / output.outdir)", p, vdir.resolve(),
+                        "feds_fireline / feds_newfirepix" if p == "feds" else "firms_detections")
+    for p, ok in have.items():
+        if ok and p not in products:
+            LOG.warning("%s vectors exist in %s but %s is not in raster.products %s (not rasterized)",
+                        p, vdir.resolve(), p, products)
+    if not products:
+        LOG.warning("No vector layers to rasterize in %s", vdir.resolve())
     LOG.info("Grid %dx%d at %.4f deg, metric CRS %s", grid.width, grid.height, grid.res, utm)
     rows = []
     if "feds" in products:

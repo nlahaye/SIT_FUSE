@@ -32,6 +32,11 @@ try:
     from sit_fuse.train.matchup_splits import finalize as finalize_splits
 except ImportError:  # running from the scripts directory
     from matchup_splits import finalize as finalize_splits
+try:
+    from sit_fuse.train.scene_grid_truth import bucket_matchups
+except ImportError:  # running from the scripts directory
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from scene_grid_truth import bucket_matchups
 
 
 LOG = logging.getLogger("build-sit-fuse-fdcc-fire-matchups")
@@ -658,6 +663,12 @@ def main(config_path: Path) -> None:
         config=config,
     )
 
+    # Max-bucket the reference onto each scene grid (scene_grid block): any
+    # scene pixel containing a positive reference subpixel becomes positive.
+    # Runs before the split step so stratification reads the scene-grid truth.
+    matchups, scene_grid_summary = bucket_matchups(
+        matchups, "truth_fdcc_fire", config.get("scene_grid"), default_positive=[1], log=LOG)
+
     # Encoder (DBN/cluster) train/test tracing + stratified classifier splits
     matchups, split_summary = finalize_splits(
         matchups, config, truth_field="truth_fdcc_fire", truth_date_field="fdcc_date", log=LOG)
@@ -701,6 +712,8 @@ def main(config_path: Path) -> None:
     )
     if split_summary is not None:
         classifier_config.setdefault("matchup_metadata", {})["splits"] = split_summary
+    if scene_grid_summary.get("enabled"):
+        classifier_config.setdefault("matchup_metadata", {})["scene_grid"] = scene_grid_summary
 
     classifier_yaml_path = Path(config["output"]["classifier_yaml"])
     audit_csv_path = Path(config["output"]["audit_csv"])

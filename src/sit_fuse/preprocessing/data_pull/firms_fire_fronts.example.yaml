@@ -7,8 +7,12 @@
 #
 # Coverage of the FEDS fire-front layers (VEDA OGC API, no key):
 #   2018-2021 archive, 2025-01 -> 2025-03 NRT snapshot, 2025-03 -> present NRT
-#   large fires. Other years (e.g. Park fire 2024): enable `firms` below and
-#   derive fronts from VIIRS detections.
+#   large fires. Other years (e.g. Park fire 2024): use local FEDS vectors
+#   (feds.local_vectors) and / or FIRMS detections (firms.local_csv or the
+#   Area API) and derive fronts from VIIRS detections.
+# Relative input paths (local_vectors, local_csv) are resolved against the
+# directory of this file. Use absolute output paths if pull and rasterize are
+# run from different working directories.
 # =============================================================================
 
 time_range:
@@ -32,6 +36,23 @@ overwrite: false
 # -----------------------------------------------------------------------------
 feds:
   enabled: true
+  # auto: local_vectors when given, else the VEDA API | local | api | both
+  source: auto
+  # Local FEDS vectors (fireatlas outputs / downloads): files, globs or
+  # directories (searched recursively for .fgb .gpkg .shp .geojson .parquet).
+  # Layer from the file / GPKG layer name: perimeter, fireline, newfirepix
+  # (also lf_perimeter.fgb, ...); nfplist / uptonow are skipped. Step time from
+  # `t` (or time / date) or YYYYMMDD[AM|PM] in the path (Snapshot/20240726PM/,
+  # Largefire/F123_20240726PM/); fireid from fireID / fireid or F<id>_ in the path.
+  local_vectors: []
+  #   - /data/nlahaye/feds/CONUS/2024/Largefire/     # directory
+  #   - ./feds/**/*.fgb                              # glob
+  # or per layer:
+  # local_vectors:
+  #   fireline: [/data/feds/park_fireline.gpkg]
+  #   perimeter: [/data/feds/park_perimeter.gpkg]
+  #   newfirepix: [/data/feds/park_newfirepix.gpkg]
+  local_crs: EPSG:9311       # CRS for local files without one (fireatlas default)
   api_url: https://openveda.cloud/api/features
   layers: [fireline, perimeter, newfirepix]
   collections: auto          # or {fireline: [public.eis_fire_lf_fireline_nrt], ...}
@@ -45,7 +66,7 @@ feds:
 # FIRMS active fire detections (fronts derived in the rasterizer)
 # -----------------------------------------------------------------------------
 firms:
-  enabled: false
+  enabled: auto              # auto: on when sources or local_csv are given | true | false
   api_url: https://firms.modaps.eosdis.nasa.gov/api/area/csv
   map_key_env: FIRMS_MAP_KEY
   # Area API sources: LANDSAT_NRT (US/Canada, 30 m, 2022-06-20 on; no SP),
@@ -59,8 +80,19 @@ firms:
   prefer_standard_processing: true
   day_range: 5               # API maximum
   request_pause_seconds: 0.5
-  local_csv: []              # FIRMS archive-download CSVs, e.g. ["./firms/fire_archive_SV-C2_*.csv"]
-  local_source_name: null    # firms_source label for local CSVs (default: file stem)
+  # FIRMS archive-download files (string or list; files, globs, directories):
+  # .csv / .json / .shp or the DL_FIRE_*.zip itself. Without a MAP_KEY the
+  # Area API sources are skipped and only these are used.
+  local_csv: []
+  #   - /data/nlahaye/firms/DL_FIRE_SV-C2_*/fire_*.csv
+  #   - /data/nlahaye/firms/DL_FIRE_J1V-C2_123456.zip
+  # firms_source label; null = from the file name (fire_archive_SV-C2_* ->
+  # VIIRS_SNPP_SP, fire_nrt_J1V-C2_* -> VIIRS_NOAA20_NRT; M-C61 = MODIS,
+  # J2V-C2 = NOAA-21), so NRT rows are superseded by SP rows of the same satellite
+  local_source_name: null
+  # Archive `type` (SP files only): 0 presumed vegetation fire, 1 active volcano,
+  # 2 other static land source (industrial), 3 offshore. null = keep all.
+  keep_types: [0]
   min_confidence: nominal    # low | nominal | high (MODIS: <30 low, 30-79 nominal, >=80 high)
   include_night: true
   overpass_gap_minutes: 20   # detections of one satellite closer than this = one overpass
@@ -71,7 +103,7 @@ firms:
 raster:
   outdir: null               # default <output.outdir>/rasters
   prefix: fire_front
-  products: [feds]           # feds | firms (both allowed)
+  products: auto             # auto (every product with vectors) | [feds] | [firms] | [feds, firms]
   resolution_deg: 0.0025     # ~250 m; the matchup generator aggregates to the scene grid
   fill_value: 255
   classes: {front: 1, interior: 2, negative: 0}

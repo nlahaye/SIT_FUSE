@@ -10,7 +10,11 @@ Sources
            fireline    active portion of the perimeter (the fire front)
            perimeter   modeled fire perimeter (polygon)
            newfirepix  VIIRS 375 m detections new in the 12-hour step
-         Collections are chosen by date (`feds.collections: auto`):
+         Local FEDS vector files (fireatlas outputs or downloads, any OGR
+         format: .fgb, .gpkg, .shp, .geojson, .parquet; any CRS, e.g. the
+         fireatlas EPSG:9311 equal-area grid) are read from feds.local_vectors
+         instead of the API (feds.source: auto | local | api | both).
+         API collections are chosen by date (`feds.collections: auto`):
            *_archive        2018-2021 (FEDS science archive)
            snapshot_*_nrt   2025-01 .. 2025-03 (all fires, NRT snapshot)
            lf_*_nrt         2025-03 .. present (large fires, NRT)
@@ -20,7 +24,10 @@ Sources
          derived per feature as t_date + overpass_lst_hours[AM|PM] - lon/15 h.
   firms  FIRMS active fire detections (VIIRS 375 m / MODIS 1 km points) from
          the FIRMS Area API (MAP_KEY; *_SP science archive or *_NRT) and/or
-         local FIRMS archive-download CSVs. Detections are grouped into
+         local FIRMS archive-download files (firms.local_csv: .csv, .json,
+         .shp or the DL_FIRE_*.zip itself; fire_archive_* = SP, fire_nrt_* =
+         NRT, satellite from the M-C61 / SV-C2 / J1V-C2 / J2V-C2 code).
+         Detections are grouped into
          overpasses (one satellite, contiguous acquisition times). Fire fronts
          are derived from these by rasterize_fire_fronts.py (FEDS-style new
          pixels), which covers years outside the FEDS collections (e.g. 2022-2024).
@@ -38,6 +45,10 @@ Outputs (EPSG:4326, in output.outdir/vectors):
 Usage:
   export FIRMS_MAP_KEY=...      # only for firms.sources (https://firms.modaps.eosdis.nasa.gov/api/map_key/)
   python pull_firms_fire_fronts.py firms_fire_fronts.example.yaml [--local-only]
+
+Relative paths in feds.local_vectors and firms.local_csv are resolved against
+the config file directory. --local-only: no network (cached Area API CSVs,
+local FIRMS files and local FEDS vectors only).
 """
 
 from __future__ import annotations
@@ -45,6 +56,8 @@ from __future__ import annotations
 import argparse
 import glob
 import io
+import re
+import zipfile
 import json
 import logging
 import os
@@ -74,6 +87,13 @@ VIIRS_CONF = {"l": 0, "low": 0, "n": 1, "nominal": 1, "m": 1, "medium": 1, "h": 
 # Nominal pixel size (km) when the CSV has no usable scan/track (Landsat scan/track are pixel indices)
 DEFAULT_PIXEL_KM = {"MODIS": 1.0, "VIIRS": 0.375, "LANDSAT": 0.03}
 CONF_LEVEL = {"low": 0, "nominal": 1, "high": 2}
+# FIRMS archive-download file codes (DL_FIRE_<code>_<id>.zip / fire_{archive,nrt}_<code>_<id>.*)
+FIRMS_ARCHIVE_CODES = {"M-C61": "MODIS", "M-C6": "MODIS", "SV-C2": "VIIRS_SNPP",
+                       "J1V-C2": "VIIRS_NOAA20", "J2V-C2": "VIIRS_NOAA21", "J2C-C2": "VIIRS_NOAA21"}
+FIRMS_LOCAL_EXT = (".csv", ".json", ".geojson", ".shp", ".gpkg", ".zip", ".txt")
+FEDS_LOCAL_EXT = (".fgb", ".gpkg", ".shp", ".geojson", ".json", ".parquet")
+# FIRMS archive `type`: 0 presumed vegetation fire, 1 active volcano, 2 other static land source, 3 offshore
+FIRMS_TYPES = {0: "vegetation", 1: "volcano", 2: "static_land", 3: "offshore"}
 
 
 # ---------------------------------------------------------------------------
@@ -100,7 +120,38 @@ def load_config(path) -> dict:
     if cfg["_end"] < cfg["_start"]:
         raise ValueError("time_range.end is before time_range.start")
     cfg["_outdir"] = Path(cfg["output"]["outdir"])
+    cfg["_cfgdir"] = Path(path).resolve().parent
     return cfg
+
+
+def resolve_inputs(spec, base: Path, exts, what: str) -> list[Path]:
+    """
+    Files from a path / glob / directory or a list of them. Relative entries
+    are resolved against `base` (the config directory) first, then the cwd;
+    directories are searched recursively for `exts`. Warns when an entry
+    matches nothing.
+    """
+    if spec is None:
+        return []
+    items = [spec] if isinstance(spec, (str, Path)) else list(spec)
+    out: list[Path] = []
+    for it in items:
+        it = os.path.expanduser(str(it))
+        cands = [it] if os.path.isabs(it) else [os.path.normpath(str(base / it)), it]
+        hits: list[str] = []
+        for c in cands:
+            if os.path.isdir(c):
+                hits = [str(p) for p in sorted(Path(c).rglob("*")) if p.suffix.lower() in exts]
+            else:
+                hits = sorted(glob.glob(c, recursive=True))
+                hits = [h for h in hits if os.path.isfile(h)]
+            if hits:
+                break
+        if not hits:
+            LOG.warning("%s: %r matched no files (looked in %s)", what, it, " and ".join(dict.fromkeys(
+                os.path.abspath(c) for c in cands)))
+        out += [Path(h) for h in hits]
+    return list(dict.fromkeys(out))
 
 
 def vector_dir(cfg) -> Path:
@@ -183,48 +234,167 @@ def feds_obs_time(step_t: pd.Series, lon: np.ndarray, lst_hours: dict) -> pd.Ser
     return step_t.dt.normalize() + off, half
 
 
-def pull_feds(cfg: dict) -> dict:
-    fcfg = cfg.get("feds") or {}
+def _feds_api_layer(cfg, fcfg, layer, start, end) -> gpd.GeoDataFrame | None:
     api = fcfg.get("api_url", FEDS_API)
-    bbox, start, end = cfg["_bbox"], cfg["_start"], cfg["_end"]
+    rows = []
+    for col in feds_collections(layer, fcfg, start, end):
+        try:
+            feats = ogc_items(api, col, cfg["_bbox"], start, end, fcfg.get("page_limit", 1000))
+        except requests.HTTPError as exc:
+            LOG.warning("FEDS %s: %s", col, exc)
+            continue
+        LOG.info("FEDS %s: %d features", col, len(feats))
+        for f in feats:
+            if not f.get("geometry"):
+                continue
+            p = dict(f.get("properties") or {})
+            p["collection"] = col
+            p["geometry"] = shape(f["geometry"])
+            rows.append(p)
+    if not rows:
+        return None
+    return gpd.GeoDataFrame(rows, geometry="geometry", crs="EPSG:4326")
+
+
+# --- local FEDS vectors ------------------------------------------------------
+
+_FEDS_STEP_RE = re.compile(r"(\d{8})(AM|PM)", re.I)
+_FEDS_FID_RE = re.compile(r"(?:^|[/\\_])F(\d+)_\d{8}(?:AM|PM)", re.I)
+
+
+def _feds_layer_name(name: str) -> str | None:
+    n = name.lower()
+    for layer in ("newfirepix", "fireline", "perimeter"):  # newfirepix before 'fire...'
+        if layer in n:
+            return layer
+    return None
+
+
+def _list_layers(path: Path) -> list[str | None]:
+    if path.suffix.lower() != ".gpkg":
+        return [None]
+    try:
+        import pyogrio
+        return [str(l[0]) for l in pyogrio.list_layers(path)]
+    except Exception:  # fiona fallback
+        import fiona
+        return list(fiona.listlayers(path))
+
+
+def _feds_time(g: gpd.GeoDataFrame, path: Path) -> pd.Series:
+    """Step time: `t` (fireatlas / VEDA), else time/date columns, else YYYYMMDD(AM|PM) in the path."""
+    for c in ("t", "time", "datetime", "step_t", "date"):
+        if c in g.columns:
+            t = pd.to_datetime(g[c], utc=True, errors="coerce")
+            if t.notna().any():
+                return t
+    m = _FEDS_STEP_RE.findall(str(path))
+    if not m:
+        raise ValueError(f"{path}: FEDS step time not found (no t/time/date column, no YYYYMMDD[AM|PM] in path)")
+    d, half = m[-1]
+    t = pd.Timestamp(f"{d[:4]}-{d[4:6]}-{d[6:]}T{'12' if half.upper() == 'PM' else '00'}:00:00", tz="UTC")
+    return pd.Series([t] * len(g), index=g.index)
+
+
+def read_feds_local(fcfg: dict, cfg: dict) -> dict[str, list[gpd.GeoDataFrame]]:
+    """
+    feds.local_vectors: path / glob / directory (or a list), or a mapping
+    {fireline: [...], perimeter: [...], newfirepix: [...]}. Without a mapping
+    the layer comes from the file or GPKG layer name (perimeter.fgb,
+    lf_fireline.fgb, F123_20240726PM/newfirepix.fgb, ...); nfplist / uptonow /
+    other files are skipped. Geometries are reprojected to EPSG:4326
+    (feds.local_crs for files without a CRS; fireatlas default EPSG:9311).
+    """
+    spec = fcfg.get("local_vectors")
+    by_layer = spec if isinstance(spec, dict) else {None: spec}
+    out: dict[str, list] = {l: [] for l in FEDS_LAYERS}
+    bbox_geom = box(*cfg["_bbox"])
+    for forced, entries in by_layer.items():
+        if forced is not None and forced not in FEDS_LAYERS:
+            raise ValueError(f"feds.local_vectors: unknown layer {forced!r} ({', '.join(FEDS_LAYERS)})")
+        for path in resolve_inputs(entries, cfg["_cfgdir"], FEDS_LOCAL_EXT, "feds.local_vectors"):
+            for lname in _list_layers(path):
+                layer = forced or _feds_layer_name(lname or path.stem) or _feds_layer_name(path.parent.name)
+                if layer is None:
+                    LOG.debug("FEDS local: skipping %s%s", path, f" layer {lname}" if lname else "")
+                    continue
+                g = gpd.read_parquet(path) if path.suffix.lower() == ".parquet" else \
+                    gpd.read_file(path, layer=lname) if lname else gpd.read_file(path)
+                n_read = len(g)
+                if g.empty:
+                    continue
+                if g.crs is None:
+                    g = g.set_crs(fcfg.get("local_crs", "EPSG:9311"))
+                g = g.to_crs("EPSG:4326")
+                g = g[g.geometry.notna() & ~g.geometry.is_empty]
+                g.columns = [c if c == g.geometry.name else str(c).lower() for c in g.columns]
+                g = g.loc[:, ~g.columns.duplicated()]
+                g["t"] = _feds_time(g, path)
+                if "fireid" not in g.columns:
+                    m = _FEDS_FID_RE.search(str(path))
+                    g["fireid"] = m.group(1) if m else path.parent.name
+                g = g[g.intersects(bbox_geom)]
+                g["collection"] = f"local:{path.name}" + (f":{lname}" if lname else "")
+                LOG.info("FEDS local %s%s -> %s: %d features, %d in bbox", path,
+                         f" [{lname}]" if lname else "", layer, n_read, len(g))
+                if len(g):
+                    out[layer].append(g)
+    return out
+
+
+def pull_feds(cfg: dict, local_only: bool = False) -> dict:
+    fcfg = cfg.get("feds") or {}
+    start, end = cfg["_start"], cfg["_end"]
     # FEDS steps are labeled at 00/12 local-solar-ish hours; pad so steps whose
     # estimated overpass falls inside the window are kept.
     pad = pd.Timedelta(hours=float(fcfg.get("time_pad_hours", 12)))
+    source = str(fcfg.get("source", "auto")).lower()
+    if source == "auto":
+        source = "local" if fcfg.get("local_vectors") else "api"
+    if source not in ("local", "api", "both"):
+        raise ValueError("feds.source must be auto | local | api | both")
+    if local_only and source in ("api", "both"):
+        LOG.info("FEDS: --local-only, VEDA API not queried")
+        source = "local" if source == "both" else "none"
+    local = read_feds_local(fcfg, cfg) if source in ("local", "both") else {}
+    if source in ("local", "both") and not any(local.values()):
+        LOG.warning("FEDS: no local features read from feds.local_vectors in the bbox")
     out = {}
     for layer in fcfg.get("layers", list(FEDS_LAYERS)):
         if layer not in FEDS_LAYERS:
             raise ValueError(f"feds.layers: unknown layer {layer!r}")
-        rows = []
-        for col in feds_collections(layer, fcfg, start - pad, end + pad):
-            try:
-                feats = ogc_items(api, col, bbox, start - pad, end + pad, fcfg.get("page_limit", 1000))
-            except requests.HTTPError as exc:
-                LOG.warning("FEDS %s: %s", col, exc)
-                continue
-            LOG.info("FEDS %s: %d features", col, len(feats))
-            for f in feats:
-                if not f.get("geometry"):
-                    continue
-                p = dict(f.get("properties") or {})
-                p["collection"] = col
-                p["geometry"] = shape(f["geometry"])
-                rows.append(p)
-        if not rows:
+        parts = list(local.get(layer, []))
+        if source in ("api", "both"):
+            g_api = _feds_api_layer(cfg, fcfg, layer, start - pad, end + pad)
+            if g_api is not None:
+                parts.append(g_api)
+        if not parts:
             LOG.warning("FEDS %s: no features in bbox/time range", layer)
             out[layer] = None
             continue
-        g = gpd.GeoDataFrame(rows, geometry="geometry", crs="EPSG:4326")
+        g = gpd.GeoDataFrame(pd.concat(parts, ignore_index=True), geometry="geometry", crs="EPSG:4326")
         g["fireid"] = g["fireid"].astype(str).str.replace(r"\.0$", "", regex=True)
         g["step_t"] = pd.to_datetime(g["t"], utc=True)
+        n0 = len(g)
+        g = g[g["step_t"].notna()]
         lon = g.geometry.representative_point().x.to_numpy()
         g["obs_time"], g["step_half"] = feds_obs_time(g["step_t"], lon, fcfg.get("overpass_lst_hours", {}))
         g = g[(g["obs_time"] >= start) & (g["obs_time"] <= end)].copy()
-        # snapshot and large-fire collections overlap in early 2025: drop exact duplicates
+        if len(g) < n0:
+            LOG.info("FEDS %s: %d of %d features in time_range %s .. %s", layer, len(g), n0, start, end)
+        if g.empty:
+            LOG.warning("FEDS %s: no features left in time_range", layer)
+            out[layer] = None
+            continue
+        # snapshot / large-fire collections (and local + API copies) overlap: drop exact duplicates
         g["_wkb"] = g.geometry.apply(lambda s: s.wkb_hex)
         g = g.drop_duplicates(subset=["step_t", "_wkb"]).drop(columns=["_wkb", "t"], errors="ignore")
         g.insert(0, "layer", layer)
         g.insert(0, "source", "feds")
         g = g.drop(columns=[c for c in ("wkb_geometry", "ogc_fid", "geom_counts") if c in g], errors="ignore")
+        for c in g.columns:  # mixed-type object columns from heterogeneous files break Parquet
+            if c != g.geometry.name and g[c].dtype == object:
+                g[c] = g[c].map(lambda v: v if v is None or isinstance(v, str) else str(v))
         g = g.sort_values(["step_t", "fireid"]).reset_index(drop=True)
         out[layer] = g
         LOG.info("FEDS %s: %d features, %d steps kept", layer, len(g), g["step_t"].nunique())
@@ -272,6 +442,77 @@ def _norm_firms(df: pd.DataFrame, firms_source: str) -> pd.DataFrame:
     return df
 
 
+def infer_firms_source(name: str, default: str | None = None) -> str:
+    """FIRMS source label from an archive-download file name (fire_archive_SV-C2_123 -> VIIRS_SNPP_SP)."""
+    m = re.search(r"(archive|nrt)_([A-Z0-9]+-C\d+)", name, re.I)
+    if m:
+        fam = FIRMS_ARCHIVE_CODES.get(m.group(2).upper(), m.group(2).upper())
+        return f"{fam}_{'SP' if m.group(1).lower() == 'archive' else 'NRT'}"
+    return default or name
+
+
+def _read_table(path: Path, member: str | None = None) -> pd.DataFrame:
+    """FIRMS detections table from .csv / .txt / .json / .geojson / .shp / .gpkg (optionally inside a zip)."""
+    ext = Path(member or path.name).suffix.lower()
+    if member:
+        with zipfile.ZipFile(path) as z:
+            if ext in (".csv", ".txt"):
+                with z.open(member) as f:
+                    return pd.read_csv(f)
+            if ext == ".json":
+                with z.open(member) as f:
+                    raw = f.read()
+                try:
+                    return pd.read_json(io.BytesIO(raw))
+                except ValueError:
+                    return pd.DataFrame(gpd.read_file(io.BytesIO(raw)).drop(columns="geometry"))
+        uri = f"zip://{path.resolve()}!{member}"
+        return pd.DataFrame(gpd.read_file(uri).drop(columns="geometry", errors="ignore"))
+    if ext in (".csv", ".txt"):
+        return pd.read_csv(path)
+    if ext == ".json":
+        try:
+            return pd.read_json(path)
+        except ValueError:
+            pass
+    return pd.DataFrame(gpd.read_file(path).drop(columns="geometry", errors="ignore"))
+
+
+def read_firms_local(fcfg: dict, cfg: dict) -> list[pd.DataFrame]:
+    """
+    firms.local_csv: path / glob / directory or a list (FIRMS archive-download
+    .csv / .json / .shp, or the DL_FIRE_*.zip). One table per file / zip member;
+    firms_source from firms.local_source_name, else the file name
+    (fire_archive_* -> *_SP, fire_nrt_* -> *_NRT), so NRT rows are superseded
+    by SP rows of the same satellite (prefer_standard_processing).
+    """
+    frames = []
+    for f in resolve_inputs(fcfg.get("local_csv"), cfg["_cfgdir"], FIRMS_LOCAL_EXT, "firms.local_csv"):
+        members = [None]
+        if f.suffix.lower() == ".zip":
+            with zipfile.ZipFile(f) as z:
+                names = [n for n in z.namelist() if not n.endswith("/")]
+            members = [n for n in names if n.lower().endswith((".csv", ".txt")) and "readme" not in n.lower()] or \
+                      [n for n in names if n.lower().endswith(".json")] or \
+                      [n for n in names if n.lower().endswith(".shp")]
+            if not members:
+                LOG.warning("FIRMS local %s: no .csv / .json / .shp inside", f)
+                continue
+        for m in members:
+            df = _read_table(f, m)
+            label = f"{f.name}!{m}" if m else str(f)
+            if df.empty:
+                LOG.warning("FIRMS local %s: no rows", label)
+                continue
+            src = infer_firms_source(Path(m or f.name).stem, fcfg.get("local_source_name"))
+            frames.append(_norm_firms(df, src))
+            d = frames[-1]
+            LOG.info("FIRMS local %s: %d rows (%s, %s .. %s, lon %.2f..%.2f, lat %.2f..%.2f)", label, len(d), src,
+                     d.acq_time.min(), d.acq_time.max(), d.longitude.min(), d.longitude.max(),
+                     d.latitude.min(), d.latitude.max())
+    return frames
+
+
 def firms_area_requests(fcfg: dict, bbox, start, end):
     key = os.environ.get(fcfg.get("map_key_env", "FIRMS_MAP_KEY"), "")
     if not key:
@@ -303,14 +544,17 @@ def pull_firms(cfg: dict, local_only: bool = False) -> gpd.GeoDataFrame | None:
     raw_dir = cfg["_outdir"] / "firms_csv"
     raw_dir.mkdir(parents=True, exist_ok=True)
     frames = []
-    for p in fcfg.get("local_csv", []) or []:
-        for f in sorted(glob.glob(str(p))):
-            f = Path(f)
-            frames.append(_norm_firms(pd.read_csv(f), fcfg.get("local_source_name", f.stem)))
-            LOG.info("FIRMS local CSV %s: %d rows", f, len(frames[-1]))
-    if fcfg.get("sources"):
+    frames += read_firms_local(fcfg, cfg)
+    use_api = bool(fcfg.get("sources"))
+    if use_api and not local_only and not os.environ.get(fcfg.get("map_key_env", "FIRMS_MAP_KEY")) and frames:
+        LOG.warning("FIRMS: no MAP_KEY in $%s; firms.sources (Area API) skipped, using the %d local file(s)",
+                    fcfg.get("map_key_env", "FIRMS_MAP_KEY"), len(frames))
+        use_api = False
+    if use_api:
         if local_only:
             for f in sorted(raw_dir.glob("*.csv")):
+                if f.stat().st_size == 0 or not f.read_text().strip():
+                    continue
                 src = f.stem.split("__")[0]
                 frames.append(_norm_firms(pd.read_csv(f), src))
         else:
@@ -332,13 +576,29 @@ def pull_firms(cfg: dict, local_only: bool = False) -> gpd.GeoDataFrame | None:
         LOG.warning("FIRMS: no detections (configure firms.sources or firms.local_csv)")
         return None
     df = pd.concat(frames, ignore_index=True)
+    LOG.info("FIRMS: %d detections read", len(df))
     x0, y0, x1, y1 = bbox
-    df = df[(df.longitude >= x0) & (df.longitude <= x1) & (df.latitude >= y0) & (df.latitude <= y1)
-            & (df.acq_time >= start) & (df.acq_time <= end)]
+
+    def keep(mask, what):
+        nonlocal df
+        n0 = len(df)
+        df = df[mask]
+        LOG.info("FIRMS: %-28s %d -> %d", what, n0, len(df))
+        if n0 and df.empty:
+            LOG.warning("FIRMS: the %s filter removed every detection", what)
+
+    keep((df.longitude >= x0) & (df.longitude <= x1) & (df.latitude >= y0) & (df.latitude <= y1),
+         f"bbox {x0},{y0},{x1},{y1}")
+    keep((df.acq_time >= start) & (df.acq_time <= end), f"time {start:%Y-%m-%d} .. {end:%Y-%m-%d}")
     minc = CONF_LEVEL[str(fcfg.get("min_confidence", "nominal")).lower()]
-    df = df[df.confidence_level >= minc]
+    keep(df.confidence_level >= minc, f"confidence >= {fcfg.get('min_confidence', 'nominal')}")
+    # archive `type` (SP only): 0 vegetation fire, 1 volcano, 2 static land source, 3 offshore
+    types = fcfg.get("keep_types", [0])
+    if types is not None and "type" in df:
+        t = pd.to_numeric(df["type"], errors="coerce")
+        keep(t.isna() | t.isin([int(v) for v in types]), f"type in {list(types)}")
     if not fcfg.get("include_night", True):
-        df = df[df.daynight.astype(str).str.upper() != "N"]
+        keep(df.daynight.astype(str).str.upper() != "N", "daytime only")
     df = df.drop_duplicates(subset=["latitude", "longitude", "acq_time", "satellite"])
     if fcfg.get("prefer_standard_processing", True):
         # Same satellite pulled as *_NRT and *_SP: keep SP on dates where SP has data
@@ -353,9 +613,9 @@ def pull_firms(cfg: dict, local_only: bool = False) -> gpd.GeoDataFrame | None:
         LOG.warning("FIRMS: no detections left after bbox / time / confidence filters")
         return None
     df = assign_overpasses(df, float(fcfg.get("overpass_gap_minutes", 20)))
-    keep = ["firms_source", "firms_level", "satellite", "instrument", "acq_time", "overpass_id", "overpass_time",
+    cols = ["firms_source", "firms_level", "satellite", "instrument", "acq_time", "overpass_id", "overpass_time",
             "confidence", "confidence_level", "frp", "scan", "track", "daynight", "latitude", "longitude"]
-    g = gpd.GeoDataFrame(df[keep].copy(), geometry=gpd.points_from_xy(df.longitude, df.latitude), crs="EPSG:4326")
+    g = gpd.GeoDataFrame(df[cols].copy(), geometry=gpd.points_from_xy(df.longitude, df.latitude), crs="EPSG:4326")
     g.insert(0, "layer", "detection")
     g.insert(0, "source", "firms")
     LOG.info("FIRMS: %d detections in %d overpasses", len(g), g["overpass_id"].nunique())
@@ -368,19 +628,25 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("config", type=Path)
     ap.add_argument("--local-only", action="store_true",
-                    help="reuse cached FIRMS Area API CSVs instead of downloading (FEDS is always fetched)")
+                    help="no network: cached FIRMS Area API CSVs, firms.local_csv and feds.local_vectors only")
     ap.add_argument("--skip-feds", action="store_true")
     a = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     cfg = load_config(a.config)
     manifest = {"bbox": cfg["_bbox"], "start": str(cfg["_start"]), "end": str(cfg["_end"]), "layers": {}}
     if (cfg.get("feds") or {}).get("enabled", True) and not a.skip_feds:
-        for layer, g in pull_feds(cfg).items():
+        for layer, g in pull_feds(cfg, local_only=a.local_only).items():
             if g is not None and len(g):
                 manifest["layers"][f"feds_{layer}"] = {
                     "files": write_layer(g, cfg, f"feds_{layer}"), "n": int(len(g)),
                     "steps": int(g["step_t"].nunique()), "collections": sorted(g["collection"].unique())}
-    if (cfg.get("firms") or {}).get("enabled", False):
+    fc = cfg.get("firms") or {}
+    firms_on = fc.get("enabled", "auto")
+    if firms_on == "auto":
+        firms_on = bool(fc.get("sources") or fc.get("local_csv"))
+    elif not firms_on and fc.get("local_csv"):
+        LOG.warning("firms.enabled is false: firms.local_csv %s is not read", fc.get("local_csv"))
+    if firms_on:
         g = pull_firms(cfg, local_only=a.local_only)
         if g is not None:
             manifest["layers"]["firms_detections"] = {
@@ -388,6 +654,7 @@ def main(argv=None):
                 "overpasses": int(g["overpass_id"].nunique()), "sources": sorted(g["firms_source"].unique())}
     d = vector_dir(cfg)
     d.mkdir(parents=True, exist_ok=True)
+    LOG.info("Vector layers in %s: %s", d.resolve(), ", ".join(manifest["layers"]) or "none")
     (d / "pull_manifest.json").write_text(json.dumps(manifest, indent=2, default=str))
     if not manifest["layers"]:
         LOG.warning("Nothing written. FEDS covers 2018-2021 and 2025-01 onward; use firms for other years.")

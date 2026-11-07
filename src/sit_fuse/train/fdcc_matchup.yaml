@@ -107,6 +107,32 @@ matching:
   group_by: fdcc_timestamp
 
 # -----------------------------------------------------------------------------
+# Scene-grid truth (bucket resampling, max operator)
+# -----------------------------------------------------------------------------
+# FDCC (0.02 deg here) is aggregated onto each SIT-FUSE scene's own grid
+# (affine or GCP; TEMPO ~10 km) before the split step: every FDCC cell centre
+# goes to the scene pixel containing it, and a scene pixel is fire (1) if ANY
+# of its FDCC cells is fire, background (0) if it has valid FDCC cells and
+# none is fire, NoData otherwise. Nearest-neighbour collocation keeps only the
+# FDCC cell under each scene-pixel centre and loses most fire pixels.
+# Writes <truth_dir>/<fdcc stem>__<scene stem>.tif (band 1 label, band 2 fire
+# fraction %); truth_fdcc_fire / annotation_raster point at it and the native
+# raster is kept as truth_native. The UQ scripts then read it without resampling.
+scene_grid:
+  enabled: true
+  truth_dir: /data/nlahaye/output/sitfuse_uq/fire_tempo/fdcc_scene_truth
+  # pull_goes_abi_fdcc.py mask.mode binary -> [1]; raw / categorical -> FDC
+  # fire codes [[10, 15], [30, 35]] (processed, saturated, cloud-contaminated,
+  # high / medium / low probability, and their temporally filtered versions)
+  positive_values: [1]
+  nodata_values: [255, -1]       # plus the raster NoData tag (output_nodata, default -1)
+  # Negatives only: a pixel without fire needs at least this valid FDCC share
+  # (0 = any valid cell). A fire subpixel always makes the pixel fire.
+  min_valid_fraction: 0.0
+  drop_empty: true               # drop records with no valid FDCC on the scene
+  overwrite: false
+
+# -----------------------------------------------------------------------------
 # Base classifier configuration
 # -----------------------------------------------------------------------------
 classifier_config:
@@ -189,9 +215,9 @@ classifier_split:
     positive_fraction:
       enabled: true                 # reads each truth raster once
       positive_values: null         # null -> value > 0; e.g. [1, 2, 3] for HMS density
-      nodata_values: [-1]
-      label_values: null
-      raster_nodata: auto 
+      nodata_values: [255, -1]
+      label_values: null            # values that are labels, never NoData; null = 0 + positive_values (or 1)
+      raster_nodata: auto           # auto: ignore a raster NoData tag equal to a label (ADP NoData=0) | use | ignore
       n_bins: 2                     # quantile bins over eligible groups
 
 # Expected export_head_outputs.py rasters (same directory as its output_dir)
