@@ -1,0 +1,191 @@
+# =============================================================================
+# FIRMS fire fronts: pull (pull_firms_fire_fronts.py), VIIRS fire mask
+# (pull_viirs_fire_mask.py) + rasterize (rasterize_fire_fronts.py). All read this file.
+#
+#   python pull_firms_fire_fronts.py firms_fire_fronts.example.yaml
+#   python pull_viirs_fire_mask.py   firms_fire_fronts.example.yaml   # negative_zone: observed only
+#   python rasterize_fire_fronts.py  firms_fire_fronts.example.yaml
+#
+# Coverage of the FEDS fire-front layers (VEDA OGC API, no key):
+#   2018-2021 archive, 2025-01 -> 2025-03 NRT snapshot, 2025-03 -> present NRT
+#   large fires. Other years (e.g. Park fire 2024): enable `firms` below and
+#   derive fronts from VIIRS detections.
+# =============================================================================
+
+time_range:
+  start: "2024-07-01T00:00:00Z"
+  end: "2026-08-08T01:59:59Z"
+
+bbox:
+  min_lon: -125.45
+  min_lat: 31.31
+  max_lon: -101.98
+  max_lat: 49.01
+
+
+output:
+  outdir: ./firms_fire_fronts_out
+  vector_formats: [parquet, gpkg]   # parquet = GeoParquet; gpkg for QGIS builds without Parquet
+
+overwrite: false
+
+# -----------------------------------------------------------------------------
+# FEDS VIIRS modeled fire perimeters / active fire fronts
+# -----------------------------------------------------------------------------
+feds:
+  enabled: True
+  api_url: https://openveda.cloud/api/features
+  layers: [fireline, perimeter, newfirepix]
+  collections: auto          # or {fireline: [public.eis_fire_lf_fireline_nrt], ...}
+  page_limit: 1000
+  time_pad_hours: 12         # query pad around time_range (steps are 12-h labels)
+  # Estimated overpass time per step: t_date + LST hour - lon/15 h
+  # (AM = night VIIRS overpass ~01:30 LST, PM = day overpass ~13:30 LST)
+  overpass_lst_hours: {AM: 1.5, PM: 13.5}
+
+# -----------------------------------------------------------------------------
+# FIRMS active fire detections (fronts derived in the rasterizer)
+# -----------------------------------------------------------------------------
+firms:
+  enabled: true
+  api_url: https://firms.modaps.eosdis.nasa.gov/api/area/csv
+  map_key_env: FIRMS_MAP_KEY
+  # Science-quality archive (*_SP) for past fires; *_NRT for the last months.
+
+  sources: [LANDSAT_NRT, MODIS_SP, MODIS_NRT, VIIRS_SNPP_SP, VIIRS_SNPP_NRT,
+             VIIRS_NOAA20_SP, VIIRS_NOAA20_NRT, VIIRS_NOAA21_SP, VIIRS_NOAA21_NRT]
+  prefer_standard_processing: true
+
+  day_range: 5               # API maximum
+  request_pause_seconds: 0.5
+  local_csv: [
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_archive_J1V-C2_837488.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_archive_J1V-C2_837493.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_archive_J1V-C2_837498.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_archive_J2V-C2_837489.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_archive_J2V-C2_837494.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_archive_J2V-C2_837499.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_archive_M-C61_837486.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_archive_M-C61_837491.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_archive_M-C61_837496.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_archive_SV-C2_837490.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_archive_SV-C2_837495.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_archive_SV-C2_837500.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_nrt_J1V-C2_837498.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_nrt_J2V-C2_837499.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_nrt_LS_837487.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_nrt_LS_837492.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_nrt_LS_837497.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_nrt_SV-C2_837500.csv",
+  ]              # FIRMS archive-download CSVs, e.g. ["./firms/fire_archive_SV-C2_*.csv"]
+
+  local_source_name: null    # firms_source label for local CSVs (default: file stem)
+  min_confidence: nominal    # low | nominal | high (MODIS: <30 low, 30-79 nominal, >=80 high)
+  include_night: true
+  overpass_gap_minutes: 20   # detections of one satellite closer than this = one overpass
+
+# -----------------------------------------------------------------------------
+# VIIRS 375 m fire mask (pull_viirs_fire_mask.py): observed no-fire cells per
+# satellite pass, for raster.negative_zone: observed
+# -----------------------------------------------------------------------------
+# VNP14IMG / VJ114IMG / VJ214IMG (LP DAAC) + VNP03IMG / VJ103IMG / VJ203IMG
+# geolocation (LAADS, ~150 MB per 6-min granule). Earthdata Login token in the
+# env var auth.token_env (default EARTHDATA_TOKEN) or ~/.netrc.
+#   python pull_viirs_fire_mask.py <this config> [--search-only]
+viirs_fire_mask:
+  outdir: null               # default <output.outdir>/viirs_fire_mask
+  platforms: [SNPP, NOAA20, NOAA21]
+  # Restrict the search (the top-level time_range is used when null)
+  time_ranges:
+    - {start: "2024-07-20T00:00:00Z", end: "2024-08-15T23:59:59Z"}   # Park
+    - {start: "2025-01-06T00:00:00Z", end: "2025-01-31T23:59:59Z"}   # LA
+  only_firms_overpasses: true  # only passes holding a FIRMS VIIRS overpass of the same satellite
+  match_tolerance_minutes: 10
+  day_night: both            # both | day | night
+  resolution_deg: null       # default raster.resolution_deg (same grid as the fire fronts)
+  # fire mask classes: 0 not processed, 1 bow-tie, 2 glint, 3 water, 4 cloud,
+  # 5 clear land, 6 unclassified, 7-9 low/nominal/high-confidence fire
+  fire_classes: [7, 8, 9]    # any of these in a cell -> never a negative
+  clear_classes: [5]
+  cloud_classes: [4]
+  water_classes: [3]
+  ignore_classes: [0, 1]     # not observations; left out of the cell totals
+  water_is_negative: true    # water = observed no fire (0); false -> NoData
+  min_clear_fraction: 0.8    # (clear land + water) share of the cell's pixels for a negative
+  hole_fill_iterations: auto # auto: 1 when resolution_deg < 0.01 (grid finer than the pixel spacing)
+  max_gap_seconds: 600       # consecutive granules of one satellite = one pass
+  local_dirs: []             # already-downloaded *14IMG* / *03IMG* .nc (dirs, files, globs)
+  local_only: false          # true: no CMR search, local_dirs only
+  keep_nc: false             # delete downloaded granules after rasterizing
+  download_dir: null         # default <outdir>/raw_nc
+  overwrite: false
+
+# -----------------------------------------------------------------------------
+# Rasterizer
+# -----------------------------------------------------------------------------
+raster:
+  outdir: null               # default <output.outdir>/rasters
+  prefix: fire
+  products: [firms]           # feds | firms (both allowed)
+  resolution_deg: 0.025     # ~250 m; the matchup generator aggregates to the scene grid
+  fill_value: 255
+  classes: {front: 1, interior: 2, negative: 0}
+  #local_vectors: [
+  #  "/data/nlahaye/remoteSensing/data_pull/firms_fire_fronts_out/vectors/feds_perimeter.parquet",
+  #  "/data/nlahaye/remoteSensing/data_pull/firms_fire_fronts_out/vectors/feds_newfirepix.parquet",
+  #  "/data/nlahaye/remoteSensing/data_pull/firms_fire_fronts_out/vectors/feds_fireline.parquet" 
+  #]
+
+  local_csv: [
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_archive_J1V-C2_837488.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_archive_J1V-C2_837493.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_archive_J1V-C2_837498.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_archive_J2V-C2_837489.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_archive_J2V-C2_837494.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_archive_J2V-C2_837499.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_archive_M-C61_837486.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_archive_M-C61_837491.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_archive_M-C61_837496.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_archive_SV-C2_837490.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_archive_SV-C2_837495.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_archive_SV-C2_837500.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_nrt_J1V-C2_837498.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_nrt_J2V-C2_837499.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_nrt_LS_837487.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_nrt_LS_837492.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_nrt_LS_837497.csv",
+"/data/nlahaye/remoteSensing/FIRMS_Fire_Lines/fire_nrt_SV-C2_837500.csv",
+  ] 
+
+  # Where 0 (no fire) is written; outside it is NoData.
+  #   ring     - within ring_km of the step's fire geometry
+  #   observed - FIRMS VIIRS overpasses: cells the same-satellite VIIRS fire
+  #              mask marks as observed no fire (clear land, water); cloud,
+  #              glint, bow-tie and out-of-swath cells are NoData. Needs
+  #              pull_viirs_fire_mask.py output (viirs_fire_mask block).
+  #   bbox     - the whole bbox (assumes the overpass saw it all, cloud free)
+  #   none     - positive-only reference (like HMS)
+  negative_zone: observed
+  ring_km: 25                # ring mode and the observed ring fallback
+  observed:
+    index_csv: null          # default <viirs_fire_mask.outdir>/viirs_fire_mask_index.csv
+    max_time_difference_minutes: null   # default viirs_fire_mask.match_tolerance_minutes
+    # Overpasses without a same-satellite VIIRS pass (MODIS, Landsat, missing
+    # granules) and FEDS steps: skip (no raster) | ring | none (positives only)
+    fallback: skip
+  # NoData instead of 0 within this distance of the current and prior (lookback)
+  # fire footprints: margin for time / geolocation mismatch. 0 = off.
+  negative_exclusion_km: 0
+  feds:
+    front_buffer_m: 375      # half-width around the fire line (VIIRS I-band pixel)
+    include_newfirepix: true # new pixels of the step are front as well
+    newfirepix_size_m: 375
+    interior: true           # perimeter area not on the front -> classes.interior
+    perimeter_persist_hours: 72
+  firms:
+    front_mode: new          # new: pixels new vs. lookback = front, others interior | all
+    lookback_hours: 24
+    min_prior_gap_minutes: 30  # prior detections must be this much older (excludes the same overpass;
+                               # SNPP and NOAA-20 overpasses are ~50 min apart)
+    new_distance_m: 750      # a detection is new if no prior detection is within this distance
+    min_confidence: nominal

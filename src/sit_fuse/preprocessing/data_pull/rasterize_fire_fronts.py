@@ -13,13 +13,26 @@ Encoding (uint8, single band; values configurable under raster.classes):
     2    fire-affected, not front
            feds:  inside the modeled perimeter (burned / residual activity)
            firms: persistent detections (seen within lookback_hours)
-    0    no fire front reported, inside raster.negative_zone
+    0    no fire, inside raster.negative_zone
     255  NoData (outside the negative zone)
 
-Negatives are "no front reported", not "observed clear": FEDS and FIRMS carry
-no cloud or swath mask, so cloud-obscured fire is labeled 0 or 255. The
-default negative zone is a ring of ring_km around the fire geometry of the step,
-which keeps negatives close to observed fire activity.
+raster.negative_zone sets where 0 is written:
+    ring      within ring_km of the step's fire geometry (default). Negatives
+              are "no front reported": FEDS and FIRMS carry no cloud or swath
+              mask, so cloud-obscured fire can be labeled 0.
+    observed  FIRMS VIIRS overpasses only: cells the VIIRS 375 m fire mask of
+              the same satellite pass marks as observed no fire (clear land,
+              and water unless viirs_fire_mask.water_is_negative: false);
+              cloud, glint, bow-tie, unprocessed and out-of-swath cells are
+              NoData. Needs the per-pass rasters of pull_viirs_fire_mask.py
+              (index viirs_fire_mask.outdir/{prefix}_index.csv). Overpasses
+              without a matching pass (MODIS, Landsat, missing granules) and
+              FEDS steps use raster.observed.fallback (skip | ring | none).
+    bbox      the whole bbox (assumes the overpass saw it all, cloud free)
+    none      positive-only reference (like HMS)
+raster.negative_exclusion_km (default 0) sets cells within that distance of
+the step's current and prior fire footprints to NoData instead of 0 (time /
+geolocation mismatch margin); front and interior cells are kept.
 
 Files: {prefix}_{YYYYMMDDTHHMMSSZ}_{TAG}.tif, where the time is the (estimated)
 overpass time and TAG is FEDS-AM / FEDS-PM or the FIRMS satellite, plus
@@ -162,13 +175,89 @@ def negative_zone(fire_geoms_m, utm, bbox, rcfg):
         return [box(*bbox)]
     if mode == "none":
         return []
+    if mode == "observed":
+        mode = str((rcfg.get("observed") or {}).get("fallback", "skip")).lower()
+        if mode in ("skip", "none"):
+            return []
+        if mode != "ring":
+            raise ValueError("raster.observed.fallback must be skip | ring | none")
     if mode != "ring":
-        raise ValueError("raster.negative_zone must be ring | bbox | none")
+        raise ValueError("raster.negative_zone must be ring | observed | bbox | none")
     geoms = [g for g in fire_geoms_m if g is not None and not g.is_empty]
     if not geoms:
         return []
     ring = unary_union(geoms).buffer(float(rcfg.get("ring_km", 25)) * 1000.0)
     return list(gpd.GeoSeries([ring], crs=utm).to_crs("EPSG:4326"))
+
+
+def exclude_near_fire(arr, grid, fire_geoms_m, utm, rcfg, classes, fill):
+    """NoData instead of negative within raster.negative_exclusion_km of the fire footprints."""
+    km = float(rcfg.get("negative_exclusion_km", 0) or 0)
+    geoms = [g for g in fire_geoms_m if g is not None and not g.is_empty]
+    if km <= 0 or not geoms:
+        return arr
+    zone = gpd.GeoSeries([unary_union(geoms).buffer(km * 1000.0)], crs=utm).to_crs("EPSG:4326")
+    m = rasterize(((g, 1) for g in zone), out_shape=grid.shape, transform=grid.transform,
+                  fill=0, all_touched=True, dtype="uint8").astype(bool)
+    arr[m & (arr == classes["negative"])] = fill
+    return arr
+
+
+class ObservedMasks:
+    """Per-pass VIIRS observed-state rasters (pull_viirs_fire_mask.py) on the fire-front grid."""
+
+    def __init__(self, cfg, grid):
+        try:
+            from sit_fuse.preprocessing.data_pull.pull_viirs_fire_mask import mask_config, viirs_platform, STATE
+        except ImportError:
+            from pull_viirs_fire_mask import mask_config, viirs_platform, STATE
+        self.platform_of, self.grid = viirs_platform, grid
+        mc = mask_config(cfg)
+        ocfg = (cfg.get("raster", {}) or {}).get("observed") or {}
+        idx = Path(ocfg.get("index_csv") or mc["index_csv"])
+        self.tol = pd.Timedelta(minutes=float(ocfg.get("max_time_difference_minutes",
+                                                       mc["match_tolerance_minutes"])))
+        states = ocfg.get("negative_states")
+        # state 0 already includes water unless viirs_fire_mask.water_is_negative: false
+        self.neg_states = [int(v) for v in states] if states else [STATE["clear"]]
+        self.cache = {}
+        if idx.exists():
+            self.idx = pd.read_csv(idx)
+            for c in ("time_utc", "start_utc", "end_utc"):
+                self.idx[c] = pd.to_datetime(self.idx[c], utc=True)
+            LOG.info("Observed masks: %d VIIRS passes from %s", len(self.idx), idx)
+        else:
+            self.idx = pd.DataFrame(columns=["path", "platform", "time_utc", "start_utc", "end_utc"])
+            LOG.warning("negative_zone observed: %s not found (run pull_viirs_fire_mask.py with this "
+                        "config); every overpass uses raster.observed.fallback", idx)
+
+    def match(self, satellite, firms_source, t):
+        plat = self.platform_of(satellite, firms_source)
+        if plat is None or self.idx.empty:
+            return None, plat
+        c = self.idx[(self.idx["platform"] == plat) & (self.idx["start_utc"] - self.tol <= t)
+                     & (self.idx["end_utc"] + self.tol >= t)]
+        if c.empty:
+            return None, plat
+        return c.loc[(c["time_utc"] - t).abs().idxmin(), "path"], plat
+
+    def negatives(self, path):
+        """Boolean observed-no-fire mask on the fire-front grid."""
+        if path not in self.cache:
+            with rasterio.open(path) as src:
+                st = src.read(1)
+                same = src.shape == self.grid.shape and src.transform.almost_equals(self.grid.transform)
+                if not same:
+                    from rasterio.warp import reproject, Resampling
+                    out = np.full(self.grid.shape, 255, np.uint8)
+                    reproject(st, out, src_transform=src.transform, src_crs=src.crs, src_nodata=255,
+                              dst_transform=self.grid.transform, dst_crs="EPSG:4326", dst_nodata=255,
+                              resampling=Resampling.nearest)
+                    st = out
+            if len(self.cache) > 8:
+                self.cache.pop(next(iter(self.cache)))
+            self.cache[path] = np.isin(st, self.neg_states)
+        return self.cache[path]
 
 
 def counts(arr, classes, fill):
@@ -216,7 +305,11 @@ def rasterize_feds(cfg, grid, utm, classes, fill, out_dir, prefix):
             continue
         to_ll = lambda gs: list(gpd.GeoSeries(gs, crs=utm).to_crs("EPSG:4326")) if gs else []
         arr = np.full(grid.shape, fill, np.uint8)
+        if str(rcfg.get("negative_zone", "ring")).lower() == "observed" and \
+                str((rcfg.get("observed") or {}).get("fallback", "skip")).lower() == "skip":
+            continue                                   # FEDS steps have no single VIIRS pass
         grid.burn(arr, negative_zone(front_m + interior_m, utm, cfg["_bbox"], rcfg), classes["negative"], False)
+        exclude_near_fire(arr, grid, front_m + interior_m, utm, rcfg, classes, fill)
         grid.burn(arr, to_ll(interior_m), classes["interior"], True)
         grid.burn(arr, to_ll(front_m), classes["front"], True)
         ts = pd.Series(obs).median().round("s")
@@ -259,6 +352,10 @@ def rasterize_firms(cfg, grid, utm, classes, fill, out_dir, prefix):
     look = pd.Timedelta(hours=float(fc.get("lookback_hours", 24)))
     gap = pd.Timedelta(minutes=float(fc.get("min_prior_gap_minutes", 30)))
     rad = float(fc.get("new_distance_m", 750))
+    zmode = str(rcfg.get("negative_zone", "ring")).lower()
+    observed = ObservedMasks(cfg, grid) if zmode == "observed" else None
+    fallback = str((rcfg.get("observed") or {}).get("fallback", "skip")).lower()
+    n_obs = n_fb = n_skip = 0
     rows = []
     for oid, sel in det_m.groupby("overpass_id"):
         T = sel["overpass_time"].iloc[0]
@@ -277,16 +374,36 @@ def rasterize_firms(cfg, grid, utm, classes, fill, out_dir, prefix):
         prior_m = footprints_m(det_m[prior]) if prior.any() else []
         to_ll = lambda gs: list(gpd.GeoSeries(gs, crs=utm).to_crs("EPSG:4326")) if gs else []
         arr = np.full(grid.shape, fill, np.uint8)
-        grid.burn(arr, negative_zone(fp + prior_m, utm, cfg["_bbox"], rcfg), classes["negative"], False)
+        obs_path, zone_used = None, zmode
+        if observed is not None:
+            obs_path, _ = observed.match(sel["satellite"].iloc[0],
+                                         sel["firms_source"].iloc[0] if "firms_source" in sel else None, T)
+            if obs_path is not None:
+                arr[observed.negatives(obs_path)] = classes["negative"]
+                zone_used, n_obs = "observed", n_obs + 1
+            elif fallback == "skip":
+                n_skip += 1
+                continue
+            else:
+                zone_used, n_fb = fallback, n_fb + 1
+        if obs_path is None:
+            grid.burn(arr, negative_zone(fp + prior_m, utm, cfg["_bbox"], rcfg), classes["negative"], False)
+        exclude_near_fire(arr, grid, fp + prior_m, utm, rcfg, classes, fill)
         grid.burn(arr, to_ll(persist_m), classes["interior"], True)
         grid.burn(arr, to_ll(front_m), classes["front"], True)
         sat = str(sel["satellite"].iloc[0]).replace(" ", "")
         path = out_dir / f"{prefix}_{T:%Y%m%dT%H%M%SZ}_{sat}.tif"
         write_tif(path, arr, grid, fill, {"source": "firms", "satellite": sat, "overpass_time": T.isoformat(),
+                                          "negative_zone": zone_used, "observed_mask": Path(obs_path).name
+                                          if obs_path else "",
                                           "front_mode": mode, "lookback_hours": look.total_seconds() / 3600})
         rows.append({"path": str(path.resolve()), "timestamp": T.strftime("%Y-%m-%dT%H:%M:%SZ"),
                      "source": "firms", "tag": sat, "step_t": "", "n_fires": int(len(sel)),
-                     "n_new_detections": int(is_new.sum()), **counts(arr, classes, fill)})
+                     "n_new_detections": int(is_new.sum()), "negative_zone": zone_used,
+                     "observed_mask": obs_path or "", **counts(arr, classes, fill)})
+    if observed is not None:
+        LOG.info("FIRMS observed negatives: %d overpasses with a VIIRS pass, %d fallback (%s), %d skipped "
+                 "(no same-satellite VIIRS pass within %s)", n_obs, n_fb, fallback, n_skip, observed.tol)
     LOG.info("FIRMS: %d overpass rasters", len(rows))
     return rows
 

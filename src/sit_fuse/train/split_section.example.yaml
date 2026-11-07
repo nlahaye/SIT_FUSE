@@ -46,6 +46,12 @@ classifier_split:
   min_calibration_groups_total: 1        # overall floor; never leaves < 2 dev groups
   reserve_dev_group: auto                # auto: hold one eligible group back for dev only in strata
                                          # without encoder_train / buffer dev groups | always | never
+  # Explicit partition for specific split groups (observing days), applied after
+  # the stratified allocation. Eligible (encoder_test, outside buffer) groups only;
+  # the "Groups for <event>" log line lists each event's days by partition.
+  # assign_groups:
+  #   calibration: ["2024-07-27"]
+  #   holdout: ["2024-07-28"]
   random_state: 42
   stratify:
     # Strata = event window (else year-month) [x product] [x positive-fraction bin]
@@ -56,9 +62,9 @@ classifier_split:
     positive_fraction:
       enabled: true                 # reads each truth raster once
       positive_values: null         # null -> value > 0; e.g. [1, 2, 3] for HMS density
-      nodata_values: [-1]
-      label_values: null
-      raster_nodata: auto 
+      nodata_values: [255, -1]
+      label_values: null            # values that are labels, never NoData; null = 0 + positive_values (or 1)
+      raster_nodata: auto           # auto: ignore a raster NoData tag equal to a label (ADP NoData=0) | use | ignore
       n_bins: 2                     # quantile bins over eligible groups
 
 # Expected export_head_outputs.py rasters (same directory as its output_dir)

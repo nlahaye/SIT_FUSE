@@ -15,14 +15,14 @@
 # All timestamps are interpreted as UTC.
 time_range:
   start: "2024-07-23T00:00:00Z"
-  end: "2025-01-14T23:59:59Z"
+  end: "2024-07-31T23:59:59Z"
 
 # -----------------------------------------------------------------------------
 # Context-free SIT-FUSE cluster-raster outputs
 # -----------------------------------------------------------------------------
 sit_fuse:
   # Root directory searched recursively for SIT-FUSE GeoTIFF files.
-  directory: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/
+  directory: /data/nlahaye/output/Learnergy/SF_TEMPO_PARK/
 
   patterns:
     # Must contain exactly one capture group holding the scene timestamp.
@@ -179,6 +179,12 @@ classifier_split:
   min_calibration_groups_total: 1        # overall floor; never leaves < 2 dev groups
   reserve_dev_group: auto                # auto: hold one eligible group back for dev only in strata
                                          # without encoder_train / buffer dev groups | always | never
+  # Explicit partition for specific split groups (observing days), applied after
+  # the stratified allocation. Eligible (encoder_test, outside buffer) groups only;
+  # the "Groups for <event>" log line lists each event's days by partition.
+  # assign_groups:
+  #   calibration: ["2024-07-27"]
+  #   holdout: ["2024-07-28"]
   random_state: 42
   stratify:
     # Strata = event window (else year-month) [x product] [x positive-fraction bin]
@@ -189,10 +195,9 @@ classifier_split:
     positive_fraction:
       enabled: true                 # reads each truth raster once
       positive_values: null         # null -> value > 0; e.g. [1, 2, 3] for HMS density
-      nodata_values: [-1]
-      label_values: null 
-      raster_nodata: auto   
- 
+      nodata_values: [255, -1]
+      label_values: null            # values that are labels, never NoData; null = 0 + positive_values (or 1)
+      raster_nodata: auto           # auto: ignore a raster NoData tag equal to a label (ADP NoData=0) | use | ignore
       n_bins: 2                     # quantile bins over eligible groups
 
 # Expected export_head_outputs.py rasters (same directory as its output_dir)
@@ -203,10 +208,10 @@ classifier_split:
 # pixels are removed downstream. The stratification positive fraction ignores
 # excluded pixels. Share one list with the UQ config (recommended) ...
 invalid_clusters:
-  from_uq_config: uq_config.example.yaml 
+  from_uq_config: /data/nlahaye/sitfuse_uq/smoke_tempo/uq_config.yaml   # same file passed to simple_classifiers_uq.py
   min_kept_pixels: 1             # drop if fewer non-excluded matched pixels remain
   max_scene_fraction: null       # optional: also drop if the matched-area excluded share exceeds this
-  cluster_nodata_values: [0.0]      # e.g. [0.0] if .full_geo.tif zero padding should not count as cluster 0
+  cluster_nodata_values: []      # e.g. [0.0] if .full_geo.tif zero padding should not count as cluster 0
   truth_nodata_values: null      # null = stratify.positive_fraction.nodata_values + raster nodata
   num_child_classes: null        # parent IDs only; null = cluster.heir.num_classes from encoder_split.sit_fuse_yaml (200 for TEMPO)
   geotiff_scale: 1000            # SIT-FUSE cluster GeoTIFFs store joint_label / 1000
@@ -218,7 +223,7 @@ invalid_clusters:
 #   num_child_classes: 200
 
 head_outputs:
-  directory: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ/
+  directory: /data/nlahaye/output/sitfuse_uq/head_outputs
   suffix: .head_outputs.tif
 
 # Add to the existing `output:` block:

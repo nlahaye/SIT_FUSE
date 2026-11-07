@@ -1,8 +1,9 @@
 # =============================================================================
-# FIRMS fire fronts: pull (pull_firms_fire_fronts.py) + rasterize
-# (rasterize_fire_fronts.py). Both scripts read this file.
+# FIRMS fire fronts: pull (pull_firms_fire_fronts.py), VIIRS fire mask
+# (pull_viirs_fire_mask.py) + rasterize (rasterize_fire_fronts.py). All read this file.
 #
 #   python pull_firms_fire_fronts.py firms_fire_fronts.example.yaml
+#   python pull_viirs_fire_mask.py   firms_fire_fronts.example.yaml   # negative_zone: observed only
 #   python rasterize_fire_fronts.py  firms_fire_fronts.example.yaml
 #
 # Coverage of the FEDS fire-front layers (VEDA OGC API, no key):
@@ -98,6 +99,42 @@ firms:
   overpass_gap_minutes: 20   # detections of one satellite closer than this = one overpass
 
 # -----------------------------------------------------------------------------
+# VIIRS 375 m fire mask (pull_viirs_fire_mask.py): observed no-fire cells per
+# satellite pass, for raster.negative_zone: observed
+# -----------------------------------------------------------------------------
+# VNP14IMG / VJ114IMG / VJ214IMG (LP DAAC) + VNP03IMG / VJ103IMG / VJ203IMG
+# geolocation (LAADS, ~150 MB per 6-min granule). Earthdata Login token in the
+# env var auth.token_env (default EARTHDATA_TOKEN) or ~/.netrc.
+#   python pull_viirs_fire_mask.py <this config> [--search-only]
+viirs_fire_mask:
+  outdir: null               # default <output.outdir>/viirs_fire_mask
+  platforms: [SNPP, NOAA20, NOAA21]
+  # Restrict the search (the top-level time_range is used when null)
+  time_ranges: null
+  #  - {start: "2024-07-20T00:00:00Z", end: "2024-08-15T23:59:59Z"}   # Park
+  #  - {start: "2025-01-06T00:00:00Z", end: "2025-01-31T23:59:59Z"}   # LA
+  only_firms_overpasses: true  # only passes holding a FIRMS VIIRS overpass of the same satellite
+  match_tolerance_minutes: 10
+  day_night: both            # both | day | night
+  resolution_deg: null       # default raster.resolution_deg (same grid as the fire fronts)
+  # fire mask classes: 0 not processed, 1 bow-tie, 2 glint, 3 water, 4 cloud,
+  # 5 clear land, 6 unclassified, 7-9 low/nominal/high-confidence fire
+  fire_classes: [7, 8, 9]    # any of these in a cell -> never a negative
+  clear_classes: [5]
+  cloud_classes: [4]
+  water_classes: [3]
+  ignore_classes: [0, 1]     # not observations; left out of the cell totals
+  water_is_negative: true    # water = observed no fire (0); false -> NoData
+  min_clear_fraction: 0.8    # (clear land + water) share of the cell's pixels for a negative
+  hole_fill_iterations: auto # auto: 1 when resolution_deg < 0.01 (grid finer than the pixel spacing)
+  max_gap_seconds: 600       # consecutive granules of one satellite = one pass
+  local_dirs: []             # already-downloaded *14IMG* / *03IMG* .nc (dirs, files, globs)
+  local_only: false          # true: no CMR search, local_dirs only
+  keep_nc: false             # delete downloaded granules after rasterizing
+  download_dir: null         # default <outdir>/raw_nc
+  overwrite: false
+
+# -----------------------------------------------------------------------------
 # Rasterizer
 # -----------------------------------------------------------------------------
 raster:
@@ -107,12 +144,33 @@ raster:
   resolution_deg: 0.0025     # ~250 m; the matchup generator aggregates to the scene grid
   fill_value: 255
   classes: {front: 1, interior: 2, negative: 0}
-  # Where 0 (no front reported) is written; outside it is NoData.
-  #   ring - within ring_km of the step's fire geometry (default)
-  #   bbox - the whole bbox (assumes the overpass saw it all, cloud free)
-  #   none - positive-only reference (like HMS)
-  negative_zone: ring
-  ring_km: 25
+  # Local inputs read directly by the rasterizer (no pull run needed, no
+  # network). Default null = use firms.local_csv / feds.local_vectors.
+  # Vectors are built into <output.outdir>/vectors when missing, or always when
+  # rebuild_vectors (default: overwrite) is true; otherwise existing vectors
+  # (e.g. from an earlier pull) are reused.
+  local_csv: null            # same forms as firms.local_csv
+  local_vectors: null        # same forms as feds.local_vectors
+  rebuild_vectors: false
+  # Where 0 (no fire) is written; outside it is NoData.
+  #   ring     - within ring_km of the step's fire geometry
+  #   observed - FIRMS VIIRS overpasses: cells the same-satellite VIIRS fire
+  #              mask marks as observed no fire (clear land, water); cloud,
+  #              glint, bow-tie and out-of-swath cells are NoData. Needs
+  #              pull_viirs_fire_mask.py output (viirs_fire_mask block).
+  #   bbox     - the whole bbox (assumes the overpass saw it all, cloud free)
+  #   none     - positive-only reference (like HMS)
+  negative_zone: observed
+  ring_km: 25                # ring mode and the observed ring fallback
+  observed:
+    index_csv: null          # default <viirs_fire_mask.outdir>/viirs_fire_mask_index.csv
+    max_time_difference_minutes: null   # default viirs_fire_mask.match_tolerance_minutes
+    # Overpasses without a same-satellite VIIRS pass (MODIS, Landsat, missing
+    # granules) and FEDS steps: skip (no raster) | ring | none (positives only)
+    fallback: skip
+  # NoData instead of 0 within this distance of the current and prior (lookback)
+  # fire footprints: margin for time / geolocation mismatch. 0 = off.
+  negative_exclusion_km: 0
   feds:
     front_buffer_m: 375      # half-width around the fire line (VIIRS I-band pixel)
     include_newfirepix: true # new pixels of the step are front as well
