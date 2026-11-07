@@ -77,6 +77,8 @@ LOG = logging.getLogger("pull-firms-fire-fronts")
 FEDS_API = "https://openveda.cloud/api/features"
 FIRMS_AREA_API = "https://firms.modaps.eosdis.nasa.gov/api/area/csv"
 FEDS_LAYERS = ("fireline", "perimeter", "newfirepix")
+# Columns pull_feds adds to its output layers (dropped when such a layer is read back as input)
+FEDS_DERIVED_COLS = ("source", "layer", "obs_time", "step_half")
 # (collection template, first valid time, last valid time or None = open)
 FEDS_AUTO = (
     ("public.eis_fire_lf_{layer}_archive", "2018-01-01", "2021-12-31T23:59:59"),
@@ -329,6 +331,10 @@ def read_feds_local(fcfg: dict, cfg: dict) -> dict[str, list[gpd.GeoDataFrame]]:
                 g = g[g.geometry.notna() & ~g.geometry.is_empty]
                 g.columns = [c if c == g.geometry.name else str(c).lower() for c in g.columns]
                 g = g.loc[:, ~g.columns.duplicated()]
+                # Re-reading a layer this pipeline wrote (vectors/feds_<layer>.parquet):
+                # drop the columns pull_feds derives so they are rebuilt, not duplicated.
+                # step_t stays as the step-time source for _feds_time.
+                g = g.drop(columns=[c for c in FEDS_DERIVED_COLS if c in g.columns])
                 g["t"] = _feds_time(g, path)
                 if "fireid" not in g.columns:
                     m = _FEDS_FID_RE.search(str(path))
@@ -388,7 +394,8 @@ def pull_feds(cfg: dict, local_only: bool = False) -> dict:
             continue
         # snapshot / large-fire collections (and local + API copies) overlap: drop exact duplicates
         g["_wkb"] = g.geometry.apply(lambda s: s.wkb_hex)
-        g = g.drop_duplicates(subset=["step_t", "_wkb"]).drop(columns=["_wkb", "t"], errors="ignore")
+        g = g.drop_duplicates(subset=["step_t", "_wkb"]).drop(columns=["_wkb", "t", "layer", "source"],
+                                                              errors="ignore")
         g.insert(0, "layer", layer)
         g.insert(0, "source", "feds")
         g = g.drop(columns=[c for c in ("wkb_geometry", "ogc_fid", "geom_counts") if c in g], errors="ignore")
