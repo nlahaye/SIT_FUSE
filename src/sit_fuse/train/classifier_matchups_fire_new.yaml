@@ -1,0 +1,213 @@
+matching:
+  # 0 means require the SIT-FUSE time to fall within the truth interval.
+  # Use a small nonzero value only to handle endpoint or product-timing gaps.
+  max_time_difference_seconds: 1800
+
+  # If false, one time-sliced HMS raster can be matched only once.
+  # For supervision, true is normally appropriate because multiple TEMPO/GOES
+  # acquisitions may legitimately use the same valid HMS polygon interval.
+  allow_hms_reuse: true
+
+  # Permit closest truth interval only when SIT-FUSE time is not contained
+  # by any available interval.
+  allow_nearest_interval: true
+
+  # Strong default: group observations sharing the same truth interval.
+  group_by: hms_interval
+
+hms:
+  directory: "/home/nlahaye/SIT_FUSE/src/sit_fuse/preprocessing/data_pull/hms_out/rasters/"
+
+  patterns:
+    smoke:
+      - "(?i)_smoke"
+    fire:
+      - "(?i)_fire"
+
+    #interval_timestamp_patterns:
+    #  - "(?i)(\\d{8}T\\d{6}Z)_(\\d{8}T\\d{6}Z)"
+    
+    #timestamp_patterns:
+    #  - "(\\d{8}T\\d{6}Z)"
+    #  - "(\\d{8}T\\d{6})"
+
+    # No interval patterns means daily matching is used.
+    interval_timestamp_patterns: []
+
+    # Optional: retain if some HMS products later include full timestamps.
+    timestamp_patterns:
+      - "(\\d{8}T\\d{6}Z)"
+      - "(\\d{8}T\\d{6})"
+
+    # Daily raster filename patterns. Each must capture YYYYMMDD.
+    daily_date_patterns:
+      - "hms_smoke(\\d{8})"
+      - "hms_fire(\\d{8})"
+      - "smoke_(\\d{8})"
+      - "fire_(\\d{8})"
+      - "(\\d{8})"
+
+
+matching:
+  mode: daily
+  allow_hms_reuse: true
+  group_by: hms_day
+
+
+# Scene-grid truth (bucket resampling, max operator) for HMS fire: a scene
+# pixel is fire if ANY HMS fire cell inside it is fire (see fdcc_matchup.yaml).
+# products: [fire] leaves HMS smoke (density polygons) on nearest collocation.
+scene_grid:
+  enabled: true
+  products: [fire]
+  truth_dir: /data/nlahaye/output/sitfuse_uq/fire_tempo/hms_scene_truth
+  positive_values: null          # null = max of the raw values (HMS fire 1); or e.g. [1]
+  nodata_values: [255, -1]
+  min_valid_fraction: 0.0
+  drop_empty: true
+  overwrite: false
+
+time_range:
+  start: "2024-07-20T00:00:00Z"
+  end: "2024-07-31T23:59:59Z"
+
+sit_fuse:
+  directory: "/data/nlahaye/output/Learnergy/SF_TEMPO_PARK/"
+
+  # Retain only context-free outputs. Tune these to your actual naming convention.
+  context_free_filters:
+    include_patterns:
+      - "full_geo"
+    exclude_patterns:
+      - "proba"
+      - "no_geo"
+      - "no_heir"
+
+  # SIT-FUSE filenames must contain smoke/fire and a timestamp.
+  patterns:
+    smoke:
+      - "full_geo"
+    fire:
+      - "fowl_geo"
+
+
+
+
+    # Capture group 1 must be a full timestamp.
+    timestamp_patterns:
+      - "(\\d{8}T\\d{6}Z)"
+      - "(\\d{8}T\\d{6})"
+
+    # Used only if some SIT-FUSE files are daily products.
+    daily_date_patterns:
+      - "(\\d{8})"
+
+  daily_time_policy: "start_of_day"
+
+
+classifier_config:
+  # Existing classifier config carrying your feature-construction settings
+  # expected by build_training_dataset() in sit_fuse_utils_multiscale_final.py.
+  base_yaml: "/home/nlahaye/SIT_FUSE/src/sit_fuse/train/basic_clssifier.yaml"
+
+output:
+  classifier_yaml: "//data/nlahaye/experiments/basic_clssifier_iter_2.yaml"
+  audit_csv: "/data/nlahaye/experiments/hms_context_free/matchup_audit_post.csv"
+
+  # Destination key written into the generated config.
+  #
+  # Change this after checking build_training_dataset() if it expects,
+  # for example, "data.samples", "training_pairs", or "file_pairs".
+  matchup_key: "matchups"
+
+# -----------------------------------------------------------------------------
+# Encoder (DBN / cluster) split tracing + stratified classifier splits
+# Append to any of: classifier_matchups.yaml (HMS), adp_matchup.yaml (ADP),
+# fdcc_matchup.yaml (FDCC). Implemented in matchup_splits.py.
+# -----------------------------------------------------------------------------
+encoder_split:
+  enabled: true
+  # SIT-FUSE encoder/cluster training YAML; data.files_train / data.files_test
+  sit_fuse_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/tempo_park_st_bb.yaml
+  # SIT-FUSE outputs are named basename(files_*[i][0]) + suffix; the longest
+  # input basename prefixing the output name wins. key_patterns are a fallback
+  # for renamed outputs (TEMPO granule key shown).
+  key_patterns:
+    - "(\\d{8}T\\d{6}Z_S\\d{3}G\\d{2})"
+  # Dates of encoder-training inputs (used for the temporal buffer)
+  date_pattern: "(\\d{8})T\\d{6}Z"
+  unmatched_policy: drop            # drop | unknown (unknown is never calibration/holdout)
+  encoder_train_policy: dev         # dev: may train classifiers; exclude: drop entirely
+
+classifier_split:
+  enabled: true
+  group_by: date                    # date | block (block_days-wide windows)
+  block_days: 3
+  # Groups within buffer_days of any encoder-training date are not used for
+  # calibration/holdout (multi-day plumes, adjacent swaths). buffer_policy:
+  # dev (use for classifier training) | exclude
+  buffer_days: 0
+  # Observing day: group scenes by (scene time - day_start_utc_hour), not by
+  # UTC date, so one daily scan sequence crossing 00 UTC stays in one group
+  # (TEMPO over the US: ~11Z to ~01:30Z; 06Z falls in the nightly gap).
+  # Remove the block to group by the reference date.
+  observing_day:
+    time_pattern: '(\d{8}T\d{6})Z'   # scene time from the SIT-FUSE input / output name
+    day_start_utc_hour: 6
+  # Merge groups that share a reference raster so one reference never spans
+  # partitions. With daily references matched by UTC date, evening (00-02Z)
+  # scenes use the next day's raster and consecutive days chain into one group.
+  link_shared_truth: false
+  min_partition_gap_hours: null      # optional: warn if any partitions are closer than this
+  buffer_policy: dev
+  holdout_fraction: 0.25            # of eligible (encoder_test, unbuffered) groups
+  calibration_fraction: 0.2
+  min_holdout_groups_per_stratum: 1      # strata with >= 2 eligible groups
+  min_calibration_groups_per_stratum: 1  # strata with >= 3 eligible groups
+  min_holdout_groups_total: 1            # overall floor (holdout takes priority)
+  min_calibration_groups_total: 1        # overall floor; never leaves < 2 dev groups
+  reserve_dev_group: auto                # auto: hold one eligible group back for dev only in strata
+                                         # without encoder_train / buffer dev groups | always | never
+  random_state: 42
+  stratify:
+    # Strata = event window (else year-month) [x product] [x positive-fraction bin]
+    event_windows:
+      - {name: park_fire_2024, start: "2024-07-20", end: "2024-08-15"}
+      - {name: la_fires_2025,  start: "2025-01-06", end: "2025-01-31"}
+    by_product: false               # true for HMS runs with both smoke and fire
+    positive_fraction:
+      enabled: true                 # reads each truth raster once
+      positive_values: null         # null -> value > 0; e.g. [1, 2, 3] for HMS density
+      nodata_values: [255, -1]
+      label_values: null            # values that are labels, never NoData; null = 0 + positive_values (or 1)
+      raster_nodata: auto           # auto: ignore a raster NoData tag equal to a label (ADP NoData=0) | use | ignore
+      n_bins: 2                     # quantile bins over eligible groups
+
+# Expected export_head_outputs.py rasters (same directory as its output_dir)
+# Excluded ("bad") clusters at the matchup step (optional). A record is
+# dropped only when its matched area (valid SIT-FUSE cluster pixels that
+# overlap valid reference pixels) is entirely in excluded clusters, or the
+# whole scene is. Containing an excluded cluster never drops a record: those
+# pixels are removed downstream. The stratification positive fraction ignores
+# excluded pixels. Share one list with the UQ config (recommended) ...
+invalid_clusters:
+  from_uq_config: /data/nlahaye/sitfuse_uq/smoke_tempo/uq_config.yaml   # same file passed to simple_classifiers_uq.py
+  min_kept_pixels: 1             # drop if fewer non-excluded matched pixels remain
+  max_scene_fraction: null       # optional: also drop if the matched-area excluded share exceeds this
+  cluster_nodata_values: []      # e.g. [0.0] if .full_geo.tif zero padding should not count as cluster 0
+  truth_nodata_values: null      # null = stratify.positive_fraction.nodata_values + raster nodata
+  num_child_classes: null        # parent IDs only; null = cluster.heir.num_classes from encoder_split.sit_fuse_yaml (200 for TEMPO)
+  geotiff_scale: 1000            # SIT-FUSE cluster GeoTIFFs store joint_label / 1000
+# ... or give the list inline (same keys as the UQ config):
+# invalid_clusters:
+#   joint: [73.201, 48.054]
+#   parent: [12]
+#   min_kept_pixels: 1
+#   num_child_classes: 200
+
+head_outputs:
+  directory: /data/nlahaye/output/sitfuse_uq/head_outputs
+  suffix: .head_outputs.tif
+
+# Add to the existing `output:` block:
+#   split_csv: /data/nlahaye/experiments/hms_context_free/matchup_splits.csv
