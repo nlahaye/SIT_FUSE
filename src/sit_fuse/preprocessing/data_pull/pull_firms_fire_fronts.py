@@ -444,6 +444,9 @@ def _norm_firms(df: pd.DataFrame, firms_source: str) -> pd.DataFrame:
 
 def infer_firms_source(name: str, default: str | None = None) -> str:
     """FIRMS source label from an archive-download file name (fire_archive_SV-C2_123 -> VIIRS_SNPP_SP)."""
+    m = re.search(r"(archive|nrt)_(LS|L8|L9|LANDSAT)(?:_|$)", name, re.I)
+    if m:  # Landsat downloads (fire_nrt_LS_<id>): NRT only
+        return "LANDSAT_NRT"
     m = re.search(r"(archive|nrt)_([A-Z0-9]+-C\d+)", name, re.I)
     if m:
         fam = FIRMS_ARCHIVE_CODES.get(m.group(2).upper(), m.group(2).upper())

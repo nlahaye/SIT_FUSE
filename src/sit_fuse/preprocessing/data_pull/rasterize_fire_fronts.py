@@ -32,6 +32,13 @@ Usage:
 raster.products: auto (default) rasterizes every product whose vectors exist in
 the pull output; a product listed without vectors, or vectors not listed, are
 logged as warnings.
+
+Local inputs without a pull step: raster.local_csv (FIRMS archive-download
+files; falls back to firms.local_csv) and raster.local_vectors (FEDS vectors;
+falls back to feds.local_vectors) are read directly (no network) and written to
+the vector directory first, so the pull script is optional for local data.
+They are rebuilt when the vector layer is missing, when overwrite: true, or
+when raster.rebuild_vectors: true; otherwise existing vectors are reused.
 """
 
 from __future__ import annotations
@@ -52,10 +59,11 @@ from shapely.geometry import box
 from shapely.ops import unary_union
 
 try:
-    from sit_fuse.preprocessing.data_pull.pull_firms_fire_fronts import load_config, vector_dir
+    from sit_fuse.preprocessing.data_pull.pull_firms_fire_fronts import (load_config, vector_dir, pull_firms,
+                                                                          pull_feds, write_layer)
 except ImportError:  # run from the data_pull directory
     sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from pull_firms_fire_fronts import load_config, vector_dir
+    from pull_firms_fire_fronts import load_config, vector_dir, pull_firms, pull_feds, write_layer
 
 LOG = logging.getLogger("rasterize-fire-fronts")
 DEFAULT_CLASSES = {"front": 1, "interior": 2, "negative": 0}
@@ -95,6 +103,48 @@ def read_layer(cfg, name):
 def _layer_exists(cfg, name):
     d = vector_dir(cfg)
     return any((d / f"{name}.{ext}").exists() for ext in ("parquet", "gpkg"))
+
+
+def _local_spec(rcfg, sec, key):
+    v = rcfg.get(key)
+    if v in (None, [], "") and isinstance(sec, dict):
+        v = sec.get(key)
+    return None if v in (None, [], "") else v
+
+
+def build_local_vectors(cfg, products):
+    """
+    Build firms_detections / feds_* vector layers from local inputs
+    (raster.local_csv / raster.local_vectors, else the firms. / feds. entries)
+    so rasterization does not depend on a separate pull run. No network calls.
+    """
+    rcfg = cfg.get("raster", {}) or {}
+    rebuild = bool(rcfg.get("rebuild_vectors", cfg.get("overwrite", False)))
+    want = {"feds", "firms"} if products in ("auto", ["auto"]) else set(products)
+    built = []
+    csv = _local_spec(rcfg, cfg.get("firms"), "local_csv")
+    if "firms" in want and csv is not None and (rebuild or not _layer_exists(cfg, "firms_detections")):
+        fc = dict(cfg.get("firms") or {})
+        fc["local_csv"], fc["sources"] = csv, []          # local files only
+        g = pull_firms({**cfg, "firms": fc}, local_only=True)
+        if g is not None and len(g):
+            write_layer(g, cfg, "firms_detections")
+            LOG.info("FIRMS local: %d detections in %d overpasses -> %s", len(g), g["overpass_id"].nunique(),
+                     vector_dir(cfg).resolve())
+            built.append("firms_detections")
+        else:
+            LOG.warning("FIRMS local: no detections left from %s (check bbox, time_range, min_confidence, "
+                        "keep_types in the log above)", csv)
+    vec = _local_spec(rcfg, cfg.get("feds"), "local_vectors")
+    if "feds" in want and vec is not None and (rebuild or not any(
+            _layer_exists(cfg, f"feds_{n}") for n in ("fireline", "newfirepix"))):
+        fd = dict(cfg.get("feds") or {})
+        fd["local_vectors"], fd["source"] = vec, "local"
+        for layer, g in pull_feds({**cfg, "feds": fd}, local_only=True).items():
+            if g is not None and len(g):
+                write_layer(g, cfg, f"feds_{layer}")
+                built.append(f"feds_{layer}")
+    return built
 
 
 def write_tif(path, arr, grid, fill, tags):
@@ -260,6 +310,9 @@ def main(argv=None):
     prefix = rcfg.get("prefix", "fire_front")
     products = a.products or rcfg.get("products", "auto")
     vdir = vector_dir(cfg)
+    built = build_local_vectors(cfg, products)
+    if built:
+        LOG.info("Built vector layers from local inputs: %s", ", ".join(built))
     have = {"feds": any(_layer_exists(cfg, f"feds_{n}") for n in ("fireline", "newfirepix")),
             "firms": _layer_exists(cfg, "firms_detections")}
     LOG.info("Vector dir %s: feds=%s firms=%s", vdir.resolve(), have["feds"], have["firms"])
