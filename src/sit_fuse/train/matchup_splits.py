@@ -725,6 +725,43 @@ def apply_splits(matchups: list[dict[str, Any]], cfg: dict[str, Any], *,
         elif i["kind"] == "buffer":
             assign[g] = EXCLUDED if bp == "exclude" else DEV
 
+    # ---- explicit group assignments (classifier_split.assign_groups) -------
+    # {calibration: [2024-07-27, ...], holdout: [...], dev: [...]}: split_group
+    # values (observing days under group_by: date; a merged link_shared_truth
+    # group matches any of its member days). Eligible groups only, so
+    # calibration/holdout stay encoder_test and outside the buffer.
+    forced = cs.get("assign_groups") or {}
+    if forced:
+        seen = {}
+        for part, vals in forced.items():
+            part = str(part).lower()
+            if part not in (DEV, CAL, HOLDOUT):
+                raise ValueError(f"classifier_split.assign_groups: unknown partition {part!r} "
+                                 f"(use {DEV}, {CAL} or {HOLDOUT}).")
+            for v in (vals or []):
+                v = str(v)
+                hits = [g for g in ginfo if v == str(g) or v in str(g).split("+")]
+                if not hits:
+                    LOG.warning("assign_groups.%s: no split_group matches %r", part, v)
+                    continue
+                for g in hits:
+                    if g in seen and seen[g] != part:
+                        raise ValueError(f"assign_groups: group {g!r} listed for both {seen[g]} and {part}.")
+                    seen[g] = part
+                    if ginfo[g]["kind"] != "eligible" and part != DEV:
+                        LOG.warning("assign_groups.%s: group %r is %s (not encoder_test / outside buffer); "
+                                    "left as %s.", part, g, ginfo[g]["kind"], assign.get(g, DEV))
+                        continue
+                    if assign.get(g) != part:
+                        LOG.info("assign_groups: %s (%s) %s -> %s", g, ginfo[g]["stratum"], assign.get(g), part)
+                    assign[g] = part
+    # eligible-day inventory per event, for choosing assign_groups
+    inv = defaultdict(lambda: defaultdict(list))
+    for g, i in ginfo.items():
+        inv[i["key"][0]][i["kind"] if i["kind"] != "eligible" else assign.get(g, DEV)].append(str(g))
+    for ev in sorted(inv):
+        LOG.info("Groups for %s: %s", ev, {k: sorted(v) for k, v in sorted(inv[ev].items())})
+
     # ---- write back, enforce encoder-train policy at record level --------
     out = []
     for m in kept:
