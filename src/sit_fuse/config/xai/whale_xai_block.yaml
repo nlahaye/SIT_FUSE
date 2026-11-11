@@ -1,0 +1,59 @@
+# Blue whale xai block. Merge into the encoder config with
+#   python -m sit_fuse.xai.make_xai_config -b config/model/copernicus_whale.yaml -x config/xai/whale_xai_block.yaml \
+#       -o config/model/copernicus_whale_xai.yaml
+# then
+#   python -m sit_fuse.xai.xai               -y config/model/copernicus_whale_xai.yaml
+#   python -m sit_fuse.xai.shap_faithfulness -y config/model/copernicus_whale_xai.yaml
+#   python -m sit_fuse.xai.cluster_interpret -y config/model/copernicus_whale_xai.yaml
+#
+# Channel order = cop_env_whales_t<i>.zarr channel order, i.e. the data_dict order in
+# NatureNet models/misc/preprocess_copernicus_2.py (resolution groups in insertion order, files in list order,
+# vars in list order):
+#   0 T     near-surface temperature            cmems_mod_glo_bgc_my_0.083deg-lmtl-Fphy_P1D-i
+#   1 U     near-surface eastward current       (same file)
+#   2 V     near-surface northward current      (same file)
+#   3 zooc  zooplankton carbon biomass           cmems_mod_glo_bgc_my_0.083deg-lmtl_P1D-i
+#   4 npp   net primary production               (same file)
+#   5 CHL   chlorophyll-a (gap-free L4, 4 km)    cmems_obs-oc_glo_bgc-plankton_my_l4-gapfree-multi-4km_P1D
+xai:
+  output_mode: assigned_logprob
+  attribution_level: channel           # 6 players -> exact Shapley
+  background: kmeans
+  n_background: 50
+  background_pool: 20000
+  max_samples_per_cluster: 200
+  min_cluster_samples: 10
+  max_clusters: 0
+  exact_max_players: 12
+  data_split: train
+  seed: 42
+  feature_names: [T, U, V, zooc, npp, CHL]
+  feature_groups:
+    currents: [U, V]
+    productivity: [zooc, npp, CHL]
+  faithfulness:
+    n_curve_samples: 50
+    n_random_orders: 10
+    n_permutations: 5
+    top_k: 3
+    stability_backgrounds: [kmeans, sample, zero]
+    stability_seeds: [0, 1, 2]
+    stability_sample_sizes: [50, 100, 200]
+  interpret:
+    label_pattern: "{out_dir}/{name}.clust.data_*clusters.no_geo.tif"   # * = per-scene cluster count (wildcards expanded by make_xai_config)
+    variable_names: [T, U, V, zooc, npp, CHL]
+    dates: []                          # optional ISO date per scene (scene_dates_file from preprocess_copernicus)
+    label_fill: -1
+    n_top_clusters: 30
+    min_cluster_pixels: 50
+    max_pixels_per_scene: 20000
+    surrogate_depths: [3, 4, 6]
+    n_splits: 5
+    external:
+      sst: T
+      front_percentile: 90
+      u: U
+      v: V
+      ow_threshold: 0.2
+      pixel_km: 9.25                   # 1/12 degree grid (all channels resampled to the 0.083 grid)
+      masks: {}
