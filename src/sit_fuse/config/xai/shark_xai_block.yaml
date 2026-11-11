@@ -44,7 +44,7 @@ xai:
     stability_seeds: [0, 1, 2]
     stability_sample_sizes: [50, 100, 200]
   interpret:
-    label_pattern: "{out_dir}/{name}.clust.data_{n_classes}clusters.zarr.full_geo.tif"   # TODO: confirm suffix
+    label_pattern: "{out_dir}/{name}.clust.data_*clusters.no_geo.tif"   # * = per-scene cluster count (wildcards expanded by make_xai_config)
     variable_names: [nppv, o2, ph, dissic, fe, no3, po4, si, phyc,
                      zooc, zos, sea_surface_temperature_anomaly, uo, vo, so, thetao, wo,
                      VCMX, VHM0, VHM0_SW1, VHM0_WW, VMDR, VMDR_SW1, VMDR_WW, VMXL, VPED, VTM01_SW1, VTM01_WW, VTPK]

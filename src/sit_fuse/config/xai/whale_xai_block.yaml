@@ -40,9 +40,7 @@ xai:
     stability_seeds: [0, 1, 2]
     stability_sample_sizes: [50, 100, 200]
   interpret:
-    # label raster per scene (SIT-FUSE inference output). Check the suffix against one file in output.out_dir;
-    # with the heir head the cluster count in the name is the final (heir) count, not cluster.num_classes.
-    label_pattern: "{out_dir}/{name}.clust.data_{n_classes}clusters.zarr.full_geo.tif"   # TODO: confirm suffix
+    label_pattern: "{out_dir}/{name}.clust.data_*clusters.no_geo.tif"   # * = per-scene cluster count (wildcards expanded by make_xai_config)
     variable_names: [T, U, V, zooc, npp, CHL]
     dates: []                          # optional ISO date per scene (scene_dates_file from preprocess_copernicus)
     label_fill: -1

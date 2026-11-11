@@ -7,7 +7,9 @@ Build a full SIT-FUSE config for the xai tools: <base model yml> + <species xai 
 - Deep-merges the block into the base config (block wins; lists replaced).
 - Fills xai.interpret.label_files from xai.interpret.label_pattern, one per data file
   (default data.files_train). Placeholders: {out_dir} (output.out_dir), {stem} (scene file name without
-  directory), {name} (scene file name), {n_classes} (cluster.num_classes).
+  directory), {name} (scene file name), {n_classes} (cluster.num_classes). Shell wildcards (* ? [..]) are
+  expanded per scene, e.g. "{out_dir}/{name}.clust.data_*clusters.no_geo.tif" for the variable cluster
+  count in SIT-FUSE output names; each scene must match exactly one file (0 -> warning, >1 -> error).
 - Sets data.number_channels = len(feature_names) + len(delete_chans) in the merged copy (the base value is not
   used by non-convolutional DBN training, so e.g. copernicus_shark.yaml says 6 for a 29-channel model; the xai
   tools fall back to it only when no names are given). Checks that every name used by feature_groups / external
@@ -16,6 +18,7 @@ Build a full SIT-FUSE config for the xai tools: <base model yml> + <species xai 
 """
 import argparse
 import copy
+import glob
 import os
 import sys
 
@@ -32,6 +35,19 @@ def deep_merge(base, over):
     return out
 
 
+def _resolve(path):
+    """Expand wildcards; returns (path, status) with status 'ok' | 'missing'. >1 match raises."""
+    if not glob.has_magic(path):
+        return path, ("ok" if os.path.exists(path) else "missing")
+    hits = sorted(glob.glob(path))
+    if len(hits) == 1:
+        return hits[0], "ok"
+    if not hits:
+        return path, "missing"
+    raise ValueError(f"{path} matches {len(hits)} files; make the pattern specific enough for one file per "
+                     f"scene: {hits[:5]}")
+
+
 def fill_label_files(conf):
     ip = conf.setdefault("xai", {}).setdefault("interpret", {})
     pat = ip.pop("label_pattern", None)
@@ -40,9 +56,12 @@ def fill_label_files(conf):
         fmt = dict(out_dir=conf["output"]["out_dir"].rstrip("/"), n_classes=conf.get("cluster", {}).get("num_classes"))
         ip["label_files"] = [pat.format(stem=os.path.splitext(os.path.basename(f))[0], name=os.path.basename(f), **fmt)
                              for f in data_files]
-    missing = [f for f in ip.get("label_files", []) if not os.path.exists(f)]
+    resolved = [_resolve(f) for f in ip.get("label_files", [])]
+    ip["label_files"] = [p for p, _ in resolved]
+    missing = [p for p, s in resolved if s == "missing"]
     if missing:
-        print(f"WARNING: {len(missing)}/{len(ip['label_files'])} label files not found yet, e.g. {missing[0]}",
+        print(f"WARNING: {len(missing)}/{len(resolved)} label files not found yet, e.g. {missing[0]}. "
+              "Rerun make_xai_config once inference has written them (cluster_interpret needs real paths).",
               file=sys.stderr)
     return conf
 
