@@ -8,8 +8,10 @@ Build a full SIT-FUSE config for the xai tools: <base model yml> + <species xai 
 - Fills xai.interpret.label_files from xai.interpret.label_pattern, one per data file
   (default data.files_train). Placeholders: {out_dir} (output.out_dir), {stem} (scene file name without
   directory), {name} (scene file name), {n_classes} (cluster.num_classes).
-- Checks len(feature_names) == data.number_channels - len(data.delete_chans) and that every name used by
-  feature_groups / external exists. Warns (does not fail) for missing label files, so the config can be
+- Sets data.number_channels = len(feature_names) + len(delete_chans) in the merged copy (the base value is not
+  used by non-convolutional DBN training, so e.g. copernicus_shark.yaml says 6 for a 29-channel model; the xai
+  tools fall back to it only when no names are given). Checks that every name used by feature_groups / external
+  exists. Warns (does not fail) for missing label files, so the config can be
   built before inference finishes.
 """
 import argparse
@@ -48,10 +50,11 @@ def fill_label_files(conf):
 def check(conf):
     x, d = conf["xai"], conf["data"]
     names = list(x["feature_names"])
-    n_ch = int(d["number_channels"]) - len(d.get("delete_chans") or [])
-    if len(names) != n_ch:
-        raise ValueError(f"{len(names)} feature_names but number_channels - delete_chans = {n_ch}. "
-                         "Fix the base config or the block before running xai.")
+    n_new = len(names) + len(d.get("delete_chans") or [])
+    if int(d.get("number_channels", -1)) != n_new:
+        print(f"NOTE: data.number_channels {d.get('number_channels')} -> {n_new} (= len(feature_names) + "
+              "len(delete_chans)) in the merged config", file=sys.stderr)
+        d["number_channels"] = n_new
     if len(set(names)) != len(names):
         raise ValueError("duplicate feature_names")
     used = [m for g in (x.get("feature_groups") or {}).values() for m in g]
