@@ -1,0 +1,152 @@
+# SIT-FUSE environment (pixi). Place at the repo root, next to pyproject.toml.
+#   pixi install               # auto-selects CUDA or CPU torch
+#   pixi run check
+#   pixi shell                 # or: pixi run infer -y config.yaml
+[workspace]
+name = "sit_fuse"
+channels = ["conda-forge"]
+# The CUDA platform is listed first, so pixi picks it on machines with an NVIDIA driver
+# and falls back to the CPU build elsewhere (no separate env name needed).
+platforms = [
+  { name = "linux-64-cuda", platform = "linux-64", cuda = "12.0" },
+  { name = "linux-64-cpu", platform = "linux-64" },
+  # ARM64 Linux with an NVIDIA GPU: DGX Spark / GB10, Grace Hopper/Blackwell (CUDA 13 driver)
+  { name = "linux-aarch64-cuda", platform = "linux-aarch64", cuda = "13.0" },
+  { name = "linux-aarch64-cpu", platform = "linux-aarch64" },
+  "osx-arm64",
+]
+
+# ---------------------------------------------------------------- base (all envs)
+[dependencies]
+# 3.11: shap<=0.42.1 (pinned in pyproject.toml) has no cp312 builds on PyPI or conda-forge.
+python = "3.11.*"
+pip = "*"
+numpy = ">=1.26,<2"          # matches the validated env; relax once code is NumPy-2 checked
+scipy = "*"
+pandas = "*"
+pyarrow = "*"
+pyyaml = "*"
+tqdm = "*"
+tabulate = "*"
+joblib = "*"
+threadpoolctl = "*"
+numba = "*"
+
+# Geospatial / scientific I/O
+gdal = "*"                    # osgeo bindings (61 files)
+libgdal-hdf4 = "*"
+libgdal-netcdf = "*"
+rasterio = "*"
+pyhdf = "*"
+netcdf4 = "*"
+h5py = "*"
+zarr = ">=2.18,<3"            # code and existing outputs use the zarr v2 API/format
+dask = "*"
+xarray = "*"
+rioxarray = "*"
+geopandas = "*"
+shapely = ">=2"
+pyproj = "*"
+pyresample = "*"
+geocube = "*"
+regionmask = "*"
+rasterstats = "*"
+geojson = "*"
+geopy = "*"
+dbfread = "*"
+pytz = "*"
+
+# ML / analysis (torch itself comes from the cpu/gpu features)
+torchvision = "*"
+lightning = ">=2.5"
+pytorch-lightning = "*"
+torchmetrics = "*"
+torchinfo = "*"
+einops = "0.7.*"            # claymodel pins einops~=0.7
+scikit-learn = "*"
+scikit-image = "*"
+imbalanced-learn = "*"
+opencv = "*"
+matplotlib = "*"
+seaborn = "*"
+pot = "*"                     # import ot
+umap-learn = "*"
+opentsne = "*"
+graspologic = "*"
+wandb = "*"
+tensorboard = "*"            # required by the pytorch-segmentation fork (torch.utils.tensorboard)
+huggingface_hub = "*"
+boto3 = "*"
+requests = "*"
+pillow = "*"
+
+[pypi-dependencies]
+tqdm-joblib = "*"
+torchsummary = "*"
+# Forks used by SIT-FUSE (pip-installable; same sources as Dockerfile / docs env)
+learnergy = { git = "https://github.com/nlahaye/learnergy", branch = "master" }  # has models.temporal (RTDBN)
+x-transformers = { git = "https://github.com/nlahaye/x-transformers", branch = "main" }
+vit-pytorch = { git = "https://github.com/nlahaye/vit-pytorch", branch = "main" }
+pixel-level-contrastive-learning = { git = "https://github.com/nlahaye/pixel-level-contrastive-learning", branch = "main" }
+byol-pytorch = { git = "https://github.com/nlahaye/byol-pytorch", branch = "master" }
+segmentation = { git = "https://github.com/nlahaye/pytorch-segmentation", branch = "master" }
+claymodel = { git = "https://github.com/Clay-foundation/model", branch = "main" }      # see clay_segmentor.py import fix
+# I-JEPA: requires the pyproject.toml from ijepa_fork/ to be pushed to nlahaye/I-JEPA (main)
+ijepa = { git = "https://github.com/nlahaye/I-JEPA", branch = "main" }
+# SIT-FUSE itself (pulls myosuite, gymnasium, timeshap, shap from pyproject.toml)
+sit_fuse = { path = ".", editable = true }
+
+# ---------------------------------------------------------------- torch per platform
+[target.linux-64-cuda.dependencies]
+pytorch-gpu = "*"
+cuda-version = "12.*"         # pin to <= driver's CUDA (nvidia-smi), e.g. "12.6.*"
+
+[target.linux-64-cpu.dependencies]
+pytorch-cpu = "*"
+
+[target.linux-aarch64-cuda.dependencies]
+pytorch-gpu = "*"
+cuda-version = "13.0.*"       # <= driver CUDA (nvidia-smi); DGX Spark ships 13.0. Builds include sm_120+PTX (runs on GB10 sm_121)
+
+[target.linux-aarch64-cpu.dependencies]
+pytorch-cpu = "*"
+
+[target.osx-arm64.dependencies]
+pytorch-cpu = "*"             # MPS-enabled build on Apple silicon
+
+# diplib (used only by 3 postprocessing scripts) has no Linux ARM64 wheels
+[target.linux-64.pypi-dependencies]
+diplib = "*"
+[target.osx-arm64.pypi-dependencies]
+diplib = "*"
+
+# ---------------------------------------------------------------- optional features
+# Optional analysis-only tools
+[feature.extras.pypi-dependencies]
+calflops = "*"
+transformers = "*"
+[feature.extras.dependencies]
+healpy = "*"
+
+[feature.viz.dependencies]
+opencv = "<5"                 # fiftyone requires opencv-python-headless<5
+[feature.viz.pypi-dependencies]
+fiftyone = "*"
+
+[feature.dev.dependencies]
+pytest = "*"
+ipykernel = "*"
+jupyterlab = "*"
+
+# ---------------------------------------------------------------- environments
+[environments]
+default = { solve-group = "main" }
+full = { features = ["extras", "dev"], solve-group = "main" }
+viz = { features = ["viz"] }
+
+# ---------------------------------------------------------------- tasks
+[tasks]
+check = { cmd = "python -c \"import torch, osgeo.gdal as g, rasterio, pyhdf.SD, zarr, learnergy, segmentation, IJEPA, claymodel, sit_fuse.models.deep_cluster.heir_dc; print('torch', torch.__version__, 'cuda', torch.cuda.is_available(), torch.cuda.device_count()); print('gdal', g.__version__, 'zarr', zarr.__version__)\"" }
+gpu-check = { cmd = "python -c \"import torch; assert torch.cuda.is_available(), 'no CUDA'; print(torch.cuda.get_device_name(0), 'cc', torch.cuda.get_device_capability(0), 'built for', torch.cuda.get_arch_list()); x=torch.randn(4096,4096,device='cuda'); print('matmul ok', float((x@x).abs().mean()))\"" }
+infer = { cmd = "python src/sit_fuse/inference/generate_output.py" }
+train-dc = { cmd = "python src/sit_fuse/train/train_heirarchichal_deep_cluster.py" }

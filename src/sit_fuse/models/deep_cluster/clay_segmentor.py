@@ -14,7 +14,10 @@ from einops import rearrange, repeat
 from torch import nn
 
 #from claymodel.model import Encoder
-from clay.model import Encoder
+try:
+    from claymodel.model import Encoder  # Clay >= 1.0 (pip install git+https://github.com/Clay-foundation/model)
+except ImportError:
+    from clay.model import Encoder  # older local checkout layout
 
 class SegmentEncoder(Encoder):
     """
