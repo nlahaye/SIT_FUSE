@@ -7,7 +7,7 @@ runs:
   seed2: []   # TODO
 scenes: []    # optional raw scenes for centroid matching, e.g. /data/nlahaye/NatureNet_Env/Copernicus/cop_env_shark_t9.zarr
 sit_fuse_config: config/model/copernicus_shark_xai.yaml   # output of make_xai_config
-variable_names: [nppv, o2, ph, dissic, fe, no3, po4, si, phyc, zooc, zos, sea_surface_temperature_anomaly, uo, vo, so, thetao, wo,
+variable_names: [nppv, o2, ph, dissic, fe, no3, po4, si, phyc, zos, sea_surface_temperature_anomaly, uo, vo, so, thetao, wo,
                  VCMX, VHM0, VHM0_SW1, VHM0_WW, VMDR, VMDR_SW1, VMDR_WW, VMXL, VPED, VTM01_SW1, VTM01_WW, VTPK]
 label_fill: -1
 max_pixels: 500000

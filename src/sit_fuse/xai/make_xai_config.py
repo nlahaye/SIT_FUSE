@@ -11,7 +11,7 @@ Build a full SIT-FUSE config for the xai tools: <base model yml> + <species xai 
   expanded per scene, e.g. "{out_dir}/{name}.clust.data_*clusters.no_geo.tif" for the variable cluster
   count in SIT-FUSE output names; each scene must match exactly one file (0 -> warning, >1 -> error).
 - Sets data.number_channels = len(feature_names) + len(delete_chans) in the merged copy (the base value is not
-  used by non-convolutional DBN training, so e.g. copernicus_shark.yaml says 6 for a 29-channel model; the xai
+  used by non-convolutional DBN training, so e.g. copernicus_shark.yaml says 6 for a 28-channel model; the xai
   tools fall back to it only when no names are given). Checks that every name used by feature_groups / external
   exists. Warns (does not fail) for missing label files, so the config can be
   built before inference finishes.
