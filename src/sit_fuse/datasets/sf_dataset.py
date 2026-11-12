@@ -443,6 +443,10 @@ class SFDataset(torch.utils.data.Dataset):
 				r += 1
 		self.chan_dim = 2 + self.increment
 		print("SCENE PASS RUNTIME", timer() - start, "TOTAL VALID", total_valid)
+		if total_valid == 0 and r > 0:
+			print("WARNING: no valid samples in any scene. A pixel is dropped if ANY channel is non-finite, "
+				"< valid_min, > valid_max or == fill_value; find the channel(s) with:\n"
+				"  python -m sit_fuse.datasets.valid_qa -y <this config> --names <channel-name JSON>")
 
 		self.data_full = None
 		rng = np.random.default_rng([ss.base_seed(cfg), 1])
