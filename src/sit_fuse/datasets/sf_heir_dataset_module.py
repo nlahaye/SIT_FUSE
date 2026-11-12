@@ -2,7 +2,7 @@ import pytorch_lightning as pl
 import torch
 from torch.utils.data import DataLoader
 
-from sit_fuse.datasets.simple_dataset import SimpleDataset
+from sit_fuse.datasets.simple_dataset import SimpleDataset, batch_collate
 
 class SFHeirDataModule(pl.LightningDataModule):
     def __init__(self,
@@ -16,6 +16,7 @@ class SFHeirDataModule(pl.LightningDataModule):
         super().__init__()
 
         self.batch_size = batch_size
+        self.pin_memory = pin_memory
         self.num_workers = num_workers
         self.shuffle = shuffle
         self.val_percent = val_percent
@@ -41,7 +42,10 @@ class SFHeirDataModule(pl.LightningDataModule):
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             shuffle=self.shuffle,
-            drop_last=True
+            drop_last=True,
+            collate_fn=batch_collate,
+            pin_memory=self.pin_memory and torch.cuda.is_available(),
+            persistent_workers=self.num_workers > 0,
         )
 
     def val_dataloader(self):
@@ -50,7 +54,10 @@ class SFHeirDataModule(pl.LightningDataModule):
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             shuffle=False,
-            drop_last=True
+            drop_last=True,
+            collate_fn=batch_collate,
+            pin_memory=self.pin_memory and torch.cuda.is_available(),
+            persistent_workers=self.num_workers > 0,
         )
 
 

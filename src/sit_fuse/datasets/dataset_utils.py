@@ -100,6 +100,7 @@ def get_train_dataset_sf(yml_conf):
 
 
     read_func = get_read_func(data_reader)
+    sampling = yml_conf["data"].get("sampling")
 
     data = None
     if not tiled:
@@ -114,10 +115,11 @@ def get_train_dataset_sf(yml_conf):
             data.read_and_preprocess_data(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
                 valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
                 transform_values=transform_values, scaler = scaler, train_scaler = scaler_train, scale = scale_data, \
-                transform=None, subset_training = subset_training, stratify_data=stratify_data)
+                transform=None, subset_training = subset_training, stratify_data=stratify_data, sampling=sampling)
         else:
             data = SFDataset()
-            data.read_data_preprocessed(data_fname, targets_fname, scaler, subset_training = subset_training, stratify_data=stratify_data)
+            data.read_data_preprocessed(data_fname, targets_fname, scaler, subset_training = subset_training, stratify_data=stratify_data, \
+                sampling=sampling)
     else:
         if preprocess_train:
             data = SFDatasetConv()
@@ -312,7 +314,9 @@ def get_prediction_dataset_from_scene_arr(yml_conf, data_arr, init_shape, strat_
         preprocess_train = False
 
     scaler_tune = False
-    if not os.path.exists(scaler_fname) or preprocess_train == True:
+    # Prediction never fits a scaler: use the saved training scaler whenever it exists
+    # (previously it was only loaded if the cached train_data.npy also existed, else an unfitted one was used).
+    if not os.path.exists(scaler_fname):
         scaler_type = yml_conf["scaler"]["name"]
         scaler, scaler_train = get_scaler(scaler_type)
     else:
@@ -330,11 +334,12 @@ def get_prediction_dataset_from_scene_arr(yml_conf, data_arr, init_shape, strat_
 
     if not tiled:
         data = SFDataset()
-        data.preprocess_data_from_scene_arr(scene_arr, init_shape, strat_inds, fill_value = fill, chan_dim = 2, scaler=scaler, scale = scale_data, \
-            transform=transform, do_shuffle=False)
+        data.pixel_padding = pixel_padding
+        data.preprocess_data_from_scene_arr(data_arr, init_shape, strat_inds, fill_value = fill, chan_dim = 2, scaler=scaler, scale = scale_data, \
+            transform=transform, do_shuffle=False, sampling=yml_conf["data"].get("sampling"))
     else:
         data = SFDatasetConv()
-        data.read_and_preprocess_data(scene_arr, init_shape, strat_inds, chan_dim = 2, transform = transform, \
+        data.read_and_preprocess_data(data_arr, init_shape, strat_inds, chan_dim = 2, transform = transform, \
             tile=tiled, tile_size=tile_size, tile_step=tile_step, do_shuffle=False)
 
     return data
@@ -386,7 +391,9 @@ def get_prediction_dataset(yml_conf, fname):
         preprocess_train = False
 
     scaler_tune = False
-    if not os.path.exists(scaler_fname) or preprocess_train == True:
+    # Prediction never fits a scaler: use the saved training scaler whenever it exists
+    # (previously it was only loaded if the cached train_data.npy also existed, else an unfitted one was used).
+    if not os.path.exists(scaler_fname):
         scaler_type = yml_conf["scaler"]["name"]
         scaler, scaler_train = get_scaler(scaler_type)
     else:
@@ -425,7 +432,7 @@ def get_prediction_dataset(yml_conf, fname):
         data = SFDataset()
         data.read_and_preprocess_data(flist, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \
             fill_value = fill, chan_dim = chan_dim, transform_chans=transform_chans, transform_values=transform_values, scaler=scaler, scale = scale_data, \
-            transform=transform, do_shuffle=False)
+            transform=transform, do_shuffle=False, sampling=yml_conf["data"].get("sampling"))
     else:
         data = SFDatasetConv()
         data.read_and_preprocess_data(flist, read_func, data_reader_kwargs,  delete_chans=delete_chans, valid_min=valid_min, valid_max=valid_max, \

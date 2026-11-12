@@ -1,5 +1,12 @@
 
 from resource import *
+
+# Cap native thread pools (OpenMP/BLAS/MKL) before numpy/torch are imported when run
+# as a script (DDP ranks re-run this file, so they pick it up too).
+if __name__ == '__main__':
+    from sit_fuse.compute_resources import limit_env_from_argv
+    limit_env_from_argv()
+
 import pytorch_lightning as pl
 import torch
 from pytorch_lightning.callbacks import (
@@ -20,6 +27,7 @@ from sit_fuse.models.encoders.pca_encoder import PCAEncoder
 from sit_fuse.models.encoders.cnn_encoder import DeepConvEncoder
 from sit_fuse.datasets.sf_dataset_module import SFDataModule
 from sit_fuse.utils import read_yaml
+from sit_fuse.compute_resources import apply_compute_limits, num_local_processes, get_strategy, training_checkpoint, accelerator_uses_gpu
 
 from segmentation.models.gcn import GCN
 from segmentation.models.deeplabv3_plus_xception import DeepLab
@@ -97,10 +105,7 @@ def pretrain_DBN(yml_conf, dataset, conv = False):
 
         lr_monitor = LearningRateMonitor(logging_interval="step")
         model_summary = ModelSummary(max_depth=2)
-        checkpoint_steps = 100
-        if max_epochs < checkpoint_steps:
-            checkpoint_steps = 1
-        checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="encoder", enable_version_counter=False, every_n_train_steps = checkpoint_steps, save_on_train_epoch_end=False)
+        checkpoint_callback = training_checkpoint(save_dir, "encoder", max_epochs)
 
         os.makedirs(save_dir, exist_ok=True) 
         if use_wandb_logger:
@@ -110,7 +115,7 @@ def pretrain_DBN(yml_conf, dataset, conv = False):
                 default_root_dir=save_dir,
                 accelerator=accelerator,
                 devices=devices,
-                strategy=DDPStrategy(find_unused_parameters=True),
+                strategy=get_strategy(devices, accelerator),
                 precision=precision,
                 max_epochs=max_epochs,
                 callbacks=[lr_monitor, model_summary, checkpoint_callback],
@@ -122,7 +127,7 @@ def pretrain_DBN(yml_conf, dataset, conv = False):
                 default_root_dir=save_dir,
                 accelerator=accelerator,
                 devices=devices,
-                strategy=DDPStrategy(find_unused_parameters=True),
+                strategy=get_strategy(devices, accelerator),
                 precision=precision,
                 max_epochs=max_epochs,
                 callbacks=[lr_monitor, model_summary],
@@ -202,10 +207,7 @@ def pretrain_MAE(yml_conf, dataset):
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
-    checkpoint_steps = 100
-    if max_epochs < checkpoint_steps:
-        checkpoint_steps = 1
-    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="encoder", enable_version_counter=False, every_n_train_steps = checkpoint_steps, save_on_train_epoch_end=False)
+    checkpoint_callback = training_checkpoint(save_dir, "encoder", max_epochs)
 
     os.makedirs(save_dir, exist_ok=True)
     if use_wandb_logger:
@@ -216,7 +218,7 @@ def pretrain_MAE(yml_conf, dataset):
             default_root_dir=save_dir,
             accelerator=accelerator,
             devices=devices,
-            strategy=DDPStrategy(find_unused_parameters=True),
+            strategy=get_strategy(devices, accelerator),
             precision=precision,
             max_epochs=max_epochs,
             callbacks=[lr_monitor, model_summary, checkpoint_callback],
@@ -228,12 +230,11 @@ def pretrain_MAE(yml_conf, dataset):
             default_root_dir=save_dir,
             accelerator=accelerator,
             devices=devices,
-            strategy=DDPStrategy(find_unused_parameters=True),
+            strategy=get_strategy(devices, accelerator),
             precision=precision,
             max_epochs=max_epochs,
             callbacks=[lr_monitor, model_summary, checkpoint_callback],
-            gradient_clip_val=gradient_clip_val,
-            logger=wandb_logger
+            gradient_clip_val=gradient_clip_val
         )
     trainer.fit(model, dataset)
     torch.save(model.vit.state_dict(), os.path.join(save_dir, "vit.ckpt"))
@@ -288,10 +289,7 @@ def pretrain_IJEPA(yml_conf, dataset):
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
-    checkpoint_steps = 100
-    if max_epochs < checkpoint_steps:
-        checkpoint_steps = 1
-    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="encoder", enable_version_counter=False, every_n_train_steps = checkpoint_steps, save_on_train_epoch_end=False)
+    checkpoint_callback = training_checkpoint(save_dir, "encoder", max_epochs)
 
     os.makedirs(save_dir, exist_ok=True) 
     if use_wandb_logger:
@@ -302,7 +300,7 @@ def pretrain_IJEPA(yml_conf, dataset):
             default_root_dir=save_dir,
             accelerator=accelerator,
             devices=devices,
-            strategy=DDPStrategy(find_unused_parameters=True),
+            strategy=get_strategy(devices, accelerator),
             precision=precision,
             max_epochs=max_epochs,
             callbacks=[lr_monitor, model_summary, checkpoint_callback],
@@ -314,7 +312,7 @@ def pretrain_IJEPA(yml_conf, dataset):
             default_root_dir=save_dir,
             accelerator=accelerator,
             devices=devices,
-            strategy=DDPStrategy(find_unused_parameters=True),
+            strategy=get_strategy(devices, accelerator),
             precision=precision,
             max_epochs=max_epochs,
             callbacks=[lr_monitor, model_summary],
@@ -398,10 +396,7 @@ def pretrain_BYOL(yml_conf, dataset):
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
-    checkpoint_steps = 100
-    if max_epochs < checkpoint_steps:
-        checkpoint_steps = 1
-    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="encoder", enable_version_counter=False, every_n_train_steps = checkpoint_steps, save_on_train_epoch_end=False)
+    checkpoint_callback = training_checkpoint(save_dir, "encoder", max_epochs)
  
 
     os.makedirs(save_dir, exist_ok=True)
@@ -413,7 +408,7 @@ def pretrain_BYOL(yml_conf, dataset):
             default_root_dir=save_dir,
             accelerator=accelerator,
             devices=devices,
-            strategy=DDPStrategy(find_unused_parameters=True),
+            strategy=get_strategy(devices, accelerator),
             precision=precision,
             max_epochs=max_epochs,
             callbacks=[lr_monitor, model_summary, checkpoint_callback],
@@ -425,12 +420,11 @@ def pretrain_BYOL(yml_conf, dataset):
             default_root_dir=save_dir,
             accelerator=accelerator,
             devices=devices,
-            strategy=DDPStrategy(find_unused_parameters=True),
+            strategy=get_strategy(devices, accelerator),
             precision=precision,
             max_epochs=max_epochs,
             callbacks=[lr_monitor, model_summary, checkpoint_callback],
-            gradient_clip_val=gradient_clip_val,
-            logger=wandb_logger
+            gradient_clip_val=gradient_clip_val
         )
     trainer.fit(learner, dataset)
     torch.save(model.state_dict(), os.path.join(save_dir, "byol.ckpt"))
@@ -443,6 +437,11 @@ def run_pretraining_outside(yml_fpath):
     run_pretraining(yml_conf)
 
 def run_pretraining(yml_conf):
+
+    # Thread/CPU throttling from the `compute:` YAML section; the budget is split across DDP ranks.
+    training = yml_conf["encoder"]["training"]
+    apply_compute_limits(yml_conf,
+        num_processes=num_local_processes(training.get("devices", 1), training.get("accelerator", "auto")))
 
     num_loader_workers = int(yml_conf["data"]["num_loader_workers"])
     val_percent = float(yml_conf["data"]["val_percent"])
@@ -466,7 +465,12 @@ def run_pretraining(yml_conf):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-y", "--yaml", help="YAML file for DBN and output config.")
+    parser.add_argument("-n", "--num-threads", default=None,
+        help="CPU thread cap: int, negative int (all but N), fraction (0-1], or low/medium/high/max. "
+             "Overrides compute.num_threads in the YAML.")
     args = parser.parse_args()
+    if args.num_threads is not None:
+        os.environ["SIT_FUSE_NUM_THREADS"] = str(args.num_threads)  # inherited by DDP ranks
     run_pretraining_outside(args.yaml)
  
     print(getrusage(RUSAGE_SELF))

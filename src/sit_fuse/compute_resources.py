@@ -28,6 +28,7 @@ YAML (all keys optional; omitting the section keeps the old behaviour):
       dask_scheduler: threads # threads | synchronous | processes
       use_gpu: auto           # auto | true | false
       inference_batch_size: null  # override generate_output's default (10000, tiled: 5)
+      prefetch_files: 0       # generate_output: read the next N input files in a background thread
 
 Overrides (highest priority first): explicit function args / CLI flag
 (--num-threads), env var SIT_FUSE_NUM_THREADS, YAML compute.num_threads.
@@ -365,3 +366,47 @@ def apply_compute_limits(yml_conf=None, num_threads=None, num_processes=1,
               % (n, avail, " per process (x%d processes)" % num_processes if num_processes > 1 else "",
                  " (pinned)" if pin else ""))
     return n
+
+
+# ---------------------------------------------------------------------------
+# Lightning training helpers (shared by pretrain_encoder, finetune_dc_mlp_head,
+# train_heirarchichal_deep_cluster)
+# ---------------------------------------------------------------------------
+
+def accelerator_uses_gpu(accelerator):
+    """True if a Lightning accelerator string will run on CUDA ("auto" -> if CUDA is available)."""
+    acc = str(accelerator).lower()
+    if acc in ("gpu", "cuda"):
+        return True
+    if acc == "auto":
+        try:
+            import torch
+            return torch.cuda.is_available()
+        except ImportError:
+            return False
+    return False
+
+
+def get_strategy(devices, accelerator="auto", num_nodes=1):
+    """
+    DDP (find_unused_parameters=True, as before) only when more than one process is launched;
+    otherwise "auto", which avoids process-group setup and DDP wrapping for single-device runs.
+    """
+    if num_local_processes(devices, accelerator) * max(1, int(num_nodes or 1)) > 1:
+        from pytorch_lightning.strategies import DDPStrategy
+        return DDPStrategy(find_unused_parameters=True)
+    return "auto"
+
+
+def training_checkpoint(dirpath, filename, max_epochs, checkpoint_steps=100):
+    """
+    Same checkpoint file as before (<dirpath>/<filename>.ckpt, no version counter). Short runs
+    (max_epochs < checkpoint_steps) previously saved every training step; they now save once per
+    epoch, which ends in the same final checkpoint without per-step disk writes.
+    """
+    from pytorch_lightning.callbacks import ModelCheckpoint
+    if max_epochs < checkpoint_steps:
+        return ModelCheckpoint(dirpath=dirpath, filename=filename, enable_version_counter=False,
+                               every_n_epochs=1, save_on_train_epoch_end=True)
+    return ModelCheckpoint(dirpath=dirpath, filename=filename, enable_version_counter=False,
+                           every_n_train_steps=checkpoint_steps, save_on_train_epoch_end=False)

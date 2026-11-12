@@ -165,7 +165,7 @@ class Heir_DC(pl.LightningModule):
 
             #print(encoder_output_size, "HERE")
 
-            state_dict = torch.load(clust_tree_ckpt)
+            state_dict = torch.load(clust_tree_ckpt, map_location="cpu")
             pytorch_total_params = sum(p.numel() for p in self.pretrained_model.pretrained_model.parameters()) + sum(p.numel() for p in self.pretrained_model.mlp_head.parameters())
             print("PARAMS 1", pytorch_total_params)
             self.clust_tree, self.lab_full = \
@@ -175,47 +175,78 @@ class Heir_DC(pl.LightningModule):
         del data
 
     def generate_label_set(self, data):
-        count = 0
+        """
+        Assign every training sample to its root-level cluster (self.lab_full[key] -> sample indices).
+
+        Same batches as before (batch_size = min(700 or 10, min_samples), drop_last=True), but
+        batches are sliced directly from data.data_full when the dataset uses the plain
+        SFDataset/SFDatasetConv __getitem__, and indices are grouped once at the end instead
+        of growing each key with torch.cat per batch.
+        """
         self.lab_full = {}
         if isinstance(data, SFDatasetConv):
             batch_size = min(10, self.min_samples)
         else:
             batch_size = min(700, self.min_samples)
 
-        output_sze = data.data_full.shape[0]
+        n_full = data.data_full.shape[0]
+        n_batches = n_full // batch_size  # drop_last=True
+        device = self.pretrained_model.device
 
-        test_loader = DataLoader(data, batch_size=batch_size, shuffle=False, \
-        num_workers = 0, drop_last = True, pin_memory = True)
-        ind = 0
+        direct = type(data).__getitem__ in (SFDataset.__getitem__, SFDatasetConv.__getitem__)
+        if direct:
+            def _batches():
+                for b in range(n_batches):
+                    yield data.data_full[b*batch_size:(b+1)*batch_size]
+        else:
+            loader = DataLoader(data, batch_size=batch_size, shuffle=False, \
+                num_workers = 0, drop_last = True, pin_memory = (device.type == "cuda"))
+            def _batches():
+                for data2 in loader:
+                    yield data2[0]
+
+        positions = []
+        labels = []
+        batch_ids = []
         ind2 = 0
+        with torch.no_grad():
+            for b, batch in enumerate(tqdm(_batches(), total=n_batches)):
+                dat_dev = torch.as_tensor(batch).to(device=device, non_blocking=True, dtype=torch.float32)
 
-        for data2 in tqdm(test_loader):
-            dat_dev = data2[0].to(device=self.pretrained_model.device, non_blocking=True, dtype=torch.float32)
+                lab = self.pretrained_model.forward(dat_dev)
+                if lab.ndim > 2: #or B,C,H,W
+                    lab = lab.flatten(start_dim=2).permute(0,2,1).flatten(start_dim=0, end_dim=1)
+                lab = torch.argmax(lab, axis = 1).detach().cpu().numpy().astype(np.int64)
 
-            lab = self.pretrained_model.forward(dat_dev)
-            if lab.ndim > 2: #or B,C,H,W
-                lab = lab.flatten(start_dim=2).permute(0,2,1).flatten(start_dim=0, end_dim=1)
-            lab = torch.argmax(lab, axis = 1)
-            lab = lab.detach().cpu()
-            dat_dev = dat_dev.detach().cpu()
+                ind1 = ind2
+                ind2 += dat_dev.shape[0]
+                if ind2 > n_full:
+                    ind2 = n_full
 
-            ind1 = ind2
-            ind2 += dat_dev.shape[0]
-            if ind2 > data.data_full.shape[0]:
-                ind2 = data.data_full.shape[0]
+                positions.append(np.arange(lab.shape[0], dtype=np.int64) + ind1)
+                labels.append(lab)
+                batch_ids.append(np.full(lab.shape[0], b, dtype=np.int64))
+                del dat_dev
 
-            lab_unq = torch.unique(lab)
-            for l in lab_unq:
-                inds = torch.where(lab == l)
-                key = str(l.detach().cpu().numpy())
-                if key in self.lab_full.keys():
-                    self.lab_full[key] = torch.cat((self.lab_full[key],(inds[0] + ind1)))
-                else:
-                    self.lab_full[key] = inds[0] + ind1
+        if len(labels) == 0:
+            return
+        positions = np.concatenate(positions)
+        labels = np.concatenate(labels)
+        batch_ids = np.concatenate(batch_ids)
 
-            ind = ind + 1
-            count = count + 1
-            del dat_dev
+        # Stable sort keeps batch / within-batch order for each key, as the per-batch torch.cat did.
+        order = np.argsort(labels, kind="stable")
+        uniq, starts = np.unique(labels[order], return_index=True)
+        bounds = list(starts[1:]) + [order.shape[0]]
+        groups = {}
+        first_seen = []
+        for u, st, en in zip(uniq.tolist(), starts.tolist(), bounds):
+            idx = order[st:en]
+            groups[u] = idx
+            first_seen.append((int(batch_ids[idx[0]]), u))
+        # Original dict insertion order: first batch a key appears in, then ascending label.
+        for _, u in sorted(first_seen):
+            self.lab_full[str(u)] = torch.from_numpy(positions[groups[u]])
 
  
     def forward(self, x, perturb = False, train=False, return_embed=False):
@@ -445,61 +476,46 @@ class Heir_DC(pl.LightningModule):
             tmp_prob_full = torch.zeros((y.shape[0], 1, y.shape[-2], y.shape[-1]), device=y.device, dtype=torch.float32)
 
 
-        f = lambda z: str(z)
-        #tmp2 = y  strings
-        #tmp = y
-        
-        #BxHxW OR B 
-        tmp2 = np.vectorize(f)(tmp.detach().cpu())
-        #BxCxHxW OR BxC 
         tmp3 = tmp.clone()
-        #x.requires_grad = True
-        keys = np.unique(tmp2)
-        #print("HERE KEYS", keys)
-        for key in keys:
-            #BxCxHxW OR BxC 
-            tmp = y.clone()
-            inds = None
-            inds2 = None
-            tmp2_2 = None
-            tmp4 = None
-            input_tmp = None
+        lab_cpu = tmp.detach().cpu().numpy()
+        if np.issubdtype(lab_cpu.dtype, np.integer):
+            # Fast path: compare integer labels directly. Keys keep the original
+            # string form and lexicographic order (np.unique over str labels).
+            lab_arr = lab_cpu
+            key_pairs = sorted(((str(v), v) for v in np.unique(lab_arr).tolist()), key=lambda kv: kv[0])
+        else:
+            f = lambda z: str(z)
+            lab_arr = np.vectorize(f)(tmp.detach().cpu())
+            key_pairs = [(k, k) for k in np.unique(lab_arr)]
+
+        # Per-key views computed once per batch (previously cloned / deep-copied per key).
+        tmp4 = tmp3 if y.ndim <= 2 else torch.flatten(tmp3, start_dim=0)
+        lab_rows = None
+        if y.ndim == 3:
+            lab_rows = lab_arr.reshape(lab_arr.shape[0], -1).transpose(1,0)
+        elif y.ndim == 4:
+            lab_rows = lab_arr.ravel()
+        if x.ndim == 4:
+            input_all = torch.flatten(x.permute(1,0,2,3), start_dim=1).permute(1,0)
+        else:
+            input_all = x
+
+        subset_list = []
+        prob_list = []
+        keep_prob = None
+        for key, key_val in key_pairs:
             if train and key != self.key:
                 continue
 
-            inds = np.where(tmp2 == key)
-
-            if tmp.ndim == 1 or tmp.ndim == 2:
+            inds = np.nonzero(lab_arr == key_val)
+            if y.ndim == 1 or y.ndim == 2:
                 inds2 = inds[0]
-                tmp2_2 = copy.deepcopy(tmp2)
-                tmp4 = tmp3.clone()
-            elif tmp.ndim == 3: 
-                tmp2_2 = tmp2.reshape(tmp2.shape[0], -1).transpose(1,0)
-                tmp4 = torch.flatten(tmp3, start_dim=0)
-                inds2 = np.where(tmp2_2 == key)[0]
+            elif y.ndim == 3:
+                inds2 = np.nonzero(lab_rows == key_val)[0]
+            else:
+                inds2 = np.nonzero(lab_rows == key_val)[0]
 
-            elif tmp.ndim == 4:
-                
-                tmp2_2 = tmp2.ravel() 
-                tmp4 = torch.flatten(tmp3, start_dim=0)
-                inds2 = np.where(tmp2_2 == key)[0]            
-
- 
-            #print(tmp.shape, tmp.ndim)
-            #print(tmp2.shape, tmp2_2.shape, tmp4.shape, tmp3.shape, tmp.ndim, x.shape, y.shape, "HERE")
-            if x.ndim == 2:
-                input_tmp = x.clone()
-            elif x.ndim == 3:
-                input_tmp = x.clone() #ch.flatten(x, start_dim=2) #.permute(1,0)
-            elif x.ndim == 4:
-                input_tmp = x.clone()
-                input_tmp = torch.flatten(x.permute(1,0,2,3), start_dim=1).permute(1,0)
-                #input_tmp = torch_flatten(input_tmp, start_dim=0, end_dim=1)
-              
-            #print(input_tmp.shape, x.shape, tmp2_2.shape, tmp2.shape)
-            #print(min(inds2), max(inds2), input_tmp.shape, "HERE", tmp2.shape, tmp2_2.shape, tmp4.shape, tmp.shape, tmp3.shape, x.shape)
-            input_tmp = input_tmp[inds2,:] 
-
+            input_tmp = input_all[inds2,:]
 
             tmp_prob = None
 
@@ -522,17 +538,13 @@ class Heir_DC(pl.LightningModule):
             else:
                 continue
 
-            if tmp_subset is None:
-                tmp_subset = tmp.clone()
-                if tmp_prob is not None:
-                    tmp_prob_subset = tmp_prob.clone()
-            else:
-                if tmp_prob is not None and tmp_prob_subset is not None:
-                    tmp_prob_subset = torch.cat((tmp_prob_subset, tmp_prob), dim=0)
-                tmp_subset = torch.cat((tmp_subset, tmp), dim=0)
-
-            #print(y.shape, tmp.shape, tmp_full.shape, y.shape)
-
+            # Same accumulation semantics as the original torch.cat chain, but
+            # concatenated once at the end (the old chain was quadratic).
+            if keep_prob is None:
+                keep_prob = tmp_prob is not None
+            subset_list.append(tmp)
+            if tmp_prob is not None and keep_prob:
+                prob_list.append(tmp_prob)
 
             if y.ndim == 2:
                 tmp_full[inds[0],:] = tmp.type(tmp_full.dtype)
@@ -548,6 +560,9 @@ class Heir_DC(pl.LightningModule):
                     tmp_prob_full[inds[0],:,inds[1],inds[2]] = tmp_prob.type(tmp_prob_full.dtype)
             del tmp
             del tmp_prob
+
+        tmp_subset = torch.cat(subset_list, dim=0) if len(subset_list) > 0 else None
+        tmp_prob_subset = torch.cat(prob_list, dim=0) if len(prob_list) > 0 else None
 
         if tmp_subset is None or tmp_full is None:
             return None

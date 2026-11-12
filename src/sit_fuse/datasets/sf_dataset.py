@@ -10,6 +10,7 @@ from resource import *
 from timeit import default_timer as timer
 from osgeo import osr, gdal
 import os
+import math
 import numpy as np
 import random
 import zarr
@@ -24,6 +25,7 @@ import sys
 sys.setrecursionlimit(4500)
 
 from sit_fuse.utils import read_yaml, get_read_func, get_scaler
+from sit_fuse.datasets import scene_sampling as ss
 
 import pickle
 from joblib import load, dump
@@ -39,6 +41,11 @@ from skimage.util import view_as_windows
 class SFDataset(torch.utils.data.Dataset):
 	"""
 	This class is an extension of the PyTorch Dataset class. It is a specialization built for 2-D datasets used in SIT-FUSE.
+
+	All initialisers accept an optional ``sampling`` dict (YAML ``data.sampling``, see
+	sit_fuse.datasets.scene_sampling.DEFAULTS). Without it, behaviour matches the previous
+	implementation (same samples, order and targets for prediction / full builds), but with
+	much lower peak memory. ``sampling: {legacy: true}`` restores the original code path.
 	"""
 
 	def __init__(self):
@@ -48,13 +55,14 @@ class SFDataset(torch.utils.data.Dataset):
 		"""
 		pass	
 
-	def init_from_array(self, data, targets, scaler = None, transform = None, subset_training = -1, stratify_data = None):
+	def init_from_array(self, data, targets, scaler = None, transform = None, subset_training = -1, stratify_data = None, sampling = None):
 		"""
 		Initializes Dataset from pre-existing external array(s).
 
 		:param data: Dataset with N_samples x N_features dimensionality.
-			:param targets: Since unsupervised, targets array consists of indices per sample. The indices are representative of (File_Index, Line_Index, Sample_index) and full shape is thus N_samples X 3.
+		:param targets: Since unsupervised, targets array consists of indices per sample. The indices are representative of (File_Index, Line_Index, Sample_index) and full shape is thus N_samples X 3.
 		:param scaler: Optional The per-feature scaler to train and use with the dataset. If set to None, no scaling will be applied. Default value is None.
+		:param sampling: Optional dict of sampling options (data.sampling).
 		"""		
 
 		#Set class attributes
@@ -73,27 +81,26 @@ class SFDataset(torch.utils.data.Dataset):
 		self.targets_full = self.targets
 		self.subset_training = subset_training
 		self.stratify_data = stratify_data                
+		self.sampling = ss.sampling_conf(sampling)
 
-		if (((self.subset_training < self.data_full.shape[0] and self.subset_training > 0)) and (self.stratify_data or self.stratify_data["kmeans"])):
-			if self.subset_training > 0 and self.stratify_data and self.stratify_data["kmeans"]:
-				self.__stratify_k_means__()
-			else:   
-				self.data_full = self.data_full[:self.subset_training,:]
-				self.targets_full = self.targets_full[:self.subset_training,:]
+		self.__subset_loaded__()
 
 
-	def read_data_preprocessed(self, data_filename, indices_filename, scaler = None, subset_training = -1, stratify_data = None):
+	def read_data_preprocessed(self, data_filename, indices_filename, scaler = None, subset_training = -1, stratify_data = None, sampling = None):
 		"""
 		Initializes Dataset from files that contain preprocessed samples. Data should have N_samples x N_features dimensionality.
 	
 		:param data_filename: The path to the file that contains data to be loaded.
 		:param indices_filename: The path to the filename that contains per-sample (File_Index, Line_Index, Sample_index) indices.
 		:param scaler: Optional The per-feature scaler to train and use with the dataset. If set to None, no scaling will be applied. Default value is None.
+		:param sampling: Optional dict of sampling options (data.sampling). sampling.mmap memory-maps the arrays.
 		"""		
 
+		self.sampling = ss.sampling_conf(sampling)
+		mmap_mode = "r" if self.sampling.get("mmap") else None
 		#Load in npy files and set class attributes
-		self.data = np.load(data_filename, allow_pickle=True)
-		self.targets = np.load(indices_filename, allow_pickle=True)
+		self.data = np.load(data_filename, allow_pickle=True, mmap_mode=mmap_mode)
+		self.targets = np.load(indices_filename, allow_pickle=True, mmap_mode=mmap_mode)
 		self.increment = 0
 
 		self.train_indices = None
@@ -108,14 +115,9 @@ class SFDataset(torch.utils.data.Dataset):
 		self.subset_training = subset_training
 		self.stratify_data = stratify_data
 
-		if (((self.subset_training < self.data_full.shape[0] and self.subset_training > 0)) and (self.stratify_data or self.stratify_data["kmeans"])):
-			if self.subset_training > 0 and self.stratify_data and self.stratify_data["kmeans"]:
-				self.__stratify_k_means__()
-			else:   
-				self.data_full = self.data_full[:self.subset_training,:]
-				self.targets_full = self.targets_full[:self.subset_training,:]
+		self.__subset_loaded__()
  
-	def preprocess_data_from_scene_arr(self, scene_arr, init_shape, strat_inds, fill_value, chan_dim, scaler, scale, transform, no_window = False, do_shuffle=False):
+	def preprocess_data_from_scene_arr(self, scene_arr, init_shape, strat_inds, fill_value, chan_dim, scaler, scale, transform, no_window = False, do_shuffle=False, sampling = None):
 		"""
 		High level initialization function for data ingestion, preprocessesing, and Dataset initialization. Data that has already been read in (from something like dataset_utils.get_scene) and gets preprocessed/changed into n_samples x n_features dimensionality. 
 
@@ -129,6 +131,7 @@ class SFDataset(torch.utils.data.Dataset):
 		:param transform: Optional unused currently, but will be updated to be a transform function to be applied in preprocessing. Used in child classes. Default is None.
 		:param no_window: Boolean value indicating whether or not a windowing function is used to split the data. Typically False.
 		:param do_shuffle: Boolean value indicating whether or not to shuffle samples.
+		:param sampling: Optional dict of sampling options (data.sampling). Falls back to self.sampling if set.
 		"""
 
 		#Set class attributes
@@ -146,13 +149,21 @@ class SFDataset(torch.utils.data.Dataset):
 
 		self.no_window = no_window
 		self.do_shuffle = do_shuffle
+		if sampling is not None or not hasattr(self, "sampling"):
+			self.sampling = ss.sampling_conf(sampling)
+		else:
+			self.sampling = ss.sampling_conf(self.sampling)
+		#Attributes the legacy path expected callers to set directly
+		for attr, default in (("pixel_padding", 0), ("train_scaler", False), ("subset_training", -1), ("stratify_data", None)):
+			if not hasattr(self, attr):
+				setattr(self, attr, default)
 
 		#load and preprocess data
 		self.__loaddata_from_scene_arr__()
 
 
 
-	def read_and_preprocess_data(self, filenames, read_func, read_func_kwargs, pixel_padding, delete_chans, valid_min, valid_max, fill_value = -999999, chan_dim = 0, transform_chans = [], transform_values = [], scaler = None, scale=False, transform=None, train_scaler = False, subset_training = -1, stratify_data = None, no_window = False, do_shuffle = True):
+	def read_and_preprocess_data(self, filenames, read_func, read_func_kwargs, pixel_padding, delete_chans, valid_min, valid_max, fill_value = -999999, chan_dim = 0, transform_chans = [], transform_values = [], scaler = None, scale=False, transform=None, train_scaler = False, subset_training = -1, stratify_data = None, no_window = False, do_shuffle = True, sampling = None):
 		"""
 		High level initialization function for data ingestion, preprocessesing, and Dataset initialization. Data gets read in in file x channel x line x sample dimensionality and gets preprocessed/changed into n_samples x n_features dimensionality. 
 	
@@ -171,10 +182,11 @@ class SFDataset(torch.utils.data.Dataset):
 		:param scale: Optional boolean value specifying whether or not to use scaler to scale data. Default value is False.
 		:param transform: Optional unused currently, but will be updated to be a transform function to be applied in preprocessing. Used in child classes. Default is None.
 		:param train_scaler: Optional boolean value indicating whether or not to train scaler with data in Dataset. Default is False.
-		:param subset_training: Optional number of samples to subset and extract out of full preprocessed set. Typically used for training Datasets. If set to -1, full set of samples is kept. Associated stratification and oversampling techniques being developed. Default is -1. 
-		:param stratify_data: Optional dictionary describing data and techniques for stratification of subset. Subset size specified via subset_training. Currently under development and should be left unset/set to None. If set to None, no stratification is done. Default value is None.
-                :param no_window: Boolean value indicating whether or not a windowing function is used to split the data. Typically False.
-                :param do_shuffle: Boolean value indicating whether or not to shuffle samples.
+		:param subset_training: Optional number of samples to subset and extract out of full preprocessed set. Typically used for training Datasets. If set to -1, full set of samples is kept. Default is -1. 
+		:param stratify_data: Optional dictionary describing stratification of the subset ({"kmeans": True} or label reader/filename/reader_kwargs). If None, a random subset is drawn.
+		:param no_window: Boolean value indicating whether or not a windowing function is used to split the data. Typically False.
+		:param do_shuffle: Boolean value indicating whether or not to shuffle samples.
+		:param sampling: Optional dict of sampling options (data.sampling, see scene_sampling.DEFAULTS).
 		"""
 
 		#Set class attributes
@@ -199,6 +211,7 @@ class SFDataset(torch.utils.data.Dataset):
 		self.read_func_kwargs = read_func_kwargs
 		self.subset_training = subset_training
 		self.stratify_data = stratify_data
+		self.sampling = ss.sampling_conf(sampling)
 
 		self.no_window = no_window
 		self.do_shuffle = do_shuffle
@@ -207,7 +220,294 @@ class SFDataset(torch.utils.data.Dataset):
 		self.__loaddata__()
 
 
+	# ------------------------------------------------------------------ #
+	# Dispatch
+	# ------------------------------------------------------------------ #
+	def __loaddata__(self):
+		"""
+		Internal function for data ingestion and preprocessing. Should not be interfaced with directly. Use read_and_preprocess_data to properly interface.
+		"""
+		if self.sampling.get("legacy"):
+			return self._loaddata_legacy()
+		return self._loaddata_streaming(from_files=True)
+
 	def __loaddata_from_scene_arr__(self):
+		"""
+		Internal function for post-ingestion preprocessing. Should not be interfaced with directly. Use preprocess_data_from_scene_arr to properly interface.
+		"""
+		if self.sampling.get("legacy"):
+			return self._loaddata_from_scene_arr_legacy()
+		return self._loaddata_streaming(from_files=False)
+
+	def __subset_loaded__(self):
+		"""Subset / stratify data that is already in sample x feature form."""
+		if not hasattr(self, "stratify_training"):
+			self.stratify_training = []
+		n = self.data_full.shape[0]
+		N = self.subset_training
+		if N is None or not (0 < N < n):
+			return
+		if self.sampling.get("legacy"):
+			if self.stratify_data or self.stratify_data["kmeans"]:
+				if self.stratify_data and self.stratify_data["kmeans"]:
+					self.__stratify_k_means__()
+				else:
+					self.data_full = self.data_full[:self.subset_training,:]
+					self.targets_full = self.targets_full[:self.subset_training,:]
+			return
+		if self.stratify_data and self.stratify_data.get("kmeans", False):
+			is_torch = torch.is_tensor(self.data_full)
+			X = self.data_full.numpy() if is_torch else np.asarray(self.data_full)
+			T = self.targets_full.numpy() if torch.is_tensor(self.targets_full) else np.asarray(self.targets_full)
+			rng = np.random.default_rng(ss.base_seed(self.sampling))
+			print("Running Mini-Batch K-Means Stratification")
+			start = timer()
+			labels = ss.kmeans_strata(X.reshape(X.shape[0], -1), self.sampling["n_clusters"], self.sampling["kmeans_fit_samples"], rng, self.sampling["chunk_size"])
+			print("KMEANS RUNTIME", timer() - start)
+			sel, by_stratum = ss.select_by_strata(rng.random(n), labels, N, self.sampling["allocation"])
+			sel = rng.permutation(sel)
+			self.data_full = X[sel]
+			self.targets_full = T[sel]
+			self.stratify_training = labels[sel]
+			self.train_indices = [np.nonzero(self.stratify_training == u)[0] for u in by_stratum.keys()]
+			if is_torch:
+				self.data_full = torch.from_numpy(self.data_full)
+				self.targets_full = torch.from_numpy(self.targets_full)
+		else:
+			#Legacy behaviour for non-k-means subsets (stored data is already shuffled)
+			self.data_full = self.data_full[:N]
+			self.targets_full = self.targets_full[:N]
+		self.data = self.data_full
+		self.targets = self.targets_full
+
+
+	# ------------------------------------------------------------------ #
+	# Streaming implementation
+	# ------------------------------------------------------------------ #
+	def _scene_tasks(self, from_files):
+		"""Returns (items, task_fn, label_mode, group_sizes)."""
+		cfg = self.sampling
+		strat = self.stratify_data
+		label_files = from_files and strat is not None and "kmeans" not in strat
+		if from_files:
+			fnames = list(self.filenames)
+			lab_fnames = list(strat["filename"]) if label_files else None
+			if not label_files:
+				fnames = ss.expand_filenames(fnames)
+			idx = np.arange(len(fnames))
+			if self.subset_training is not None and self.subset_training > 0 and cfg.get("max_scenes") and len(fnames) > int(cfg["max_scenes"]):
+				rng = np.random.default_rng([ss.base_seed(cfg), 7])
+				idx = np.sort(rng.choice(len(fnames), size=int(cfg["max_scenes"]), replace=False))
+			fnames = [fnames[i] for i in idx]
+			if lab_fnames is not None:
+				lab_fnames = [lab_fnames[i] for i in idx]
+			self.filenames = fnames
+			group_of, group_sizes = ss.scene_groups(fnames, cfg.get("group_by"))
+
+			def task(i):
+				dat = self.read_func(fnames[i], **self.read_func_kwargs)
+				if dat is None:
+					return None
+				scenes, inc = ss.preprocess_read(dat, self.chan_dim, self.delete_chans, self.valid_min, self.valid_max,
+					self.fill_value, self.transform_chans, self.transform_value)
+				del dat
+				labs = [None] * len(scenes)
+				if lab_fnames is not None:
+					lab = strat["reader"](lab_fnames[i], **strat["reader_kwargs"])
+					labs = [ss.binarize_labels(lab)] * len(scenes)
+				return [self._process_scene(sc, lb, i, j, "eq", group_sizes[group_of[i]]) for j, (sc, lb) in enumerate(zip(scenes, labs))], inc
+			return list(range(len(fnames))), task, label_files
+
+		scenes = self.scene_arr
+		strat_local = self.strat_inds if self.strat_inds is not None else []
+		fill_mode = "lt9000" if self.scale else "eq"
+		n_sc = len(scenes)
+
+		def task(r):
+			sc = np.array(scenes[r], dtype=np.float32, copy=True)
+			lb = strat_local[r] if len(strat_local) > 0 else None
+			return [self._process_scene(sc, lb, r, 0, fill_mode, n_sc)], 3 - np.ndim(scenes[0])
+		return list(range(n_sc)), task, len(strat_local) > 0
+
+	def _process_scene(self, scene, lab, file_idx, sub_idx, fill_mode, group_size):
+		"""Per-scene work (runs in worker threads). Returns a dict of per-scene results."""
+		cfg = self.sampling
+		p = 0 if self.no_window else int(self.pixel_padding)
+		bad = ss.bad_pixel_mask(scene, fill_mode)
+		out = {"n_chan": scene.shape[2], "shape": scene.shape[:2]}
+		if self._fit_scaler:
+			out["fit_pix"] = scene[ss.scaler_pixel_mask(scene)]
+		valid = ss.valid_center_mask(bad, p)
+		out["grid"] = valid.shape
+
+		if not self._subset_mode:
+			if self._prescale:
+				good = ~bad
+				if good.any():
+					scene[good] = self.scaler.transform(scene[good])
+			rows, cols = np.nonzero(valid)
+			out["parts"] = [(None, None, ss.extract_windows(scene, rows, cols, p), rows, cols)]
+			out["n_valid"] = len(rows)
+			return out
+
+		rng = np.random.default_rng([ss.base_seed(cfg), int(file_idx), int(sub_idx)])
+		if lab is not None:
+			lab = ss.crop_labels(lab, p, valid.shape)
+			groups = [(int(c), np.flatnonzero(valid & (lab == c))) for c in np.unique(lab[valid])]
+		else:
+			groups = [(None, np.flatnonzero(valid))]
+		n_valid = int(sum(len(g[1]) for g in groups))
+		out["n_valid"] = n_valid
+		out["stratum_sizes"] = {g[0]: len(g[1]) for g in groups}
+		alpha = float(cfg.get("scene_balance") or 0.0)
+		w = (max(n_valid, 1) ** (-alpha)) / max(int(group_size), 1)
+		cap = cfg.get("max_samples_per_scene")
+		parts = []
+		for stratum, flat in groups:
+			k = min(len(flat), self._pool_cap if cap is None else min(self._pool_cap, int(cap)))
+			pick, keys = ss.draw_candidates(rng, len(flat), k, w)
+			if len(pick) == 0:
+				continue
+			sel = flat[pick]
+			rows, cols = np.divmod(sel, valid.shape[1])
+			parts.append((stratum, keys, ss.extract_windows(scene, rows, cols, p), rows, cols))
+		out["parts"] = parts
+		return out
+
+	def _loaddata_streaming(self, from_files):
+		cfg = self.sampling
+		chunk = cfg["chunk_size"]
+		N = self.subset_training if self.subset_training is not None else -1
+		if self.scale and self.scaler is None:
+			print("SFDataset: scale=True but no scaler given; data will not be scaled")
+		scale = bool(self.scale) and self.scaler is not None
+		if from_files:
+			self._fit_scaler = scale and bool(self.train_scaler)
+		else:
+			self._fit_scaler = scale and (self.scaler is None or bool(self.train_scaler))
+		if self._fit_scaler or N >= 0:
+			self.training = True
+		self._subset_mode = N > 0
+		self._prescale = scale and not self._fit_scaler and not self._subset_mode
+		strat = self.stratify_data
+		kmeans = bool(strat) and bool(strat.get("kmeans", False)) if isinstance(strat, dict) else False
+		if self._subset_mode:
+			self._pool_cap = int(math.ceil(float(cfg["candidate_factor"]) * N)) if kmeans else int(N)
+			self._pool_cap = max(self._pool_cap, int(N))
+
+		items, task, label_mode = self._scene_tasks(from_files)
+		pool = ss.CandidatePool(self._pool_cap) if self._subset_mode else None
+		full_windows, full_targets = [], []
+		self.stratify_training = []
+		self.increment = 0
+		r = 0
+		total_valid = 0
+		stratum_pop = {}
+		n_chan = None
+		start = timer()
+		for res in ss.iterate_parallel(task, items, cfg["n_jobs"]):
+			if res is None:
+				continue
+			scene_results, inc = res
+			self.increment = inc
+			for sr in scene_results:
+				n_chan = sr["n_chan"]
+				if from_files and inc == 0:
+					self.init_shape.append(sr["shape"])
+				if self._fit_scaler and sr["fit_pix"].shape[0] > 0:
+					self.scaler.partial_fit(sr["fit_pix"])
+				p_off = 0 if self.no_window else int(self.pixel_padding)
+				total_valid += sr["n_valid"]
+				for st, cnt in sr.get("stratum_sizes", {}).items():
+					if st is not None:
+						stratum_pop[st] = stratum_pop.get(st, 0) + cnt
+				for stratum, keys, win, rows, cols in sr["parts"]:
+					tgt = np.empty((len(rows), 3), dtype=np.int64)
+					tgt[:, 0] = r
+					tgt[:, 1] = rows + p_off
+					tgt[:, 2] = cols + p_off
+					if pool is None:
+						full_windows.append(win)
+						full_targets.append(tgt)
+					else:
+						pool.add(stratum, keys, win, tgt)
+				print("SCENE", r, sr["shape"], "valid samples:", sr["n_valid"])
+				r += 1
+		self.chan_dim = 2 + self.increment
+		print("SCENE PASS RUNTIME", timer() - start, "TOTAL VALID", total_valid)
+
+		self.data_full = None
+		rng = np.random.default_rng([ss.base_seed(cfg), 1])
+		pre_scaled = self._prescale
+		strata = None
+		if pool is None:
+			if len(full_windows) == 0:
+				self.data, self.targets = [], []
+				return
+			data = full_windows[0] if len(full_windows) == 1 else np.concatenate(full_windows, axis=0)
+			del full_windows
+			targets = full_targets[0] if len(full_targets) == 1 else np.concatenate(full_targets, axis=0)
+			del full_targets
+		else:
+			pools = pool.finalize()
+			del pool
+			if len(pools) == 0:
+				self.data, self.targets = [], []
+				return
+			keys_l, data_l, tgt_l, str_l = [], [], [], []
+			for s, (k, w, t) in pools.items():
+				keys_l.append(k); data_l.append(w); tgt_l.append(t)
+				str_l.append(np.full(len(k), -1 if s is None else s, dtype=np.int64))
+			pools = None
+			keys = np.concatenate(keys_l); del keys_l
+			data = data_l[0] if len(data_l) == 1 else np.concatenate(data_l); del data_l
+			targets = np.concatenate(tgt_l); del tgt_l
+			strata = np.concatenate(str_l); del str_l
+			if label_mode:
+				sel, _ = ss.select_by_strata(keys, strata, N, cfg["allocation"], stratum_pop)
+			elif kmeans and total_valid > N and data.shape[0] > N:
+				if scale:
+					ss.transform_in_chunks(self.scaler, data, n_chan, chunk)
+					pre_scaled = True
+				print("Running Mini-Batch K-Means Stratification on", data.shape[0], "candidates")
+				kstart = timer()
+				strata = ss.kmeans_strata(data, cfg["n_clusters"], cfg["kmeans_fit_samples"], rng, chunk)
+				print("KMEANS RUNTIME", timer() - kstart)
+				sel, _ = ss.select_by_strata(keys, strata, N, cfg["allocation"])
+			else:
+				sel = np.argsort(-keys, kind="stable")[:N]
+				strata = None
+			if len(sel) < data.shape[0]:
+				data, targets = data[sel], targets[sel]
+				if strata is not None:
+					strata = strata[sel]
+			del keys
+
+		if self.do_shuffle and data.shape[0] > 1:
+			perm = rng.permutation(data.shape[0])
+			data, targets = data[perm], targets[perm]
+			if strata is not None:
+				strata = strata[perm]
+
+		if scale and not pre_scaled:
+			ss.transform_in_chunks(self.scaler, data, n_chan, chunk)
+
+		if data.dtype != np.float32:
+			data = data.astype(np.float32)
+		self.data_full = data
+		self.targets_full = targets.astype(ss.targets_dtype(int(targets.max()) if targets.size else 0))
+		if strata is not None and self._subset_mode and (label_mode or kmeans):
+			self.stratify_training = strata
+			self.train_indices = [np.nonzero(strata == u)[0] for u in np.unique(strata)]
+		self.data = self.data_full
+		self.targets = self.targets_full
+		print("DATA", self.data_full.shape, self.targets_full.shape)
+
+
+	# ------------------------------------------------------------------ #
+	# Original implementation (sampling.legacy: true)
+	# ------------------------------------------------------------------ #
+	def _loaddata_from_scene_arr_legacy(self):
 		"""
 		Internal function for post-ingestion preprocessing. Should not be interfaced with directly. Use preprocess_data_from_scene_arr to properly interface.
 		"""
@@ -352,7 +652,7 @@ class SFDataset(torch.utils.data.Dataset):
 
 
 
-	def __loaddata__(self):
+	def _loaddata_legacy(self):
 		"""
 		Internal function for data ingestion and preprocessing. Should not be interfaced with directly. Use read_and_preprocess_data to properly interface.
 		"""
@@ -696,6 +996,8 @@ def data_prep_outside(yml_fpath):
 	"""
 	#Translate config to dictionary 
 	yml_conf = read_yaml(yml_fpath)
+	from sit_fuse.compute_resources import apply_compute_limits
+	apply_compute_limits(yml_conf)
 
 	run_data_prep(yml_conf)        
  
@@ -751,7 +1053,8 @@ def run_data_prep(yml_conf):
 	x2.read_and_preprocess_data(data_train, read_func, data_reader_kwargs, pixel_padding, delete_chans=delete_chans, \
 			valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
 			transform_values=transform_values, scaler = scaler, train_scaler = scaler_train, scale = scale_data, \
-			transform=None, subset_training = subset_training, stratify_data=stratify_data, no_window = no_window)
+			transform=None, subset_training = subset_training, stratify_data=stratify_data, no_window = no_window, \
+			sampling = yml_conf["data"].get("sampling"))
  
 	#if x2.train_indices is not None:
 	#	np.save(os.path.join(out_dir, "train_indices"), x2.train_indices)

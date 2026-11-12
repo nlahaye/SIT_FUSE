@@ -1,3 +1,9 @@
+# Cap native thread pools (OpenMP/BLAS/MKL) before numpy/torch are imported when run
+# as a script (DDP ranks re-run this file, so they pick it up too).
+if __name__ == '__main__':
+    from sit_fuse.compute_resources import limit_env_from_argv
+    limit_env_from_argv()
+
 import pytorch_lightning as pl
 import torch
 from pytorch_lightning.callbacks import (
@@ -24,6 +30,7 @@ from sit_fuse.models.deep_cluster.pca_dc import PCA_DC
 from sit_fuse.models.deep_cluster.multi_prototypes import MultiPrototypes, DeepConvMultiPrototypes
 from sit_fuse.datasets.sf_dataset_module import SFDataModule
 from sit_fuse.utils import read_yaml
+from sit_fuse.compute_resources import apply_compute_limits, num_local_processes, get_strategy, training_checkpoint, accelerator_uses_gpu
  
 from segmentation.models.deeplabv3_plus_xception import DeepLab
 from segmentation.models.gcn import GCN
@@ -64,10 +71,7 @@ def train_dc_no_pt(yml_conf, dataset, conv=False):
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
-    checkpoint_steps = 100
-    if max_epochs < checkpoint_steps:
-        checkpoint_steps = 1
-    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="deep_cluster", enable_version_counter=False, every_n_train_steps = checkpoint_steps, save_on_train_epoch_end=False)
+    checkpoint_callback = training_checkpoint(save_dir, "deep_cluster", max_epochs)
 
     os.makedirs(save_dir, exist_ok=True)
     if use_wandb_logger:
@@ -78,7 +82,7 @@ def train_dc_no_pt(yml_conf, dataset, conv=False):
             default_root_dir=save_dir,
             accelerator=accelerator,
             devices=devices,
-            strategy=DDPStrategy(find_unused_parameters=True),
+            strategy=get_strategy(devices, accelerator),
             precision=precision,
             max_epochs=max_epochs,
             callbacks=[lr_monitor, model_summary, checkpoint_callback],
@@ -90,7 +94,7 @@ def train_dc_no_pt(yml_conf, dataset, conv=False):
             default_root_dir=save_dir,
             accelerator=accelerator,
             devices=devices,
-            strategy=DDPStrategy(find_unused_parameters=True),
+            strategy=get_strategy(devices, accelerator),
             precision=precision,
             max_epochs=max_epochs,
             callbacks=[lr_monitor, model_summary, checkpoint_callback],
@@ -141,10 +145,7 @@ def dc_PCA(yml_conf, dataset, conv=False):
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
-    checkpoint_steps = 100
-    if max_epochs < checkpoint_steps:
-        checkpoint_steps = 1
-    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="deep_cluster", enable_version_counter=False, every_n_train_steps = checkpoint_steps, save_on_train_epoch_end=False)
+    checkpoint_callback = training_checkpoint(save_dir, "deep_cluster", max_epochs)
 
     os.makedirs(save_dir, exist_ok=True) 
 
@@ -156,7 +157,7 @@ def dc_PCA(yml_conf, dataset, conv=False):
             default_root_dir=save_dir,
             accelerator=accelerator,
             devices=devices,
-            strategy=DDPStrategy(find_unused_parameters=True),
+            strategy=get_strategy(devices, accelerator),
             precision=precision,
             max_epochs=max_epochs,
             callbacks=[lr_monitor, model_summary, checkpoint_callback],
@@ -168,7 +169,7 @@ def dc_PCA(yml_conf, dataset, conv=False):
             default_root_dir=save_dir,
             accelerator=accelerator,
             devices=devices,
-            strategy=DDPStrategy(find_unused_parameters=True),
+            strategy=get_strategy(devices, accelerator),
             precision=precision,
             max_epochs=max_epochs,
             callbacks=[lr_monitor, model_summary, checkpoint_callback],
@@ -222,7 +223,7 @@ def dc_DBN(yml_conf, dataset, conv=False):
     if not conv:
         model_type = tuple(yml_conf["dbn"]["model_type"])
         dbn = DBN(model=model_type, n_visible=dataset.n_visible, n_hidden=dbn_arch, steps=gibbs_steps,
-             learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=True)
+             learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=accelerator_uses_gpu(accelerator))
     else:
         model_type = yml_conf["dbn"]["model_type"]
         visible_shape = yml_conf["data"]["tile_size"]
@@ -231,10 +232,10 @@ def dc_DBN(yml_conf, dataset, conv=False):
         #padding = yml_conf["dbn"]["padding"]
         dbn = ConvDBN(model=model_type, visible_shape=visible_shape, filter_shape = dbn_arch[1], n_filters = dbn_arch[0], \
             n_channels=number_channel, steps=gibbs_steps, learning_rate=learning_rate, momentum=momentum, \
-            decay=decay, use_gpu=True, maxpooling=[False]*len(gibbs_steps)) #, maxpooling=mp)
+            decay=decay, use_gpu=accelerator_uses_gpu(accelerator), maxpooling=[False]*len(gibbs_steps)) #, maxpooling=mp)
 
     print(ckpt_path, conv, model_type)
-    dbn.load_state_dict(torch.load(ckpt_path))
+    dbn.load_state_dict(torch.load(ckpt_path, map_location="cpu"))
 
     for param in dbn.parameters():
         param.requires_grad = False
@@ -252,10 +253,7 @@ def dc_DBN(yml_conf, dataset, conv=False):
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
-    checkpoint_steps = 100
-    if max_epochs < checkpoint_steps:
-        checkpoint_steps = 1
-    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="deep_cluster", enable_version_counter=False, every_n_train_steps = checkpoint_steps, save_on_train_epoch_end=False)
+    checkpoint_callback = training_checkpoint(save_dir, "deep_cluster", max_epochs)
 
     os.makedirs(save_dir, exist_ok=True)
     if use_wandb_logger:
@@ -266,7 +264,7 @@ def dc_DBN(yml_conf, dataset, conv=False):
             default_root_dir=save_dir,
             accelerator=accelerator,
             devices=devices,
-            strategy=DDPStrategy(find_unused_parameters=True),
+            strategy=get_strategy(devices, accelerator),
             precision=precision,
             max_epochs=max_epochs,
             callbacks=[lr_monitor, model_summary, checkpoint_callback],
@@ -278,7 +276,7 @@ def dc_DBN(yml_conf, dataset, conv=False):
             default_root_dir=save_dir,
             accelerator=accelerator,
             devices=devices,
-            strategy=DDPStrategy(find_unused_parameters=True),
+            strategy=get_strategy(devices, accelerator),
             precision=precision,
             max_epochs=max_epochs,
             callbacks=[lr_monitor, model_summary, checkpoint_callback],
@@ -337,10 +335,7 @@ def dc_Clay(yml_conf, dataset):
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
-    checkpoint_steps = 100
-    if max_epochs < checkpoint_steps:
-        checkpoint_steps = 1
-    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="deep_cluster", enable_version_counter=False, every_n_train_steps = checkpoint_steps, save_on_train_epoch_end=False)
+    checkpoint_callback = training_checkpoint(save_dir, "deep_cluster", max_epochs)
 
     os.makedirs(save_dir, exist_ok=True)
     if use_wandb_logger:
@@ -351,7 +346,7 @@ def dc_Clay(yml_conf, dataset):
             default_root_dir=save_dir,
             accelerator=accelerator,
             devices=devices,
-            strategy=DDPStrategy(find_unused_parameters=True),
+            strategy=get_strategy(devices, accelerator),
             precision=precision,
             max_epochs=max_epochs,
             callbacks=[lr_monitor, model_summary, checkpoint_callback],
@@ -363,7 +358,7 @@ def dc_Clay(yml_conf, dataset):
             default_root_dir=save_dir,
             accelerator=accelerator,
             devices=devices,
-            strategy=DDPStrategy(find_unused_parameters=True),
+            strategy=get_strategy(devices, accelerator),
             precision=precision,
             max_epochs=max_epochs,
             callbacks=[lr_monitor, model_summary, checkpoint_callback],
@@ -419,10 +414,7 @@ def dc_MAE(yml_conf, dataset):
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
-    checkpoint_steps = 100
-    if max_epochs < checkpoint_steps:
-        checkpoint_steps = 1
-    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="deep_cluster", enable_version_counter=False, every_n_train_steps = checkpoint_steps, save_on_train_epoch_end=False)
+    checkpoint_callback = training_checkpoint(save_dir, "deep_cluster", max_epochs)
 
     os.makedirs(save_dir, exist_ok=True)
     if use_wandb_logger:
@@ -433,7 +425,7 @@ def dc_MAE(yml_conf, dataset):
             default_root_dir=save_dir,
             accelerator=accelerator,
             devices=devices,
-            strategy=DDPStrategy(find_unused_parameters=True),
+            strategy=get_strategy(devices, accelerator),
             precision=precision,
             max_epochs=max_epochs,
             callbacks=[lr_monitor, model_summary, checkpoint_callback],
@@ -445,7 +437,7 @@ def dc_MAE(yml_conf, dataset):
             default_root_dir=save_dir,
             accelerator=accelerator,
             devices=devices,
-            strategy=DDPStrategy(find_unused_parameters=True),
+            strategy=get_strategy(devices, accelerator),
             precision=precision,
             max_epochs=max_epochs,
             callbacks=[lr_monitor, model_summary, checkpoint_callback],
@@ -502,10 +494,7 @@ def dc_IJEPA(yml_conf, dataset):
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
-    checkpoint_steps = 100
-    if max_epochs < checkpoint_steps:
-        checkpoint_steps = 1
-    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="deep_cluster", enable_version_counter=False, every_n_train_steps = checkpoint_steps, save_on_train_epoch_end=False) 
+    checkpoint_callback = training_checkpoint(save_dir, "deep_cluster", max_epochs)
 
     os.makedirs(save_dir, exist_ok=True)
     if use_wandb_logger:
@@ -516,7 +505,7 @@ def dc_IJEPA(yml_conf, dataset):
             default_root_dir=save_dir,
             accelerator=accelerator,
             devices=devices,
-            strategy=DDPStrategy(find_unused_parameters=True),
+            strategy=get_strategy(devices, accelerator),
             precision=precision,
             max_epochs=max_epochs,
             callbacks=[lr_monitor, model_summary, checkpoint_callback],
@@ -528,7 +517,7 @@ def dc_IJEPA(yml_conf, dataset):
             default_root_dir=save_dir,
             accelerator=accelerator,
             devices=devices,
-            strategy=DDPStrategy(find_unused_parameters=True),
+            strategy=get_strategy(devices, accelerator),
             precision=precision,
             max_epochs=max_epochs,
             callbacks=[lr_monitor, model_summary, checkpoint_callback],
@@ -573,18 +562,18 @@ def dc_BYOL(yml_conf, dataset):
     model_2 = None
     if model_type == "GCN":
         model_2 = GCN(num_classes, in_chans, pretrained = False, use_deconv=True, use_resnet_gcn=True)
-        model_2.load_state_dict(torch.load(ckpt_path))
+        model_2.load_state_dict(torch.load(ckpt_path, map_location="cpu"))
     elif model_type == "DeepLab":
         model_2 = DeepLab(num_classes, in_chans, backbone='resnet', pretrained=True, checkpoint_path=encoder_dir)
-        model_2.load_state_dict(torch.load(ckpt_path))
+        model_2.load_state_dict(torch.load(ckpt_path, map_location="cpu"))
     elif model_type == "Unet":
         m1 = UNetEncoder(num_classes, in_channels=in_chans) 
-        m1.load_state_dict(torch.load(ckpt_path))
+        m1.load_state_dict(torch.load(ckpt_path, map_location="cpu"))
         m2 = UNetDecoder(num_classes, in_channels=in_chans)  
         model_2 = torch.nn.Sequential(m1, m2)
     elif model_type == "DCE":
         m1 = DeepConvEncoder(in_chans)
-        m1.load_state_dict(torch.load(ckpt_path))
+        m1.load_state_dict(torch.load(ckpt_path, map_location="cpu"))
         m1 = m1.eval()
         #output_dim = in_chans*8*img_size*img_size
         m2 = DeepConvMultiPrototypes(in_chans*8, num_classes, 1)
@@ -604,10 +593,7 @@ def dc_BYOL(yml_conf, dataset):
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
-    checkpoint_steps = 100
-    if max_epochs < checkpoint_steps:
-        checkpoint_steps = 1
-    checkpoint_callback = ModelCheckpoint(dirpath=save_dir, filename="deep_cluster", enable_version_counter=False, every_n_train_steps = checkpoint_steps, save_on_train_epoch_end=False)
+    checkpoint_callback = training_checkpoint(save_dir, "deep_cluster", max_epochs)
 
 
 
@@ -619,7 +605,7 @@ def dc_BYOL(yml_conf, dataset):
             default_root_dir=save_dir,
             accelerator=accelerator,
             devices=devices,
-            strategy=DDPStrategy(find_unused_parameters=True),
+            strategy=get_strategy(devices, accelerator),
             precision=precision,
             max_epochs=max_epochs,
             callbacks=[lr_monitor, model_summary, checkpoint_callback],
@@ -631,7 +617,7 @@ def dc_BYOL(yml_conf, dataset):
             default_root_dir=save_dir,
             accelerator=accelerator,
             devices=devices,
-            strategy=DDPStrategy(find_unused_parameters=True),
+            strategy=get_strategy(devices, accelerator),
             precision=precision,
             max_epochs=max_epochs,
             callbacks=[lr_monitor, model_summary, checkpoint_callback],
@@ -649,6 +635,11 @@ def run_tuning_outside(yml_fpath):
 
 
 def run_tuning(yml_conf):
+
+    # Thread/CPU throttling from the `compute:` YAML section; the budget is split across DDP ranks.
+    training = yml_conf["cluster"]["training"]
+    apply_compute_limits(yml_conf,
+        num_processes=num_local_processes(training.get("devices", 1), training.get("accelerator", "auto")))
 
     num_loader_workers = int(yml_conf["data"]["num_loader_workers"])
     val_percent = float(yml_conf["data"]["val_percent"])
@@ -675,6 +666,11 @@ def run_tuning(yml_conf):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-y", "--yaml", help="YAML file for DBN and output config.")
+    parser.add_argument("-n", "--num-threads", default=None,
+        help="CPU thread cap: int, negative int (all but N), fraction (0-1], or low/medium/high/max. "
+             "Overrides compute.num_threads in the YAML.")
     args = parser.parse_args()
+    if args.num_threads is not None:
+        os.environ["SIT_FUSE_NUM_THREADS"] = str(args.num_threads)  # inherited by DDP ranks
     run_tuning_outside(args.yaml)
 

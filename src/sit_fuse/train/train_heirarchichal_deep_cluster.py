@@ -28,7 +28,7 @@ from sit_fuse.datasets.sf_dataset import SFDataset
 from sit_fuse.datasets.sf_dataset_conv import SFDatasetConv
 from sit_fuse.datasets.dataset_utils import get_train_dataset_sf
 from sit_fuse.utils import read_yaml, get_output_shape
-from sit_fuse.compute_resources import apply_compute_limits, num_local_processes
+from sit_fuse.compute_resources import apply_compute_limits, num_local_processes, get_strategy, training_checkpoint, accelerator_uses_gpu
 
 import wandb
 
@@ -37,6 +37,9 @@ import joblib
 import uuid
 import argparse
 import os
+from types import SimpleNamespace
+
+import numpy as np
 
 def heir_dc(yml_conf, dataset, ckpt_path):
 
@@ -113,7 +116,7 @@ def heir_dc(yml_conf, dataset, ckpt_path):
         if not conv:
             model_type = tuple(yml_conf["dbn"]["model_type"])
             encoder = DBN(model=model_type, n_visible=dataset.data_full.shape[1], n_hidden=dbn_arch, steps=gibbs_steps,
-                 learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=True)
+                 learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=accelerator_uses_gpu(accelerator))
         else:
             model_type = yml_conf["dbn"]["model_type"]
             visible_shape = yml_conf["data"]["tile_size"]
@@ -122,9 +125,9 @@ def heir_dc(yml_conf, dataset, ckpt_path):
             #padding = yml_conf["dbn"]["padding"]
             encoder = ConvDBN(model=model_type, visible_shape=visible_shape, filter_shape = dbn_arch[1], n_filters = dbn_arch[0], \
                 n_channels=number_channel, steps=gibbs_steps, learning_rate=learning_rate, momentum=momentum, \
-                decay=decay, use_gpu=True, maxpooling=[False]*len(gibbs_steps)) #, maxpooling=mp)
+                decay=decay, use_gpu=accelerator_uses_gpu(accelerator), maxpooling=[False]*len(gibbs_steps)) #, maxpooling=mp)
 
-        encoder.load_state_dict(torch.load(enc_ckpt_path))
+        encoder.load_state_dict(torch.load(enc_ckpt_path, map_location="cpu"))
  
         for param in encoder.parameters():
             param.requires_grad = False
@@ -155,7 +158,7 @@ def heir_dc(yml_conf, dataset, ckpt_path):
             encoder = DeepLab(num_classes, in_chans, backbone='resnet', pretrained=True, checkpoint_path=encoder_dir)
         elif model_type == "DCE":
             encoder = DeepConvEncoder(in_chans)
-        encoder.load_state_dict(torch.load(encoder_ckpt_path))
+        encoder.load_state_dict(torch.load(encoder_ckpt_path, map_location="cpu"))
             #encoder.eval()
             #output_dim = in_chans*8*tile_size*tile_size
             #m2 =  MultiPrototypes(output_dim, num_classes, 1)
@@ -194,6 +197,39 @@ def heir_dc(yml_conf, dataset, ckpt_path):
     val_percent = float(yml_conf["data"]["val_percent"])
     batch_size = yml_conf["cluster"]["heir"]["training"]["batch_size"]
 
+    # Head input size is the same for every key: compute it (and run get_output_shape) once.
+    encoder_output_size = None
+    n_visible = 0
+    if "encoder_type" not in yml_conf.keys():
+        n_visible = yml_conf["data"]["tile_size"][2] * yml_conf["data"]["tile_size"][0] * yml_conf["data"]["tile_size"][1]
+    elif yml_conf["encoder_type"] == "ijepa":
+        #TODO encoder_output_size = get_output_shape(model.pretrained_model.pretrained_model.model, (2, in_chans,model.pretrained_model.pretrained_model.img_size,model.pretrained_model.pretrained_model.img_size))
+        #n_visible = encoder_output_size[2] #[1]*encoder_output_size[2]
+         n_visible = 512 #1024
+    elif yml_conf["encoder_type"] == "dbn":
+        encoder_output_size = (1, model.pretrained_model.pretrained_model.models[-1].n_hidden)
+        n_visible = encoder_output_size[1]
+    elif yml_conf["encoder_type"] == "conv_dbn":
+        encoder_output_size = get_output_shape(encoder, (1, yml_conf["data"]["tile_size"][2], yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
+        n_visible = 900 #TODO encoder_output_size[1]
+    elif yml_conf["encoder_type"] == "byol":
+        encoder_output_size = get_output_shape(encoder, (1, yml_conf["data"]["tile_size"][2], yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
+        n_visible = encoder_output_size[1]
+    elif yml_conf["encoder_type"] == "clay":
+        #TODO print((2, in_chans, yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
+        #encoder_output_size = get_output_shape(model.pretrained_model.pretrained_model.encoder, (2, in_chans, yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
+        n_visible = 768 #encoder_output_size[2]
+    elif yml_conf["encoder_type"] == "mae":
+        #TODO print((2, in_chans, yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
+        #encoder_output_size = get_output_shape(model.pretrained_model.pretrained_model.encoder, (2, in_chans, yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
+        n_visible = 1024 #encoder_output_size[2]
+    elif yml_conf["encoder_type"] == "pca":
+        encoder_output_size = (1, model.pretrained_model.pretrained_model.pca.components_.shape[0])
+        n_visible = encoder_output_size[1]
+    print("HERE ENCODER SHAPE", encoder_output_size)
+
+    subset_per_key = bool(yml_conf["cluster"]["heir"]["training"].get("subset_per_key", False))
+
     for key in model.lab_full.keys():
 
         count = count + 1
@@ -203,35 +239,6 @@ def heir_dc(yml_conf, dataset, ckpt_path):
 
         print("TRAINING MODEL ", str(count), " / ", str(len(model.lab_full.keys())))
 
-        encoder_output_size = None
-        n_visible = 0
-        if "encoder_type" not in yml_conf.keys():
-            n_visible = yml_conf["data"]["tile_size"][2] * yml_conf["data"]["tile_size"][0] * yml_conf["data"]["tile_size"][1]
-        elif yml_conf["encoder_type"] == "ijepa":
-            #TODO encoder_output_size = get_output_shape(model.pretrained_model.pretrained_model.model, (2, in_chans,model.pretrained_model.pretrained_model.img_size,model.pretrained_model.pretrained_model.img_size))
-            #n_visible = encoder_output_size[2] #[1]*encoder_output_size[2]
-             n_visible = 512 #1024
-        elif yml_conf["encoder_type"] == "dbn":
-            encoder_output_size = (1, model.pretrained_model.pretrained_model.models[-1].n_hidden)
-            n_visible = encoder_output_size[1]
-        elif yml_conf["encoder_type"] == "conv_dbn":
-            encoder_output_size = get_output_shape(encoder, (1, yml_conf["data"]["tile_size"][2], yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
-            n_visible = 900 #TODO encoder_output_size[1]
-        elif yml_conf["encoder_type"] == "byol":
-            encoder_output_size = get_output_shape(encoder, (1, yml_conf["data"]["tile_size"][2], yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
-            n_visible = encoder_output_size[1]
-        elif yml_conf["encoder_type"] == "clay":
-            #TODO print((2, in_chans, yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
-            #encoder_output_size = get_output_shape(model.pretrained_model.pretrained_model.encoder, (2, in_chans, yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
-            n_visible = 768 #encoder_output_size[2]
-        elif yml_conf["encoder_type"] == "mae":
-            #TODO print((2, in_chans, yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
-            #encoder_output_size = get_output_shape(model.pretrained_model.pretrained_model.encoder, (2, in_chans, yml_conf["data"]["tile_size"][0], yml_conf["data"]["tile_size"][1]))
-            n_visible = 1024 #encoder_output_size[2]
-        elif yml_conf["encoder_type"] == "pca":
-            encoder_output_size = (1, model.pretrained_model.pretrained_model.pca.components_.shape[0])
-            n_visible = encoder_output_size[1]
-        print("HERE ENCODER SHAPE", encoder_output_size)
 
         if key in model.clust_tree["1"] and model.clust_tree["1"][key] is not None:
             continue #TODO make optional
@@ -258,7 +265,15 @@ def heir_dc(yml_conf, dataset, ckpt_path):
         #    train_subset.init_from_array(dataset.data_full[model.lab_full[key]], 
         #        dataset.targets_full[model.lab_full[key]], transform = dataset.transform)
 
-        final_dataset = SFHeirDataModule(dataset, batch_size=batch_size, num_workers=num_loader_workers, val_percent=val_percent)
+        key_dataset = dataset
+        if subset_per_key:
+            # Optional: train this key's head only on its own samples. By default (as before) each
+            # head sees the first limit_train_batches batches of the full set, and forward(train=True)
+            # discards the samples that belong to other keys.
+            idx = model.lab_full[key]
+            idx = idx.cpu().numpy() if torch.is_tensor(idx) else np.asarray(idx)
+            key_dataset = SimpleNamespace(data_full=dataset.data_full[np.sort(idx)])
+        final_dataset = SFHeirDataModule(key_dataset, batch_size=batch_size, num_workers=num_loader_workers, val_percent=val_percent)
         model.key = key
 
         if use_wandb_logger:
@@ -270,7 +285,7 @@ def heir_dc(yml_conf, dataset, ckpt_path):
                 default_root_dir=save_dir,
                 accelerator=accelerator,
                 devices=devices,
-                strategy=DDPStrategy(find_unused_parameters=True),
+                strategy=get_strategy(devices, accelerator),
                 precision=precision,
                 max_epochs=max_epochs,
                 callbacks=[lr_monitor, model_summary],
@@ -283,7 +298,7 @@ def heir_dc(yml_conf, dataset, ckpt_path):
                 default_root_dir=save_dir,
                 accelerator=accelerator,
                 devices=devices,
-                strategy=DDPStrategy(find_unused_parameters=True),
+                strategy=get_strategy(devices, accelerator),
                 precision=precision,
                 max_epochs=max_epochs,
                 callbacks=[lr_monitor, model_summary],
@@ -292,8 +307,8 @@ def heir_dc(yml_conf, dataset, ckpt_path):
 
 
 
-        state_dict = get_state_dict(model.clust_tree, model.lab_full)
-        torch.save(state_dict, os.path.join(save_dir, "heir_fc.ckpt"))
+        # (The checkpoint is no longer written here, before fit: a crash during fit left an untrained
+        # head in heir_fc.ckpt, which a restart then skipped as already trained.)
         trainer.fit(model, final_dataset)
 
         if use_wandb_logger:

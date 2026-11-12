@@ -1,5 +1,6 @@
 from torch.utils.data import DataLoader, Dataset
 import pytorch_lightning as pl
+import numpy as np
 import torch
 
 class SimpleDataset(Dataset):
@@ -14,6 +15,19 @@ class SimpleDataset(Dataset):
 
     def __getitem__(self, index):
         return self.data[index]
+
+    def __getitems__(self, indices):
+        """Batched fetch (torch >= 2.0 DataLoader): one fancy-index instead of len(indices) lookups + stack."""
+        if torch.is_tensor(self.data):
+            return self.data[torch.as_tensor(indices, dtype=torch.long)]
+        return [self.data[i] for i in indices]
+
+
+def batch_collate(batch):
+    """collate_fn for SimpleDataset.__getitems__: the batch is already a stacked tensor."""
+    if torch.is_tensor(batch):
+        return batch
+    return torch.utils.data.default_collate(batch)
 
 
 class SimpleDataModule(pl.LightningDataModule):
