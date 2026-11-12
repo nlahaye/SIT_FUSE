@@ -15,9 +15,16 @@ Build a full SIT-FUSE config for the xai tools: <base model yml> + <species xai 
   tools fall back to it only when no names are given). Checks that every name used by feature_groups / external
   exists. Warns (does not fail) for missing label files, so the config can be
   built before inference finishes.
+- xai.env_meta_json (NatureNet cmems_env <tag>_env_meta.json): feature_names and interpret.variable_names left
+  empty / "auto" are filled with its channel order, so the ~110-channel v2 scenes need no hand-written lists.
+  feature_groups members may be shell patterns (e.g. "thetao_*"); they are expanded against feature_names in
+  order, a channel goes to the first group that matches it (groups whose members are all "*" are matched last,
+  so they collect only the leftovers), and groups with no match are dropped (with a note).
 """
 import argparse
 import copy
+import fnmatch
+import json
 import glob
 import os
 import sys
@@ -66,6 +73,45 @@ def fill_label_files(conf):
     return conf
 
 
+def fill_from_meta(conf):
+    x = conf.setdefault("xai", {})
+    meta = x.get("env_meta_json")
+    ip = x.setdefault("interpret", {})
+    if meta:
+        with open(meta) as f:
+            chans = list(json.load(f)["channels"])
+        if x.get("feature_names") in (None, [], "auto"):
+            x["feature_names"] = chans
+        elif list(x["feature_names"]) != chans:
+            raise ValueError(f"xai.feature_names differs from the channel order in {meta}")
+        if ip.get("variable_names") in ([], "auto"):
+            ip["variable_names"] = list(x["feature_names"])
+    names = list(x.get("feature_names") or [])
+    groups = x.get("feature_groups") or {}
+    if names and groups:
+        used, out = set(), {}
+        catch_all = [g for g, m in groups.items() if all(str(p) == "*" for p in m)]
+        order = [g for g in groups if g not in catch_all] + catch_all     # "*" groups take only the leftovers
+        for g in order:
+            members, hit = groups[g], []
+            for pat in members:
+                for n in names:
+                    if n not in used and n not in hit and fnmatch.fnmatchcase(n, pat):
+                        hit.append(n)
+            if hit:
+                out[g] = hit
+                used.update(hit)
+            else:
+                print(f"NOTE: feature group {g} matches no channel; dropped", file=sys.stderr)
+        x["feature_groups"] = {g: out[g] for g in groups if g in out}
+    ext = ip.get("external") or {}
+    for k in ("sst", "u", "v"):
+        if ext.get(k) and names and ext[k] not in names:
+            print(f"NOTE: interpret.external.{k} = {ext[k]} not in feature_names; disabled", file=sys.stderr)
+            ext[k] = None
+    return conf
+
+
 def check(conf):
     x, d = conf["xai"], conf["data"]
     names = list(x["feature_names"])
@@ -97,7 +143,7 @@ def main(argv=None):
         base = yaml.safe_load(f)
     with open(a.xai) as f:
         block = yaml.safe_load(f)
-    conf = fill_label_files(deep_merge(base, block))
+    conf = fill_label_files(fill_from_meta(deep_merge(base, block)))
     check(conf)
     with open(a.out, "w") as f:
         yaml.safe_dump(conf, f, sort_keys=False, default_flow_style=None, width=120)

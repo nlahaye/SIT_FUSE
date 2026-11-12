@@ -1,0 +1,60 @@
+# Whales xai block for the v2 CMEMS scenes. Merge into the v2 encoder config with
+#   python -m sit_fuse.xai.make_xai_config -b sit_fuse/config/model/copernicus_whale_v2.yaml \
+#       -x sit_fuse/config/xai/whale_xai_block_v2.yaml -o sit_fuse/config/model/copernicus_whale_v2_xai.yaml
+# feature_names / variable_names come from the env meta JSON (channel order of cop_env_whales_t<i>.zarr), and
+# make_xai_config sets data.number_channels to their count. With ~110 channels, attribution is at group level
+# (13 players -> KernelSHAP; ungrouped channels fall into "other").
+xai:
+  env_meta_json: /data/nlahaye/NatureNet_Env/Copernicus/v2/whales/whales_env_meta.json
+  output_mode: assigned_logprob
+  attribution_level: group
+  background: kmeans
+  n_background: 50
+  background_pool: 20000
+  max_samples_per_cluster: 200
+  min_cluster_samples: 10
+  max_clusters: 0
+  exact_max_players: 12
+  data_split: train
+  seed: 42
+  feature_names: auto
+  feature_groups:                      # shell patterns; a channel joins the first group that matches; empty groups dropped
+    temperature: ["sst", "sst_*", "grad_mag_sst", "thetao_*", "bottomT", "sst_minus_bottomT", "strat_*"]
+    salinity_density: ["so_*", "sos", "dos", "grad_mag_sos"]
+    mixed_layer: ["mlotst"]
+    sea_level_eddies: ["zos", "adt", "sla", "grad_mag_adt", "eke", "okubo_weiss_geo", "rossby_geo", "ugos*", "vgos*"]
+    currents: ["uo_*", "vo_*", "wo*", "ue", "ve", "cur_speed_*"]
+    wind_upwelling: ["eastward_*", "northward_*", "*stress*", "*curl*", "*divergence*", "wind_speed", "air_density", "ekman_pumping"]
+    waves: ["V*"]
+    ocean_colour: ["CHL*", "log10_CHL", "grad_mag_log10_CHL", "KD490", "log10_KD490", "ZSD", "chl_model*", "log10_chl_model*"]
+    productivity_plankton: ["npp*", "log10_npp", "nppv*", "phyc*", "zooc", "log10_zooc", "mnkc*", "zeu"]
+    oxygen_nutrients_carbon: ["o2_*", "no3_*", "po4_*", "si_*", "fe_*", "fe", "ph_*", "ph", "spco2*", "dissic*", "talk*"]
+    bathymetry_coast: ["depth_m", "log10_depth", "slope_deg", "rugosity_m", "dist_*"]
+    human: ["log_ship_density*"]
+    other: ["*"]
+  faithfulness:
+    n_curve_samples: 50
+    n_random_orders: 10
+    n_permutations: 5
+    top_k: 3
+    stability_backgrounds: [kmeans, sample, zero]
+    stability_seeds: [0, 1, 2]
+    stability_sample_sizes: [50, 100, 200]
+  interpret:
+    label_pattern: "{out_dir}/{name}.clust.data_*clusters.no_geo.tif"   # * = per-scene cluster count
+    variable_names: auto
+    dates: []
+    label_fill: -1
+    n_top_clusters: 30
+    min_cluster_pixels: 50
+    max_pixels_per_scene: 20000
+    surrogate_depths: [3, 4, 6]
+    n_splits: 5
+    external:
+      sst: sst                         # OSTIA SST (degC) for thermal fronts
+      front_percentile: 90
+      u: null                          # eddy_core dropped for whales (as in v1)
+      v: null
+      ow_threshold: 0.2
+      pixel_km: 9.25                   # 1/12 degree grid
+      masks: {}

@@ -1,0 +1,16 @@
+# v2 scenes / encoders.
+# Cluster stability across encoder runs (sharks). Only if you trained more than one encoder (seeds / subsets):
+#   python -m sit_fuse.xai.cluster_stability -y config/xai/shark_cluster_stability_v2.yaml
+# Every run lists one label raster per scene, same scenes in the same order.
+runs:
+  seed0: []   # TODO: label rasters of run 1, e.g. <out_dir_seed0>/cop_env_sharks_t9.zarr.clust.data_<K>clusters.zarr.full_geo.tif
+  seed1: []   # TODO
+  seed2: []   # TODO
+scenes: []    # optional raw scenes for centroid matching, e.g. /data/nlahaye/NatureNet_Env/Copernicus/v2/sharks/cop_env_sharks_t9.zarr
+sit_fuse_config: config/model/copernicus_shark_v2_xai.yaml   # output of make_xai_config
+variable_names: []   # unused by cluster_stability (channel order: the v2 env meta JSON)
+label_fill: -1
+max_pixels: 500000
+min_cluster_pixels: 50
+seed: 0
+out_dir: /data/nlahaye/output/Learnergy/COP_SHARK_V2_STABILITY/   # TODO
