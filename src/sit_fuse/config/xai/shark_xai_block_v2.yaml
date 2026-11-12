@@ -20,7 +20,7 @@ xai:
   feature_names: auto
   feature_groups:                      # shell patterns; a channel joins the first group that matches; empty groups dropped
     temperature: ["sst", "sst_*", "grad_mag_sst", "thetao_*", "bottomT", "sst_minus_bottomT", "strat_*"]
-    salinity_density: ["so_*", "sos", "dos", "grad_mag_sos"]
+    salinity_density: ["so_*", "sos*", "dos*", "grad_mag_sos"]   # SSS channels are sos_0m / dos_0m
     mixed_layer: ["mlotst"]
     sea_level_eddies: ["zos", "adt", "sla", "grad_mag_adt", "eke", "okubo_weiss_geo", "rossby_geo", "ugos*", "vgos*"]
     currents: ["uo_*", "vo_*", "wo*", "ue", "ve", "cur_speed_*"]
@@ -59,3 +59,9 @@ xai:
       ow_threshold: 0.2
       pixel_km: 9.25                   # 1/12 degree grid
       masks: {}
+    reference:                         # categorical maps on the scene grid -> xai/<interpret dir>/reference_<name>_*.csv
+      seascapes:                       # MBON Seascapes (NatureNet: python -m naturenet.environment.seascapes all)
+        pattern: "/data/nlahaye/NatureNet_Env/Seascapes/v2/sharks/seascape_sharks_t{t}.tif"
+        t_regex: '_t(\d+)'             # scene index t from cop_env_sharks_t<t>.zarr
+        scale: 1
+        names_csv: "/data/nlahaye/NatureNet_Env/Seascapes/v2/sharks/seascape_classes.csv"
