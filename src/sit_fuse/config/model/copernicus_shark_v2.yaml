@@ -40,7 +40,7 @@ scaler:
 
 output:
  out_dir: "/data/nlahaye/output/Learnergy/COP_SHARK_V2/"
- generate_intermediate_output: False
+ generate_intermediate_output: True    # also write <scene>.no_heir.clust.data_<n>clusters.no_geo.tif (parent level; cluster_hierarchy verify)
  generate_train_output: True
 
 dbn:

@@ -12,6 +12,7 @@ YAML:
   runs:
     seed0: [labels_scene_a.tif, ...]
     seed1: [...]
+  label_scale: 1                       cluster id = rint(value * label_scale); 1000 for SIT-FUSE .no_geo.tif rasters
   max_pixels: 500000
   min_cluster_pixels: 50
   out_dir: /path/to/output
@@ -63,7 +64,7 @@ def centroid_distances(Xp, a, b, matches):
     return out
 
 
-def pooled_labels(run_files, fill=-1, max_pixels=500000, seed=0, scenes=None):
+def pooled_labels(run_files, fill=-1, max_pixels=500000, seed=0, scenes=None, label_scale=1):
     """Pixels valid in every run (and finite in all raw channels if scenes are given), subsampled once for all runs."""
     names = list(run_files)
     n_sc = {len(v) for v in run_files.values()}
@@ -81,7 +82,8 @@ def pooled_labels(run_files, fill=-1, max_pixels=500000, seed=0, scenes=None):
             ok &= np.all(np.isfinite(flat), 1)
             raw.append(flat[ok])
         for k, l in zip(names, labs):
-            per_run[k].append(l.reshape(-1)[ok].astype(np.int64))
+            v = l.reshape(-1)[ok]
+            per_run[k].append(np.rint(v * label_scale).astype(np.int64) if label_scale != 1 else v.astype(np.int64))
     y = {k: np.concatenate(v) for k, v in per_run.items()}
     Xp = np.concatenate(raw) if scenes is not None else None
     n = len(next(iter(y.values())))
@@ -133,7 +135,7 @@ def main(path):
         sconf = read_yaml(conf["sit_fuse_config"])
         scenes = [read_raw_scene(sconf, s) for s in conf["scenes"]]
     labels, Xp = pooled_labels(conf["runs"], conf.get("label_fill", -1), conf.get("max_pixels", 500000),
-                               conf.get("seed", 0), scenes)
+                               conf.get("seed", 0), scenes, float(conf.get("label_scale", 1)))
     run(labels, conf["out_dir"], Xp, conf.get("min_cluster_pixels", 50))
 
 

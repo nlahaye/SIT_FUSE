@@ -10,6 +10,7 @@ scenes: []    # optional raw scenes for centroid matching, e.g. /data/nlahaye/Na
 sit_fuse_config: config/model/copernicus_whale_v2_xai.yaml   # output of make_xai_config
 variable_names: []   # unused by cluster_stability (channel order: the v2 env meta JSON)
 label_fill: -1
+label_scale: 1000   # .no_geo.tif rasters store cluster id / 1000
 max_pixels: 500000
 min_cluster_pixels: 50
 seed: 0

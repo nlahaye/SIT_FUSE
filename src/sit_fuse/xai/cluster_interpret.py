@@ -18,6 +18,14 @@ YAML (xai.interpret block, in the SIT-FUSE config):
   variable_names: [...]         names of the input channels (defaults to xai.feature_names)
   dates: [...]                  optional ISO dates per scene for the monthly summary
   label_fill: -1                labels < 0, NaN or == label_fill are ignored
+  label_scale: 1                cluster id = rint(raster value * label_scale). SIT-FUSE .no_geo.tif rasters store
+                                id / 1000, so use 1000 for them (with 1 the ids are truncated to 0..4). With a
+                                scale != 1 the CSVs carry cluster_id (integer id) and cluster = id / label_scale
+                                (the raster-value convention NatureNet reward_env_projection expects).
+  level: {level: parent | coarse, k: 20, hierarchy_json: <cluster_hierarchy.json>, label_input: fine,
+          num_child: 5}       optional environment level (sit_fuse.postprocessing.cluster_hierarchy); ids are
+                                then parent / coarse ids. CLI: --level / --k / --hierarchy_json. Output goes to
+                                xai/interpret_<level> (interpret_k<K> for coarse) unless --out_subdir is given.
   n_top_clusters: 30            clusters kept by frequency (the rest are pooled as "other" in the surrogate)
   max_pixels_per_scene: 20000
   surrogate_depths: [3, 4, 6]
@@ -37,7 +45,7 @@ import warnings
 
 import numpy as np
 
-ANCILLARY_DEFAULTS = dict(label_fill=-1, n_top_clusters=30, max_pixels_per_scene=20000, surrogate_depths=[3, 4, 6],
+ANCILLARY_DEFAULTS = dict(label_fill=-1, label_scale=1, level=None, n_top_clusters=30, max_pixels_per_scene=20000, surrogate_depths=[3, 4, 6],
                           n_splits=5, min_cluster_pixels=50, seed=0)
 
 
@@ -83,6 +91,39 @@ def clean_labels(lab, fill):
     bad = ~np.isfinite(lab) | (lab < 0) | (lab == fill)
     lab[bad] = np.nan
     return lab
+
+
+def level_labels(lab, conf):
+    """Cleaned label raster (NaN = invalid) -> integer ids (float array, NaN = invalid) at the configured level."""
+    scale = float(conf.get("label_scale", 1) or 1)
+    v = np.asarray(lab, dtype=np.float64)
+    ok = np.isfinite(v)
+    if scale == 1 and ok.any() and np.any(np.abs(v[ok] - np.rint(v[ok])) > 1e-6):
+        warnings.warn("label values are not integers with label_scale 1 (SIT-FUSE tifs store id / 1000: set "
+                      "xai.interpret.label_scale: 1000); ids are truncated")
+    ids = np.full(v.shape, -1, dtype=np.int64)
+    ids[ok] = np.rint(v[ok] * scale).astype(np.int64) if scale != 1 else v[ok].astype(np.int64)
+    lv = conf.get("level") or {}
+    if lv.get("level") and lv["level"] != "fine":
+        from sit_fuse.postprocessing.cluster_hierarchy import apply_level, load_level_map
+        lm = None
+        if lv["level"] == "coarse":
+            lm, _ = load_level_map(lv["hierarchy_json"], lv["k"])
+        ids = apply_level(ids, lv["level"], int(lv.get("num_child", 5)), lv.get("label_input", "fine"), lm,
+                          lv.get("unmapped", "error"))
+    out = ids.astype(np.float64)
+    out[ids < 0] = np.nan
+    return out
+
+
+def _id_columns(df, scale):
+    """cluster -> cluster_id (int) and cluster = id / label_scale (raster-value convention), if scale != 1."""
+    if scale == 1 or "cluster" not in df.columns:
+        return df
+    df = df.copy()
+    df.insert(0, "cluster_id", df["cluster"].astype(int))
+    df["cluster"] = df["cluster_id"] / float(scale)
+    return df
 
 
 # ============================== EXTERNAL FEATURES ===============================
@@ -357,7 +398,8 @@ def run(scenes, labels, names, conf, out_dir, dates=None):
     os.makedirs(out_dir, exist_ok=True)
     assert len(scenes) == len(labels) and len(scenes) > 0
     assert all(s.shape[0] == len(names) for s in scenes), "variable_names must match the number of channels"
-    labels = [clean_labels(l, conf["label_fill"]) for l in labels]
+    labels = [level_labels(clean_labels(l, conf["label_fill"]), conf) for l in labels]
+    sc = float(conf.get("label_scale", 1) or 1)
     Xp, y, g, _ = collect_pixels(scenes, labels, conf["max_pixels_per_scene"], conf["seed"])
     if not len(y):
         raise ValueError("no valid pixels")
@@ -365,8 +407,8 @@ def run(scenes, labels, names, conf, out_dir, dates=None):
     order = uniq[np.argsort(-cnt)]
     clusters = [int(c) for c in order[:conf["n_top_clusters"]] if cnt[uniq == c][0] >= conf["min_cluster_pixels"]]
     long_df, wide_df = cluster_profiles(Xp, y, names, order)
-    long_df.to_csv(os.path.join(out_dir, "cluster_profiles_long.csv"), index=False)
-    wide_df.to_csv(os.path.join(out_dir, "cluster_profiles_wide.csv"), index=False)
+    _id_columns(long_df, sc).to_csv(os.path.join(out_dir, "cluster_profiles_long.csv"), index=False)
+    _id_columns(wide_df, sc).to_csv(os.path.join(out_dir, "cluster_profiles_wide.csv"), index=False)
     plot_profile_heatmap(long_df[long_df.cluster.isin(clusters)], os.path.join(out_dir, "cluster_profile_heatmap.png"))
     maps = occurrence_maps(labels, clusters)
     if maps is not None:
@@ -395,18 +437,42 @@ def run(scenes, labels, names, conf, out_dir, dates=None):
     return out
 
 
-def main(yaml_path):
+def main(yaml_path, level=None, k=None, hierarchy_json=None, label_input=None, out_subdir=None):
     from sit_fuse.utils import read_yaml
     yml_conf = read_yaml(yaml_path)
     conf = interpret_config(yml_conf)
+    if level:
+        lv = dict(conf.get("level") or {})
+        lv["level"] = level
+        if k is not None:
+            lv["k"] = int(k)
+        if hierarchy_json:
+            lv["hierarchy_json"] = hierarchy_json
+        if label_input:
+            lv["label_input"] = label_input
+        lv.setdefault("num_child", int(yml_conf.get("cluster", {}).get("heir", {}).get("num_classes", 5)))
+        conf["level"] = lv
+    lv = conf.get("level") or {}
+    if out_subdir is None:
+        out_subdir = "interpret"
+        if lv.get("level") == "parent":
+            out_subdir = "interpret_parent"
+        elif lv.get("level") == "coarse":
+            out_subdir = f"interpret_k{int(lv['k'])}"
     names = conf["variable_names"] or [f"chan_{i}" for i in range(int(yml_conf["data"]["number_channels"]))]
     scenes = [read_raw_scene(yml_conf, f) for f in conf["data_files"]]
     labels = [read_label_raster(f) for f in conf["label_files"]]
-    out_dir = os.path.join(yml_conf["output"]["out_dir"], "xai", "interpret")
+    out_dir = os.path.join(yml_conf["output"]["out_dir"], "xai", out_subdir)
     run(scenes, labels, list(names), conf, out_dir, conf.get("dates"))
 
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("-y", "--yaml", required=True)
-    main(p.parse_args().yaml)
+    p.add_argument("--level", choices=["fine", "parent", "coarse"], default=None)
+    p.add_argument("--k", type=int, default=None, help="coarse cut K (cluster_hierarchy.json)")
+    p.add_argument("--hierarchy_json", default=None)
+    p.add_argument("--label_input", choices=["fine", "parent"], default=None)
+    p.add_argument("--out_subdir", default=None)
+    a = p.parse_args()
+    main(a.yaml, a.level, a.k, a.hierarchy_json, a.label_input, a.out_subdir)

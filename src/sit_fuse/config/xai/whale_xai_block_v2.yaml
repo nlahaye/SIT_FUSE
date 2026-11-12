@@ -45,6 +45,7 @@ xai:
     variable_names: auto
     dates: []
     label_fill: -1
+    label_scale: 1000                  # .no_geo.tif rasters store cluster id / 1000 (1 would truncate the ids)
     n_top_clusters: 30
     min_cluster_pixels: 50
     max_pixels_per_scene: 20000
