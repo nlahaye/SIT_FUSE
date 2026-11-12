@@ -78,6 +78,12 @@ def write_yaml(data: dict[str, Any], path: Path) -> None:
         yaml.safe_dump(data, f, sort_keys=False, default_flow_style=False)
 
 
+# Filename timestamp tokens (capture group 1 of the timestamp patterns):
+#   YYYYMMDDTHHMMSSZ / YYYYMMDDTHHMMSS (TEMPO, ADP, FDCC)
+#   YYYYJJJHHMMSS (GOES ABI start time "_sYYYYJJJHHMMSSt_", e.g. pattern "_s(\\d{13})\\d_")
+TIMESTAMP_FORMATS = ("%Y%m%dT%H%M%SZ", "%Y%m%dT%H%M%S", "%Y%j%H%M%S")
+
+
 def parse_datetime(value: str) -> dt.datetime:
     for fmt in (
         "%Y-%m-%dT%H:%M:%SZ",
@@ -151,7 +157,7 @@ def parse_filename_time(
             continue
 
         token = match.group(1)
-        for fmt in ("%Y%m%dT%H%M%SZ", "%Y%m%dT%H%M%S"):
+        for fmt in TIMESTAMP_FORMATS:
             try:
                 return dt.datetime.strptime(token, fmt)
             except ValueError:
@@ -201,7 +207,7 @@ def parse_hms_interval_from_filename(
 
         start_token, end_token = match.group(1), match.group(2)
 
-        for fmt in ("%Y%m%dT%H%M%SZ", "%Y%m%dT%H%M%S"):
+        for fmt in TIMESTAMP_FORMATS:
             try:
                 start = dt.datetime.strptime(start_token, fmt)
                 break
@@ -210,7 +216,7 @@ def parse_hms_interval_from_filename(
         else:
             start = None
 
-        for fmt in ("%Y%m%dT%H%M%SZ", "%Y%m%dT%H%M%S"):
+        for fmt in TIMESTAMP_FORMATS:
             try:
                 end = dt.datetime.strptime(end_token, fmt)
                 break

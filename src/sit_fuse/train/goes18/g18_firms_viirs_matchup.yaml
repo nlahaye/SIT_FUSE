@@ -1,0 +1,72 @@
+# =============================================================================
+# GOES-18 fire: SIT-FUSE <-> FIRMS VIIRS (positives + observed negatives; consensus level) (attached reference; splits off)
+#   python firms_fire_front_matchup_generator.py goes18/g18_firms_viirs_matchup.yaml
+# Labels on the scene grid: 1 front, 2 fire-affected (active, repeat), 0 no fire, 255 NoData
+# =============================================================================
+time_range:
+  start: "2024-07-20T00:00:00Z"
+  end: "2025-01-15T23:59:59Z"
+
+sit_fuse:
+  # GOES-18 SIT-FUSE outputs: basename(input) + ".clust.data_<N>clusters.zarr.full_geo.tif"
+  # Check with: ls /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED_FIRE/ | grep full_geo | head
+  directory: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED_FIRE/
+  patterns:
+    timestamp_patterns:
+      - "(?i)_s(\\d{13})\\d_e"     # ABI scan start _sYYYYJJJHHMMSSt_e -> UTC
+  context_free_filters:
+    include_patterns:
+      - "(?i)full_geo\\.tif$"
+    exclude_patterns:
+      - "(?i)Contour"
+      - "(?i)smoke"
+      - "(?i)ImFill"
+      - "(?i)Edged"
+      - "(?i)merged"
+      - "(?i)fire"
+      - "(?i)head_outputs"
+
+fire_fronts:
+  index_csv: /home/nlahaye/SIT_FUSE/src/sit_fuse/preprocessing/data_pull/firms_fire_fronts_out/rasters_viirs/fire_front_index.csv
+  sources: [firms]           # FEDS kept out of the analysis
+  # Satellite labels differ between FIRMS API (N, N20, N21) and archive / local
+  # CSVs (e.g. SNPP); check: python -c "import pandas as p; print(p.read_csv('<index_csv>').tag.value_counts())"
+  tags: [N, SNPP, N20, NOAA20, N21, NOAA21]
+  require_front: false
+  search_pad_seconds: 86400
+  classes: {front: 1, interior: 2, negative: 0}
+  fill_value: 255
+  # If the FIRMS rasters were built at 0.025 deg, they are about one GOES
+  # pixel per cell; rasterize at <= 0.01 deg for GOES (bucket_max then
+  # aggregates cleanly onto the ~2 km scene grid).
+
+matching:
+  # Overpass-time products: pair each overpass with the nearest GOES scans
+  # only (5-min cadence), not with scans hours later.
+  policy: nearest
+  max_time_difference_seconds: 900
+  prefer_source: [firms]
+  group_by: front_timestamp
+
+scene_grid:
+  enabled: true
+  truth_dir: /home/nlahaye/SIT_FUSE/src/sit_fuse/preprocessing/data_pull/firms_fire_fronts_out/rasters_truth_viirs_g18/
+  front_min_fraction: 0.0
+  interior_min_fraction: 0.0
+  min_valid_fraction: 0.0
+  drop_scenes_without_front: false
+  overwrite: true
+
+classifier_config:
+  base_yaml: ./basic_clssifier.yaml
+
+output:
+  classifier_yaml: ./goes18/g18_firms_viirs_classifier_matchups.yaml
+  audit_csv: ./goes18/g18_firms_viirs_matchups_audit.csv
+  matchup_key: matchups
+
+# Attached with attach_references.py; every record inherits the FDCC split.
+encoder_split:
+  enabled: false
+classifier_split:
+  enabled: false

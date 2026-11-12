@@ -1,0 +1,152 @@
+# =============================================================================
+# GOES-18 fire: SIT-FUSE (goes_tempo_test_3_fire encoder) <-> FDCC primary
+#   python build_fdcc_matchups.py goes18/g18_fdcc_matchup.yaml
+# Caveat: FDCC is derived from the same ABI scans the encoder sees, so FDCC
+# agreement is partly circular for GOES (it is not for TEMPO). FIRMS VIIRS
+# observed negatives are the independent consensus level.
+# =============================================================================
+time_range:
+  start: "2024-07-20T00:00:00Z"
+  end: "2025-01-15T23:59:59Z"
+
+sit_fuse:
+  # GOES-18 SIT-FUSE outputs: basename(input) + ".clust.data_<N>clusters.zarr.full_geo.tif"
+  # Check with: ls /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED_FIRE/ | grep full_geo | head
+  directory: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED_FIRE/
+  patterns:
+    timestamp_patterns:
+      - "(?i)_s(\\d{13})\\d_e"     # ABI scan start _sYYYYJJJHHMMSSt_e -> UTC
+  context_free_filters:
+    include_patterns:
+      - "(?i)full_geo\\.tif$"
+    exclude_patterns:
+      - "(?i)Contour"
+      - "(?i)smoke"
+      - "(?i)ImFill"
+      - "(?i)Edged"
+      - "(?i)merged"
+      - "(?i)fire"
+      - "(?i)head_outputs"
+
+fdcc_fire:
+  directory: /home/nlahaye/SIT_FUSE/src/sit_fuse/preprocessing/data_pull/goes_fdcc_fire/rasters/
+  patterns:
+    include_patterns:
+      - "(?i)^fdcc_fire_mask_"
+    timestamp_patterns:
+      - "(?i)^fdcc_fire_mask_(\\d{8}T\\d{6}Z)\\.tiff?$"
+
+matching:
+  # FDCC (FDCC = ABI FDC CONUS, 5-min) vs GOES-18 RadC: same scan cadence;
+  # 120 s pairs each scene with its own FDC scan.
+  max_time_difference_seconds: 120
+  allow_fdcc_reuse: true
+  group_by: fdcc_timestamp
+
+scene_grid:
+  enabled: true
+  # Separate truth dir: names are <fdcc stem>__<scene stem>.tif, but keeping
+  # GOES and TEMPO truth apart makes overwrite/cleanup safe.
+  truth_dir: /home/nlahaye/SIT_FUSE/src/sit_fuse/preprocessing/data_pull/goes_fdcc_fire/rasters_truth_g18/
+  positive_values: [1]
+  nodata_values: [255, -1]
+  min_valid_fraction: 0.0
+  drop_empty: true
+  overwrite: false
+  # FDCC was pulled at 0.05 deg (abi_fdcc.yaml resolution_degrees) for TEMPO.
+  # GOES-18 pixels over CA are ~2-3 km (~0.025 deg), so a 0.05 deg FDCC grid
+  # is coarser than the scene and fire is smeared over ~4 scene pixels.
+  # Re-pull FDCC at resolution_degrees 0.01 into rasters_g18/ for GOES.
+
+classifier_config:
+  base_yaml: ./basic_clssifier.yaml
+
+output:
+  classifier_yaml: ./goes18/g18_fdcc_fire_classifier_matchups.yaml
+  audit_csv: ./goes18/g18_fdcc_fire_matchups_audit.csv
+  split_csv: ./goes18/g18_fdcc_fire_matchup_splits.csv
+  matchup_key: matchups
+
+# -----------------------------------------------------------------------------
+# Encoder split tracing (matchup_splits.py)
+# -----------------------------------------------------------------------------
+encoder_split:
+  enabled: true
+  # Encoder + cluster training YAML (data.files_train = encoder_train)
+  sit_fuse_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/goes_tempo_test_3_fire.yaml
+  # NEW: inference-only YAMLs that applied the same trained model to more
+  # inputs (same out_dir, overwrite_model: False). Every input they list is
+  # encoder_test unless the training YAML lists it in files_train.
+  inference_yamls:
+    - /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/goes_la_fire_infer.yaml
+  # Outputs are basename(input) + suffix, so prefix matching normally wins.
+  # Fallback key: the ABI scan-start token.
+  key_patterns:
+    - "(_s\\d{14}_)"
+  # GOES ABI start time _sYYYYJJJHHMMSSt_: YYYYJJJ -> date
+  date_pattern: "_s(\\d{7})\\d{7}_"
+  unmatched_policy: drop
+  encoder_train_policy: dev
+
+classifier_split:
+  enabled: true
+  group_by: date
+  block_days: 3
+  buffer_days: 0
+  # GOES-18 CONUS scenes here run ~14Z-01Z; 06Z falls in the nightly gap.
+  observing_day:
+    time_pattern: '_s(\d{13})\d_'    # YYYYJJJHHMMSS
+    day_start_utc_hour: 6
+  # One reference raster supervises several 5-min GOES scenes; keep them together.
+  link_shared_truth: true
+  min_partition_gap_hours: null
+  buffer_policy: dev
+  holdout_fraction: 0.25
+  calibration_fraction: 0.2
+  min_holdout_groups_per_stratum: 1
+  min_calibration_groups_per_stratum: 1
+  min_holdout_groups_total: 1
+  min_calibration_groups_total: 1
+  reserve_dev_group: auto
+  # GOES encoder-training days are 2024-07-26 and 2024-07-30, so the TEMPO
+  # Park holdout day (07-26) is not eligible here. LA days match TEMPO; Park
+  # 07-27 is the nearest eligible day. A Park calibration day removes the
+  # pooled-fallback conformal group seen in the TEMPO fire run. Delete the
+  # block to use the stratified random allocation. Groups not listed keep
+  # the random allocation, so the remaining eligible days are pinned to dev.
+  assign_groups:
+    holdout: ["2024-07-27", "2025-01-11", "2025-01-12"]
+    calibration: ["2024-07-29", "2025-01-09"]
+    dev: ["2024-07-25", "2024-07-28", "2024-07-31", "2025-01-05", "2025-01-06",
+          "2025-01-07", "2025-01-08", "2025-01-10", "2025-01-13"]
+  random_state: 42
+  stratify:
+    event_windows:
+      - {name: park_fire_2024, start: "2024-07-20", end: "2024-08-15"}
+      # starts 01-05: the 00-01Z scans of 01-06 belong to observing day 01-05
+      - {name: la_fires_2025,  start: "2025-01-05", end: "2025-01-31"}
+    by_product: false
+    positive_fraction:
+      enabled: true
+      positive_values: [1]
+      nodata_values: [255, -1]
+      label_values: [0, 1]
+      raster_nodata: auto
+      n_bins: 2
+
+# -----------------------------------------------------------------------------
+# Excluded clusters: read from the GOES UQ config (its list is GOES-specific;
+# the TEMPO joint ID 76.49 does not apply to the GOES-18 clustering)
+# -----------------------------------------------------------------------------
+invalid_clusters:
+  from_uq_config: ./goes18/g18_uq_config_fire.yaml
+  min_kept_pixels: 1
+  max_scene_fraction: null
+  cluster_nodata_values: [0.0]   # .full_geo.tif zero padding
+  truth_nodata_values: null
+  num_child_classes: null        # from cluster.heir.num_classes of sit_fuse_yaml (100 for GOES-18)
+  geotiff_scale: 1000
+
+head_outputs:
+  directory: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED_FIRE/UQ_FIRE/
+  suffix: .head_outputs.tif

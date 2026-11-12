@@ -72,6 +72,7 @@ from sf_uq_utils import (
     select_selective_threshold,
     select_threshold,
     select_threshold_multiclass,
+    threshold_grid,
     uq_feature_signature,
     write_table,
 )
@@ -527,6 +528,8 @@ def run(cfg):
     if unknown:
         LOG.warning("threshold_metric_overrides: no such model(s) %s (available: %s)", unknown, list(names))
     threshold_metrics = {}
+    thr_grid = threshold_grid(ccfg.get("threshold_grid"))
+    LOG.info("Threshold grid: %d values in [%.2g, %.2g]", thr_grid.size, thr_grid.min(), thr_grid.max())
     sel_cfg = cfg.get("selective", {}) or {}
     selective = {}
     for n in names:
@@ -535,10 +538,14 @@ def run(cfg):
         ref_cal = cal_frame["ref_label"].to_numpy()
         m_n = threshold_metrics[n] = thr_overrides.get(n, thr_metric)
         if C == 2:
-            thresholds[n], _ = select_threshold(Pc[:, 1], ref_cal, w_cal, m_n)
+            thresholds[n], _ = select_threshold(Pc[:, 1], ref_cal, w_cal, m_n, grid=thr_grid)
         else:
-            thresholds[n], _ = select_threshold_multiclass(Pc, ref_cal, w_cal, m_n)
-        LOG.info("Threshold %s: %.3f (%s)", n, thresholds[n], m_n)
+            thresholds[n], _ = select_threshold_multiclass(Pc, ref_cal, w_cal, m_n, grid=thr_grid)
+        LOG.info("Threshold %s: %.4g (%s)", n, thresholds[n], m_n)
+        if thresholds[n] <= thr_grid.min() * (1 + 1e-9):
+            LOG.warning("Threshold %s is at the grid floor (%.2g): the optimum may lie lower. Set "
+                        "calibration.threshold_grid: {scale: log, min: <smaller>} (e.g. prevalence / 10).",
+                        n, thr_grid.min())
         if sel_cfg.get("enabled", True):
             selective[n] = selective_rules(n, Pc, ref_cal, w_cal, cal_frame, thresholds.get(n),
                                            calibrators[n], final_models, boot_paths, feats, C,
@@ -550,6 +557,7 @@ def run(cfg):
             "calibration_label_level": cal_level,
             "calibrator": calibrators[n].describe(),
             "threshold": thresholds.get(n),
+            "threshold_grid": {"n": int(thr_grid.size), "min": float(thr_grid.min()), "max": float(thr_grid.max())},
             "oof_uncalibrated": summarize(oof[n], oof_frame, oof_T, C, 0.5),
             "oof_calibrated": summarize(calibrators[n].transform(oof[n]), oof_frame, oof_T, C, thresholds.get(n)),
         }

@@ -1,0 +1,69 @@
+# =============================================================================
+# GOES-18 fire: SIT-FUSE <-> HMS fire (daily; attached reference, splits off)
+#   python build_simple_classifier_matchups.py goes18/g18_hms_fire_matchup.yaml
+# =============================================================================
+time_range:
+  start: "2024-07-20T00:00:00Z"
+  end: "2025-01-15T23:59:59Z"
+
+sit_fuse:
+  directory: "/data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED_FIRE/"
+  context_free_filters:
+    include_patterns:
+      - "(?i)full_geo\\.tif$"
+    exclude_patterns:
+      - "proba"
+      - "no_geo"
+      - "no_heir"
+      - "(?i)head_outputs"
+  patterns:
+    # Every context-free output is treated as the fire product (the other
+    # product pattern never matches).
+    fire:
+      - "full_geo"
+    smoke:
+      - "__never_matches__"
+    timestamp_patterns:
+      - "(?i)_s(\\d{13})\\d_e"     # ABI _sYYYYJJJHHMMSSt_e
+    daily_date_patterns: []         # an 8-digit fallback would misread YYYYJJJH
+  daily_time_policy: "start_of_day"
+
+hms:
+  directory: "/home/nlahaye/SIT_FUSE/src/sit_fuse/preprocessing/data_pull/hms_out/rasters/"
+  patterns:
+    fire:
+      - "(?i)hms_fire"
+    smoke:
+      - "__never_matches__"
+    interval_timestamp_patterns: []
+    timestamp_patterns: []
+    daily_date_patterns:
+      - "(\\d{8})"
+
+matching:
+  mode: daily
+  allow_hms_reuse: true
+  group_by: hms_day
+
+scene_grid:
+  enabled: true
+  products: [fire]
+  truth_dir: /home/nlahaye/SIT_FUSE/src/sit_fuse/preprocessing/data_pull/hms_out/rasters_truth_g18/
+  positive_values: null          # max of raw values (HMS fire = 1)
+  nodata_values: [255, -1]
+  min_valid_fraction: 0.0
+  drop_empty: true
+  overwrite: true
+
+classifier_config:
+  base_yaml: ./basic_clssifier.yaml
+
+output:
+  classifier_yaml: ./goes18/g18_hms_fire_classifier_matchups.yaml
+  audit_csv: ./goes18/g18_hms_fire_matchups_audit.csv
+  matchup_key: matchups
+
+encoder_split:
+  enabled: false
+classifier_split:
+  enabled: false

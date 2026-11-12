@@ -1589,7 +1589,7 @@ def _prevalence_threshold(score, is_pos, w, grid):
 def select_threshold_multiclass(P, ref, w, metric="iou", grid=None):
     """Threshold on 1 - p0 maximizing target-class macro IoU/F1, or matching
     the reference non-background prevalence (metric='prevalence')."""
-    grid = np.linspace(0.05, 0.95, 91) if grid is None else np.asarray(grid)
+    grid = DEFAULT_THRESHOLD_GRID if grid is None else np.asarray(grid)
     if metric == "prevalence":
         return _prevalence_threshold(1.0 - P[:, 0], np.asarray(ref) != 0, w, grid)
     best_t, best_s = 0.5, -1.0
@@ -1601,9 +1601,49 @@ def select_threshold_multiclass(P, ref, w, metric="iou", grid=None):
     return best_t, best_s
 
 
+DEFAULT_THRESHOLD_GRID = np.linspace(0.05, 0.95, 91)
+
+
+def threshold_grid(spec=None) -> np.ndarray:
+    """
+    Candidate decision thresholds for select_threshold / _multiclass.
+
+    spec (calibration.threshold_grid):
+      null            legacy grid 0.05 .. 0.95 (step 0.01)
+      [t1, t2, ...]   explicit list
+      {scale: log | linear, min: 1e-4, max: 0.95, n: 100, include_default: true}
+                      generated grid, by default merged with the legacy grid.
+                      A log grid down to ~prevalence/10 lets rare classes
+                      (calibrated p1 << 0.05) reach their F1 / IoU optimum.
+    """
+    if spec is None:
+        return DEFAULT_THRESHOLD_GRID.copy()
+    if isinstance(spec, (list, tuple)):
+        g = np.asarray(spec, dtype=float)
+    elif isinstance(spec, dict):
+        scale = str(spec.get("scale", "log")).lower()
+        lo, hi, n = float(spec.get("min", 1e-4)), float(spec.get("max", 0.95)), int(spec.get("n", 100))
+        if not 0.0 < lo < hi < 1.0 or n < 2:
+            raise ValueError(f"calibration.threshold_grid needs 0 < min < max < 1 and n >= 2, got {spec}")
+        if scale == "log":
+            g = np.geomspace(lo, hi, n)
+        elif scale == "linear":
+            g = np.linspace(lo, hi, n)
+        else:
+            raise ValueError(f"calibration.threshold_grid.scale must be log | linear, got {scale!r}")
+        if spec.get("include_default", True):
+            g = np.concatenate([g, DEFAULT_THRESHOLD_GRID])
+    else:
+        raise ValueError(f"calibration.threshold_grid must be null, a list or a mapping, got {type(spec).__name__}")
+    g = np.unique(g[np.isfinite(g) & (g > 0.0) & (g < 1.0)])
+    if g.size == 0:
+        raise ValueError("calibration.threshold_grid has no values in (0, 1)")
+    return g
+
+
 def select_threshold(P1, ref, w, metric="iou", grid=None):
     """metric: iou | f1 (maximize on class 1) | prevalence (match class-1 prevalence)."""
-    grid = np.linspace(0.05, 0.95, 91) if grid is None else np.asarray(grid)
+    grid = DEFAULT_THRESHOLD_GRID if grid is None else np.asarray(grid)
     if metric == "prevalence":
         return _prevalence_threshold(np.asarray(P1), np.asarray(ref) == 1, w, grid)
     best_t, best_s = 0.5, -1.0

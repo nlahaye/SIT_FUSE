@@ -1,0 +1,58 @@
+# =============================================================================
+# GOES-18 smoke: SIT-FUSE <-> VIIRS Deep Blue aerosol-type smoke (consensus)
+#   python adp_matchup_generator.py goes18/g18_viirs_smoke_matchup.yaml
+# Same generator as ADP; only the config differs. Attached to the ADP
+# matchups with attach_references.py; records inherit the ADP split.
+# =============================================================================
+time_range:
+  start: "2024-07-20T00:00:00Z"
+  end: "2025-01-15T23:59:59Z"
+
+sit_fuse:
+  # GOES-18 SIT-FUSE outputs: basename(input) + ".clust.data_<N>clusters.zarr.full_geo.tif"
+  # Check with: ls /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/ | grep full_geo | head
+  directory: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/
+  patterns:
+    timestamp_patterns:
+      - "(?i)_s(\\d{13})\\d_e"     # ABI scan start _sYYYYJJJHHMMSSt_e -> UTC
+  context_free_filters:
+    include_patterns:
+      - "(?i)full_geo\\.tif$"
+    exclude_patterns:
+      - "(?i)Contour"
+      - "(?i)smoke"
+      - "(?i)ImFill"
+      - "(?i)Edged"
+      - "(?i)merged"
+      - "(?i)fire"
+      - "(?i)head_outputs"
+
+# The generator's reference block is named adp_smoke; here it points at VIIRS.
+adp_smoke:
+  directory: /data/nlahaye/viirs_aerdb_out/rasters/
+  patterns:
+    include_patterns:
+      - "(?i)^viirs_smoke_"
+    timestamp_patterns:
+      - "(?i)^viirs_smoke_(\\d{8}T\\d{6}Z)_[A-Z0-9]+\\.tiff?$"
+
+matching:
+  # VIIRS overpasses ~19:40-22:20 UTC over CA. 1800 s, as for TEMPO, pairs
+  # each overpass with ~12 GOES scans on either side; use 600 s to restrict
+  # consensus to near-coincident scans (fast-moving plumes).
+  max_time_difference_seconds: 1800
+  allow_adp_reuse: true
+  group_by: adp_timestamp
+
+classifier_config:
+  base_yaml: ./basic_clssifier.yaml
+
+output:
+  classifier_yaml: ./goes18/g18_viirs_smoke_classifier_matchups.yaml
+  audit_csv: ./goes18/g18_viirs_smoke_matchups_audit.csv
+  matchup_key: matchups
+
+encoder_split:
+  enabled: false
+classifier_split:
+  enabled: false

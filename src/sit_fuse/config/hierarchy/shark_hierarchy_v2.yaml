@@ -1,0 +1,20 @@
+# Parent -> coarse hierarchy of the v2 shark SIT-FUSE clusters (multi-scale environment levels for NatureNet).
+#   python -m sit_fuse.postprocessing.cluster_hierarchy verify -y <SIT_FUSE>/src/sit_fuse/config/hierarchy/shark_hierarchy_v2.yaml
+#   python -m sit_fuse.postprocessing.cluster_hierarchy build  -y <SIT_FUSE>/src/sit_fuse/config/hierarchy/shark_hierarchy_v2.yaml
+# model_yaml = the make_xai_config output (feature_names / feature_groups from the env meta JSON).
+# Outputs: /data/nlahaye/output/Learnergy/COP_SHARK_V2/hierarchy/{cluster_hierarchy.json, parent_profiles.csv, cut_summary.csv, dendrogram.png}
+model_yaml: ../model/copernicus_shark_v2_xai.yaml   # relative to this file
+hierarchy:
+  out_dir: /data/nlahaye/output/Learnergy/COP_SHARK_V2/hierarchy/
+  scenes: test                  # files_test = every complete scene, so every parent seen along the tracks is mapped
+  scene_stride: 1               # >1 speeds up the profile pass (rare parents may then be missing)
+  label_pattern: "{out_dir}/{name}.clust.data_*clusters.no_geo.tif"
+  no_heir_pattern: "{out_dir}/{name}.no_heir.clust.data_*clusters.no_geo.tif"
+  label_input: fine             # fine: parent = fine // num_child | parent: read the no_heir rasters
+  label_scale: 1000             # raster value = id / 1000
+  num_child: null               # null = cluster.heir.num_classes (5)
+  variables: null               # shell patterns; null = every channel
+  group_weighting: equal        # each xai.feature_groups group gets equal weight in the profile distance
+  min_parent_pixels: 200        # smaller parents follow their nearest well-sampled parent
+  linkage: ward
+  ks: [8, 10, 12, 15, 20, 25, 30, 40]

@@ -105,7 +105,10 @@ def _parse_dates(names, pattern: str) -> set[dt.date]:
         m = rx.search(n)
         if m:
             tok = m.group(1)
-            for fmt in ("%Y%m%d", "%Y-%m-%d", "%Y%j"):
+            # 7 digits = YYYYJJJ (GOES ABI); try it first, as strptime would
+            # read "2024208" as %Y%m%d (2024-02-08)
+            fmts = ("%Y%j",) if tok.isdigit() and len(tok) == 7 else ("%Y%m%d", "%Y-%m-%d", "%Y%j")
+            for fmt in fmts:
                 try:
                     out.add(dt.datetime.strptime(tok, fmt).date())
                     break
@@ -120,7 +123,11 @@ def _scene_time(name: str, pattern: str):
     if not m:
         return None
     tok = m.group(1)
-    for fmt in ("%Y%m%dT%H%M%S", "%Y%m%dT%H%M", "%Y%m%d%H%M%S", "%Y%j%H%M%S"):
+    # 13 digits = YYYYJJJHHMMSS (GOES ABI "_sYYYYJJJHHMMSSt_"); strptime would
+    # also accept it as %Y%m%d%H%M%S with single-digit fields
+    fmts = (("%Y%j%H%M%S",) if tok.isdigit() and len(tok) == 13 else
+            ("%Y%m%dT%H%M%S", "%Y%m%dT%H%M", "%Y%m%d%H%M%S", "%Y%j%H%M%S"))
+    for fmt in fmts:
         try:
             return dt.datetime.strptime(tok, fmt)
         except ValueError:
@@ -166,7 +173,7 @@ class EncoderSplit:
     """data.files_train / data.files_test of the SIT-FUSE encoder+cluster YAML."""
 
     def __init__(self, sf_yaml: dict[str, Any], key_patterns=None,
-                 date_pattern: str = r"(\d{8})T\d{6}Z"):
+                 date_pattern: str = r"(\d{8})T\d{6}Z", inference_yamls=()):
         data = sf_yaml["data"]
         self.entries: dict[str, tuple[str, Any]] = {}
         dup = set()
@@ -178,6 +185,15 @@ class EncoderSplit:
                     dup.add(b)
                     continue
                 self.entries[b] = (role, entry)
+        # Inference-only YAMLs (same trained encoder applied to new inputs, e.g.
+        # goes_la.yaml): every listed input is unseen by the encoder unless the
+        # training YAML lists it in files_train.
+        for inf in inference_yamls or ():
+            idata = inf["data"]
+            for entry in list(idata.get("files_train") or []) + list(idata.get("files_test") or []):
+                b = _entry_basenames(entry)[0]
+                if b not in self.entries:
+                    self.entries[b] = (ENCODER_TEST, entry)
         if dup:
             LOG.warning("%d inputs appear in both files_train and files_test; "
                         "treated as encoder_train.", len(dup))
@@ -215,8 +231,12 @@ class EncoderSplit:
         from sit_fuse.utils import read_yaml
         enc = split_cfg.get("encoder_split", {})
         sf = read_yaml(enc["sit_fuse_yaml"])
+        inf = [read_yaml(p) for p in (enc.get("inference_yamls") or [])]
+        if inf:
+            LOG.info("encoder_split: %d inference-only YAML(s) traced as encoder_test: %s",
+                     len(inf), enc.get("inference_yamls"))
         return cls(sf, enc.get("key_patterns"),
-                   enc.get("date_pattern", r"(\d{8})T\d{6}Z"))
+                   enc.get("date_pattern", r"(\d{8})T\d{6}Z"), inference_yamls=inf)
 
 
 # ---------------------------------------------------------------------------

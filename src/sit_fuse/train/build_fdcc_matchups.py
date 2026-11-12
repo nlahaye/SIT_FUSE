@@ -80,6 +80,12 @@ def write_yaml(data: dict[str, Any], path: Path) -> None:
         )
 
 
+# Filename timestamp tokens (capture group 1 of the timestamp patterns):
+#   YYYYMMDDTHHMMSSZ / YYYYMMDDTHHMMSS (TEMPO, ADP, FDCC)
+#   YYYYJJJHHMMSS (GOES ABI start time "_sYYYYJJJHHMMSSt_", e.g. pattern "_s(\\d{13})\\d_")
+TIMESTAMP_FORMATS = ("%Y%m%dT%H%M%SZ", "%Y%m%dT%H%M%S", "%Y%j%H%M%S")
+
+
 def parse_datetime(value: str) -> dt.datetime:
     """
     Parse a UTC-naive datetime from the configuration.
@@ -142,7 +148,7 @@ def parse_timestamp_from_filename(
 
         token = match.group(1)
 
-        for fmt in ("%Y%m%dT%H%M%SZ", "%Y%m%dT%H%M%S"):
+        for fmt in TIMESTAMP_FORMATS:
             try:
                 return dt.datetime.strptime(token, fmt)
             except ValueError:

@@ -1,0 +1,61 @@
+# =============================================================================
+# GOES-18 smoke: SIT-FUSE <-> HMS smoke (daily; attached reference, splits off)
+#   python build_simple_classifier_matchups.py goes18/g18_hms_smoke_matchup.yaml
+# =============================================================================
+time_range:
+  start: "2024-07-20T00:00:00Z"
+  end: "2025-01-15T23:59:59Z"
+
+sit_fuse:
+  directory: "/data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/"
+  context_free_filters:
+    include_patterns:
+      - "(?i)full_geo\\.tif$"
+    exclude_patterns:
+      - "proba"
+      - "no_geo"
+      - "no_heir"
+      - "(?i)head_outputs"
+  patterns:
+    # Every context-free output is treated as the smoke product (the other
+    # product pattern never matches).
+    smoke:
+      - "full_geo"
+    fire:
+      - "__never_matches__"
+    timestamp_patterns:
+      - "(?i)_s(\\d{13})\\d_e"     # ABI _sYYYYJJJHHMMSSt_e
+    daily_date_patterns: []         # an 8-digit fallback would misread YYYYJJJH
+  daily_time_policy: "start_of_day"
+
+hms:
+  directory: "/home/nlahaye/SIT_FUSE/src/sit_fuse/preprocessing/data_pull/hms_out/rasters/"
+  patterns:
+    smoke:
+      - "(?i)hms_smoke"
+    fire:
+      - "__never_matches__"
+    interval_timestamp_patterns: []
+    timestamp_patterns: []
+    daily_date_patterns:
+      - "(\\d{8})"
+
+matching:
+  mode: daily
+  allow_hms_reuse: true
+  group_by: hms_day
+
+# HMS smoke density polygons: nearest collocation (no scene_grid block)
+
+classifier_config:
+  base_yaml: ./basic_clssifier.yaml
+
+output:
+  classifier_yaml: ./goes18/g18_hms_smoke_classifier_matchups.yaml
+  audit_csv: ./goes18/g18_hms_smoke_matchups_audit.csv
+  matchup_key: matchups
+
+encoder_split:
+  enabled: false
+classifier_split:
+  enabled: false
