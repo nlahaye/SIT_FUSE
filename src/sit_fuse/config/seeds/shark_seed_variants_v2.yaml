@@ -1,0 +1,25 @@
+# Seed variants of the v2 sharks model, for sit_fuse.xai.cluster_stability. Run from src/sit_fuse.
+#   python -m sit_fuse.train.seed_variants make -y config/seeds/shark_seed_variants_v2.yaml
+#   bash config/model/seeds_shark/run_seed_variants.sh
+#   python -m sit_fuse.train.seed_variants stability -y config/seeds/shark_seed_variants_v2.yaml
+#   python -m sit_fuse.xai.cluster_stability -y config/xai/shark_cluster_stability_v2_seeds.yaml
+# The main model (base_config) must have run pretrain_encoder first, so its cached sample can be shared.
+base_config: config/model/copernicus_shark_v2_split.yaml
+seeds: [1, 2, 3, 4]
+seed_scope: model             # model (same sample, different init/shuffle) | data | both
+share_train_cache: link       # link | copy | none
+out_dir_pattern: "{base}_seed{seed}/"
+config_dir: config/model/seeds_shark
+files_test: holdout           # inference on the holdout scenes only (enough for stability)
+stages: [pretrain_encoder, finetune_dc_mlp_head, generate_output]   # add train_child_heads before generate_output for level: fine
+python: python
+num_threads: null
+overrides:
+  logger: {use_wandb: False}  # keeps every variant's checkpoints directly under its out_dir
+stability:
+  yaml: config/xai/shark_cluster_stability_v2_seeds.yaml
+  template: config/xai/shark_cluster_stability_v2.yaml
+  include_main: true
+  level: parent               # parent (.no_heir.clust.data, 800 clusters) | fine (.clust.data; needs train_child_heads)
+  raster: no_geo
+  out_dir: /data/nlahaye/output/Learnergy/COP_SHARK_V2_STABILITY/

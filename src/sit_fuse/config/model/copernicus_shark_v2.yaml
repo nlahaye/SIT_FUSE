@@ -3,6 +3,11 @@
 #   python -m naturenet.environment.sync_v2_configs sitfuse --model sit_fuse/config/model/copernicus_shark_v2.yaml \
 #       --block /data/nlahaye/NatureNet_Env/Copernicus/v2/sharks/sharks_sitfuse_data_block.yaml
 # files_train = every train_every_days-th complete scene, files_test = every complete scene (inference).
+# Balanced, spatio-temporally stratified train / holdout scenes (writes copernicus_shark_v2_split.yaml; train that one):
+#   python -m sit_fuse.datasets.scene_split split -y config/split/shark_scene_split_v2.yaml
+# Child heads (after finetune_dc_mlp_head; main model read-only):
+#   python -m sit_fuse.train.train_child_heads -y config/model/copernicus_shark_v2_split.yaml
+# Seed variants for cluster_stability: config/seeds/shark_seed_variants_v2.yaml
 # Channel order: /data/nlahaye/NatureNet_Env/Copernicus/v2/sharks/sharks_env_meta.json
 data:
  tile: False
@@ -27,6 +32,15 @@ data:
   chans: []
   transform: []
 
+ sampling:
+  seed: 0                  # fixed sample; seed variants (seed_scope: model) reuse the cached one
+  cache_train: True        # train_data.npy / .indices.npy / .files.json, reused by DC, child heads, seed variants
+  scene_balance: 1.0       # with groups (scene_split strata): every stratum, and every scene in it, ~equal mass
+  groups: {}               # {scene basename: stratum}; filled by scene_split
+  spatial_block: 32        # window-centre pixels (~2.7 deg at 1/12 deg); blocks are fixed across scenes
+  spatial_balance: 0.5     # 0 = legacy (valid-pixel weighted), 1 = every block equal
+  n_jobs: 4
+
 
  files_train: [
 ]
@@ -35,6 +49,8 @@ data:
 ]
 
 
+seed: 0     # model seed (sit_fuse.train.seeding); stage seeds (encoder.training.seed, ...) override it
+
 scaler:
  name: "standard" 
 
@@ -42,6 +58,7 @@ output:
  out_dir: "/data/nlahaye/output/Learnergy/COP_SHARK_V2/"
  generate_intermediate_output: True    # also write <scene>.no_heir.clust.data_<n>clusters.no_geo.tif (parent level; cluster_hierarchy verify)
  generate_train_output: True
+ #heir_model_dir: full_model_heir      # where train_child_heads writes heir_fc.ckpt and inference reads it
 
 dbn:
  model_type: ["gaussian_selu", "gaussian_selu"]
@@ -102,13 +119,18 @@ cluster:
    accelerator: "gpu"
    devices: 1
    gradient_clip_val: 0.1
-   precision: "16-mixed"
    save_dir: "wandb_dbn_full_model_heir"
-   batch_size: 100
    min_samples: 1000
    learning_rate: 0.0001
    batch_size: 1000
    epochs: 30
+   # train_child_heads (each child head trained only on its parent's samples)
+   max_samples_per_head: 200000
+   val_percent: 0.1
+   limit_train_batches: null
+   precision: "32-true"     # was 16-mixed; parent assignment is fp32 either way
+   logger: none             # none | csv | wandb
+   overwrite: False
 
 
 

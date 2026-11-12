@@ -430,6 +430,11 @@ def get_model(yml_conf, n_visible):
         project = yml_conf["logger"]["project"]
  
     heir_model_dir = os.path.join(save_dir, "full_model_heir")
+    # output.heir_model_dir: child heads trained by sit_fuse.train.train_child_heads into another directory
+    # (absolute, or relative to the model save dir); default full_model_heir as before.
+    _heir_sub = yml_conf.get("output", {}).get("heir_model_dir")
+    if _heir_sub:
+        heir_model_dir = _heir_sub if os.path.isabs(_heir_sub) else os.path.join(save_dir, _heir_sub)
     full_model_dir = os.path.join(save_dir, "full_model")
 
     accelerator = yml_conf["cluster"]["heir"]["training"]["accelerator"]

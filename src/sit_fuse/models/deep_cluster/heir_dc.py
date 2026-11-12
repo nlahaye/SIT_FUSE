@@ -122,6 +122,15 @@ class Heir_DC(pl.LightningModule):
         self.encoder_type = encoder_type
         self.num_classes = num_classes       
 
+        # Child-head training (sit_fuse.train.train_child_heads):
+        #  rows_are_key: every row of a training batch already belongs to self.key (the loader only
+        #    serves that parent's samples, assigned once in fp32/eval mode), so forward(train=True)
+        #    does not re-derive membership under autocast / train mode. Only used for (N, K) outputs.
+        #  keep_parent_eval: Lightning's model.train() must not switch the frozen parent model to
+        #    train mode (batch-norm / dropout would change parent assignments during training).
+        self.rows_are_key = False
+        self.keep_parent_eval = True
+
         self.clust_tree = {"0": {"-1": self.pretrained_model}, "1": {}}
 
         #define loss
@@ -173,6 +182,16 @@ class Heir_DC(pl.LightningModule):
                 #list(self.pretrained_model.mlp_head.children())[1].num_features, self, state_dict)        
  
         del data
+
+    def train(self, mode=True):
+        super().train(mode)
+        if mode and getattr(self, "keep_parent_eval", False):
+            if self.pretrained_model is not None:
+                self.pretrained_model.eval()
+            enc = getattr(self, "encoder", None)
+            if isinstance(enc, nn.Module):
+                enc.eval()
+        return self
 
     def generate_label_set(self, data):
         """
@@ -475,6 +494,10 @@ class Heir_DC(pl.LightningModule):
                 tmp_full = torch.zeros((y.shape[0], 1, y.shape[-2], y.shape[-1]), device=y.device, dtype=torch.float32)
             tmp_prob_full = torch.zeros((y.shape[0], 1, y.shape[-2], y.shape[-1]), device=y.device, dtype=torch.float32)
 
+
+        if train and getattr(self, "rows_are_key", False) and y.ndim == 2:
+            # Strict parent membership: the batch was drawn from this parent's samples only.
+            tmp = torch.full((y.shape[0],), int(self.key), device=y.device, dtype=torch.long)
 
         tmp3 = tmp.clone()
         lab_cpu = tmp.detach().cpu().numpy()

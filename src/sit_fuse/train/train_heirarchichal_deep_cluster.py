@@ -41,37 +41,33 @@ from types import SimpleNamespace
 
 import numpy as np
 
-def heir_dc(yml_conf, dataset, ckpt_path):
-
-    use_wandb_logger = yml_conf["logger"]["use_wandb"]
-    log_model = None
+def model_save_dir(yml_conf):
+    """<out_dir> or <out_dir>/<logger.log_out_dir> (wandb): parent of encoder/, full_model/, full_model_heir/."""
     save_dir = yml_conf["output"]["out_dir"]
-    project = None
-    if use_wandb_logger:
-        log_model = yml_conf["logger"]["log_model"]
+    if yml_conf["logger"]["use_wandb"]:
         save_dir = os.path.join(yml_conf["output"]["out_dir"], yml_conf["logger"]["log_out_dir"])
-        project = yml_conf["logger"]["project"]
+    return save_dir
 
-    full_model_dir = os.path.join(save_dir, "full_model")
-    save_dir = os.path.join(save_dir, "full_model_heir")
-    encoder_dir = os.path.join(save_dir, "encoder")
 
-    accelerator = yml_conf["cluster"]["heir"]["training"]["accelerator"]
-    devices = yml_conf["cluster"]["heir"]["training"]["devices"]
-    precision = yml_conf["cluster"]["heir"]["training"]["precision"]
-    max_epochs = yml_conf["cluster"]["heir"]["training"]["epochs"]
-    gradient_clip_val = yml_conf["encoder"]["training"]["gradient_clip_val"]
-    heir_model_tiers = yml_conf["cluster"]["heir"]["tiers"] #TODO incorporate
-    heir_gauss_stdev = yml_conf["cluster"]["heir"]["gauss_noise_stdev"] #TODO incorporate
-    lambda_iid = yml_conf["cluster"]["heir"]["lambda"] #TODO incorporate 
+def heir_model_dir(yml_conf):
+    """Directory of heir_fc.ckpt: output.heir_model_dir if set (absolute, or relative to model_save_dir), else full_model_heir."""
+    sub = yml_conf.get("output", {}).get("heir_model_dir")
+    if sub:
+        return sub if os.path.isabs(sub) else os.path.join(model_save_dir(yml_conf), sub)
+    return os.path.join(model_save_dir(yml_conf), "full_model_heir")
 
+
+def load_frozen_encoder(yml_conf, dataset, accelerator):
+    """
+    Build the (frozen, eval-mode) encoder that Heir_DC needs for this encoder_type, from the
+    main model's encoder/ checkpoint. Returns (encoder or None, encoder_type, in_chans, tile_size).
+    Shared by heir_dc() and sit_fuse.train.train_child_heads.
+    """
+    use_wandb_logger = yml_conf["logger"]["use_wandb"]
+    log_model = yml_conf["logger"].get("log_model") if use_wandb_logger else None
+    project = yml_conf["logger"].get("project") if use_wandb_logger else None
     num_classes = yml_conf["cluster"]["num_classes"]
- 
-    num_classes_heir = yml_conf["cluster"]["heir"]["num_classes"]
-    min_samples = yml_conf["cluster"]["heir"]["training"]["min_samples"]
-
-
-    ckpt_path = os.path.join(full_model_dir, "deep_cluster.ckpt")
+    encoder_dir = os.path.join(model_save_dir(yml_conf), "encoder")
 
     encoder_type=None
     if "encoder_type" in yml_conf:
@@ -83,10 +79,7 @@ def heir_dc(yml_conf, dataset, ckpt_path):
     if encoder_type is not None and  "pca" in encoder_type:
         encoder = PCAEncoder()
 
-        use_wandb_logger = yml_conf["logger"]["use_wandb"]
-        if use_wandb_logger:
-            encoder_dir = os.path.join(yml_conf["output"]["out_dir"], yml_conf["logger"]["log_out_dir"])
-        encoder_dir = os.path.join(encoder_dir, "encoder")
+        encoder_dir = os.path.join(model_save_dir(yml_conf), "encoder")
 
         encoder.pca = joblib.load(os.path.join(encoder_dir, "pca.pkl"))
     if encoder_type is not None and  "dbn" in encoder_type:
@@ -174,29 +167,11 @@ def heir_dc(yml_conf, dataset, ckpt_path):
         tile_size = yml_conf["data"]["tile_size"][0]
 
  
-    lr = yml_conf["cluster"]["training"]["learning_rate"]
+    return encoder, encoder_type, in_chans, tile_size
 
-    heir_ckpt_path = os.path.join(save_dir, "heir_fc.ckpt")
-    if os.path.exists(heir_ckpt_path): #TODO make optional
-        model = Heir_DC(None, pretrained_model_path=ckpt_path, num_classes=num_classes_heir, yml_conf=yml_conf, \
-            encoder_type=encoder_type, encoder=encoder, clust_tree_ckpt = heir_ckpt_path, lr = lr)
-    else: 
-        model = Heir_DC(dataset, pretrained_model_path=ckpt_path, num_classes=num_classes_heir, yml_conf=yml_conf, \
-            encoder_type=encoder_type, encoder=encoder, lr = lr)
 
-    for param in model.pretrained_model.parameters():
-        param.requires_grad = False
-
-    lr_monitor = LearningRateMonitor(logging_interval="step")
-    model_summary = ModelSummary(max_depth=2)
- 
-    os.makedirs(save_dir, exist_ok=True)
-
-    count = 0 
-    num_loader_workers = int(yml_conf["data"]["num_loader_workers"])
-    val_percent = float(yml_conf["data"]["val_percent"])
-    batch_size = yml_conf["cluster"]["heir"]["training"]["batch_size"]
-
+def head_input_size(yml_conf, model, encoder):
+    """Input size of every child head (same for every parent key)."""
     # Head input size is the same for every key: compute it (and run get_output_shape) once.
     encoder_output_size = None
     n_visible = 0
@@ -227,6 +202,67 @@ def heir_dc(yml_conf, dataset, ckpt_path):
         encoder_output_size = (1, model.pretrained_model.pretrained_model.pca.components_.shape[0])
         n_visible = encoder_output_size[1]
     print("HERE ENCODER SHAPE", encoder_output_size)
+    return n_visible
+
+
+def heir_dc(yml_conf, dataset, ckpt_path):
+
+    use_wandb_logger = yml_conf["logger"]["use_wandb"]
+    log_model = None
+    save_dir = yml_conf["output"]["out_dir"]
+    project = None
+    if use_wandb_logger:
+        log_model = yml_conf["logger"]["log_model"]
+        save_dir = os.path.join(yml_conf["output"]["out_dir"], yml_conf["logger"]["log_out_dir"])
+        project = yml_conf["logger"]["project"]
+
+    full_model_dir = os.path.join(save_dir, "full_model")
+    save_dir = os.path.join(save_dir, "full_model_heir")
+    encoder_dir = os.path.join(save_dir, "encoder")
+
+    accelerator = yml_conf["cluster"]["heir"]["training"]["accelerator"]
+    devices = yml_conf["cluster"]["heir"]["training"]["devices"]
+    precision = yml_conf["cluster"]["heir"]["training"]["precision"]
+    max_epochs = yml_conf["cluster"]["heir"]["training"]["epochs"]
+    gradient_clip_val = yml_conf["encoder"]["training"]["gradient_clip_val"]
+    heir_model_tiers = yml_conf["cluster"]["heir"]["tiers"] #TODO incorporate
+    heir_gauss_stdev = yml_conf["cluster"]["heir"]["gauss_noise_stdev"] #TODO incorporate
+    lambda_iid = yml_conf["cluster"]["heir"]["lambda"] #TODO incorporate 
+
+    num_classes = yml_conf["cluster"]["num_classes"]
+ 
+    num_classes_heir = yml_conf["cluster"]["heir"]["num_classes"]
+    min_samples = yml_conf["cluster"]["heir"]["training"]["min_samples"]
+
+
+    ckpt_path = os.path.join(full_model_dir, "deep_cluster.ckpt")
+
+    encoder, encoder_type, in_chans, tile_size = load_frozen_encoder(yml_conf, dataset, accelerator)
+
+    lr = yml_conf["cluster"]["training"]["learning_rate"]
+
+    heir_ckpt_path = os.path.join(save_dir, "heir_fc.ckpt")
+    if os.path.exists(heir_ckpt_path): #TODO make optional
+        model = Heir_DC(None, pretrained_model_path=ckpt_path, num_classes=num_classes_heir, yml_conf=yml_conf, \
+            encoder_type=encoder_type, encoder=encoder, clust_tree_ckpt = heir_ckpt_path, lr = lr)
+    else: 
+        model = Heir_DC(dataset, pretrained_model_path=ckpt_path, num_classes=num_classes_heir, yml_conf=yml_conf, \
+            encoder_type=encoder_type, encoder=encoder, lr = lr)
+
+    for param in model.pretrained_model.parameters():
+        param.requires_grad = False
+
+    lr_monitor = LearningRateMonitor(logging_interval="step")
+    model_summary = ModelSummary(max_depth=2)
+ 
+    os.makedirs(save_dir, exist_ok=True)
+
+    count = 0 
+    num_loader_workers = int(yml_conf["data"]["num_loader_workers"])
+    val_percent = float(yml_conf["data"]["val_percent"])
+    batch_size = yml_conf["cluster"]["heir"]["training"]["batch_size"]
+
+    n_visible = head_input_size(yml_conf, model, encoder)
 
     subset_per_key = bool(yml_conf["cluster"]["heir"]["training"].get("subset_per_key", False))
 
@@ -338,6 +374,9 @@ def run_heir_training(yml_conf):
     training = yml_conf["cluster"]["heir"]["training"]
     apply_compute_limits(yml_conf, default_num_threads=5,
         num_processes=num_local_processes(training.get("devices", 1), training.get("accelerator", "auto")))
+
+    from sit_fuse.train.seeding import apply_seed
+    apply_seed(yml_conf, "heir")
 
     dataset = get_train_dataset_sf(yml_conf)
 

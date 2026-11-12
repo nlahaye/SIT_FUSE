@@ -32,6 +32,26 @@ import pickle
 
 
 
+def save_train_cache(out_dir, data, sampling=None):
+    """
+    Save the extracted training sample (data.sampling.cache_train: true) so that every later stage
+    (finetune_dc_mlp_head, train_child_heads, seed variants with seed_scope: model) loads exactly
+    the same samples instead of re-drawing them. Also writes train_data.files.json, mapping
+    train_data.indices[:, 0] to the scene files (for scene_split report).
+    """
+    import json
+    np.save(os.path.join(out_dir, "train_data.indices"), np.asarray(data.targets_full))
+    np.save(os.path.join(out_dir, "train_data"), np.asarray(data.data_full))
+    files = [f if isinstance(f, str) else list(f) for f in getattr(data, "filenames", [])]
+    meta = dict(files=files, scene_index=[list(map(int, t)) for t in getattr(data, "scene_index", [])],
+                seed=(getattr(data, "sampling", None) or {}).get("seed"),
+                pixel_padding=int(getattr(data, "pixel_padding", 0) or 0),
+                n_samples=int(np.asarray(data.data_full).shape[0]))
+    with open(os.path.join(out_dir, "train_data.files.json"), "w") as f:
+        json.dump(meta, f, indent=1)
+    print("Cached training sample:", os.path.join(out_dir, "train_data.npy"), meta["n_samples"], "samples")
+
+
 def get_train_dataset_sf(yml_conf):
     #Get config values 
     data_train = yml_conf["data"]["files_train"]
@@ -116,6 +136,8 @@ def get_train_dataset_sf(yml_conf):
                 valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
                 transform_values=transform_values, scaler = scaler, train_scaler = scaler_train, scale = scale_data, \
                 transform=None, subset_training = subset_training, stratify_data=stratify_data, sampling=sampling)
+            if sampling and sampling.get("cache_train"):
+                save_train_cache(out_dir, data, sampling)
         else:
             data = SFDataset()
             data.read_data_preprocessed(data_fname, targets_fname, scaler, subset_training = subset_training, stratify_data=stratify_data, \

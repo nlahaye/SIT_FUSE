@@ -1,0 +1,37 @@
+# Balanced, spatio-temporally stratified train / holdout scenes for the v2 CMEMS sharks scenes.
+# Run from src/sit_fuse after naturenet.environment.sync_v2_configs sitfuse (number_channels etc. filled):
+#   python -m sit_fuse.datasets.scene_split split -y config/split/shark_scene_split_v2.yaml
+# -> config/model/copernicus_shark_v2_split.yaml (train this one), plus a manifest + summary in output.dir.
+# After pretrain_encoder (data.sampling.cache_train: True), check the achieved sample balance:
+#   python -m sit_fuse.datasets.scene_split report -y config/split/shark_scene_split_v2.yaml
+scenes:
+  table: /data/nlahaye/NatureNet_Env/Copernicus/v2/sharks/sharks_scene_index.csv   # columns t, date, path, complete
+  path_column: path
+  filter: {complete: true}
+time:
+  column: date
+  # alternatives: attr: date (zarr attrs) | index_regex: "_t(\\d+)" + origin_json: .../sharks_env_meta.json, origin_key: time_start
+strata:
+  time_bins: [year, season]        # year | season | season_year | month | quarter | week | doy_bin:N
+  seasons: {DJF: [12, 1, 2], MAM: [3, 4, 5], JJA: [6, 7, 8], SON: [9, 10, 11]}
+  include_space: true              # no space key for the single-domain CMEMS grid
+split:
+  block_days: 14                   # contiguous 2-week units go wholly to train or holdout
+  test_fraction: 0.2
+  val_fraction: 0.0
+  buffer_days: 3                   # drop train scenes within 3 days of a holdout scene
+  balance: proportional            # proportional | equal (cap every stratum at the smallest)
+  max_train_scenes: null           # optional cap, temporally spaced within each stratum
+  min_units_for_test: 2
+  seed: 0
+output:
+  dir: /data/nlahaye/output/Learnergy/COP_SHARK_V2/scene_split/
+  tag: sharks
+  base_config: config/model/copernicus_shark_v2.yaml
+  derived_config: config/model/copernicus_shark_v2_split.yaml
+  files_test: all                  # NatureNet needs clusters for every scene; files_holdout lists the evaluation scenes
+  set_groups: true                 # data.sampling.groups = {basename: stratum}
+  sampling: {}                     # extra data.sampling keys, e.g. {spatial_block: 32, spatial_balance: 0.5}
+  train_dir: /data/nlahaye/output/Learnergy/COP_SHARK_V2/   # report: holds train_data.npy (output.out_dir)
+report:
+  spatial_block: 32

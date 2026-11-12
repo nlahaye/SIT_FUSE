@@ -1,6 +1,8 @@
 # v2 scenes / encoders.
-# Cluster stability across encoder runs (whales). Only if you trained more than one encoder (seeds / subsets):
-#   python -m sit_fuse.xai.cluster_stability -y config/xai/whale_cluster_stability_v2.yaml
+# Cluster stability across seed variants (whales). This file is the template; the runs are filled in by
+#   python -m sit_fuse.train.seed_variants stability -y config/seeds/whale_seed_variants_v2.yaml
+# which writes config/xai/whale_cluster_stability_v2_seeds.yaml (main + seed runs, holdout scenes present in every run),
+# then: python -m sit_fuse.xai.cluster_stability -y config/xai/whale_cluster_stability_v2_seeds.yaml
 # Every run lists one label raster per scene, same scenes in the same order.
 runs:
   seed0: []   # TODO: label rasters of run 1, e.g. <out_dir_seed0>/cop_env_whales_t9.zarr.clust.data_<K>clusters.zarr.full_geo.tif

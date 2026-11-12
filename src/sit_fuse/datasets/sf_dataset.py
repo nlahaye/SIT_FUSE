@@ -302,7 +302,7 @@ class SFDataset(torch.utils.data.Dataset):
 			if lab_fnames is not None:
 				lab_fnames = [lab_fnames[i] for i in idx]
 			self.filenames = fnames
-			group_of, group_sizes = ss.scene_groups(fnames, cfg.get("group_by"))
+			group_of, group_sizes = ss.scene_groups(fnames, cfg.get("group_by"), cfg.get("groups"))
 
 			def task(i):
 				dat = self.read_func(fnames[i], **self.read_func_kwargs)
@@ -334,7 +334,7 @@ class SFDataset(torch.utils.data.Dataset):
 		cfg = self.sampling
 		p = 0 if self.no_window else int(self.pixel_padding)
 		bad = ss.bad_pixel_mask(scene, fill_mode)
-		out = {"n_chan": scene.shape[2], "shape": scene.shape[:2]}
+		out = {"n_chan": scene.shape[2], "shape": scene.shape[:2], "file_idx": int(file_idx), "sub_idx": int(sub_idx)}
 		if self._fit_scaler:
 			out["fit_pix"] = scene[ss.scaler_pixel_mask(scene)]
 		valid = ss.valid_center_mask(bad, p)
@@ -362,10 +362,16 @@ class SFDataset(torch.utils.data.Dataset):
 		alpha = float(cfg.get("scene_balance") or 0.0)
 		w = (max(n_valid, 1) ** (-alpha)) / max(int(group_size), 1)
 		cap = cfg.get("max_samples_per_scene")
+		blk = ss.block_shape(cfg.get("spatial_block"))
+		beta = float(cfg.get("spatial_balance") or 0.0)
 		parts = []
 		for stratum, flat in groups:
 			k = min(len(flat), self._pool_cap if cap is None else min(self._pool_cap, int(cap)))
-			pick, keys = ss.draw_candidates(rng, len(flat), k, w)
+			if blk is not None and beta > 0:
+				# Spatial balance: same scene mass, spread across spatial blocks (scene_sampling.spatial_candidates).
+				pick, keys = ss.spatial_candidates(rng, flat, valid.shape, blk, beta, len(flat) * w, k)
+			else:
+				pick, keys = ss.draw_candidates(rng, len(flat), k, w)
 			if len(pick) == 0:
 				continue
 			sel = flat[pick]
@@ -400,6 +406,7 @@ class SFDataset(torch.utils.data.Dataset):
 		full_windows, full_targets = [], []
 		self.stratify_training = []
 		self.increment = 0
+		self.scene_index = []   # targets[:, 0] == r -> (file index into self.filenames, sub-scene index)
 		r = 0
 		total_valid = 0
 		stratum_pop = {}
@@ -431,6 +438,7 @@ class SFDataset(torch.utils.data.Dataset):
 						full_targets.append(tgt)
 					else:
 						pool.add(stratum, keys, win, tgt)
+				self.scene_index.append((sr.get("file_idx", r), sr.get("sub_idx", 0)))
 				print("SCENE", r, sr["shape"], "valid samples:", sr["n_valid"])
 				r += 1
 		self.chan_dim = 2 + self.increment

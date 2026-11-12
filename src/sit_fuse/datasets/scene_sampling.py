@@ -42,6 +42,11 @@ DEFAULTS = {
     "scene_balance": 0.0,          # 0 = every valid pixel equally likely (legacy),
                                    # 1 = every scene contributes ~equally, in between = mix
     "group_by": None,              # regex on file basename; balance groups (e.g. date/sensor)
+    "groups": None,                # {basename or path: group} (e.g. written by scene_split); overrides group_by
+    "spatial_block": None,         # int or [rows, cols]: block size (window-centre grid) for spatial balance
+    "spatial_balance": 0.0,        # 0 = blocks weighted by valid pixels (legacy), 1 = every block ~equal
+    "cache_train": False,          # save train_data.npy / .indices.npy / .files.json after the first build,
+                                   # so later stages (DC, child heads) and seed variants reuse the same sample
     "max_samples_per_scene": None, # hard cap on candidates from one scene
     "candidate_factor": 2.0,       # k-means candidate pool = factor x subset_training
     "kmeans_fit_samples": None,    # fit k-means on at most this many candidates
@@ -334,8 +339,31 @@ def _basename(f):
     return os.path.basename(str(f))
 
 
-def scene_groups(filenames, group_by):
-    """Group id per file (regex group 1, else whole match, else basename)."""
+def _group_from_map(groups, f):
+    """Look a file up in a {path or basename: group} map (path, then basename, then basename sans ext)."""
+    for k in (str(f) if not isinstance(f, (list, tuple)) else None, _basename(f)):
+        if k is not None and k in groups:
+            return str(groups[k])
+    b = _basename(f)
+    stem = b.split(".")[0]
+    if stem in groups:
+        return str(groups[stem])
+    return None
+
+
+def scene_groups(filenames, group_by, groups=None):
+    """
+    Group id per file. `groups` ({path or basename: group}, e.g. strata from scene_split) wins;
+    otherwise regex `group_by` on the basename (group 1, else whole match, else basename).
+    Files missing from `groups` form their own group "__other__".
+    """
+    if groups:
+        names = []
+        for f in filenames:
+            g = _group_from_map(groups, f)
+            names.append("__other__" if g is None else g)
+        uniq, inv = np.unique(np.array(names, dtype=object).astype(str), return_inverse=True)
+        return inv, np.bincount(inv, minlength=len(uniq))
     if not group_by:
         return np.zeros(len(filenames), dtype=np.int64), np.array([len(filenames)])
     pat = re.compile(group_by)
@@ -346,6 +374,64 @@ def scene_groups(filenames, group_by):
         names.append((m.group(1) if m.groups() else m.group(0)) if m else b)
     uniq, inv = np.unique(np.array(names, dtype=object).astype(str), return_inverse=True)
     return inv, np.bincount(inv, minlength=len(uniq))
+
+
+# --------------------------------------------------------------------------- #
+# Spatial balance within scenes
+# --------------------------------------------------------------------------- #
+def block_shape(spatial_block):
+    if spatial_block is None:
+        return None
+    if isinstance(spatial_block, (list, tuple)):
+        by, bx = int(spatial_block[0]), int(spatial_block[1])
+    else:
+        by = bx = int(spatial_block)
+    if by <= 0 or bx <= 0:
+        return None
+    return by, bx
+
+
+def block_ids(flat, grid_shape, blk):
+    """Spatial block id of each flat index on the (H, W) window-centre grid."""
+    rows, cols = np.divmod(flat, grid_shape[1])
+    nbx = -(-grid_shape[1] // blk[1])
+    return (rows // blk[0]) * nbx + (cols // blk[1])
+
+
+def spatial_candidates(rng, flat, grid_shape, blk, beta, scene_mass, k):
+    """
+    Weighted candidates over one scene's valid flat indices, balanced across spatial blocks.
+
+    The scene's total sampling mass `scene_mass` is split across its blocks in proportion to
+    n_b ** (1 - beta) (beta = 0: proportional to valid pixels, i.e. the legacy uniform weighting;
+    beta = 1: every block gets the same mass). Each pixel in block b gets weight
+    scene_mass * share_b / n_b, and Efraimidis-Spirakis keys are drawn per block (O(k_b)).
+    Because the block grid is the same for every scene on a common grid, block ids also index
+    the same locations across time. Returns (indices into flat, keys), at most k items.
+    """
+    n = len(flat)
+    k = int(min(k, n))
+    if k <= 0:
+        return np.empty(0, dtype=np.int64), np.empty(0, dtype=np.float64)
+    bid = block_ids(flat, grid_shape, blk)
+    ub, inv, cnt = np.unique(bid, return_inverse=True, return_counts=True)
+    share = cnt.astype(np.float64) ** (1.0 - float(beta))
+    share /= share.sum()
+    order = np.argsort(inv, kind="stable")
+    starts = np.concatenate([[0], np.cumsum(cnt)[:-1]])
+    picks, keys = [], []
+    for j in range(len(ub)):
+        members = order[starts[j]:starts[j] + cnt[j]]
+        w = float(scene_mass) * share[j] / cnt[j]
+        p, kk = draw_candidates(rng, len(members), min(k, len(members)), w)
+        picks.append(members[p])
+        keys.append(kk)
+    picks = np.concatenate(picks)
+    keys = np.concatenate(keys)
+    if len(keys) > k:
+        top = np.argpartition(-keys, k - 1)[:k]
+        picks, keys = picks[top], keys[top]
+    return picks, keys
 
 
 def iterate_parallel(func, items, n_jobs):

@@ -443,6 +443,10 @@ def run_pretraining(yml_conf):
     apply_compute_limits(yml_conf,
         num_processes=num_local_processes(training.get("devices", 1), training.get("accelerator", "auto")))
 
+    # Optional run seed (encoder/cluster training.seed or top-level seed; see sit_fuse.train.seeding).
+    from sit_fuse.train.seeding import apply_seed
+    apply_seed(yml_conf, "encoder")
+
     num_loader_workers = int(yml_conf["data"]["num_loader_workers"])
     val_percent = float(yml_conf["data"]["val_percent"])
     batch_size = yml_conf["encoder"]["training"]["batch_size"]    
