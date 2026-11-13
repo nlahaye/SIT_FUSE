@@ -192,6 +192,7 @@ def update_config_multi_hist(out_dir, config_dict, yml_conf, instrument, species
     config_dict["end_date"] = yml_conf["end_date"]
     config_dict["clusters_dir"] = out_dir
     config_dict["use_key"] = species_key
+    config_dict["save_hists"] = True
 
     config_dict["clusters"] = yml_conf["clusters"]
     config_dict["input_file_type"] = INSTRUMENT_PREFIX[instrument]
