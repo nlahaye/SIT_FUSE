@@ -133,6 +133,25 @@ opencv = "<5"                 # fiftyone requires opencv-python-headless<5
 [feature.viz.pypi-dependencies]
 fiftyone = "*"
 
+# NatureNet environment pipeline (naturenet.environment: cmems_env scenes, static layers, land jitter,
+# movement preprocessing, sample_env_inputs, seascapes; models.feature_rep.env_data_format).
+# Everything else it needs (xarray, dask, zarr<3, rasterio, gdal, scipy, opencv, boto3, ...) is in the base.
+[feature.naturenet.dependencies]
+copernicusmarine = ">=2.1"    # Copernicus Marine Toolbox 2.x (lazy ARCO open_dataset); numpy<2 above caps it at 2.3/2.4
+sparse = "*"                  # pydata sparse: movement grids / transition counts
+numcodecs = "*"               # Blosc zstd for the scene zarrs (installed with zarr; listed because it is imported)
+python-dateutil = "*"
+h5netcdf = "*"
+[feature.naturenet.target.linux-64.dependencies]
+py-spy = "*"                  # stall diagnosis for long CMEMS pulls (py-spy dump --pid)
+[feature.naturenet.target.linux-aarch64.dependencies]
+py-spy = "*"
+# NatureNet has no package metadata, so it is put on PYTHONPATH. Default checkout: next to SIT-FUSE;
+# override with `export NATURENET_ROOT=/path/to/NatureNet-main` before `pixi shell` / `pixi run`.
+[feature.naturenet.activation.env]
+NATURENET_ROOT = "${NATURENET_ROOT:-$PIXI_PROJECT_ROOT/../NatureNet-main}"
+PYTHONPATH = "$NATURENET_ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
+
 [feature.dev.dependencies]
 pytest = "*"
 ipykernel = "*"
@@ -140,13 +159,16 @@ jupyterlab = "*"
 
 # ---------------------------------------------------------------- environments
 [environments]
-default = { solve-group = "main" }
-full = { features = ["extras", "dev"], solve-group = "main" }
+default = { features = ["naturenet"], solve-group = "main" }
+full = { features = ["extras", "dev", "naturenet"], solve-group = "main" }
+sitfuse = { solve-group = "main" }    # SIT-FUSE only (no NatureNet extras); same versions as default
 viz = { features = ["viz"] }
 
 # ---------------------------------------------------------------- tasks
 [tasks]
 check = { cmd = "python -c \"import torch, osgeo.gdal as g, rasterio, pyhdf.SD, zarr, learnergy, segmentation, IJEPA, claymodel, sit_fuse.models.deep_cluster.heir_dc; print('torch', torch.__version__, 'cuda', torch.cuda.is_available(), torch.cuda.device_count()); print('gdal', g.__version__, 'zarr', zarr.__version__)\"" }
 gpu-check = { cmd = "python -c \"import torch; assert torch.cuda.is_available(), 'no CUDA'; print(torch.cuda.get_device_name(0), 'cc', torch.cuda.get_device_capability(0), 'built for', torch.cuda.get_arch_list()); x=torch.randn(4096,4096,device='cuda'); print('matmul ok', float((x@x).abs().mean()))\"" }
+nn-check = { cmd = "python -c \"import os, copernicusmarine, sparse, numcodecs, zarr, xarray, rasterio, naturenet.environment.cmems_env.pipeline as p, naturenet.environment.movement_preprocess_pipeline; print('copernicusmarine', copernicusmarine.__version__, 'zarr', zarr.__version__, 'xarray', xarray.__version__); print('naturenet from', os.path.dirname(p.__file__))\"" }
+cmems-env = { cmd = "python -m naturenet.environment.cmems_env.pipeline" }   # pixi run cmems-env all --config <yaml>
 infer = { cmd = "python src/sit_fuse/inference/generate_output.py" }
 train-dc = { cmd = "python src/sit_fuse/train/train_heirarchichal_deep_cluster.py" }
