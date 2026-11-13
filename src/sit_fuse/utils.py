@@ -466,7 +466,6 @@ def read_noaa_oisst_daily(filename, **kwargs):
         loc = read_nc_geo_sst(filename, **kwrg)
         lat = loc[0]
         lon = loc[1]
-        print(lat.shape, lon.shape, dat.shape)
         inds1 = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]))
         inds2 = np.where((lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
         lat = lat[inds1]
@@ -545,7 +544,6 @@ def read_copernicus_sss_ssd_daily(filename, **kwargs):
         loc = read_nc_geo_sss(filename, **kwrg)
         lat = loc[0]
         lon = loc[1]
-        print(lat.shape, lon.shape, dat.shape)
         inds1 = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]))
         inds2 = np.where((lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
         lat = lat[inds1]
@@ -614,7 +612,6 @@ def read_pace_oc(filename, **kwargs):
         data[invalid_data_ind] = -999999.0
     except AttributeError:
         pass
-    print(data.shape)
     data = np.moveaxis(data, 2,0)
     print(data.shape)
     dat = data.astype(np.float32)
@@ -623,7 +620,6 @@ def read_pace_oc(filename, **kwargs):
         loc = read_oc_geo(filename, **kwrg)
         lat = loc[0]
         lon = loc[1]
-        print(lat.shape, lon.shape, dat.shape)
         rows, cols = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]) & (lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
         row_bound = [min(rows), max(rows)]
         col_bound = [min(cols), max(cols)]
@@ -697,21 +693,21 @@ def read_s3_oc(filename, **kwargs):
             data[invalid_data_ind] = -999999.0
         except AttributeError:
             pass
-        print(data.shape)
         if data1 is None:
             data1 = np.zeros((len(vrs), data.shape[0], data.shape[1]))
         data1[i] = data
     dat = data1.astype(np.float32)
-
     if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs:
         loc = read_oc_geo(filename, **kwrg)
         lat = loc[0]
         lon = loc[1]
-        print(lat.shape, lon.shape, dat.shape)
         rows, cols = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]) & (lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
-        lat = lat[rows, cols]
-        lon = lon[rows, cols]
-        dat = dat[:, rows, cols]
+        row_bound = [min(rows), max(rows)]
+        col_bound = [min(cols), max(cols)]
+        lat = lat[row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]]
+        lon = lon[row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]]
+        dat = dat[:, row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]]
+
 
     #TODO Mask via shapefile
 
@@ -791,11 +787,11 @@ def read_viirs_oc(filename, **kwargs):
         data1.append(data)
     dat = np.array(data1).astype(np.float32)
 
+    print(dat.shape)
     if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs: 
         loc = read_oc_geo(filename, **kwrg)
         lat = loc[0]
         lon = loc[1]
-        print(lat.shape, lon.shape, dat.shape)
         rows, cols = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]) & (lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
         row_bound = [min(rows), max(rows)]
         col_bound = [min(cols), max(cols)]
@@ -1046,7 +1042,6 @@ def read_modis_oc(filename, **kwargs):
         loc = read_oc_geo(filename, **kwrg)
         lat = loc[0]
         lon = loc[1]
-        print(lat.shape, lon.shape, dat.shape)
         rows, cols = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]) & (lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
         row_bound = [min(rows), max(rows)]
         col_bound = [min(cols), max(cols)]
@@ -1059,7 +1054,6 @@ def read_modis_oc(filename, **kwargs):
 
     tmp1 = None
     tmp2 = None
-    print(lat.shape, lon.shape, dat.shape)
     if "mask_oceans" in kwargs:
         land_temp = ocean_basins_50.mask(lon, lat)
         land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
@@ -1544,7 +1538,6 @@ def read_noaa_water_mask_netcdf_geo(filename, **kwargs):
     dat2 = f.variables["lon"]
     lon = dat2[:]
     data1.append(lon)
-    print(lat.shape, lon.shape)
     #dat = np.array(data1)
 
     longr, latgr = np.meshgrid(lon, lat)
@@ -2118,7 +2111,6 @@ def read_oc_and_trop(fnames, **kwargs):
         loc = read_oc_geo(filename, **kwrg)
         lat = loc[0]
         lon = loc[1]
-        print(lat.shape, lon.shape, dat.shape)
         rows, cols = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]) & (lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
         row_bound = [min(rows), max(rows)]
         col_bound = [min(cols), max(cols)]
