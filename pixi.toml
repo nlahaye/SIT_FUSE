@@ -96,10 +96,6 @@ ijepa = { git = "https://github.com/nlahaye/I-JEPA", branch = "main" }
 # SIT-FUSE itself (pulls myosuite, gymnasium, timeshap, shap from pyproject.toml)
 sit_fuse = { path = ".", editable = true }
 
-# ssm's setup.py needs numpy + Cython at build time: build it against this env, not an isolated one
-[pypi-options]
-no-build-isolation = ["ssm"]
-
 # ---------------------------------------------------------------- torch per platform
 [target.linux-64-cuda.dependencies]
 pytorch-gpu = "*"
@@ -146,11 +142,11 @@ sparse = "*"                  # pydata sparse: movement grids / transition count
 numcodecs = "*"               # Blosc zstd for the scene zarrs (installed with zarr; listed because it is imported)
 python-dateutil = "*"
 h5netcdf = "*"
-# build + runtime deps of the ssm fork (NatureNet ARHMM / SWIRL). Its setup.py imports numpy and Cython
-# and compiles a C++ extension, without a pyproject build-system, so it is built in this env (see pypi-options).
+# ssm fork (NatureNet ARHMM / SWIRL): runtime dep from conda, and the C++ compiler for its Cython extension.
+# The fork's pyproject.toml builds ssm.cstats in an isolated env against NumPy 2, which also runs on the
+# NumPy 1.x pinned above. (A build against the env's NumPy 1.x would be cached by commit and then fail to
+# import in any NumPy-2 env: "numpy.core.multiarray failed to import".)
 autograd = "*"
-cython = "*"
-setuptools = "*"
 cxx-compiler = "*"
 [feature.naturenet.pypi-dependencies]
 ssm = { git = "https://github.com/nlahaye/ssm", branch = "master" }   # coupled / kinematic classes, ssm.swirl
@@ -163,6 +159,7 @@ py-spy = "*"
 [feature.naturenet.activation.env]
 NATURENET_ROOT = "${NATURENET_ROOT:-$PIXI_PROJECT_ROOT/../NatureNet-main}"
 PYTHONPATH = "$NATURENET_ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
+PYTHONNOUSERSITE = "1"        # ignore ~/.local site-packages (e.g. an ssm or numpy built for another env)
 
 [feature.dev.dependencies]
 pytest = "*"
@@ -181,6 +178,7 @@ viz = { features = ["viz"] }
 check = { cmd = "python -c \"import torch, osgeo.gdal as g, rasterio, pyhdf.SD, zarr, learnergy, segmentation, IJEPA, claymodel, sit_fuse.models.deep_cluster.heir_dc; print('torch', torch.__version__, 'cuda', torch.cuda.is_available(), torch.cuda.device_count()); print('gdal', g.__version__, 'zarr', zarr.__version__)\"" }
 gpu-check = { cmd = "python -c \"import torch; assert torch.cuda.is_available(), 'no CUDA'; print(torch.cuda.get_device_name(0), 'cc', torch.cuda.get_device_capability(0), 'built for', torch.cuda.get_arch_list()); x=torch.randn(4096,4096,device='cuda'); print('matmul ok', float((x@x).abs().mean()))\"" }
 nn-check = { cmd = "python -c \"import os, ssm, copernicusmarine, sparse, numcodecs, zarr, xarray, rasterio, naturenet.environment.cmems_env.pipeline as p, naturenet.environment.movement_preprocess_pipeline, ssm.cstats; from ssm.swirl import ARHMMs; print('copernicusmarine', copernicusmarine.__version__, 'zarr', zarr.__version__, 'xarray', xarray.__version__); print('naturenet from', os.path.dirname(p.__file__))\"" }
+ssm-check = { cmd = "python -c \"import sys, numpy; print('python', sys.executable); print('numpy', numpy.__version__, numpy.__file__); import ssm; print('ssm', ssm.__file__); import ssm.cstats as c; print('cstats', c.__file__, 'OK')\"" }
 cmems-env = { cmd = "python -m naturenet.environment.cmems_env.pipeline" }   # pixi run cmems-env all --config <yaml>
 infer = { cmd = "python src/sit_fuse/inference/generate_output.py" }
 train-dc = { cmd = "python src/sit_fuse/train/train_heirarchichal_deep_cluster.py" }
