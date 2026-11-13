@@ -402,9 +402,11 @@ def export_model(cfg: dict, model: str, layer_dir: Path, out_dir: Path, records:
         rpath = out_dir / "rasters" / f"{model}_{pid}.tif"
         if rcfg.get("enabled", True):
             tags = {**{k: v for k, v in meta.items() if v is not None}, "georef_source": src,
-                    "threshold": manifest.get("threshold"),
+                    "threshold": scene.get("threshold", manifest.get("threshold")),
+                    "threshold_group": scene.get("threshold_group"),
                     "selective_measure": (manifest.get("selective") or {}).get("measure"),
                     "head_outputs": scene.get("head_outputs")}
+            tags = {k: v for k, v in tags.items() if v is not None}
             write_scene_raster(rpath, {n: arrays[n] for n in names}, tg, tags, bool(rcfg.get("cog", True)))
             written.append(str(rpath))
 

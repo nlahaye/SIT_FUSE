@@ -2,15 +2,18 @@ context:
   apply_context: true
   background_class: 1
   clusters:
-  - - 0.36
   - []
-  - - 0.153
+  - - 0.143
+  - - 0.215
     - 0.25
     - 0.292
+    - 0.36
+    - 0.517
+  - - 0.153
     - 0.314
-    - 0.557
-  - - 0.399
+    - 0.399
     - 0.429
+    - 0.557
   - []
   - []
   compare_truth: false

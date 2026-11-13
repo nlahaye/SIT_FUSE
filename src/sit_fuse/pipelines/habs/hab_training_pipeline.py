@@ -27,7 +27,7 @@ def run_hab_training_pipeline(yml_conf):
  
     configs = run_data_preprocessing(yml_conf)
 
-    run_model_training(yml_conf, configs)
+    #run_model_training(yml_conf, configs)
 
 
 if __name__ == '__main__':

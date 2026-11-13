@@ -581,51 +581,105 @@ def read_copernicus_sss_ssd_daily(filename, **kwargs):
     return dat
 
 
-def read_pace_oc(filename, **kwargs):
+# Target size of each block read from the PACE file (bytes of working memory, approx.).
+_PACE_OC_BLOCK_BYTES = 256 * 1024 ** 2
+# Approx. working bytes per element in a block: raw int16 (2) + float16 copy (2)
+# + valid/invalid masks (2) + float16 temporaries (2) + float32 output cast (4).
+_PACE_OC_BYTES_PER_ELEM = 12
 
-    vrs = ["RRS.V3_0.Rrs"]
+
+def _pace_oc_scale_block(raw, ref):
+    """Scale one raw block exactly as the original whole-array code did.
+
+    Values are cast to float16 first, compared against valid_min/valid_max,
+    scaled and offset in float16, and invalid values set to -999999.0
+    (which is -inf in float16). Results are bit-identical to the original.
+    """
+    data = raw.astype(np.float16)
+    try:
+        valid = (data >= ref.valid_min) & (data <= ref.valid_max)
+        invalid = (data < ref.valid_min) | (data > ref.valid_max)
+        try:
+            data[valid] = data[valid] * ref.scale_factor
+        except AttributeError:
+            pass
+        try:
+            data[valid] = data[valid] + ref.add_offset
+        except AttributeError:
+            pass
+        data[invalid] = -999999.0
+    except AttributeError:
+        pass
+    return data
+
+
+def read_pace_oc(filename, **kwargs):
+    vrs = ["AOP.V3_2"] #["RRS.V3_0.Rrs"]
+    internal_vars = ["Rrs"]
     kwrg = {}
-    data = None
 
     base = filename + vrs[0] + ".4km"
     flename = base + ".nc"
     if not os.path.exists(flename) and kwargs.get("nrt", False):
         flename = base + ".NRT.nc"
         kwrg["nrt"] = True
-    start_ind = 9
-    print(flename, vrs[0][start_ind:])
-    f = Dataset(flename)
-    f.set_auto_maskandscale(False)
-    ref = f.variables[vrs[0][start_ind:]]
-    data = ref[:].astype(np.float32)
-    try:
-        valid_data_ind = np.where((data >= ref.valid_min) & (data <= ref.valid_max))
-        invalid_data_ind = np.where((data < ref.valid_min) | (data > ref.valid_max))
-        try:
-            data[valid_data_ind] = data[valid_data_ind] * ref.scale_factor
-        except AttributeError:
-            pass
-        try:
-             data[valid_data_ind] = data[valid_data_ind] + ref.add_offset
-        except AttributeError:
-            pass
-        data[invalid_data_ind] = -999999.0
-    except AttributeError:
-        pass
-    data = np.moveaxis(data, 2,0)
-    print(data.shape)
-    dat = data.astype(np.float32)
+    print(flename, internal_vars[0])
 
-    if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs:
-        loc = read_oc_geo(filename, **kwrg)
-        lat = loc[0]
-        lon = loc[1]
-        rows, cols = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]) & (lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
-        row_bound = [min(rows), max(rows)]
-        col_bound = [min(cols), max(cols)]
-        lat = lat[row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]]
-        lon = lon[row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]]
-        dat = dat[:, row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]]
+    has_geo = "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs
+    has_lines = "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs
+
+    with Dataset(flename) as f:
+        f.set_auto_maskandscale(False)
+        ref = f.variables[internal_vars[0]]
+        n_rows, n_cols, n_bands = ref.shape
+        print(tuple(ref.shape))
+        print((n_bands, n_rows, n_cols))
+
+        # Work out the final window before reading, so only that window is loaded.
+        # range slicing follows the same rules as numpy slicing (negatives, clipping).
+        rows, cols = range(n_rows), range(n_cols)
+        if has_geo:
+            loc = read_oc_geo(filename, **kwrg)
+            lat = loc[0]
+            lon = loc[1]
+            print(lat.shape, lon.shape, (n_bands, n_rows, n_cols))
+            # one in-place boolean grid; the bounds equal min/max of np.where's row and col indices
+            sel = lat >= kwargs["start_lat"]
+            sel &= lat <= kwargs["end_lat"]
+            sel &= lon >= kwargs["start_lon"]
+            sel &= lon <= kwargs["end_lon"]
+            r_ind = np.flatnonzero(sel.any(axis=1))
+            c_ind = np.flatnonzero(sel.any(axis=0))
+            del sel
+            row_bound = [min(r_ind), max(r_ind)]
+            col_bound = [min(c_ind), max(c_ind)]
+            del r_ind, c_ind
+            # copies, so the full-grid lat/lon arrays can be freed
+            lat = np.array(lat[row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]])
+            lon = np.array(lon[row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]])
+            del loc
+            rows = rows[row_bound[0]:row_bound[1]]
+            cols = cols[col_bound[0]:col_bound[1]]
+
+        line_sl = slice(None)
+        samp_sl = slice(None)
+        if has_lines:
+            line_sl = slice(kwargs["start_line"], kwargs["end_line"])
+            samp_sl = slice(kwargs["start_sample"], kwargs["end_sample"])
+        out_rows = rows[line_sl]
+        out_cols = cols[samp_sl]
+
+        dat = np.empty((n_bands, len(out_rows), len(out_cols)), dtype=np.float32)
+        if dat.size > 0:
+            c0, c1 = out_cols.start, out_cols.stop
+            row_bytes = max(1, len(out_cols) * n_bands * _PACE_OC_BYTES_PER_ELEM)
+            block = max(1, _PACE_OC_BLOCK_BYTES // row_bytes)
+            for b0 in range(0, len(out_rows), block):
+                b1 = min(b0 + block, len(out_rows))
+                raw = ref[out_rows.start + b0:out_rows.start + b1, c0:c1, :]
+                # float16 -> float32 cast happens on assignment, as in data.astype(np.float32)
+                dat[:, b0:b1, :] = np.moveaxis(_pace_oc_scale_block(raw, ref), 2, 0)
+                del raw
 
     #TODO Mask via shapefile
 
@@ -650,10 +704,9 @@ def read_pace_oc(filename, **kwargs):
 
     if final_mask is not None:
         print(final_mask)
-        dat[:,final_mask] = -999999
+        # the mask covers the lat/lon window; trim it to the line/sample window already applied
+        dat[:, np.asarray(final_mask)[line_sl, samp_sl]] = -999999
 
-    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
-        dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
     return dat
 
 
@@ -961,39 +1014,32 @@ def read_oc_geo(filename, **kwargs):
     if not os.path.exists(flename) and kwargs.get("nrt", False):
         flename = base + ".NRT.nc"
 
-    f = Dataset(flename)
-    f.set_auto_maskandscale(False)
     data1 = []
-    for i in range(len(vrs)):
-        ref = f.variables[vrs[i]]
-        data = ref[:].astype(np.float32)
-        valid_data_ind = np.where((data >= ref.valid_min) & (data <= ref.valid_max))
-        invalid_data_ind = np.where((data < ref.valid_min) | (data > ref.valid_max))
-        data[invalid_data_ind] = -999999.0
-        data1.append(data)
-    #longr, latgr = np.meshgrid(data1[1], data1[0])
-    #dat = np.array([longr, latgr]).astype(np.float32)
+    with Dataset(flename) as f:
+        f.set_auto_maskandscale(False)
+        for i in range(len(vrs)):
+            ref = f.variables[vrs[i]]
+            data = ref[:].astype(np.float32)
+            data[(data < ref.valid_min) | (data > ref.valid_max)] = -999999.0
+            data1.append(data)
+
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
         data1[0] = data1[0][kwargs["start_line"]:kwargs["end_line"]]
         data1[1] = data1[1][kwargs["start_sample"]:kwargs["end_sample"]]
 
+    lat = data1[0]
+    lon = data1[1]
     if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs:
-        inds1 = np.where((data1[0] >= kwargs["start_lat"]) & (data1[0] <= kwargs["end_lat"]))
-        inds2 = np.where((data1[1] >= kwargs["start_lon"]) & (data1[1] <= kwargs["end_lon"]))
-        lat = data1[0]
-        lon = data1[1]
+        # select the 1-D coordinates first, then fill only the selected 2-D grid
+        lat = lat[(lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"])]
+        lon = lon[(lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"])]
 
-
-        nind2, nind1 = np.meshgrid(inds2, inds1)
-        lon1, lat1 = np.meshgrid(lon, lat)    
-    
-        data1 = np.array([lat1,lon1]) 
-
-        data1 = data1[:, nind1,nind2]
-    else:
-        longr, latgr = np.meshgrid(data1[1], data1[0])
-        data1 = np.array([latgr, longr]).astype(np.float32) 
-    return data1
+    # (2, n_lat, n_lon) float32: [0] = lat repeated along columns, [1] = lon repeated along rows.
+    # Filled by broadcasting, so no meshgrid copies, stacked copy or index grids are made.
+    out = np.empty((2, lat.shape[0], lon.shape[0]), dtype=np.float32)
+    out[0] = lat[:, None]
+    out[1] = lon[None, :]
+    return out
 
 
 def read_modis_oc(filename, **kwargs):
@@ -1701,7 +1747,7 @@ def read_gtiff_generic(flename, **kwargs):
 	return dat
 
 #TODO generalize pieces for other tasks
-def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n_clusters, radius_degrees, ranges, global_max, input_file_type, karenia, discard_lower=False, use_key='Total_Phytoplankton', output_dir="."): #, lookup = {}):
+def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n_clusters, radius_degrees, ranges, global_max, input_file_type, karenia, discard_lower=False, use_key='Total_Phytoplankton', output_dir=".", dates=None): #, lookup = {}):
 
     os.makedirs(output_dir, exist_ok=True)
     #print(insitu_fname)
@@ -1726,6 +1772,9 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
     
 
     insitu_df = insitu_df[(insitu_df['Datetime'] >= start_date) & (insitu_df['Datetime'] <= end_date)] 
+    if dates is not None:
+        # Restrict to days of a scene split (YYYYMMDD), e.g. train days for context assignment
+        insitu_df = insitu_df[insitu_df['Datetime'].dt.strftime('%Y%m%d').isin(set(str(d) for d in dates))]
 
     uniques = sorted(np.unique(insitu_df['Datetime'].values))
 

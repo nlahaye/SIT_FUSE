@@ -1,16 +1,25 @@
 
+
+
+if __name__ == "__main__":
+    from sit_fuse.compute_resources import limit_env_from_argv
+    limit_env_from_argv()
+
 import argparse
 
 from sit_fuse.utils import read_yaml
 from sit_fuse.pipelines.habs.hab_post_inference_pipeline import run_hab_post_inference_pipeline
 from sit_fuse.pipelines.habs.hab_training_utils import run_data_preprocessing
 
+from sit_fuse.compute_resources import apply_compute_limits, add_num_threads_arg, apply_num_threads_arg
 from sit_fuse.pipelines.inference.inference_utils import run_inference_only, update_config_inference, run_prediction, build_config_fname_inference
 
 import yaml
 import copy
 
 def run_multi_sensor_hab_inference(yml_conf):
+
+    apply_compute_limits(yml_conf)
  
     if yml_conf["run_inference"]:
         config_dicts = run_data_preprocessing(yml_conf)
@@ -40,9 +49,12 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-y", "--yaml", help="YAML file for fusion info.")
-    args = parser.parse_args()
 
     #Translate config to dictionary 
+    add_num_threads_arg(parser)
+    args = parser.parse_args()
+    apply_num_threads_arg(args)
+ 
     yml_conf = read_yaml(args.yaml)
 
     run_multi_sensor_hab_inference(yml_conf)

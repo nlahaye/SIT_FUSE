@@ -17,4 +17,4 @@ ranges:
 save_hists: false
 start_date: '2024-03-01'
 use_key: Total_Phytoplankton
-xl_fname: /mnt/data1/la_hab_data/combined_full_071426.csv
+xl_fname: /mnt/data1/habs/insitu_augmented/combined_augmented_strict.csv

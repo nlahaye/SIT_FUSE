@@ -15,9 +15,9 @@ fusion:
 high_res:
   data:
     chan_dim: 0
-    filenames: []
+    filenames:[]
     geo_coord_dim: 2
-    geo_filenames: []
+    geo_filenames:[]
     geo_lat_index: 0
     geo_lon_index: 1
     geo_reader_kwargs:
@@ -31,9 +31,9 @@ high_res:
 low_res:
   data:
     chan_dim: 2
-    filenames: []
+    filenames:[]
     geo_coord_dim: 2
-    geo_filenames: []
+    geo_filenames:[]
     geo_lat_index: 0
     geo_lon_index: 1
     geo_reader_kwargs:
@@ -43,5 +43,5 @@ low_res:
       none: None
     reader_type: zarr_to_numpy
     valid_max: 99999999999
-    valid_min: -100.0
-output_files: []
+    valid_min: !!float'-100.0'
+output_files:[]

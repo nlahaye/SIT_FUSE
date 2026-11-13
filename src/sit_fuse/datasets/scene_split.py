@@ -52,6 +52,7 @@ YAML (see config/split/*.yaml):
     balance: proportional      # proportional | equal
     max_train_scenes: null
     min_units_for_test: 2      # strata with fewer units stay all-train (flagged in the summary)
+    pin: {}                    # {train|val|test|excluded: [YYYY-MM-DD, ...]} fixed roles for whole days
     seed: 0
   output:
     dir: /path/split
@@ -129,6 +130,9 @@ def load_scenes(sc):
         pc = sc.get("path_column", "path")
         for r in rows:
             r["path"] = r[pc]
+            # multi-file scenes (e.g. [oc_prefix, trop_fname]) are stored as JSON lists, as in the manifest
+            if isinstance(r["path"], str) and r["path"].lstrip().startswith("["):
+                r["path"] = json.loads(r["path"])
     else:
         files = []
         if sc.get("from_config"):
@@ -314,8 +318,19 @@ def split_scenes(scenes, conf):
     rng = np.random.default_rng(int(conf.get("seed", 0)))
     test_f, val_f = float(conf.get("test_fraction", 0.2)), float(conf.get("val_fraction", 0.0))
     min_units = int(conf.get("min_units_for_test", 2))
+    # split.pin: {train|val|test|excluded: [dates]} fixes the role of those days (e.g. days an
+    # existing encoder was trained on -> train); the remaining days are drawn as usual.
+    pinned = {}
+    for role, days in (conf.get("pin") or {}).items():
+        if role not in ("train", "val", "test", "excluded"):
+            raise ValueError("split.pin: unknown role %s" % role)
+        for d in days or []:
+            pinned[_parse_date(d)] = role
     units = OrderedDict()
     for i, s in enumerate(scenes):
+        if s["date"] in pinned:
+            s["split"] = pinned[s["date"]]
+            continue
         units.setdefault(s["stratum"], OrderedDict()).setdefault(s["unit"], []).append(i)
     flags = {}
     for st, us in units.items():
@@ -331,7 +346,7 @@ def split_scenes(scenes, conf):
             val = set(hold[j] for j in rng.permutation(len(hold))[:max(n_val, 0)])
             for u in hold:
                 role[u] = "val" if u in val else "test"
-        else:
+        elif test_f > 0 or val_f > 0:
             flags[st] = "too_few_units_all_train"
         for u in keys:
             for i in us[u]:
@@ -347,7 +362,7 @@ def split_scenes(scenes, conf):
             held[sp] = np.sort(np.asarray(held[sp]))
         for s in scenes:
             h = held.get(s.get("space"))
-            if s["split"] == "train" and h is not None and len(h):
+            if s["split"] == "train" and s["date"] not in pinned and h is not None and len(h):
                 t = s["date"].toordinal()
                 j = np.searchsorted(h, t)
                 d = min(abs(t - h[min(j, len(h) - 1)]), abs(t - h[max(j - 1, 0)]))
@@ -356,7 +371,7 @@ def split_scenes(scenes, conf):
 
     by = OrderedDict()
     for i, s in enumerate(scenes):
-        if s["split"] == "train":
+        if s["split"] == "train" and s["date"] not in pinned:      # pinned roles are final
             by.setdefault(s["stratum"], []).append(i)
     for st in by:
         by[st].sort(key=lambda i: scenes[i]["date"])

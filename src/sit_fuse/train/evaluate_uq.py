@@ -86,6 +86,9 @@ from sf_uq_utils import (
     reliability_table,
     risk_coverage,
     save_json,
+    select_threshold,
+    select_threshold_multiclass,
+    threshold_grid,
 )
 
 LOG = logging.getLogger("evaluate-uq")
@@ -271,6 +274,7 @@ def subsample(d, n, rng):
 
 def _take(d, idx, scale=1.0):
     return {"P": d["P"][idx], "w": d["w"][idx] * scale, "pred": d["pred"][idx],
+            "thr": None if d.get("thr") is None else d["thr"][idx],
             "unc": {k: v[idx] for k, v in d["unc"].items()},
             "quant": {c: {q: a[idx] for q, a in qs.items()} for c, qs in d["quant"].items()},
             "flag": None if d["flag"] is None else d["flag"][idx],
@@ -288,6 +292,8 @@ def concat(parts):
         "P": np.concatenate([p["P"] for p in parts]),
         "w": np.concatenate([p["w"] for p in parts]),
         "pred": np.concatenate([p["pred"] for p in parts]),
+        "thr": (np.concatenate([p["thr"] for p in parts])
+                if all(p.get("thr") is not None for p in parts) else None),
         "unc": {k: np.concatenate([p["unc"][k] for p in parts]) for k in ukeys},
         "quant": {c: {q: np.concatenate([p["quant"][c][q] for p in parts]) for q in parts[0]["quant"][c]}
                   for c in qkeys},
@@ -434,6 +440,8 @@ def evaluate_block(d, ref_key, C, thr, target_error=None, full=True):
     if m.sum() < 10:
         return None, pd.DataFrame()
     P, ref, w = d["P"][m], ref_all[m], d["w"][m]
+    if d.get("thr") is not None:   # per-pixel (group / per-scene) thresholds
+        thr = d["thr"][m]
     pred = decide(P, thr)
     Y = np.eye(C)[ref]
     out = probability_metrics(P, ref, Y, w, C, threshold=thr)
@@ -980,6 +988,66 @@ def plot_outputs(out_dir, rel_rows, curves, data, overall, scene_df, C):
         plt.close(fig)
 
 
+def threshold_diagnostics(parts, C, thr, manifest, cfg, ev):
+    """
+    Per-group (event / season) cutoff diagnostic on the evaluated scenes:
+      applied   F1 / IoU at the thresholds used by the products (group or pooled)
+      pooled    F1 / IoU at the single pooled threshold
+      oracle    best F1 / IoU over the threshold grid, chosen on these scenes:
+                an optimistic upper bound (tests whether any cutoff separates
+                fire from background), not a skill estimate
+      chance    F1 of a random mask with the reference prevalence
+    Groups: evaluation.threshold_diagnostics.groups (default: the training
+    calibration.threshold_groups, else split_stratum event prefix).
+    """
+    tcfg = ev.get("threshold_diagnostics", {})
+    if tcfg is False or thr is None:
+        return None
+    tcfg = tcfg if isinstance(tcfg, dict) else {}
+    gcfg = (tcfg.get("groups") or manifest.get("threshold_groups")
+            or {"column": "split_stratum", "sep": "|", "index": 0})
+    metric = str(tcfg.get("metric", (cfg.get("calibration", {}) or {}).get("threshold_metric", "f1")))
+    metric = metric if metric in ("f1", "iou") else "f1"
+    grid = threshold_grid(tcfg.get("threshold_grid", (cfg.get("calibration", {}) or {}).get("threshold_grid")))
+    keys = [conformal_group_key(p["meta"], gcfg) for p in parts]
+    out = {"groups_config": gcfg, "metric": metric,
+           "note": "oracle_* thresholds are chosen on the evaluated scenes (upper bound only)", "groups": {}}
+    for g in sorted({k for k in keys if k is not None}):
+        sub = concat([p for p, k in zip(parts, keys) if k == g])
+        m = sub["refs"]["primary"] >= 0
+        P, ref, w = sub["P"][m], sub["refs"]["primary"][m], sub["w"][m]
+        pos = ref != 0
+        if not pos.any() or pos.all():
+            out["groups"][g] = {"n_scenes": int(sum(k == g for k in keys)),
+                                "positive_weight": float(w[pos].sum()), "skipped": "single class"}
+            continue
+        t_app = thr if sub.get("thr") is None else sub["thr"][m]
+        score = lambda pred: hard_metrics(pred, ref, w, C)[f"target_macro_{metric}"]
+        if C == 2:
+            t_or, s_or = select_threshold(P[:, 1], ref, w, metric, grid=grid)
+        else:
+            t_or, s_or = select_threshold_multiclass(P, ref, w, metric, grid=grid)
+        prev = float(np.average(pos, weights=w))
+        sc = 1.0 - P[:, 0]
+        out["groups"][g] = {
+            "n_scenes": int(sum(k == g for k in keys)),
+            "positive_weight": float(w[pos].sum()), "prevalence": prev,
+            "pr_auc": float(average_precision_score(pos, sc, sample_weight=w)),
+            "pr_auc_over_prevalence": float(average_precision_score(pos, sc, sample_weight=w) / max(prev, 1e-12)),
+            "roc_auc": float(roc_auc_score(pos, sc, sample_weight=w)),
+            "applied_threshold": (float(np.median(t_app)) if isinstance(t_app, np.ndarray) else float(t_app)),
+            f"applied_{metric}": float(score(decide(P, t_app))),
+            "pooled_threshold": float(thr), f"pooled_{metric}": float(score(decide(P, thr))),
+            "oracle_threshold": float(t_or), f"oracle_{metric}": float(s_or),
+            "chance_f1": float(2 * prev / (1 + prev)),
+        }
+        LOG.info("Cutoff diagnostic [%s]: applied %s=%.3f (t=%.3g), pooled %.3f, oracle %.3f (t=%.3g), "
+                 "PR-AUC/prevalence=%.1f", g, metric, out["groups"][g][f"applied_{metric}"],
+                 out["groups"][g]["applied_threshold"], out["groups"][g][f"pooled_{metric}"], s_or, t_or,
+                 out["groups"][g]["pr_auc_over_prevalence"])
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Driver
 # ---------------------------------------------------------------------------
@@ -1021,6 +1089,9 @@ def evaluate_model(cfg, model):
         d = sample_scene(sc, max_px, rng, C)
         if (d["refs"]["primary"] >= 0).sum() == 0:
             continue
+        # decision threshold of this scene (group threshold from inference, else pooled)
+        thr_s = s.get("threshold", thr)
+        d["thr"] = None if thr_s is None else np.full(d["P"].shape[0], float(thr_s))
         if levels:
             add_level_reference(d, levels)
             scenes_attached.append(set(s.get("additional_references") or {}))
@@ -1073,7 +1144,9 @@ def evaluate_model(cfg, model):
     allp = concat(parts)
 
     summary = {"model": model, "threshold": thr, "splits": splits, "n_scenes": len(parts),
-               "n_groups": len(boot_parts), "selective_rule": manifest.get("selective")}
+               "n_groups": len(boot_parts), "selective_rule": manifest.get("selective"),
+               "threshold_groups": manifest.get("threshold_groups"),
+               "thresholds_by_group": manifest.get("thresholds_by_group") or None}
     summary["overall"], curves = evaluate_block(allp, "primary", C, thr, target_error)
     curves.to_csv(eval_dir / "risk_coverage.csv", index=False)
     summary["discrete_full_resolution"] = pooled_full(per_counts, C, tols)
@@ -1206,7 +1279,11 @@ def evaluate_model(cfg, model):
     elif B > 0:
         LOG.warning("Bootstrap CIs need >= 2 evaluation groups; skipped.")
 
-    allp["err"] = (decide(allp["P"], thr) != allp["refs"]["primary"]).astype(int)
+    td = threshold_diagnostics(parts, C, thr, manifest, cfg, ev)
+    if td:
+        summary["threshold_diagnostics"] = td
+    allp["err"] = (decide(allp["P"], thr if allp.get("thr") is None else allp["thr"])
+                   != allp["refs"]["primary"]).astype(int)
     plot_outputs(eval_dir, rel_rows, curves, allp, summary["overall"], scene_df, C)
     save_json(eval_dir / "eval_summary.json", summary)
     o = summary["overall"]

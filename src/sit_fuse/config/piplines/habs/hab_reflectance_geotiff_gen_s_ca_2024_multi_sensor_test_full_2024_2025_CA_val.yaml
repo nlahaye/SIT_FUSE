@@ -15,6 +15,40 @@ clusters: 120000
 roi: "california"
 
 final_product_dir: "/mnt/data1/HAB_COMBINED_2024_2025_SPLIT/MERGED_TEST_FULL_2/"
+
+# Spatio-temporally stratified day split (sit_fuse.datasets.scene_split via
+# pipelines/habs/hab_scene_split.py), shared by all sensors. Context assignment
+# uses train days, validation uses held-out (test) days, uq.splits follows the
+# same days. The manifest is reused once written; keep it shared with the
+# training and _val configs so every stage sees the identical split.
+scene_split:
+  enabled: true
+  manifest: "/mnt/data1/HAB_COMBINED_2024_2025_SPLIT/scene_split/hab_ca_2024_2025_scene_split.csv"
+  regenerate: false
+  dates_from: auto           # inputs (input_oc_dir) when present, else inference out_dir
+  date_range: ["2024-01-01", "2025-04-01"]   # covers uq start/end; context/validation also clip to start_date/end_date
+  strata:
+    time_bins: [season_year]
+  split:
+    block_days: 14
+    test_fraction: 0.2
+    val_fraction: 0.0        # > 0 gives UQ calibration days unseen by context assignment
+    buffer_days: 3
+    balance: proportional
+    min_units_for_test: 2
+    seed: 0
+  output:
+    dir: "/mnt/data1/HAB_COMBINED_2024_2025_SPLIT/scene_split/"
+    tag: hab_ca_2024_2025
+  context_splits: [train]
+  validation_splits: [test]
+  uq: true
+  files_test: rest           # training: inference covers files_train + files_test = all days
+  sampling:
+    scene_balance: 0.5
+    spatial_block: 32
+    spatial_balance: 0.5
+    seed: 0
  
 instruments: 
  pace:

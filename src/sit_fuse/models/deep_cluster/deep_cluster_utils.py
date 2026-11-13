@@ -48,7 +48,7 @@ def get_deep_cluster_heirarchical(yml_conf, deep_cluster, train_data=None):
 
         else:
             heir_clust = HeirClust(final_model, n_heir_classes, use_gpu=use_gpu, min_samples=heir_min_samples, gauss_stdevs = heir_gauss_stdevs, train_data)
-            heir_dict = torch.load(heir_mdl_file + ".ckpt")
+            heir_dict = torch.load(heir_mdl_file + ".ckpt", weights_only=False)
             heir_clust.load_model(heir_dict)
 
     return heir_clust

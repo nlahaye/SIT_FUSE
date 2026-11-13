@@ -1,0 +1,54 @@
+# TEMPO L1 radiance granules (GeoTIFF) for the LA fires.
+#   python -m sit_fuse.datasets.data_audit -y config/audit/tempo_la_fire_audit.yaml [--split]
+product: tempo_la_fire
+inputs:
+  roots: [/data/nlahaye/remoteSensing/TEMPO_LA/]
+  recursive: false
+  time_window: ["2025-01-05", "2025-01-13"]
+members:
+  tempo:
+    regex: 'TEMPO_RAD_L1_V03_(?P<time>\d{8}T\d{6})Z_S(?P<scan>\d{3})G(?P<space>\d{2})\.tif$'
+    time_format: "%Y%m%dT%H%M%S"
+    anchor: true
+    count: 1
+    min_bytes: 1024
+  # Optional: require a co-temporal ABI scan (nearest scan start within 5 min) for paired
+  # TEMPO-ABI work; entry.type: list then gives [tempo, abi] entries.
+  # abi:
+  #   regex: 'OR_ABI-L1b-RadC-M6C01_G18_s(?P<time>\d{13})\d_e\d{14}_c(?P<version>\d{14})\.tif$'
+  #   time_format: "%Y%j%H%M%S"
+  #   roots: [/data/nlahaye/remoteSensing/GOES_LA/]
+  #   join: nearest
+  #   tolerance_s: 300
+  #   required: true
+scene:
+  key: [time, space]           # one scene per granule
+  day_shift_hours: -8
+space: {group: space, split: false}   # granule kept in the index; units are whole days, so
+                               # adjacent granules of one day never straddle train and test
+entry: {type: anchor}          # {type: list, members: [tempo, abi]} for paired entries
+checks: {open: none}
+strata:
+  time_bins: [none]
+split:
+  block_days: 1
+  test_fraction: 0.0          # held-out days come from pin only
+  buffer_days: 0
+  min_units_for_test: 2
+  pin:                         # same held-out days as the GOES audit
+    test: ["2025-01-11", "2025-01-12"]
+    val: ["2025-01-09"]
+  seed: 0
+output:
+  dir: /data/nlahaye/output/Learnergy/TEMPO_LA_FIRE/audit/
+  tag: tempo_la_fire
+  base_config: config/model/tempo_la_fire.yaml
+  derived_config: config/model/tempo_la_fire_split.yaml
+  files_test: all
+  set_groups: true
+  sampling:
+    spatial_block: 32
+    spatial_balance: 0.5
+    seed: 0
+  train_dir: /data/nlahaye/output/Learnergy/TEMPO_LA_FIRE/
+run_split: false

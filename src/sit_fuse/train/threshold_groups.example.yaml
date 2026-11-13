@@ -1,0 +1,14 @@
+# Per-event / per-season decision cutoffs, chosen on calibration rows only.
+# Merge into the UQ config (TEMPO fire UQ config, g18_uq_config_fire.yaml).
+calibration:
+  # null / omitted = single pooled cutoff (previous behaviour)
+  threshold_groups: {column: split_stratum, sep: "|", index: 0,
+                     min_positive_pixels: 20, min_negative_pixels: 100}
+  # season alternative (DJF/MAM/JJA/SON from scene date; LA = DJF, Park + Oregon = JJA):
+  # threshold_groups: {column: season}
+  # custom seasons: {column: season, seasons: {winter: [11,12,1,2,3], fire: [6,7,8,9,10]}}
+evaluation:
+  # per-group PR-AUC/prevalence, ROC-AUC, applied vs pooled vs holdout-oracle cutoff;
+  # false disables. Optional keys: groups (defaults to calibration.threshold_groups),
+  # metric (defaults to threshold_metric), threshold_grid.
+  threshold_diagnostics: {}

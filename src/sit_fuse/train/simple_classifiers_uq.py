@@ -61,6 +61,7 @@ from sf_uq_utils import (
     ensemble_decomposition,
     expand_soft_targets,
     forest_member_probabilities,
+    frame_group_keys,
     full_proba,
     margin_uncertainty,
     predictive_entropy_norm,
@@ -71,6 +72,7 @@ from sf_uq_utils import (
     select_feature_columns,
     select_selective_threshold,
     select_threshold,
+    select_threshold_by_group,
     select_threshold_multiclass,
     threshold_grid,
     uq_feature_signature,
@@ -295,6 +297,11 @@ def uncertainty_maps(P, frame, members=None):
         u["ensemble_mutual_information"] = mi
         u["ensemble_variance"] = var
     return u
+
+
+def _sub(thr, mask):
+    """Row subset of a per-row threshold array (scalars pass through)."""
+    return thr[mask] if isinstance(thr, np.ndarray) else thr
 
 
 def summarize(P, frame, T, C, threshold, members=None):
@@ -532,6 +539,19 @@ def run(cfg):
     LOG.info("Threshold grid: %d values in [%.2g, %.2g]", thr_grid.size, thr_grid.min(), thr_grid.max())
     sel_cfg = cfg.get("selective", {}) or {}
     selective = {}
+    # Group-specific thresholds (e.g. per event or season), chosen on the
+    # calibration rows of each group; groups without enough calibration
+    # positives keep the pooled threshold. null = one pooled threshold.
+    tg_cfg = ccfg.get("threshold_groups") or None
+    thresholds_by_group, threshold_group_info = {}, {}
+    cal_keys = frame_group_keys(cal_frame, tg_cfg) if tg_cfg else None
+
+    def row_thresholds(frame, n):
+        """Per-row decision threshold (group threshold, else pooled)."""
+        if not thresholds_by_group.get(n):
+            return thresholds.get(n)
+        keys = frame_group_keys(frame, tg_cfg)
+        return np.array([thresholds_by_group[n].get(k, thresholds[n]) for k in keys], dtype=float)
     for n in names:
         calibrators[n] = fit_calibrator(n, P_cal[n], Y_cal, w_cal, train_priors.get(n), cfg, noise_T)
         Pc = calibrators[n].transform(P_cal[n])
@@ -546,6 +566,13 @@ def run(cfg):
             LOG.warning("Threshold %s is at the grid floor (%.2g): the optimum may lie lower. Set "
                         "calibration.threshold_grid: {scale: log, min: <smaller>} (e.g. prevalence / 10).",
                         n, thr_grid.min())
+        if tg_cfg:
+            thresholds_by_group[n], threshold_group_info[n] = select_threshold_by_group(
+                Pc, ref_cal, w_cal, cal_keys, m_n, thr_grid, thresholds[n], tg_cfg,
+                dates=cal_frame["date"].to_numpy() if "date" in cal_frame.columns else None)
+            for g, gi in threshold_group_info[n].items():
+                LOG.info("Threshold %s [%s]: %.4g (%s; positive weight %.0f, %s dates)", n, g,
+                         gi["threshold"], gi["source"], gi["positive_weight"], gi["n_dates"])
         if sel_cfg.get("enabled", True):
             selective[n] = selective_rules(n, Pc, ref_cal, w_cal, cal_frame, thresholds.get(n),
                                            calibrators[n], final_models, boot_paths, feats, C,
@@ -557,6 +584,8 @@ def run(cfg):
             "calibration_label_level": cal_level,
             "calibrator": calibrators[n].describe(),
             "threshold": thresholds.get(n),
+            "threshold_by_group": thresholds_by_group.get(n),
+            "threshold_group_calibration": threshold_group_info.get(n),
             "threshold_grid": {"n": int(thr_grid.size), "min": float(thr_grid.min()), "max": float(thr_grid.max())},
             "oof_uncalibrated": summarize(oof[n], oof_frame, oof_T, C, 0.5),
             "oof_calibrated": summarize(calibrators[n].transform(oof[n]), oof_frame, oof_T, C, thresholds.get(n)),
@@ -582,22 +611,26 @@ def run(cfg):
             else:
                 P = baseline_proba(n, X_ho, enc_final)
             Pc = calibrators[n].transform(P)
-            metrics[n]["holdout_calibrated"] = summarize(Pc, X_ho, T_ho, C, thresholds.get(n), members)
+            thr_ho = row_thresholds(X_ho, n)
+            metrics[n]["holdout_calibrated"] = summarize(Pc, X_ho, T_ho, C, thr_ho, members)
+            if thresholds_by_group.get(n):
+                metrics[n]["holdout_calibrated_pooled_threshold"] = summarize(
+                    Pc, X_ho, T_ho, C, thresholds.get(n))["hard_vs_reference"]
             if levels:
                 km = calibration_rows(X_ho, levels, "consensus")
                 if km.any() and len(set(X_ho.loc[km, "ref_label"].astype(int))) == C:
                     metrics[n]["holdout_calibrated_consensus_level"] = summarize(
-                        Pc[km], X_ho[km], T_ho[km], C, thresholds.get(n),
+                        Pc[km], X_ho[km], T_ho[km], C, _sub(thr_ho, km),
                         None if members is None else members[:, km])
             metrics[n]["holdout_by_date"] = {
                 d: summarize(Pc[(X_ho["date"] == d).to_numpy()], g, T_ho[(X_ho["date"] == d).to_numpy()],
-                             C, thresholds.get(n))["hard_vs_reference"]
+                             C, _sub(thr_ho, (X_ho["date"] == d).to_numpy()))["hard_vs_reference"]
                 for d, g in X_ho.groupby("date")}
             for col in ("split_stratum", "encoder_split"):
                 if col in X_ho.columns and X_ho[col].astype(str).ne("").any():
                     metrics[n][f"holdout_by_{col}"] = {
                         str(v): summarize(Pc[(X_ho[col] == v).to_numpy()], g, T_ho[(X_ho[col] == v).to_numpy()],
-                                          C, thresholds.get(n))["hard_vs_reference"]
+                                          C, _sub(thr_ho, (X_ho[col] == v).to_numpy()))["hard_vs_reference"]
                         for v, g in X_ho.groupby(col)}
             for c in range(C):
                 holdout_preds[f"{n}_p{c}"] = Pc[:, c].astype(np.float32)
@@ -631,6 +664,9 @@ def run(cfg):
             "bootstrap_manifest": boot_paths,
             "thresholds": thresholds,
             "threshold_metrics": threshold_metrics,
+            "threshold_groups": tg_cfg,
+            "thresholds_by_group": thresholds_by_group,
+            "threshold_group_calibration": threshold_group_info,
             "label_levels": levels.describe() if levels else None,
             "calibration_label_level": cal_level,
             "noise_correction": noise_info,

@@ -1,0 +1,20 @@
+# Multi-file example: JPSS2 VIIRS daily L3m Rrs, one file per band, entries are HAB-style prefixes
+# (as hab_training_utils.find_train_test_fpaths). A day is complete only when all 5 bands exist.
+product: hab_jpss2_viirs
+inputs:
+  roots: [/mnt/data/REFLECTANCES/JPSS2_VIIRS/]
+  time_window: ["2024-03-01", "2025-02-28"]
+members:
+  rrs:
+    regex: '(?P<prefix>JPSS2_VIIRS\.(?P<time>\d{8})\.L3m\.DAY\.)RRS\.Rrs_(?P<slot>\d+)\.4km.*nc$'
+    time_format: "%Y%m%d"
+    anchor: true
+    count: 5                   # hab_training_constants.NUM_CHANNELS["JPSS2_VIIRS"]
+entry: {type: prefix}
+strata: {time_bins: [season_year]}
+split: {block_days: 14, test_fraction: 0.2, buffer_days: 3, seed: 0}
+output:
+  dir: /mnt/data1/HAB_COMBINED_2024_2025_SPLIT/audit/
+  tag: hab_jpss2_viirs
+  files_test: all
+  sampling: {scene_balance: 0.5, spatial_block: 32, spatial_balance: 0.5, seed: 0}

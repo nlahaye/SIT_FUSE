@@ -1765,11 +1765,31 @@ def pixel_area_km2(profile: dict[str, Any]) -> np.ndarray | None:
     return np.full((H, W), abs(tr.a * tr.e - tr.b * tr.d) * unit ** 2 / 1e6)
 
 
+DEFAULT_SEASONS = {"DJF": [12, 1, 2], "MAM": [3, 4, 5], "JJA": [6, 7, 8], "SON": [9, 10, 11]}
+
+
+def season_key(date, seasons=None):
+    """Season name for a date ('2025-01-11' -> 'DJF'); seasons maps name -> months."""
+    try:
+        month = pd.Timestamp(str(date)).month
+    except (ValueError, TypeError):
+        return None
+    for name, months in (seasons or DEFAULT_SEASONS).items():
+        if month in {int(m) for m in months}:
+            return str(name)
+    return None
+
+
 def conformal_group_key(scene, gcfg):
-    """Group key for group-conditional (Mondrian) conformal intervals, e.g.
-    split_stratum 'park_fire_2024|pos_q1' -> 'park_fire_2024' with sep '|'."""
+    """Group key for group-conditional (Mondrian) conformal intervals and
+    group-specific decision thresholds, e.g. split_stratum
+    'park_fire_2024|pos_q1' -> 'park_fire_2024' with sep '|'.
+    column: season derives the key from scene['date'] (gcfg.seasons, default
+    meteorological DJF/MAM/JJA/SON)."""
     if not gcfg:
         return None
+    if str(gcfg.get("column", "split_stratum")).lower() == "season":
+        return season_key(scene.get("date"), gcfg.get("seasons"))
     v = scene.get(gcfg.get("column", "split_stratum"))
     if v is None or (isinstance(v, float) and np.isnan(v)) or str(v) in ("", "nan", "None"):
         return None
@@ -1778,6 +1798,64 @@ def conformal_group_key(scene, gcfg):
         parts = v.split(sep)
         v = parts[min(int(gcfg.get("index", 0)), len(parts) - 1)]
     return v
+
+
+def frame_group_keys(frame, gcfg):
+    """conformal_group_key for every row of a pixel frame (unique scenes only)."""
+    if not gcfg:
+        return np.full(len(frame), None, dtype=object)
+    col = gcfg.get("column", "split_stratum")
+    cols = ["date"] if str(col).lower() == "season" else [col]
+    if not set(cols) <= set(frame.columns):
+        raise ValueError(f"threshold_groups.column {col!r}: frame has no column(s) {cols}")
+    sub = frame[cols].astype(str)
+    uniq = sub.drop_duplicates()
+    lut = {tuple(r): conformal_group_key(dict(zip(cols, r)), gcfg) for r in uniq.itertuples(index=False)}
+    return np.array([lut[tuple(r)] for r in sub.itertuples(index=False)], dtype=object)
+
+
+def select_threshold_by_group(P, ref, w, keys, metric, grid, pooled, gcfg, dates=None):
+    """
+    Group-specific decision thresholds (calibration.threshold_groups), chosen
+    with select_threshold / select_threshold_multiclass on the calibration rows
+    of each group. Groups with fewer than min_positive_pixels weighted target
+    pixels (or min_negative_pixels background) keep the pooled threshold.
+    Returns ({group: threshold}, {group: diagnostics}).
+    """
+    P, ref, w = np.asarray(P), np.asarray(ref).astype(int), np.asarray(w, float)
+    keys = np.asarray(keys, dtype=object)
+    min_pos = float(gcfg.get("min_positive_pixels", 20))
+    min_neg = float(gcfg.get("min_negative_pixels", 100))
+    binary = P.shape[1] == 2
+    sel = (lambda Pg, rg, wg, g: select_threshold(Pg[:, 1], rg, wg, metric, grid=g)) if binary else \
+          (lambda Pg, rg, wg, g: select_threshold_multiclass(Pg, rg, wg, metric, grid=g))
+    out, info = {}, {}
+    for g in sorted({k for k in keys if k is not None}):
+        m = keys == g
+        n_pos, n_neg = float(w[m & (ref != 0)].sum()), float(w[m & (ref == 0)].sum())
+        d = {"n_rows": int(m.sum()), "positive_weight": n_pos, "negative_weight": n_neg,
+             "n_dates": None if dates is None else int(len(set(np.asarray(dates)[m]))),
+             "pooled_threshold": pooled}
+        if n_pos < min_pos or n_neg < min_neg:
+            info[g] = {**d, "threshold": pooled, "source": "pooled_fallback",
+                       "reason": f"positive weight {n_pos:.0f} < {min_pos:.0f} or negative weight "
+                                 f"{n_neg:.0f} < {min_neg:.0f}"}
+            continue
+        t, s = sel(P[m], ref[m], w[m], grid)
+        _, s_pooled = sel(P[m], ref[m], w[m], np.array([pooled]))
+        out[g] = float(t)
+        info[g] = {**d, "threshold": float(t), "source": "group", f"calibration_{metric}": float(s),
+                   f"calibration_{metric}_at_pooled": float(s_pooled)}
+    return out, info
+
+
+def scene_threshold(scene, pooled, by_group=None, gcfg=None):
+    """Decision threshold for one scene: its group's threshold, else pooled.
+    Returns (threshold, group key or None)."""
+    if not by_group or not gcfg:
+        return pooled, None
+    key = conformal_group_key(scene, gcfg)
+    return (float(by_group[key]), key) if key in by_group else (pooled, key)
 
 
 def select_selective_threshold(u, err, w, target_error=None, target_coverage=None):

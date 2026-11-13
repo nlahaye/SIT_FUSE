@@ -1,77 +1,80 @@
 
 
-output: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
+output: "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
+
+
+
 
 instruments:
  #     input_dir: ""
  PACE_OCI:
   no_trop:
       training_config: "/home/nlahaye/SIT_FUSE/src/sit_fuse//config/model/hab_training/pace_only_n_ca_multi_layer_pl.yaml"
-      input_dir: "/mnt/data/REFLECTANCES/PACE_OCI/"
-      output_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
+      input_dir: "/mnt/data1/REFLECTANCES/PACE_OCI/"
+      output_dir: "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
       input_pattern: "PACE_OCI*nc"
       input_clip_re: "RRS.*nc"
-      input_oc_dir: "/mnt/data/REFLECTANCES/PACE_OCI/" 
+      input_oc_dir: "/mnt/data1/REFLECTANCES/PACE_OCI/" 
       input_oc_re: '(PACE_OCI\.(\d{8})\.L3m\.DAY\.)RRS.*\.4km.*nc'
       run_preprocess_and_scale: False
  JPSS1_VIIRS:
   no_trop:
       training_config: "/home/nlahaye/SIT_FUSE/src/sit_fuse//config/model/hab_training/jpss1_viirs_only_n_ca_multi_layer_pl.yaml"
-      input_dir: "/mnt/data/REFLECTANCES/JPSS1_VIIRS/"
-      output_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
+      input_dir: "/mnt/data1/REFLECTANCES/JPSS1_VIIRS/"
+      output_dir: "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
       input_pattern: "JPSS1_VIIRS*nc"
       input_clip_re: "RRS.*nc"
-      input_oc_dir: "/mnt/data/REFLECTANCES/JPSS1_VIIRS/"
+      input_oc_dir: "/mnt/data1/REFLECTANCES/JPSS1_VIIRS/"
       input_oc_re: '(JPSS1_VIIRS\.(\d{8})\.L3m\.DAY\.)RRS.*\.4km.*nc'
       run_preprocess_and_scale: False
  JPSS2_VIIRS:
   no_trop:
       training_config: "/home/nlahaye/SIT_FUSE/src/sit_fuse//config/model/hab_training/jpss2_viirs_only_n_ca_multi_layer_pl.yaml"
-      input_dir: "/mnt/data/REFLECTANCES/JPSS2_VIIRS/"
-      output_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
+      input_dir: "/mnt/data1/REFLECTANCES/JPSS2_VIIRS/"
+      output_dir: "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
       input_pattern: "JPSS2_VIIRS*nc"
       input_clip_re: "RRS.*nc"
-      input_oc_dir: "/mnt/data/REFLECTANCES/JPSS2_VIIRS/"
+      input_oc_dir: "/mnt/data1/REFLECTANCES/JPSS2_VIIRS/"
       input_oc_re: '(JPSS2_VIIRS\.(\d{8})\.L3m\.DAY\.)RRS.*\.4km.*nc'
       run_preprocess_and_scale: False
  SNPP_VIIRS:
   no_trop:
       training_config: "/home/nlahaye/SIT_FUSE/src/sit_fuse//config/model/hab_training/snpp_viirs_only_n_ca_multi_layer_pl.yaml"
-      input_dir: "/mnt/data/REFLECTANCES/SNPP_VIIRS/"
-      output_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
+      input_dir: "/mnt/data1/REFLECTANCES/SNPP_VIIRS/"
+      output_dir: "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
       input_pattern: "SNPP_VIIRS*nc"
       input_clip_re: "RRS.*nc"
-      input_oc_dir: "/mnt/data/REFLECTANCES/SNPP_VIIRS/"
+      input_oc_dir: "/mnt/data1/REFLECTANCES/SNPP_VIIRS/"
       input_oc_re: '(SNPP_VIIRS\.(\d{8})\.L3m\.DAY\.)RRS.*\.4km.*nc'
       run_preprocess_and_scale: False
  AQUA_MODIS:
   no_trop:
       training_config: "/home/nlahaye/SIT_FUSE/src/sit_fuse//config/model/hab_training/modis_only_n_ca_multi_layer_pl.yaml"
-      input_dir: "/mnt/data/REFLECTANCES/AQUA_MODIS/"
-      output_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
+      input_dir: "/mnt/data1/REFLECTANCES/AQUA_MODIS/"
+      output_dir: "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
       input_pattern: "AQUA_MODIS*nc"
       input_clip_re: "RRS.*nc"
-      input_oc_dir: "/mnt/data/REFLECTANCES/AQUA_MODIS/"
+      input_oc_dir: "/mnt/data1/REFLECTANCES/AQUA_MODIS/"
       input_oc_re: '(AQUA_MODIS\.(\d{8})\.L3m\.DAY\.)RRS.*\.4km.*nc'
       run_preprocess_and_scale: False
  S3A_OLCI:
   no_trop:
       training_config: "/home/nlahaye/SIT_FUSE/src/sit_fuse//config/model/hab_training/s3a_only_n_ca_multi_layer_pl.yaml"
-      input_dir: "/mnt/data/REFLECTANCES/S3A_OLCI/"
-      output_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
+      input_dir: "/mnt/data1/REFLECTANCES/S3A_OLCI/"
+      output_dir: "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
       input_pattern: "S3A_OLCI*nc"
       input_clip_re: "RRS.*nc"
-      input_oc_dir: "/mnt/data/REFLECTANCES/S3A_OLCI/"
+      input_oc_dir: "/mnt/data1/REFLECTANCES/S3A_OLCI/"
       input_oc_re: '(S3A_OLCI_ERRNT\.(\d{8})\.L3m\.DAY\.)RRS.*\.4km.*nc'
       run_preprocess_and_scale: False
  S3B_OLCI:
   no_trop:
       training_config: "/home/nlahaye/SIT_FUSE/src/sit_fuse//config/model/hab_training/s3b_only_n_ca_multi_layer_pl.yaml"
-      input_dir: "/mnt/data/REFLECTANCES/S3B_OLCI/"
-      output_dir: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
+      input_dir: "/mnt/data1/REFLECTANCES/S3B_OLCI/"
+      output_dir: "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
       input_pattern: "S3B_OLCI*nc"
       input_clip_re: "RRS.*nc"
-      input_oc_dir: "/mnt/data/REFLECTANCES/S3B_OLCI/"
+      input_oc_dir: "/mnt/data1/REFLECTANCES/S3B_OLCI/"
       input_oc_re: '(S3B_OLCI_ERRNT\.(\d{8})\.L3m\.DAY\.)RRS.*\.4km.*nc'
       run_preprocess_and_scale: False 
 
@@ -97,7 +100,7 @@ update_inputs: False
 
 train_min_date: "20240101"
 train_max_date: "20251201"
-output: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
+output: "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
 
 roi: "ca"
 

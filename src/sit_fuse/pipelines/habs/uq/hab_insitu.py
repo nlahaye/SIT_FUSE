@@ -104,6 +104,9 @@ def assign_splits(df: pd.DataFrame, cfg: dict[str, Any] | None = None) -> pd.Dat
       test_years: [2024]      optional temporal holdout (overrides fractions)
       seed: 13
       n_folds: 5              cross-fit folds over train groups
+      date_roles: {YYYYMMDD: train|calibration|test|excluded}   set from the
+                              pipeline scene_split block (overrides fractions /
+                              test_years for the split column)
       encoder_train_window: [YYYYMMDD, YYYYMMDD]   optional SIT-FUSE encoder
                               training dates (train_min_date/train_max_date).
                               Samples inside it are moved to `train`, so the
@@ -148,6 +151,17 @@ def assign_splits(df: pd.DataFrame, cfg: dict[str, Any] | None = None) -> pd.Dat
         fold.append(int(_stable_unit(g, seed + 1) * n_folds))
     out["split"] = split
     out["fold"] = fold
+    roles = cfg.get("date_roles")
+    if roles:
+        # Day-level scene split (hab_scene_split): held-out days -> test, val days -> calibration,
+        # buffer / unused days -> excluded; train days keep the train/calibration ratio above.
+        day = pd.to_datetime(out["Datetime"]).dt.strftime("%Y%m%d")
+        r = day.map(lambda d: roles.get(d, "excluded"))
+        tr_share = edges[0] / max(edges[1], EPS)
+        u = np.array([_stable_unit(g, seed) for g in out["split_group"]])
+        base = np.where(u < tr_share, "train", "calibration")
+        has_val = any(v == "calibration" for v in roles.values())
+        out["split"] = np.where(r == "train", "train" if has_val else base, r)
     win = cfg.get("encoder_train_window")
     if win:
         lo, hi = (pd.Timestamp(str(w)) for w in win)

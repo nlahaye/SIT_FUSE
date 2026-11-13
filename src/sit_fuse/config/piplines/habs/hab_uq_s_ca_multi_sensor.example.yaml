@@ -2,7 +2,6 @@
 # hab_reflectance_geotiff_gen_s_ca_2024_multi_sensor_test.yaml plus the `uq:` block.
 # Run: python -m sit_fuse.pipelines.habs.uq.hab_uq_pipeline -y <this file>
 # or set run_uq: true and call hab_post_inference_pipeline.py.
-# Full chain: hab_full_pipeline.py = training -> hab_inference_pipeline -> post-inference.
 
 reuse_context: False
 prob: True                 # also write .proba.tif (used as head confidence in label_only mode)
@@ -17,39 +16,6 @@ clusters: 120000
 roi: "california"
 final_product_dir: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_062526/"
 run_uq: true
-
-# ---- hab_inference_pipeline (between training and post-inference) ----------
-# train_min_date / train_max_date (training YAML) define the encoder training
-# window used by uq.splits.encoder_unseen_eval.
-run_inference: false        # hab_full_pipeline: run cluster inference stage
-run_head_export: false      # encoder head outputs (+ MC / OOD) -> *.head_outputs.tif;
-                            # honoured by hab_inference_pipeline and post-inference
-inference:
-  stages: [clusters]        # clusters | heads | ood_stats (heads added when run_head_export)
-  input_lists: [files_test, files_train]
-  overwrite: false
-  # start_date: "2024-01-01"
-  # end_date: "2025-04-01"
-  # model_configs: {modis: {no_trop: /path/to/train_model_modis.yaml}}  # default config_dir/model/
-head_export:
-  top_k_parent: 5
-  top_k_child: 3
-  n_parent_ranks: 2
-  mc:
-    samples: 0              # >0 enables MC input-noise bands (e.g. 16)
-    input_noise: null       # scaled-input sigma; null = cluster gauss_noise_stdev (0.01); scalar or per-channel list
-    joint: true             # also joint-label stability (evaluates child heads per pass)
-    seed: 0
-  ood:
-    enabled: false          # embedding-distance OOD bands
-    stats_path: null        # null = <instrument out_dir>/head_export/embedding_stats_<inst>_<key>.npz
-    max_files: 30           # training scenes sampled (half fit, half percentile table)
-    max_pixels_per_file: 20000
-    shrinkage: 50.0         # pseudo-count toward global stats for rare parents
-    refit: false
-  validate: true            # post-inference: joint_label vs {PREFIX}.{date}.L3m.DAY.tif
-  min_joint_agreement: 0.99
-  keep_no_geo: false
 
 instruments:
   pace:  {no_trop: {out_dir: "/mnt/data1/HAB_COMBINED_RUNS/PACE_OCI_no_trop/"}}
@@ -68,7 +34,7 @@ uq:
   end_date: "2025-04-01"
   max_depth_m: 1.0
   num_child: 100             # model YAML cluster.heir.num_classes (joint = child + num_child*parent)
-  input_mode: auto           # auto | head_outputs | label_only (head_outputs once run_head_export has run)
+  input_mode: auto           # auto | head_outputs | label_only
   label_level: heir          # heir | no_heir (label_only mode)
   no_heir_value: parent
   use_proba: true
@@ -88,15 +54,13 @@ uq:
     # test_years: [2025]     # temporal holdout alternative
     n_folds: 5
     seed: 13
-    encoder_unseen_eval: false   # true: calibration/test only from dates outside train_min_date..train_max_date
 
   features:
     window_radii: [1, 2, 4]
     neighborhood: {top_n_labels: 3, label_level: joint,
                    stats_of: [parent_entropy, child_entropy, parent_maxprob]}
     groups: [cluster_structure, representation, head_topk_probs, agreement,
-             soft_assignment, assignment_ensemble, neighborhood, neighborhood_context,
-             encoder_mc, encoder_ood]   # last two: mc_* / ood_* bands, empty without them
+             soft_assignment, assignment_ensemble, neighborhood, neighborhood_context]
     use_day_offset: true
 
   context_encoder:
@@ -118,22 +82,14 @@ uq:
     n_bootstrap_members: 0   # >0: group-bootstrap refits (use for non-forest models)
   max_members: 100
 
-  calibration:
-    method: temperature      # temperature | platt | isotonic | none
-    prior_correction: true   # undo class balancing (pi_train -> pi_target)
-    min_samples: 30          # per-sensor fit; else pooled calibrator
-    require: true            # no calibrator -> error (train) / no uq.tif (inference)
-    noise_correction: {enabled: false}   # {enabled: true, transition: CxC P(obs bin | true bin)}
+  calibration: {method: temperature, prior_correction: true, min_samples: 30}
   selective: {target_coverage: 0.8, bin_tolerance: 0}
 
   species:                   # optional overrides of hab_uq_common.DEFAULT_SPECIES
     pDA: {alert_thresholds: [0.5, 1.0], measurement_sigma_dex: 0.15}
     Pseudo_nitzschia_seriata_group: {alert_thresholds: [10000, 100000]}
 
-  evaluation:
-    n_bootstrap: 500
-    # stage `ablation` (uq.stages): retrain + score label_only / head_outputs / head_outputs_mc_ood
-    # ablation: [{name: label_only, input_mode: label_only}, ...]
+  evaluation: {n_bootstrap: 500}
 
   fusion:
     pool: log                # linear | log | poe
@@ -142,3 +98,6 @@ uq:
     quality: selective       # none | selective | entropy
     temporal_filter: true
     transition_stay: 0.7
+
+
+
