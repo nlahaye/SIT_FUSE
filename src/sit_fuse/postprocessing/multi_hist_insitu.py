@@ -121,9 +121,6 @@ def run_multi_hist(yml_conf, output_dir):
         arr_init[i] = sorted(arr_init[i])  
     print(arr_init)
 
-    print("HERE", 'save_hists' in yml_conf, yml_conf['save_hists'])
-    print(output_dir,  yml_conf["output_key"])
- 
     if 'save_hists' in yml_conf and yml_conf['save_hists']:
         out_fname = os.path.join(output_dir, yml_conf["output_key"] + ".pkl")
 
