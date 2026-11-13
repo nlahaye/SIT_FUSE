@@ -14,6 +14,40 @@ sif_dir: "/mnt/data/TROPOSIF/"
 train_min_date: "20240305"
 train_max_date: "20241023"
 
+# Spatio-temporally stratified day split (sit_fuse.datasets.scene_split via
+# pipelines/habs/hab_scene_split.py), shared by all sensors. Context assignment
+# uses train days, validation uses held-out (test) days, uq.splits follows the
+# same days. The manifest is reused once written; keep it shared with the
+# training and _val configs so every stage sees the identical split.
+scene_split:
+  enabled: false           # set true to replace the train_min_date/train_max_date window
+  manifest: "/mnt/data1/HAB_COMBINED_2024_2025_SPLIT/scene_split/hab_ca_2024_2025_scene_split.csv"
+  regenerate: false
+  dates_from: auto           # inputs (input_oc_dir) when present, else inference out_dir
+  date_range: null          # all input days; train_min_date/train_max_date are not used with the split
+  strata:
+    time_bins: [season_year]
+  split:
+    block_days: 14
+    test_fraction: 0.2
+    val_fraction: 0.0        # > 0 gives UQ calibration days unseen by context assignment
+    buffer_days: 3
+    balance: proportional
+    min_units_for_test: 2
+    seed: 0
+  output:
+    dir: "/mnt/data1/HAB_COMBINED_2024_2025_SPLIT/scene_split/"
+    tag: hab_ca_2024_2025
+  context_splits: [train]
+  validation_splits: [test]
+  uq: true
+  files_test: rest           # training: inference covers files_train + files_test = all days
+  sampling:
+    scene_balance: 0.5
+    spatial_block: 32
+    spatial_balance: 0.5
+    seed: 0
+
 roi: "ca"
 output: "/mnt/data/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/JPSS2_VIIRS/"
 

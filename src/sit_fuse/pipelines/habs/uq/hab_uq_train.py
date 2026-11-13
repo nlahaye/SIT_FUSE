@@ -253,6 +253,11 @@ def split_config(hab_yml: dict[str, Any]) -> dict[str, Any]:
             cfg["encoder_train_window"] = [hab_yml["train_min_date"], hab_yml["train_max_date"]]
         else:
             LOG.warning("splits.encoder_unseen_eval set but train_min_date/train_max_date missing")
+    if not cfg.get("date_roles"):
+        from sit_fuse.pipelines.habs.hab_scene_split import uq_date_roles
+        roles = uq_date_roles(hab_yml)
+        if roles:
+            cfg["date_roles"] = roles
     return cfg
 
 

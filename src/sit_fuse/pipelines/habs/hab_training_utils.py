@@ -12,6 +12,7 @@ from sit_fuse.utils import read_oc_geo
 from sit_fuse.compute_resources import merge_compute_conf
 
 from sit_fuse.pipelines.habs.hab_training_constants import *
+from sit_fuse.pipelines.habs.hab_scene_split import scene_split_conf, apply_training_split
 from sit_fuse.pipelines.data_transform_and_prep.goes_combine_and_clip_pipeline import goes_combine_and_clip_pipeline
 
 from sit_fuse.datasets.sf_dataset import run_data_prep
@@ -66,8 +67,15 @@ def build_trop_fname(yml_conf, datetm):
 
 def find_train_test_fpaths(yml_conf, config_dict, instrument, key):
  
-    train_min = datetime.strptime(yml_conf["train_min_date"], "%Y%m%d")
-    train_max = datetime.strptime(yml_conf["train_max_date"], "%Y%m%d")
+    # With scene_split enabled, train/test come from the stratified day split; the
+    # train_min_date / train_max_date window is then not used (and may be omitted).
+    use_split = scene_split_conf(yml_conf) is not None
+    entry_dates = {}
+    if use_split and not (yml_conf.get("train_min_date") and yml_conf.get("train_max_date")):
+        train_min, train_max = datetime.min, datetime.max
+    else:
+        train_min = datetime.strptime(yml_conf["train_min_date"], "%Y%m%d")
+        train_max = datetime.strptime(yml_conf["train_max_date"], "%Y%m%d")
 
     print(train_min, train_max)
 
@@ -90,6 +98,7 @@ def find_train_test_fpaths(yml_conf, config_dict, instrument, key):
                     trop_fname = build_trop_fname(yml_conf, dt)
                      
                     lst_entry = [lst_entry, trop_fname]
+                entry_dates[os.path.basename(os.path.join(root, mtch.group(1)))] = dt.date()
 
                 print(train_max > train_min, train_max, train_min, dt, dt >= train_min, dt <= train_max)    
                 if dt >= train_min and dt <= train_max:
@@ -120,6 +129,15 @@ def find_train_test_fpaths(yml_conf, config_dict, instrument, key):
                     final_train_fnames.append(train_fnames[i-1])
                 match_count = 0
 
+
+    if use_split:
+        uniq, seen = [], set()
+        for e in final_train_fnames + final_test_fnames:
+            k = str(e)
+            if k not in seen:
+                seen.add(k)
+                uniq.append(e)
+        return apply_training_split(yml_conf, config_dict, uniq, entry_dates)
 
     config_dict["data"]["files_train"] = list(set(final_train_fnames))
     config_dict["data"]["files_test"] = list(set(final_test_fnames))

@@ -10,6 +10,7 @@ from sit_fuse.postprocessing.class_compare import run_class_compare
 from sit_fuse.postprocessing.merge_datasets import run_merge
  
 from sit_fuse.pipelines.habs.hab_post_inference_constants import *
+from sit_fuse.pipelines.habs.hab_scene_split import scene_split_conf, dates_for
 
 import numpy as np
 import os
@@ -200,6 +201,12 @@ def update_config_multi_hist(out_dir, config_dict, yml_conf, instrument, species
         config_dict["input_file_type"] =  config_dict["input_file_type"] + "_no_heir"
     elif validation:
         config_dict["input_file_type"] =  'daily' + VALIDATION_INSTRUMENT_SUFFIX[species_key]
+
+    # Stratified day split: context assignment on train days, validation on held-out days
+    ssc = scene_split_conf(yml_conf)
+    if ssc is not None:
+        key = "validation_splits" if validation else "context_splits"
+        config_dict["dates"] = dates_for(yml_conf, ssc.get(key, ["test"] if validation else ["train"]))
         
 
     

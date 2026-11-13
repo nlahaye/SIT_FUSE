@@ -1,12 +1,15 @@
 
 reuse_context: False #True
 
-prob: False
+run_uq: true
+
+prob: True
 no_heir: True
 config_dir: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/"
 geo_zarr: "/mnt/data1/cal_coast_geo.zarr"
  
-insitu_file: "/mnt/data1/la_hab_data/combined_full_071426.csv" #HAB_S_CA_Combined.csv" #combined_full.csv"
+insitu_file: "/mnt/data1/habs/insitu_augmented/combined_augmented_strict.csv" #/mnt/data1/la_hab_data/combined_full_071426.csv" #HAB_S_CA_Combined.csv" #combined_full.csv"
+#/mnt/data1/habs/insitu_augmented_v2/combined_augmented_strict.csv 
 insitu_matchup_circle_max_radius: [0.09]
 start_date: "2024-03-01" #"2024-07-01" #"2018-10-01"
 end_date: "2025-02-28" #"2025-12-31" #"2025-07-01" #"2025-12-31"
@@ -15,6 +18,40 @@ clusters: 120000
 roi: "california"
 
 final_product_dir: "/mnt/data1/HAB_COMBINED_2024_2025_SPLIT/MERGED_TEST_FULL_2/"
+
+# Spatio-temporally stratified day split (sit_fuse.datasets.scene_split via
+# pipelines/habs/hab_scene_split.py), shared by all sensors. Context assignment
+# uses train days, validation uses held-out (test) days, uq.splits follows the
+# same days. The manifest is reused once written; keep it shared with the
+# training and _val configs so every stage sees the identical split.
+scene_split:
+  enabled: true
+  manifest: "/mnt/data1/HAB_COMBINED_2024_2025_SPLIT/scene_split/hab_ca_2024_2025_scene_split.csv"
+  regenerate: false
+  dates_from: auto           # inputs (input_oc_dir) when present, else inference out_dir
+  date_range: ["2024-01-01", "2025-04-01"]   # covers uq start/end; context/validation also clip to start_date/end_date
+  strata:
+    time_bins: [season_year]
+  split:
+    block_days: 14
+    test_fraction: 0.2
+    val_fraction: 0.0        # > 0 gives UQ calibration days unseen by context assignment
+    buffer_days: 3
+    balance: proportional
+    min_units_for_test: 2
+    seed: 0
+  output:
+    dir: "/mnt/data1/HAB_COMBINED_2024_2025_SPLIT/scene_split/"
+    tag: hab_ca_2024_2025
+  context_splits: [train]
+  validation_splits: [test]
+  uq: true
+  files_test: rest           # training: inference covers files_train + files_test = all days
+  sampling:
+    scene_balance: 0.5
+    spatial_block: 32
+    spatial_balance: 0.5
+    seed: 0
  
 instruments: 
  pace:
@@ -47,4 +84,84 @@ instruments:
 run_resample: False 
 
 validation_only: False
+
+uq:
+  out_dir: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_062526/uq/"
+  # augmented in-situ table written by sit_fuse.pipelines.habs.insitu.pull_insitu_hab
+  insitu_file: "/mnt/data1/la_hab_data/combined_full_augmented.csv"
+  start_date: "2024-01-01"
+  end_date: "2025-04-01"
+  max_depth_m: 1.0
+  num_child: 100             # model YAML cluster.heir.num_classes (joint = child + num_child*parent)
+  input_mode: auto           # auto | head_outputs | label_only
+  label_level: heir          # heir | no_heir (label_only mode)
+  no_heir_value: parent
+  use_proba: true
+  radius_degrees: 0.09       # production SoCal radius
+  max_day_offset: 1          # 0 = production same-day; 1 adds +/-1 d rows with temporal weights
+  encoder_use_offset_days: false
+  temporal_weighting: {tau_days: 1.5, sigma_hours: 6.0}
+  count_mode: unique_per_sample
+  sensors: [pace, s3a, s3b, jpss1, jpss2, modis, snpp]
+  model_scope: pooled        # pooled (sensor one-hot, class-space features) | per_sensor
+  seed: 42
+
+  splits:
+    block: "30D"
+    group_by: [station, block]
+    fractions: {train: 0.6, calibration: 0.2, test: 0.2}
+    # test_years: [2025]     # temporal holdout alternative
+    n_folds: 5
+    seed: 13
+
+  features:
+    window_radii: [1, 2, 4]
+    neighborhood: {top_n_labels: 3, label_level: joint,
+                   stats_of: [parent_entropy, child_entropy, parent_maxprob]}
+    groups: [cluster_structure, representation, head_topk_probs, agreement,
+             soft_assignment, assignment_ensemble, neighborhood, neighborhood_context]
+    use_day_offset: true
+
+  context_encoder:
+    alpha_parent: 5.0
+    alpha_joint: 5.0
+    assignment: {rule: histogram_mode, min_samples: 1, replicate_production_offset: false}
+    assignment_ensemble: {n_members: 100, bootstrap_unit: split_group}
+
+  target:
+    mode: blended_ensemble   # reference | cluster_agreement | assignment_ensemble | blended | blended_ensemble
+    reference: measurement   # measurement (log-normal soft labels) | onehot
+    blend_lambda: 0.3
+
+  classifier:
+    model: auto              # auto | encoder_only | hist_gradient_boosting | random_forest (auto = lowest calibration-set RPS)
+    candidates: [encoder_only, hist_gradient_boosting, random_forest]
+    random_forest: {n_estimators: 300, max_depth: 8, min_samples_leaf: 5, min_samples_split: 10,
+                    class_weight: balanced_subsample, max_samples: 0.7}
+    n_bootstrap_members: 0   # >0: group-bootstrap refits (use for non-forest models)
+  max_members: 100
+
+  calibration: {method: temperature, prior_correction: true, min_samples: 30}
+  selective: {target_coverage: 0.8, bin_tolerance: 0}
+
+  species:                   # optional overrides of hab_uq_common.DEFAULT_SPECIES
+    pDA: {alert_thresholds: [0.5, 1.0], measurement_sigma_dex: 0.15}
+    Pseudo_nitzschia_seriata_group: {alert_thresholds: [10000, 100000]}
+
+  evaluation: {n_bootstrap: 500}
+
+  fusion:
+    pool: log                # linear | log | poe
+    ref_local_hour: 10.0     # pier sampling ~09-10 local
+    tau_hours: 4.0
+    quality: selective       # none | selective | entropy
+    temporal_filter: true
+    transition_stay: 0.7
+
+
+compute:
+  num_threads: medium
+  num_loader_workers: 10     # optional; HAB training template default is 10
+  nice: 10
+  use_gpu: True
 
