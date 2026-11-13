@@ -70,6 +70,7 @@ from sf_uq_utils import (
     read_head_outputs,
     save_json,
     scene_feature_frame,
+    scene_threshold,
     uq_feature_signature,
 )
 from simple_classifiers_uq import BASELINES, baseline_proba
@@ -109,6 +110,12 @@ def run(cfg, model_name=None):
     enc = joblib.load(meta["context_encoder_path"])
     cal = joblib.load(meta["calibrators_path"])[name]
     thr = meta["thresholds"].get(name)
+    # calibration.threshold_groups: per-group (event / season) thresholds
+    thr_groups_cfg = meta.get("threshold_groups") or None
+    thr_by_group = (meta.get("thresholds_by_group") or {}).get(name) or {}
+    if thr_by_group:
+        LOG.info("%s: group thresholds %s (pooled %.4g for other groups)", name,
+                 {g: round(t, 5) for g, t in thr_by_group.items()}, thr)
     model = None if name in BASELINES else joblib.load(meta["model_paths"][name])
     sel = (meta.get("selective") or {}).get(name)
     sel_rule = sel["rules"][sel["measure"]] if sel else None
@@ -153,6 +160,7 @@ def run(cfg, model_name=None):
                              "truth": rec["truth"]})
             continue
 
+        thr_s, thr_key = scene_threshold(rec, thr, thr_by_group, thr_groups_cfg)
         area_grid = pixel_area_km2(profile)
         area_units = "km2" if area_grid is not None else "pixels"
         ref = None
@@ -167,7 +175,7 @@ def run(cfg, model_name=None):
         for s0 in range(0, len(base), chunk):
             fr = enc.transform(base.iloc[s0:s0 + chunk], features_cfg)
             Pc, members = predict_chunk(fr, name, model, enc, cal, feats, C, members_src)
-            pred = decide(Pc, thr)
+            pred = decide(Pc, thr_s)
             rows, cols = fr["row"].to_numpy(), fr["col"].to_numpy()
             o = {"pair_id": fr["pair_id"].to_numpy(), "row": rows, "col": cols,
                  "pred_label": pred.astype(np.float32)}
@@ -224,7 +232,8 @@ def run(cfg, model_name=None):
         layer_paths["excluded_cluster_mask"] = ex_path
         head_ok = np.isfinite(ex)
         excl_frac = float(np.nanmean(ex)) if head_ok.any() else None
-        tag_product_layers(layer_paths, {**provenance_common, "pair_id": rec["pair_id"],
+        tag_product_layers(layer_paths, {**provenance_common, "threshold": thr_s,
+                                         "threshold_group": thr_key, "pair_id": rec["pair_id"],
                                          "date": rec["date"], "head_outputs": rec["head_outputs"],
                                          "classifier_split": rec["classifier_split"],
                                          "encoder_split": rec["encoder_split"]},
@@ -244,12 +253,14 @@ def run(cfg, model_name=None):
                          **{k: rec[k] for k in ("product", "split_group", "classifier_split",
                                                 "encoder_split", "split_stratum")},
                          "areas": areas, "excluded_fraction": excl_frac,
+                         "threshold": thr_s, "threshold_group": thr_key,
                          "layers": {c: str(p) for c, p in layer_paths.items()}})
         LOG.info("Wrote %d layers for %s", len(value_cols), rec["pair_id"])
 
     pd.DataFrame(area_rows).to_csv(out_dir / "scene_areas.csv", index=False)
     save_json(out_dir / "inference_manifest.json", {
         "model": name, "n_classes": C, "layer_prefix": name, "threshold": thr,
+        "threshold_groups": thr_groups_cfg, "thresholds_by_group": thr_by_group,
         "selective": sel, "ensemble_quantiles": quantiles, "calibrator": cal.describe(),
         "layer_info": {c: layer_info(c) for c in value_cols + ["excluded_cluster_mask"]} if manifest else {},
         "invalid_clusters": {**invalid.signature(), "source": invalid.source} if invalid else None,
