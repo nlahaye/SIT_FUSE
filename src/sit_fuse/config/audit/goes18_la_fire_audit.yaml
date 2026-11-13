@@ -1,0 +1,51 @@
+# GOES-18 ABI CONUS scans (combined 16-band GeoTIFFs) for the LA fires.
+#   python -m sit_fuse.datasets.data_audit -y config/audit/goes18_la_fire_audit.yaml [--split]
+# -> <output.dir>/goes18_la_fire_scene_index.csv, _audit_summary.json, _scene_split.yaml
+#    and, with --split, config/model/goes_la_fire_split.yaml (files_train / files_holdout / sampling.groups).
+product: goes18_la_fire
+inputs:
+  roots: [/data/nlahaye/remoteSensing/GOES_LA/]
+  recursive: false
+  time_window: ["2025-01-05", "2025-01-13"]   # local days (scene.day_shift_hours)
+  exclude_dates: []
+members:
+  abi:
+    # scan start _sYYYYJJJHHMMSSt (tenths dropped); _c creation time picks the latest reprocessing
+    regex: 'OR_ABI-L1b-RadC-M6C01_G18_s(?P<time>\d{13})\d_e\d{14}_c(?P<version>\d{14})\.tif$'
+    time_format: "%Y%j%H%M%S"
+    anchor: true
+    count: 1
+    min_bytes: 1024
+scene:
+  key: [time]
+  day_shift_hours: -8          # assign scans to PST days, so 00-08 UTC scans stay with the previous local day
+entry: {type: anchor}          # one GeoTIFF per scene (reader_type: gtiff)
+checks: {open: none}           # auto | gdal for a readability pass (slower)
+gap_days: 1
+strata:
+  time_bins: [none]            # single event; days are the temporal units
+split:
+  block_days: 1
+  test_fraction: 0.0            # held-out days come from pin only; > 0 draws extra days
+  val_fraction: 0.0
+  buffer_days: 0
+  min_units_for_test: 2
+  # Prior GOES partition: holdout 2025-01-11/12, calibration 2025-01-09.
+  # Use the same pins in the TEMPO audit so both sensors hold out the same days.
+  pin:
+    test: ["2025-01-11", "2025-01-12"]
+    val: ["2025-01-09"]
+  seed: 0
+output:
+  dir: /data/nlahaye/output/Learnergy/GOES_LA_FIRE/audit/
+  tag: goes18_la_fire
+  base_config: config/model/goes_la_fire.yaml
+  derived_config: config/model/goes_la_fire_split.yaml
+  files_test: all              # inference on every scan; files_holdout lists the evaluation scans
+  set_groups: true
+  sampling:
+    spatial_block: 32
+    spatial_balance: 0.5
+    seed: 0
+  train_dir: /data/nlahaye/output/Learnergy/GOES_LA_FIRE/
+run_split: false
