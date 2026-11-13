@@ -13,6 +13,7 @@ import os
 import zarr
 import re
 import numpy as np
+import shapely
 import rioxarray
 from shapely.geometry import mapping
 import xarray as xr
@@ -342,15 +343,19 @@ def read_vars_copernicus_generic(filename, vrs, depth = 0):
         data = ref[:].astype(np.float32)
         data = np.squeeze(data)
         try:
-            valid_data_ind = np.where((data != ref._FillValue) & (data >= ref.valid_min) & (data <=ref.valid_max))
-            invalid_data_ind = np.where((data == ref._FillValue) | (data < ref.valid_min) | (data > ref.valid_max))
+            # boolean masks select the same elements as np.where, in the same order,
+            # without the int64 index arrays (one per dimension)
+            valid_data_ind = (data != ref._FillValue) & (data >= ref.valid_min) & (data <=ref.valid_max)
+            invalid_data_ind = (data == ref._FillValue) | (data < ref.valid_min) | (data > ref.valid_max)
             try:
                 data[valid_data_ind] = data[valid_data_ind] * ref.scale_factor
             except AttributeError:
                 pass
             try: 
                  data[valid_data_ind] = data[valid_data_ind] + ref.add_offset
-                 print(data[valid_data_ind].min(), data[valid_data_ind].max(), data[valid_data_ind].mean(), vrs[i])
+                 vals = data[valid_data_ind]
+                 print(vals.min(), vals.max(), vals.mean(), vrs[i])
+                 del vals
             except AttributeError:
                 pass
             data[invalid_data_ind] = -999999.0
@@ -380,15 +385,17 @@ def read_copernicus_generic(filename, vrs, depth = 0):
         print(data.shape)
 
         try:
+            # boolean masks select the same elements as np.where, in the same order,
+            # without the int64 index arrays (one per dimension)
             if hasattr(ref, "_FillValue") and hasattr(ref, "valid_min") and hasattr(ref, "valid_max"):
-                valid_data_ind = np.where((data != ref._FillValue) & (data >= ref.valid_min) & (data <=ref.valid_max))
-                invalid_data_ind = np.where((data == ref._FillValue) | (data < ref.valid_min) | (data > ref.valid_max))
+                valid_data_ind = (data != ref._FillValue) & (data >= ref.valid_min) & (data <=ref.valid_max)
+                invalid_data_ind = (data == ref._FillValue) | (data < ref.valid_min) | (data > ref.valid_max)
             elif hasattr(ref, "_FillValue"):
-                valid_data_ind = np.where((data != ref._FillValue))
-                invalid_data_ind = np.where((data == ref._FillValue))
+                valid_data_ind = (data != ref._FillValue)
+                invalid_data_ind = (data == ref._FillValue)
             elif hasattr(ref, "valid_min") and hasattr(ref, "valid_max"):
-                valid_data_ind = np.where((data >= ref.valid_min) & (data <=ref.valid_max))
-                invalid_data_ind = np.where((data < ref.valid_min) | (data > ref.valid_max)) 
+                valid_data_ind = (data >= ref.valid_min) & (data <=ref.valid_max)
+                invalid_data_ind = (data < ref.valid_min) | (data > ref.valid_max)
             else:
                 valid_data_ind = None
                 invalid_data_ind = None
@@ -402,13 +409,17 @@ def read_copernicus_generic(filename, vrs, depth = 0):
             try:
                  if valid_data_ind is not None:
                      data[valid_data_ind] = data[valid_data_ind] + ref.add_offset
-                     print(data[valid_data_ind].min(), data[valid_data_ind].max(), data[valid_data_ind].mean(), vrs[i])
+                     vals = data[valid_data_ind]
+                     print(vals.min(), vals.max(), vals.mean(), vrs[i])
+                     del vals
                  else:
                      data = data + ref.add_offset
             except AttributeError:
                 pass
             if invalid_data_ind is not None:
                 data[invalid_data_ind] = -999999.0
+            valid_data_ind = None
+            invalid_data_ind = None
         except AttributeError:
             pass
         print(data.shape, )
@@ -420,6 +431,7 @@ def read_copernicus_generic(filename, vrs, depth = 0):
             elif data.ndim == 1:
                 data1 = np.zeros((len(vrs), data.shape[0]))
         data1[i] = data
+        data = None
     print(data1.shape)
     return data1    
 
@@ -441,15 +453,18 @@ def read_noaa_oisst_daily(filename, **kwargs):
         data = np.squeeze(data)
         
         try:
-            valid_data_ind = np.where((data != ref._FillValue) & (data >= ref.valid_min) & (data <=ref.valid_max))
-            invalid_data_ind = np.where((data == ref._FillValue) | (data < ref.valid_min) | (data > ref.valid_max))
+            # boolean masks: same elements and order as np.where, without int64 index arrays
+            valid_data_ind = (data != ref._FillValue) & (data >= ref.valid_min) & (data <=ref.valid_max)
+            invalid_data_ind = (data == ref._FillValue) | (data < ref.valid_min) | (data > ref.valid_max)
             try:
                 data[valid_data_ind] = data[valid_data_ind] * ref.scale_factor
             except AttributeError:
                 pass
             try:
                  data[valid_data_ind] = data[valid_data_ind] + ref.add_offset
-                 print(data[valid_data_ind].min(), data[valid_data_ind].max(), data[valid_data_ind].mean(), vrs[i])
+                 vals = data[valid_data_ind]
+                 print(vals.min(), vals.max(), vals.mean(), vrs[i])
+                 del vals
             except AttributeError:
                 pass
             data[invalid_data_ind] = -999999.0
@@ -466,6 +481,7 @@ def read_noaa_oisst_daily(filename, **kwargs):
         loc = read_nc_geo_sst(filename, **kwrg)
         lat = loc[0]
         lon = loc[1]
+        print(lat.shape, lon.shape, dat.shape)
         inds1 = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]))
         inds2 = np.where((lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
         lat = lat[inds1]
@@ -520,8 +536,9 @@ def read_copernicus_sss_ssd_daily(filename, **kwargs):
         data = ref[:].astype(np.float32)
         data = np.squeeze(data)
         try:
-            valid_data_ind = np.where(data > ref._FillValue)
-            invalid_data_ind = np.where(data == ref._FillValue)
+            # boolean masks: same elements and order as np.where, without int64 index arrays
+            valid_data_ind = data > ref._FillValue
+            invalid_data_ind = data == ref._FillValue
             try:
                 data[valid_data_ind] = data[valid_data_ind] * ref.scale_factor
             except AttributeError:
@@ -544,6 +561,7 @@ def read_copernicus_sss_ssd_daily(filename, **kwargs):
         loc = read_nc_geo_sss(filename, **kwrg)
         lat = loc[0]
         lon = loc[1]
+        print(lat.shape, lon.shape, dat.shape)
         inds1 = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]))
         inds2 = np.where((lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
         lat = lat[inds1]
@@ -613,6 +631,78 @@ def _pace_oc_scale_block(raw, ref):
     return data
 
 
+def _slice_range(n, start, stop):
+    """Index range that numpy slicing [start:stop] selects from an axis of length n."""
+    return range(n)[slice(start, stop)]
+
+
+def _read_window(ref, rows, cols):
+    """Read ref[rows, cols] for two step-1 ranges (empty ranges give an empty array)."""
+    if len(rows) == 0 or len(cols) == 0:
+        return np.asarray(ref[0:0, 0:0]).reshape((len(rows), len(cols)))
+    return ref[rows.start:rows.stop, cols.start:cols.stop]
+
+
+def _oc_geo_1d(filename, **kwargs):
+    """1-D lat and lon exactly as read_oc_geo computes them before building the 2-D grid."""
+    vrs = ["lat", "lon"]
+    if "PACE" not in filename:
+        stem = "RRS.Rrs_445" if "JPSS" in filename else "RRS.Rrs_443"
+        base = f"{filename}{stem}.4km"
+    else:  # PACE has its own naming convention
+        base = f"{filename}AOP.V3_2.4km"
+
+    flename = base + ".nc"
+    print(flename, os.path.exists(flename), kwargs.get("nrt", False))
+    if not os.path.exists(flename) and kwargs.get("nrt", False):
+        flename = base + ".NRT.nc"
+
+    data1 = []
+    with Dataset(flename) as f:
+        f.set_auto_maskandscale(False)
+        for i in range(len(vrs)):
+            ref = f.variables[vrs[i]]
+            data = ref[:].astype(np.float32)
+            data[(data < ref.valid_min) | (data > ref.valid_max)] = -999999.0
+            data1.append(data)
+
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+        data1[0] = data1[0][kwargs["start_line"]:kwargs["end_line"]]
+        data1[1] = data1[1][kwargs["start_sample"]:kwargs["end_sample"]]
+    return data1[0], data1[1]
+
+
+def _oc_geo_select(filename, kwrg, kwargs):
+    """Row/column selection of the L3m lat/lon box without building the 2-D grid.
+
+    On the 2-D grid from read_oc_geo, lat[r, c] = lat_1d[r] and lon[r, c] = lon_1d[c],
+    so the box test is lat_ok[r] & lon_ok[c]. Returns the 1-D lat/lon, the row
+    indices and column indices that np.where on the 2-D test would give as unique
+    sorted values, and the two 1-D tests.
+    """
+    lat_1d, lon_1d = _oc_geo_1d(filename, **kwrg)
+    lat_ok = (lat_1d >= kwargs["start_lat"]) & (lat_1d <= kwargs["end_lat"])
+    lon_ok = (lon_1d >= kwargs["start_lon"]) & (lon_1d <= kwargs["end_lon"])
+    if lat_ok.any() and lon_ok.any():
+        r_ind = np.flatnonzero(lat_ok)
+        c_ind = np.flatnonzero(lon_ok)
+    else:
+        r_ind = np.empty(0, dtype=np.intp)
+        c_ind = np.empty(0, dtype=np.intp)
+    return lat_1d, lon_1d, lat_ok, lon_ok, r_ind, c_ind
+
+
+def _oc_grid_window(lat_1d, lon_1d, r0, r1, c0, c1):
+    """lat[r0:r1, c0:c1] and lon[r0:r1, c0:c1] of the read_oc_geo grid, as float32 copies."""
+    lat_1d = lat_1d[r0:r1]
+    lon_1d = lon_1d[c0:c1]
+    lat = np.empty((lat_1d.shape[0], lon_1d.shape[0]), dtype=np.float32)
+    lon = np.empty((lat_1d.shape[0], lon_1d.shape[0]), dtype=np.float32)
+    lat[:] = lat_1d[:, None]
+    lon[:] = lon_1d[None, :]
+    return lat, lon
+
+
 def read_pace_oc(filename, **kwargs):
     vrs = ["AOP.V3_2"] #["RRS.V3_0.Rrs"]
     internal_vars = ["Rrs"]
@@ -639,25 +729,14 @@ def read_pace_oc(filename, **kwargs):
         # range slicing follows the same rules as numpy slicing (negatives, clipping).
         rows, cols = range(n_rows), range(n_cols)
         if has_geo:
-            loc = read_oc_geo(filename, **kwrg)
-            lat = loc[0]
-            lon = loc[1]
-            print(lat.shape, lon.shape, (n_bands, n_rows, n_cols))
-            # one in-place boolean grid; the bounds equal min/max of np.where's row and col indices
-            sel = lat >= kwargs["start_lat"]
-            sel &= lat <= kwargs["end_lat"]
-            sel &= lon >= kwargs["start_lon"]
-            sel &= lon <= kwargs["end_lon"]
-            r_ind = np.flatnonzero(sel.any(axis=1))
-            c_ind = np.flatnonzero(sel.any(axis=0))
-            del sel
+            # bounds from the 1-D lat/lon tests; equal to min/max of np.where on the 2-D grid
+            lat_1d, lon_1d, _, _, r_ind, c_ind = _oc_geo_select(filename, kwrg, kwargs)
+            print((lat_1d.shape[0], lon_1d.shape[0]), (lat_1d.shape[0], lon_1d.shape[0]), (n_bands, n_rows, n_cols))
             row_bound = [min(r_ind), max(r_ind)]
             col_bound = [min(c_ind), max(c_ind)]
             del r_ind, c_ind
-            # copies, so the full-grid lat/lon arrays can be freed
-            lat = np.array(lat[row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]])
-            lon = np.array(lon[row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]])
-            del loc
+            lat, lon = _oc_grid_window(lat_1d, lon_1d, row_bound[0], row_bound[1], col_bound[0], col_bound[1])
+            del lat_1d, lon_1d
             rows = rows[row_bound[0]:row_bound[1]]
             cols = cols[col_bound[0]:col_bound[1]]
 
@@ -715,52 +794,77 @@ def read_s3_oc(filename, **kwargs):
 
     #vrs = ["CHL.chlor_a", "KD.Kd_490", "RRS.aot_865", "RRS.angstrom"]
     kwrg = {}
-    data1 = None
+    # Resolve file names first (this also sets kwrg["nrt"] exactly as before),
+    # so the lat/lon selection is known before any band is read.
+    flenames = []
     for i in range(len(vrs)):
-
         base = filename + vrs[i] + ".4km"
         flename = base + ".nc"
         if not os.path.exists(flename) and kwargs.get("nrt", False):
             flename = base + ".NRT.nc"
             kwrg["nrt"] = True 
+        flenames.append(flename)
+
+    has_geo = "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs
+    has_lines = "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs
+
+    sel_win = None
+    if has_geo:
+        # Original: rows, cols = np.where(box on 2-D grid); dat[:, rows, cols] (flattened, row-major).
+        # Same elements in the same order: read the bounding box, then apply the box test inside it.
+        lat_1d, lon_1d, lat_ok, lon_ok, r_ind, c_ind = _oc_geo_select(filename, kwrg, kwargs)
+        print((lat_1d.shape[0], lon_1d.shape[0]), (lat_1d.shape[0], lon_1d.shape[0]), (len(vrs), lat_1d.shape[0], lon_1d.shape[0]))
+        if r_ind.size > 0:
+            r0, r1 = int(r_ind[0]), int(r_ind[-1]) + 1
+            c0, c1 = int(c_ind[0]), int(c_ind[-1]) + 1
+        else:
+            r0 = r1 = c0 = c1 = 0
+        sel_win = lat_ok[r0:r1, None] & lon_ok[None, c0:c1]
+        lat = np.broadcast_to(lat_1d[r0:r1, None], sel_win.shape)[sel_win]
+        lon = np.broadcast_to(lon_1d[None, c0:c1], sel_win.shape)[sel_win]
+        del lat_1d, lon_1d, lat_ok, lon_ok, r_ind, c_ind
+
+    dat = None
+    for i in range(len(vrs)):
+        flename = flenames[i]
         # flename = filename + vrs[i] + ".4km.nc"
         print(flename)
-        f = Dataset(flename)
-        f.set_auto_maskandscale(False)
-        start_ind = 4
-        if "KD" in vrs[i]:
-            start_ind = 3
-        ref = f.variables[vrs[i][start_ind:]]
-        data = ref[:].astype(np.float32)
-        try:
-            valid_data_ind = np.where((data >= ref.valid_min) & (data <= ref.valid_max))
-            invalid_data_ind = np.where((data < ref.valid_min) | (data > ref.valid_max))
+        with Dataset(flename) as f:
+            f.set_auto_maskandscale(False)
+            start_ind = 4
+            if "KD" in vrs[i]:
+                start_ind = 3
+            ref = f.variables[vrs[i][start_ind:]]
+            rows, cols = range(ref.shape[0]), range(ref.shape[1])
+            if has_geo:
+                rows, cols = range(r0, r1), range(c0, c1)
+            elif has_lines:
+                # line/sample slicing folded into the read (no lat/lon selection in this case)
+                rows = rows[kwargs["start_line"]:kwargs["end_line"]]
+                cols = cols[kwargs["start_sample"]:kwargs["end_sample"]]
+            data = _read_window(ref, rows, cols).astype(np.float32)
             try:
-                data[valid_data_ind] = data[valid_data_ind] * ref.scale_factor 
+                valid_data_ind = (data >= ref.valid_min) & (data <= ref.valid_max)
+                invalid_data_ind = (data < ref.valid_min) | (data > ref.valid_max)
+                try:
+                    data[valid_data_ind] = data[valid_data_ind] * ref.scale_factor 
+                except AttributeError:
+                    pass
+                try:
+                     data[valid_data_ind] = data[valid_data_ind] + ref.add_offset
+                except AttributeError:
+                    pass
+                data[invalid_data_ind] = -999999.0
             except AttributeError:
                 pass
-            try:
-                 data[valid_data_ind] = data[valid_data_ind] + ref.add_offset
-            except AttributeError:
-                pass
-            data[invalid_data_ind] = -999999.0
-        except AttributeError:
-            pass
-        if data1 is None:
-            data1 = np.zeros((len(vrs), data.shape[0], data.shape[1]))
-        data1[i] = data
-    dat = data1.astype(np.float32)
-    if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs:
-        loc = read_oc_geo(filename, **kwrg)
-        lat = loc[0]
-        lon = loc[1]
-        rows, cols = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]) & (lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
-        row_bound = [min(rows), max(rows)]
-        col_bound = [min(cols), max(cols)]
-        lat = lat[row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]]
-        lon = lon[row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]]
-        dat = dat[:, row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]]
-
+        print(data.shape)
+        if has_geo:
+            data = data[sel_win]
+        if dat is None:
+            # the original float64 buffer only ever held float32 values, so float32 is exact
+            dat = np.zeros((len(vrs),) + data.shape, dtype=np.float32)
+        dat[i] = data
+        data = None
 
     #TODO Mask via shapefile
 
@@ -786,10 +890,79 @@ def read_s3_oc(filename, **kwargs):
         print(final_mask)
         dat[:,final_mask] = -999999
 
-    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+    if has_lines and has_geo:
+        # unchanged behaviour: the selection output is (bands, N)
         dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
     return dat
 
+
+
+def _oc_bands_windowed(filename, vrs, flenames, kwrg, kwargs, label_shape_print):
+    """Shared windowed band reader for read_viirs_oc and read_modis_oc.
+
+    Returns (dat, lat, lon, line_sl, samp_sl, has_geo, pre_line_shape). lat/lon are
+    None when no lat/lon box is requested. Each band is read only over the final
+    window and scaled with exactly the same element-wise operations as before.
+    """
+    has_geo = "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs
+    has_lines = "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs
+
+    lat = None
+    lon = None
+    row_bound = None
+    if has_geo:
+        lat_1d, lon_1d, _, _, r_ind, c_ind = _oc_geo_select(filename, kwrg, kwargs)
+        if label_shape_print:
+            print((lat_1d.shape[0], lon_1d.shape[0]), (lat_1d.shape[0], lon_1d.shape[0]), (len(vrs), lat_1d.shape[0], lon_1d.shape[0]))
+        row_bound = [min(r_ind), max(r_ind)]
+        col_bound = [min(c_ind), max(c_ind)]
+        # [min:max) as in the original code
+        lat, lon = _oc_grid_window(lat_1d, lon_1d, row_bound[0], row_bound[1], col_bound[0], col_bound[1])
+        del lat_1d, lon_1d, r_ind, c_ind
+
+    line_sl = slice(None)
+    samp_sl = slice(None)
+    if has_lines:
+        line_sl = slice(kwargs["start_line"], kwargs["end_line"])
+        samp_sl = slice(kwargs["start_sample"], kwargs["end_sample"])
+
+    dat = None
+    pre_line_shape = None
+    for i in range(len(vrs)):
+        with Dataset(flenames[i]) as f:
+            f.set_auto_maskandscale(False)
+            start_ind = 4
+            if "KD" in vrs[i]:
+                start_ind = 3
+            ref = f.variables[vrs[i][start_ind:]]
+            rows, cols = range(ref.shape[0]), range(ref.shape[1])
+            if has_geo:
+                rows = rows[row_bound[0]:row_bound[1]]
+                cols = cols[col_bound[0]:col_bound[1]]
+            if pre_line_shape is None:
+                pre_line_shape = (len(vrs), len(rows), len(cols))
+            data = _read_window(ref, rows[line_sl], cols[samp_sl]).astype(np.float32)
+            try:
+                valid_data_ind = (data >= ref.valid_min) & (data <= ref.valid_max)
+                invalid_data_ind = (data < ref.valid_min) | (data > ref.valid_max)
+                try:
+                    data[valid_data_ind] = data[valid_data_ind] * ref.scale_factor
+                except AttributeError:
+                    pass
+                try:
+                     data[valid_data_ind] = data[valid_data_ind] + ref.add_offset
+                except AttributeError:
+                    pass
+            except AttributeError:
+                pass
+            # outside the try, as before: without valid_min this reuses the previous
+            # band's indices (or raises UnboundLocalError on the first band)
+            data[invalid_data_ind] = -999999.0
+        if dat is None:
+            dat = np.empty((len(vrs),) + data.shape, dtype=np.float32)
+        dat[i] = data
+        data = None
+    return dat, lat, lon, line_sl, samp_sl, has_geo, pre_line_shape
 
 
 def read_viirs_oc(filename, **kwargs):
@@ -803,60 +976,26 @@ def read_viirs_oc(filename, **kwargs):
     if 'JPSS' in filename:
         vrs = vrs2
 
-    data1 = []
     kwrg = {}
     allow_nrt = kwargs.get("nrt", False)
-    for i in range(len(vrs)):
-        if 'JPSS' in filename:
-            vrs = vrs2
-
+    flenames = []
     for i in range(len(vrs)):
         base = filename + vrs[i] + ".4km"
         flename = base + ".nc"
         if not os.path.exists(flename) and allow_nrt:
             flename = base + ".NRT.nc"
             kwrg["nrt"] = True
-        f = Dataset(flename)
-        f.set_auto_maskandscale(False)
-        start_ind = 4
-        if "KD" in vrs[i]:
-            start_ind = 3
-        ref = f.variables[vrs[i][start_ind:]]
-        data = ref[:].astype(np.float32)
-        try:
-            valid_data_ind = np.where((data >= ref.valid_min) & (data <= ref.valid_max))
-            invalid_data_ind = np.where((data < ref.valid_min) | (data > ref.valid_max))
-            try:
-                data[valid_data_ind] = data[valid_data_ind] * ref.scale_factor
-            except AttributeError:
-                pass
-            try:
-                 data[valid_data_ind] = data[valid_data_ind] + ref.add_offset
-            except AttributeError:
-                pass
-        except AttributeError:
-            pass
-        data[invalid_data_ind] = -999999.0
-        data1.append(data)
-    dat = np.array(data1).astype(np.float32)
+        flenames.append(flename)
 
-    print(dat.shape)
-    if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs: 
-        loc = read_oc_geo(filename, **kwrg)
-        lat = loc[0]
-        lon = loc[1]
-        rows, cols = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]) & (lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
-        row_bound = [min(rows), max(rows)]
-        col_bound = [min(cols), max(cols)]
-        lat = lat[row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]]
-        lon = lon[row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]]
-        dat = dat[:, row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]]
+    dat, lat, lon, line_sl, samp_sl, has_geo, _ = _oc_bands_windowed(filename, vrs, flenames, kwrg, kwargs, True)
 
     #TODO Mask via shapefile
 
     tmp1 = None
     tmp2 = None
     if "mask_oceans" in kwargs:
+        if not has_geo:
+            raise UnboundLocalError("cannot access local variable 'lon' where it is not associated with a value")
         land_temp = ocean_basins_50.mask(lon, lat)
         land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
         tmp1 = land_temp.isnull().to_numpy().astype(np.bool_)
@@ -873,26 +1012,12 @@ def read_viirs_oc(filename, **kwargs):
     elif tmp2 is not None:
         final_mask = tmp2
 
+    # (the original applied the same mask twice; once gives the same result)
     if final_mask is not None:
         print(final_mask)
-        dat[:,final_mask] = -999999
+        # the mask covers the lat/lon window; trim it to the line/sample window already applied
+        dat[:, np.asarray(final_mask)[line_sl, samp_sl]] = -999999
 
-
-    final_mask = None
-    if tmp1 is not None and tmp2 is not None:
-        final_mask = xr.apply_ufunc(np.logical_and, tmp1, tmp2, vectorize=True, dask="parallelized",\
-            input_core_dims=[[],[]], output_core_dims=[[],[]])
-    elif tmp1 is not None:
-        final_mask = tmp1
-    elif tmp2 is not None:
-        final_mask = tmp2
-
-    if final_mask is not None:
-        print(final_mask)
-        dat[:,final_mask] = -999999
-
-    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
-        dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
     return dat
 
 
@@ -1002,33 +1127,7 @@ def read_nc_geo_sss(filename, **kwargs):
 
 def read_oc_geo(filename, **kwargs):
 
-    vrs = ["lat", "lon"]
-    if "PACE" not in filename:
-        stem = "RRS.Rrs_445" if "JPSS" in filename else "RRS.Rrs_443"
-        base = f"{filename}{stem}.4km"
-    else:  # PACE has its own naming convention
-        base = f"{filename}RRS.V3_0.Rrs.4km"
-
-    flename = base + ".nc"
-    print(flename, os.path.exists(flename), kwargs.get("nrt", False))
-    if not os.path.exists(flename) and kwargs.get("nrt", False):
-        flename = base + ".NRT.nc"
-
-    data1 = []
-    with Dataset(flename) as f:
-        f.set_auto_maskandscale(False)
-        for i in range(len(vrs)):
-            ref = f.variables[vrs[i]]
-            data = ref[:].astype(np.float32)
-            data[(data < ref.valid_min) | (data > ref.valid_max)] = -999999.0
-            data1.append(data)
-
-    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
-        data1[0] = data1[0][kwargs["start_line"]:kwargs["end_line"]]
-        data1[1] = data1[1][kwargs["start_sample"]:kwargs["end_sample"]]
-
-    lat = data1[0]
-    lon = data1[1]
+    lat, lon = _oc_geo_1d(filename, **kwargs)
     if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs:
         # select the 1-D coordinates first, then fill only the selected 2-D grid
         lat = lat[(lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"])]
@@ -1048,7 +1147,7 @@ def read_modis_oc(filename, **kwargs):
     vrs = ["RRS.Rrs_412", "RRS.Rrs_443", "RRS.Rrs_469", "RRS.Rrs_488", "RRS.Rrs_531", "RRS.Rrs_547", "RRS.Rrs_555", "RRS.Rrs_645", "RRS.Rrs_667", "RRS.Rrs_678"]
 
     kwrg = {}
-    data1 = []
+    flenames = []
     for i in range(len(vrs)):
         base = filename + vrs[i] + ".4km"
         flename = base + ".nc"
@@ -1057,49 +1156,18 @@ def read_modis_oc(filename, **kwargs):
             kwrg["nrt"] = True
         # flename = filename + vrs[i] + ".4km.nc"
         print(flename)
-        f = Dataset(flename)
-        f.set_auto_maskandscale(False)
-        start_ind = 4
-        if "KD" in vrs[i]:
-            start_ind = 3
-        ref = f.variables[vrs[i][start_ind:]]
-        data = ref[:].astype(np.float32)
-        try:
-            valid_data_ind = np.where((data >= ref.valid_min) & (data <= ref.valid_max))
-            invalid_data_ind = np.where((data < ref.valid_min) | (data > ref.valid_max))
-            try:
-                data[valid_data_ind] = data[valid_data_ind] * ref.scale_factor 
-            except AttributeError:
-                pass
-            try:
-                 data[valid_data_ind] = data[valid_data_ind] + ref.add_offset
-            except AttributeError:
-                pass
-        except AttributeError:
-            pass
-        data[invalid_data_ind] = -999999.0
-        data1.append(data)
-        #if i == 0:
-        #    plt.imshow(data)
-        #    plt.savefig(filename + "CHLOR_FULL.png")
-    dat = np.array(data1).astype(np.float32)
+        flenames.append(flename)
 
-    if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs: 
-        loc = read_oc_geo(filename, **kwrg)
-        lat = loc[0]
-        lon = loc[1]
-        rows, cols = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]) & (lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
-        row_bound = [min(rows), max(rows)]
-        col_bound = [min(cols), max(cols)]
-        lat = lat[row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]]
-        lon = lon[row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]]
-        dat = dat[:, row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]]
-
+    dat, lat, lon, line_sl, samp_sl, has_geo, pre_line_shape = _oc_bands_windowed(filename, vrs, flenames, kwrg, kwargs, True)
 
     #TODO Mask via shapefile
 
     tmp1 = None
     tmp2 = None
+    if not has_geo:
+        # as before: lat/lon only exist when a lat/lon box is given
+        raise UnboundLocalError("cannot access local variable 'lat' where it is not associated with a value")
+    print(lat.shape, lon.shape, pre_line_shape)
     if "mask_oceans" in kwargs:
         land_temp = ocean_basins_50.mask(lon, lat)
         land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
@@ -1118,12 +1186,8 @@ def read_modis_oc(filename, **kwargs):
 
     if final_mask is not None:
         print(final_mask)
-        dat[:,final_mask] = -999999
-
-
-
-    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
-        dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+        # the mask covers the lat/lon window; trim it to the line/sample window already applied
+        dat[:, np.asarray(final_mask)[line_sl, samp_sl]] = -999999
 
     #plt.imshow(np.squeeze(dat[0]))
     #plt.savefig(filename + "CHLOR_SUBSET.png")
@@ -1255,6 +1319,24 @@ def read_tempo_no2_netcdf(filename, **kwargs):
     return dat
  
 
+def _lat_lon_grid(lat, lon, row_slice=None):
+    """Same values and dtype as np.array([latgr, longr]) with longr, latgr = np.meshgrid(lon, lat).
+
+    Filled by broadcasting (no meshgrid copies or stacked copy). Masked inputs
+    contribute their underlying data, as np.array does. row_slice optionally
+    keeps only those rows, equal to slicing the result with [:, row_slice].
+    """
+    lat_d = np.ravel(np.ma.getdata(lat))
+    lon_d = np.ravel(np.ma.getdata(lon))
+    dtype = np.result_type(lat_d, lon_d)
+    if row_slice is not None:
+        lat_d = lat_d[row_slice]
+    out = np.empty((2, lat_d.shape[0], lon_d.shape[0]), dtype=dtype)
+    out[0] = lat_d[:, None]
+    out[1] = lon_d[None, :]
+    return out
+
+
 def read_tempo_no2_netcdf_geo(filename, **kwargs):
 
     f = Dataset(filename)
@@ -1264,14 +1346,16 @@ def read_tempo_no2_netcdf_geo(filename, **kwargs):
     lat = f.variables["latitude"][:]
     lon = f.variables["longitude"][:]
 
-    longr, latgr = np.meshgrid(lon, lat)
-
-    dat = np.array([latgr, longr])
+    dat = _lat_lon_grid(lat, lon)
     print(dat.shape, "GEO HERE")
 
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
             dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
     return dat
+
+# Channels per block for the per-channel statistics printed by read_tempo_netcdf.
+_TEMPO_STATS_CHANNELS = 64
+
 
 def read_tempo_netcdf(filename, **kwargs):
 
@@ -1279,13 +1363,55 @@ def read_tempo_netcdf(filename, **kwargs):
     f.set_always_mask(True)    
     f.set_auto_mask(True)
 
-    dat = f.groups['band_290_490_nm']['radiance'][:]
-    dat2 = f.groups['band_540_740_nm']['radiance'][:]
+    # Same result as np.ma.concatenate((dat, dat2), axis=2), but each band group is
+    # copied into a preallocated output and freed, so both groups and the
+    # concatenated copy are never held at the same time.
+    v1 = f.groups['band_290_490_nm']['radiance']
+    v2 = f.groups['band_540_740_nm']['radiance']
+    shp1, shp2 = tuple(v1.shape), tuple(v2.shape)
+    if len(shp1) != 3 or len(shp2) != 3 or shp1[:2] != shp2[:2]:
+        dat = np.ma.concatenate((v1[:], v2[:]), axis=2)
+    else:
+        n1 = shp1[2]
+        part = v1[:]
+        out = np.empty(shp1[:2] + (n1 + shp2[2],), dtype=np.ma.getdata(part).dtype)
+        out[:, :, :n1] = np.ma.getdata(part)
+        mask = None
+        if np.ma.getmask(part) is not np.ma.nomask:
+            mask = np.zeros(out.shape, dtype=np.bool_)
+            mask[:, :, :n1] = np.ma.getmaskarray(part)
+        part = None
+        part = v2[:]
+        d2 = np.ma.getdata(part)
+        if np.result_type(out.dtype, d2.dtype) != out.dtype:
+            out = out.astype(np.result_type(out.dtype, d2.dtype))
+        out[:, :, n1:] = d2
+        d2 = None
+        if np.ma.getmask(part) is not np.ma.nomask:
+            if mask is None:
+                mask = np.zeros(out.shape, dtype=np.bool_)
+            mask[:, :, n1:] = np.ma.getmaskarray(part)
+        part = None
+        # netCDF4 returns np.ma.MaskedArray, so this is the class np.ma.concatenate returns
+        dat = out.view(np.ma.MaskedArray)
+        out = None
+        if mask is not None:
+            # np.ma.concatenate shrinks an all-False mask to nomask
+            dat._mask = mask if mask.any() else np.ma.nomask
+        mask = None
 
-    dat = np.ma.concatenate((dat, dat2), axis=2) 
-
-    for j in range(dat.shape[2]):
-        print(dat[:,:,j].min(), dat[:,:,j].max(), dat[:,:,j].mean(), dat[:,:,j].std())
+    # Per-channel statistics, computed a block of channels at a time.
+    # (Printed mean/std can differ from the per-slice values in the last digits
+    # because of summation order; the returned data are unchanged.)
+    for c0 in range(0, dat.shape[2], _TEMPO_STATS_CHANNELS):
+        blk = dat[:, :, c0:c0 + _TEMPO_STATS_CHANNELS]
+        mn = blk.min(axis=(0, 1))
+        mx = blk.max(axis=(0, 1))
+        me = blk.mean(axis=(0, 1))
+        sd = blk.std(axis=(0, 1))
+        for j in range(blk.shape[2]):
+            print(mn[j], mx[j], me[j], sd[j])
+        blk = None
 
     print(dat.shape, dat.min(), dat.max())
 
@@ -1475,25 +1601,38 @@ def read_s3_netcdf(s3_dir, **kwargs):
         bands = None
         if "bands" in kwargs:
                 bands = kwargs["bands"]
+        dat = None
         if os.path.isdir(s3_dir):
-                for i in range(1,22):
-                        if bands is None or i in bands:
+                band_ids = [i for i in range(1,22) if bands is None or i in bands]
+                for n, i in enumerate(band_ids):
                                 data_key = "Oa" + str(i).zfill(2)+ "_radiance"
                                 fname = os.path.join(s3_dir, data_key + ".nc")
-                                f = Dataset(fname)
-                                f.set_auto_maskandscale(False)
-                                rad = f.variables[data_key]
-                                data = rad[:].astype(np.float32)
-                                print(rad.valid_min,  rad.valid_max, rad.scale_factor, rad.add_offset, data.min(), data.max())
-                                valid_data_ind = np.where((data >= rad.valid_min) & (data <= rad.valid_max))
-                                invalid_data_ind = np.where((data < rad.valid_min) | (data > rad.valid_max))
-                                data[valid_data_ind] = data[valid_data_ind] * rad.scale_factor + rad.add_offset
-                                data[invalid_data_ind] = -999999.0
-                                print(data[valid_data_ind].min(), data[valid_data_ind].max(), data[valid_data_ind].mean(), data[valid_data_ind].std())
-                                print(data[valid_data_ind].min()/rad.scale_factor, data[valid_data_ind].max()/rad.scale_factor, data[valid_data_ind].mean()/rad.scale_factor, data[valid_data_ind].std()/rad.scale_factor)
-                                print(data.min(), data.max(),"\n\n\n")
-                                data1.append(data)
-        dat = np.array(data1)
+                                with Dataset(fname) as f:
+                                        f.set_auto_maskandscale(False)
+                                        rad = f.variables[data_key]
+                                        data = rad[:].astype(np.float32)
+                                        print(rad.valid_min,  rad.valid_max, rad.scale_factor, rad.add_offset, data.min(), data.max())
+                                        # boolean masks: same elements and order as np.where, much less memory
+                                        valid_data_ind = (data >= rad.valid_min) & (data <= rad.valid_max)
+                                        invalid_data_ind = (data < rad.valid_min) | (data > rad.valid_max)
+                                        data[valid_data_ind] = data[valid_data_ind] * rad.scale_factor + rad.add_offset
+                                        data[invalid_data_ind] = -999999.0
+                                        invalid_data_ind = None
+                                        # one copy of the valid values serves both statistics prints
+                                        vals = data[valid_data_ind]
+                                        valid_data_ind = None
+                                        v_min, v_max, v_mean, v_std = vals.min(), vals.max(), vals.mean(), vals.std()
+                                        vals = None
+                                        print(v_min, v_max, v_mean, v_std)
+                                        print(v_min/rad.scale_factor, v_max/rad.scale_factor, v_mean/rad.scale_factor, v_std/rad.scale_factor)
+                                        print(data.min(), data.max(),"\n\n\n")
+                                if dat is None:
+                                        # preallocated instead of np.array(list of bands)
+                                        dat = np.empty((len(band_ids),) + data.shape, dtype=data.dtype)
+                                dat[n] = data
+                                data = None
+        if dat is None:
+                dat = np.array(data1)
         if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
                 dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
         return dat
@@ -1584,15 +1723,23 @@ def read_noaa_water_mask_netcdf_geo(filename, **kwargs):
     dat2 = f.variables["lon"]
     lon = dat2[:]
     data1.append(lon)
+    print(lat.shape, lon.shape)
     #dat = np.array(data1)
 
-    longr, latgr = np.meshgrid(lon, lat)
-    del lon, lat, data1, dat
-    dat = np.array([latgr, longr], dtype=np.float32)
-
+    # Filled by broadcasting straight into float32, and only for the requested lines:
+    # no float64 meshgrid copies and no full grid before slicing.
+    row_slice = None
     if "start_line" in kwargs and "end_line" in kwargs:
-        dat = dat[:, kwargs["start_line"]:kwargs["end_line"]]
-    return dat
+        row_slice = slice(kwargs["start_line"], kwargs["end_line"])
+    lat_d = np.ravel(np.ma.getdata(lat))
+    lon_d = np.ravel(np.ma.getdata(lon))
+    if row_slice is not None:
+        lat_d = lat_d[row_slice]
+    out = np.empty((2, lat_d.shape[0], lon_d.shape[0]), dtype=np.float32)
+    out[0] = lat_d[:, None]
+    out[1] = lon_d[None, :]
+    del lon, lat, data1, dat, lat_d, lon_d
+    return out
  
 
 def read_s2_gtiff(files, **kwargs):
@@ -1611,7 +1758,7 @@ def read_s2_gtiff(files, **kwargs):
         if len(data1) == 0 or len(dat1.shape) == 2:
             data1.append(dat1)
         print(dat1.shape)
-    dat = np.array(data1).astype(np.float32)
+    dat = _stack_float32(data1)
     if len(dat.shape) == 4:
         dat = np.squeeze(dat)
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
@@ -1619,6 +1766,24 @@ def read_s2_gtiff(files, **kwargs):
     print(dat.shape)
     return dat
 
+
+
+def _stack_float32(arrays):
+    """np.array(arrays).astype(np.float32) without the intermediate stacked copy.
+
+    Casting each array straight to float32 gives the same values as promoting
+    first, for every dtype except 64-bit integers (which keep the original path).
+    """
+    if len(arrays) == 0 or any(np.asarray(a).dtype.kind in "iu" and np.asarray(a).dtype.itemsize >= 8 for a in arrays) \
+            or any(np.asarray(a).dtype.kind not in "biuf" for a in arrays):
+        return np.array(arrays).astype(np.float32)
+    shp = np.shape(arrays[0])
+    if any(np.shape(a) != shp for a in arrays):
+        return np.array(arrays).astype(np.float32)
+    out = np.empty((len(arrays),) + tuple(shp), dtype=np.float32)
+    for k in range(len(arrays)):
+        out[k] = arrays[k]
+    return out
 
 
 def read_gtiff_multifile_generic(files, **kwargs):
@@ -1641,7 +1806,7 @@ def read_gtiff_multifile_generic(files, **kwargs):
         else:
             data1[0] = np.concatenate((data1[0], dat1), axis=0)
         print(dat1.shape)
-    dat = np.array(data1).astype(np.float32)
+    dat = _stack_float32(data1)
     if len(dat.shape) == 4:
         dat = np.squeeze(dat)
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
@@ -1709,7 +1874,19 @@ def read_burn_severity_stacks(flename, **kwargs):
 
 #TODO config for AVIRIS - scale 0.0001 valid_min = 0 and Fill = -9999
 def read_gtiff_generic(flename, **kwargs): 
-	dat = gdal.Open(flename, gdal.GA_ReadOnly).ReadAsArray()
+	ds = gdal.Open(flename, gdal.GA_ReadOnly)
+	has_lines = "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs
+	windowed = False
+	if has_lines and "mask_oceans" not in kwargs:
+		# read only the line/sample window (same values as reading everything and slicing)
+		rows = _slice_range(ds.RasterYSize, kwargs["start_line"], kwargs["end_line"])
+		cols = _slice_range(ds.RasterXSize, kwargs["start_sample"], kwargs["end_sample"])
+		if len(rows) > 0 and len(cols) > 0:
+			dat = ds.ReadAsArray(cols.start, rows.start, len(cols), len(rows))
+			windowed = True
+	if not windowed:
+		dat = ds.ReadAsArray()
+	ds = None
 	print(dat.shape)
 	#dat[np.where(dat.max() <= 0.0)] = -9999.0
 
@@ -1739,7 +1916,7 @@ def read_gtiff_generic(flename, **kwargs):
 			dat[:,final_mask] = -9999.0
  
 
-	if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+	if has_lines and not windowed:
                 if len(dat.shape) == 3:
                     dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
                 else:
@@ -1773,7 +1950,7 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
 
     insitu_df = insitu_df[(insitu_df['Datetime'] >= start_date) & (insitu_df['Datetime'] <= end_date)] 
     if dates is not None:
-        # Restrict to days of a scene split (YYYYMMDD), e.g. train days for context assignment
+        # restrict to the scene-split days (YYYYMMDD) assigned to this role
         insitu_df = insitu_df[insitu_df['Datetime'].dt.strftime('%Y%m%d').isin(set(str(d) for d in dates))]
 
     uniques = sorted(np.unique(insitu_df['Datetime'].values))
@@ -1897,18 +2074,13 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
         hist_data = []
         #print("PRE-ITER", len(gdf_insitu))
 
+        # pixel geometries once per scene; gdf has a default RangeIndex, so positions == index2
+        pixel_geoms = np.asarray(gdf.geometry.values)
         for index, poi in gdf_insitu.iterrows():
             count = count + 1
-            neighbours = []
-            for index2, poi2 in gdf.iterrows():
-                #print(abs(poi2.geometry.distance(poi.geometry)) < radius_degrees, "DISTANCE")
-                if abs(poi2.geometry.distance(poi.geometry)) < radius_degrees:
-                    #print(poi.geometry, poi2.geometry, poi2.geometry.distance(poi.geometry))
-                    clust_val = clust[index2] / 1000.0 
-                    #print("HERE", clust_val, clust_fname)
-                    #if  discard_lower  and str(clust_val) in lookup and np.digitize(poi[use_key], ranges) < lookup[str(clust_val)]:
-                    #    continue
-                    neighbours.append(index2)
+            # same neighbour set and order as the per-pixel iterrows loop:
+            # abs(poi2.geometry.distance(poi.geometry)) < radius_degrees
+            neighbours = _insitu_neighbours(pixel_geoms, poi.geometry, radius_degrees)
             #print(poi.geometry)
             #x = poi.geometry.buffer(0.011) #.unary_union
             #print(gdf["geometry"])
@@ -2160,6 +2332,7 @@ def read_oc_and_trop(fnames, **kwargs):
         loc = read_oc_geo(filename, **kwrg)
         lat = loc[0]
         lon = loc[1]
+        print(lat.shape, lon.shape, dat.shape)
         rows, cols = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]) & (lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
         row_bound = [min(rows), max(rows)]
         col_bound = [min(cols), max(cols)]
@@ -2329,6 +2502,16 @@ def read_trop_mod_xr(flename, **kwargs):
     return np.array(data1)
 
 
+def _insitu_neighbours(pixel_geoms, point_geom, radius_degrees):
+    """Indices of pixels with abs(pixel.distance(point)) < radius_degrees, in ascending order.
+
+    Vectorised GEOS distance (same function as shapely's Point.distance), replacing
+    the per-pixel iterrows loop.
+    """
+    d = shapely.distance(pixel_geoms, point_geom)
+    return np.flatnonzero(np.abs(d) < radius_degrees).tolist()
+
+
 def read_trop_mod_xr_geo(flename, **kwargs):
 
     print(flename)
@@ -2361,9 +2544,9 @@ def read_trop_mod_xr_geo(flename, **kwargs):
         print(x.shape)
     lat = data1[0]
     lon = data1[1]
-    longr, latgr = np.meshgrid(lon, lat)
-    print(longr, latgr)
-    geo = np.array([latgr, longr])
+    geo = _lat_lon_grid(lat, lon)
+    # same printout as print(longr, latgr) of the meshgrid arrays
+    print(geo[1], geo[0])
     print(geo.shape)
     return geo
 
@@ -2413,8 +2596,7 @@ def read_geo_nc_ungridded(fname, **kwargs):
     dat = Dataset(fname)
     lat = dat.variables['lat'][:]
     lon = dat.variables['lon'][:]
-    longr, latgr = np.meshgrid(lon, lat)
-    geo = np.array([latgr, longr])
+    geo = _lat_lon_grid(lat, lon)
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
         geo = geo[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
     return geo
@@ -2441,20 +2623,19 @@ def read_gtiff_generic_geo(flename, **kwargs):
     return latLon
 
 
+# Number of pixel centres transformed per call in get_lat_lon.
+_LATLON_BLOCK_POINTS = 1 << 20
+
+
 def get_lat_lon(fname):
     # open the dataset and get the geo transform matrix
     print(fname)
     ds = gdal.Open(fname)
     xoffset, px_w, rot1, yoffset, px_h, rot2 = ds.GetGeoTransform()
-    dataArr = ds.ReadAsArray()
-    #print(dataArr.shape, "LONLAT")
- 
-    ind = 1
-    if dataArr.ndim == 3:
-        latLon = np.zeros((dataArr.shape[1], dataArr.shape[2], 2))
-        ind = 2
-    else:
-        latLon = np.zeros((dataArr.shape[0], dataArr.shape[1], 2))
+    # Raster size from the header: the pixel values are not needed, so the
+    # (possibly many-band) raster is no longer read just to get its shape.
+    n_rows, n_cols = ds.RasterYSize, ds.RasterXSize
+    latLon = np.zeros((n_rows, n_cols, 2))
 
     # get CRS from dataset 
     crs = osr.SpatialReference()
@@ -2464,14 +2645,26 @@ def get_lat_lon(fname):
     crsGeo = osr.SpatialReference()
     crsGeo.ImportFromEPSG(4326) # 4326 is the EPSG id of lat/long crs 
     t = osr.CoordinateTransformation(crs, crsGeo)
-    for j in range(dataArr.shape[ind]):
-        for k in range(dataArr.shape[ind-1]):
-            posX = px_w * j + rot1 * k + (px_w * 0.5) + (rot1 * 0.5) + xoffset
-            posY = px_h * j + rot2 * k + (px_h * 0.5) + (rot2 * 0.5) + yoffset
 
-            (lon, lat, z) = t.TransformPoint(posX, posY)
-            latLon[k,j,1] = lon
-            latLon[k,j,0] = lat
+    # Pixel-centre coordinates with the same float64 operations, in the same order,
+    # as the per-pixel loop; transformed in blocks with TransformPoints.
+    j = np.arange(n_cols, dtype=np.float64)[None, :]
+    xj = px_w * j
+    yj = px_h * j
+    block = max(1, _LATLON_BLOCK_POINTS // max(1, n_cols))
+    for k0 in range(0, n_rows, block):
+        k1 = min(k0 + block, n_rows)
+        k = np.arange(k0, k1, dtype=np.float64)[:, None]
+        posX = xj + rot1 * k + (px_w * 0.5) + (rot1 * 0.5) + xoffset
+        posY = yj + rot2 * k + (px_h * 0.5) + (rot2 * 0.5) + yoffset
+        pts = np.column_stack((posX.ravel(), posY.ravel()))
+        del posX, posY
+        res = np.asarray(t.TransformPoints(pts), dtype=np.float64)
+        del pts
+        # (lon, lat, z) = t.TransformPoint(posX, posY) in the original
+        latLon[k0:k1, :, 1] = res[:, 0].reshape(k1 - k0, n_cols)
+        latLon[k0:k1, :, 0] = res[:, 1].reshape(k1 - k0, n_cols)
+        del res
     return latLon
 
 def genLatLon(fnames):
