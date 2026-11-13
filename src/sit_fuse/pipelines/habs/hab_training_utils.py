@@ -13,6 +13,7 @@ from sit_fuse.compute_resources import merge_compute_conf
 
 from sit_fuse.pipelines.habs.hab_training_constants import *
 from sit_fuse.pipelines.habs.hab_scene_split import scene_split_conf, apply_training_split
+from sit_fuse.pipelines.habs.hab_sensor_groups import oc_sources
 from sit_fuse.pipelines.data_transform_and_prep.goes_combine_and_clip_pipeline import goes_combine_and_clip_pipeline
 
 from sit_fuse.datasets.sf_dataset import run_data_prep
@@ -65,6 +66,17 @@ def build_trop_fname(yml_conf, datetm):
 
 
 
+def _complete_entries(entries, n_files):
+    """Sorted unique entries that were matched exactly n_files times."""
+    counts = {}
+    first = {}
+    for e in entries:
+        k = tuple(e) if isinstance(e, list) else e
+        counts[k] = counts.get(k, 0) + 1
+        first.setdefault(k, e)
+    return [first[k] for k in sorted(counts, key=str) if counts[k] == n_files]
+
+
 def find_train_test_fpaths(yml_conf, config_dict, instrument, key):
  
     # With scene_split enabled, train/test come from the stratified day split; the
@@ -82,11 +94,15 @@ def find_train_test_fpaths(yml_conf, config_dict, instrument, key):
     train_fnames = []
     test_fnames = []
 
-    for root, dirs, files in os.walk(yml_conf["instruments"][instrument][key]["input_oc_dir"]):
+    # One or more (input_oc_dir, input_oc_re) sources: sensor groups (e.g. VIIRS =
+    # SNPP + JPSS1 + JPSS2, OLCI = S3A + S3B) list one directory per platform.
+    # Entries keep their own platform prefix, so every scene is read with its own bands.
+    for in_dir, in_re in oc_sources(yml_conf["instruments"][instrument][key]):
+      for root, dirs, files in os.walk(in_dir):
          
         for fle in files:
 
-            mtch = re.search(str(yml_conf["instruments"][instrument][key]["input_oc_re"]), fle)
+            mtch = re.search(str(in_re), fle)
             if mtch:
                 if "GOES" in instrument:
                     dt = datetime.strptime(mtch.group(2), "%Y%j%H%M%S")
@@ -107,27 +123,10 @@ def find_train_test_fpaths(yml_conf, config_dict, instrument, key):
                 else:
                     test_fnames.append(lst_entry)
 
-        test_fnames = sorted(test_fnames)
-        train_fnames = sorted(train_fnames)
-        match_count = 0
-        final_test_fnames = []
-        for i in range(1, len(test_fnames)):
-            if test_fnames[i] == test_fnames[i-1]:
-                match_count += 1
-            else:
-                if match_count == NUM_CHANNELS[instrument] -1:
-                    final_test_fnames.append(test_fnames[i-1])
-                match_count = 0
-  
-        final_train_fnames = []
-        match_count = 0
-        for i in range(1, len(train_fnames)):
-            if train_fnames[i] == train_fnames[i-1]:
-                match_count += 1
-            else:
-                if match_count == NUM_CHANNELS[instrument] -1:
-                    final_train_fnames.append(train_fnames[i-1])
-                match_count = 0
+    # A scene is complete when all NUM_CHANNELS[instrument] band files matched
+    # (one match per band file). Counted per entry, so the last scene is kept too.
+    final_test_fnames = _complete_entries(test_fnames, NUM_CHANNELS[instrument])
+    final_train_fnames = _complete_entries(train_fnames, NUM_CHANNELS[instrument])
 
 
     if use_split:

@@ -42,6 +42,7 @@ import os
 import re
 
 from sit_fuse.datasets import scene_split as ss
+from sit_fuse.pipelines.habs.hab_sensor_groups import oc_sources
 
 DATE_RE = r"(?<!\d)(\d{8})(?!\d)"
 GOES_DATE_RE = (r"_s(\d{7})", "%Y%j")
@@ -97,27 +98,29 @@ def collect_dates(yml_conf, c=None):
             if not isinstance(kc, dict):
                 continue
             use_inputs = src == "inputs" or (src == "auto" and kc.get("input_oc_dir"))
-            fdir = kc.get("input_oc_dir") if use_inputs else kc.get("out_dir")
-            if not fdir or not os.path.isdir(fdir):
-                continue
-            if use_inputs and kc.get("input_oc_re"):
-                pat = re.compile(str(kc["input_oc_re"]))
-                fmt = "%Y%j%H%M%S" if "GOES" in inst else "%Y%m%d"
-                grp = 2
-            else:
-                rx, fmt = _time_pattern(c, inst)
-                pat, grp = re.compile(rx), 1
-            for root, dirs, files in os.walk(fdir):
-                for fle in list(files) + list(dirs):      # zarr outputs are directories
-                    m = pat.search(fle)
-                    if not m:
-                        continue
-                    try:
-                        d = dt.datetime.strptime(m.group(grp), fmt).date()
-                    except ValueError:
-                        continue
-                    if (lo is None or d >= lo) and (hi is None or d <= hi):
-                        days.add(d)
+            # sensor groups (VIIRS, OLCI) may list one input_oc_dir (and input_oc_re) per platform
+            sources = oc_sources(kc) if use_inputs else [(kc.get("out_dir"), None)]
+            for fdir, in_re in sources:
+                if not fdir or not os.path.isdir(fdir):
+                    continue
+                if use_inputs and in_re:
+                    pat = re.compile(str(in_re))
+                    fmt = "%Y%j%H%M%S" if "GOES" in inst else "%Y%m%d"
+                    grp = 2
+                else:
+                    rx, fmt = _time_pattern(c, inst)
+                    pat, grp = re.compile(rx), 1
+                for root, dirs, files in os.walk(fdir):
+                    for fle in list(files) + list(dirs):      # zarr outputs are directories
+                        m = pat.search(fle)
+                        if not m:
+                            continue
+                        try:
+                            d = dt.datetime.strptime(m.group(grp), fmt).date()
+                        except ValueError:
+                            continue
+                        if (lo is None or d >= lo) and (hi is None or d <= hi):
+                            days.add(d)
     return sorted(days)
 
 

@@ -25,12 +25,33 @@ DATE_RE = ".*(\d{8}).*"
 
 fname_res = ["(sif_finalday_\d+).*karenia_brevis_bloom.tif", ".*(\d{8}).*karenia_brevis_bloom.tif", ".*(\d{8}).*no_heir.*karenia_brevis_bloom.tif", ".*(\d{8}).*pseudo_nitzschia_seriata_bloom.tif", ".*(\d{8}).*pseudo_nitzschia_delicatissima_bloom.tif", ".*(\d{8}).*alexandrium_bloom.tif", ".*(\d{8}).*total_phytoplankton.tif",".*(\d{8}).*no_heir.*pseudo_nitzschia_seriata_bloom.tif", ".*(\d{8}).*no_heir.*pseudo_nitzschia_delicatissima_bloom.tif", ".*(\d{8}).*no_heir.*alexandrium_bloom.tif", ".*(\d{8}).*no_heir.*total_phytoplankton.tif", ".*(\d{8}).*no_heir.*particulate_domoic_acid.tif", ".*(\d{8}).*particulate_domoic_acid.tif"]
  
-def merge_datasets(paths, fname_str, out_dir, re_index = 0, base_index = 0): 
+def _priority_order(files, platform_priority):
+    """files ordered by platform priority (first matching prefix), then name."""
+    def key(f):
+        for i, p in enumerate(platform_priority):
+            if f.startswith(p):
+                return (i, f)
+        return (len(platform_priority), f)
+    return sorted(files, key=key)
+
+
+def merge_datasets(paths, fname_str, out_dir, re_index = 0, base_index = 0, platform_priority = None): 
+    """
+    platform_priority: optional list of file prefixes (sensor groups, e.g. SNPP_VIIRS,
+    JPSS1_VIIRS, JPSS2_VIIRS). When several scenes of the same day sit in one input
+    path, they are composited in this order: earlier platforms win where valid, later
+    platforms fill their gaps, and a later scene's no-data (-1) never removes valid
+    pixels already composited from another platform in this pass. Without it the
+    behaviour is unchanged.
+    """
 
     dqi_full = []
     products = []
+    composited = {}      # output fname -> valid mask after earlier same-day platforms (this pass)
 
     for root, dirs, files in os.walk(paths[base_index]):
+        if platform_priority:
+            files = _priority_order(files, platform_priority)
         for fle in files:
             if fname_str in fle:
                 if "OR_ABI" in fle or "_G18_" in fle:
@@ -89,7 +110,10 @@ def merge_datasets(paths, fname_str, out_dir, re_index = 0, base_index = 0):
                     if os.path.exists(flej):
                         datj = gdal.Open(flej)
                         dataj = datj.ReadAsArray()
-                        cloud_inds = np.where(dataj == -1)
+                        cloud = dataj == -1
+                        if fname in composited:
+                            cloud &= ~composited[fname]
+                        cloud_inds = np.where(cloud)
                         imgData1[cloud_inds] = -1
                         dqi[cloud_inds] = -1
                         datj = None
@@ -108,6 +132,11 @@ def merge_datasets(paths, fname_str, out_dir, re_index = 0, base_index = 0):
                 out_ds.FlushCache()
                 out_ds = None
 
+                if platform_priority:
+                    seen = fname in composited
+                    composited[fname] = imgData1 >= 0
+                    if seen:
+                        continue          # one product per day for a sensor group
                 products.append(fname)
                 dqi_full.append(dqi_fname)
     return products, dqi_full
@@ -217,7 +246,8 @@ def run_merge(yml_fpath):
     if yml_conf["gen_daily"]:
         for i in range(len(yml_conf['input_paths'])):
             products, dqi = merge_datasets(yml_conf['input_paths'], 
-                yml_conf['fname_str'], yml_conf['out_dir'], yml_conf['re_index'], i) 
+                yml_conf['fname_str'], yml_conf['out_dir'], yml_conf['re_index'], i,
+                platform_priority = yml_conf.get('platform_priority')) 
     if yml_conf["gen_monthly"]:
         products, dqi = merge_monthly(yml_conf['dirname'], yml_conf['fname_str'])  
  

@@ -90,6 +90,19 @@ INSTRUMENT_PREFIX = {
 "troposif" : "SNPP_VIIRS",
 }
 
+# Sensor groups (hab_sensor_groups): one instrument key for several platforms.
+#   olci  -> S3A_OLCI_ERRNT | S3B_OLCI_ERRNT
+#   viirs -> SNPP_VIIRS | JPSS1_VIIRS | JPSS2_VIIRS
+# INSTRUMENT_PREFIX holds a non-capturing regex alternative for a group (used only in
+# regexes); INSTRUMENT_TAG holds the literal name used for directories and in-situ lookups.
+from sit_fuse.pipelines.habs.hab_sensor_groups import SENSOR_GROUPS as _SENSOR_GROUPS, \
+    prefix_regex as _prefix_regex, instrument_tag as _instrument_tag
+_SINGLE_PREFIX = dict(INSTRUMENT_PREFIX)
+for _g in _SENSOR_GROUPS:
+    INSTRUMENT_PREFIX[_g] = _prefix_regex(_g, _SINGLE_PREFIX)
+INSTRUMENT_TAG = {k: _instrument_tag(k, _SINGLE_PREFIX) if k in _SENSOR_GROUPS else v
+                  for k, v in INSTRUMENT_PREFIX.items()}
+
 NO_HEIR_ADD = "\.no_heir.*"
 
 RE_STR = "\.\d{8}\.L3m\.DAY).*"

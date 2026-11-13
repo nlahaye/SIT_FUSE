@@ -11,6 +11,8 @@ from sit_fuse.postprocessing.merge_datasets import run_merge
  
 from sit_fuse.pipelines.habs.hab_post_inference_constants import *
 from sit_fuse.pipelines.habs.hab_scene_split import scene_split_conf, dates_for
+from sit_fuse.pipelines.habs.hab_sensor_groups import group_of, member_prefixes, \
+    input_file_type as _group_input_file_type
 
 import numpy as np
 import os
@@ -193,10 +195,11 @@ def update_config_multi_hist(out_dir, config_dict, yml_conf, instrument, species
     config_dict["end_date"] = yml_conf["end_date"]
     config_dict["clusters_dir"] = out_dir
     config_dict["use_key"] = species_key
-    config_dict["save_hists"] = True
 
     config_dict["clusters"] = yml_conf["clusters"]
-    config_dict["input_file_type"] = INSTRUMENT_PREFIX[instrument]
+    # sensor groups: '+'-joined member prefixes, so every platform's scene of a day is matched
+    config_dict["input_file_type"] = _group_input_file_type(instrument, INSTRUMENT_PREFIX) \
+        if group_of(instrument) else INSTRUMENT_PREFIX[instrument]
 
     if no_heir:
         config_dict["input_file_type"] =  config_dict["input_file_type"] + "_no_heir"
@@ -304,7 +307,7 @@ def update_config_data_stream_merge(yml_conf, config_dict, out_dir, species_run,
 
     input_paths = []
 
-    append = INSTRUMENT_PREFIX[instrument]
+    append = INSTRUMENT_TAG[instrument]          # literal name (sensor groups: S3_OLCI_ERRNT / VIIRS)
     if no_heir:
         append = append + "_no_heir"
 
@@ -336,6 +339,12 @@ def update_config_data_stream_merge(yml_conf, config_dict, out_dir, species_run,
     input_paths.append(os.path.dirname(yml_conf["instruments"][instrument]["no_trop"][key2]["cf_gtiffs"][0]))
 
     config_dict["input_paths"] = input_paths
+
+    # Sensor groups: several platforms can have a scene on the same day in the same
+    # input path; merge_datasets composites them in this order (first valid pixel wins).
+    if group_of(instrument):
+        pri = (yml_conf.get("platform_priority") or {}).get(group_of(instrument))
+        config_dict["platform_priority"] = member_prefixes(instrument, pri)
  
     if daily:
         config_dict["fname_str"] = "DAY."
@@ -757,7 +766,7 @@ def run_validation(yml_conf, species_run):
 
             out_dir = yml_conf["final_product_dir"]
 
-            append = INSTRUMENT_PREFIX[instrument]
+            append = INSTRUMENT_TAG[instrument]
             out_dir = os.path.join(out_dir, append)
 
             config_dict = update_config_multi_hist(out_dir, config_dict, yml_conf, instrument, species_run,\

@@ -173,6 +173,8 @@ READER_TYPE_MAP = {
     "TROP" : "oc_and_trop",
     "S3A_OLCI" : "s3_oc",
     "S3B_OLCI" : "s3_oc",
+    "OLCI" : "s3_oc",          # S3A + S3B OLCI (one model)
+    "VIIRS" : "viirs_oc",      # SNPP + JPSS1 + JPSS2 VIIRS (one model)
     "JPSS1_VIIRS" : "viirs_oc",
     "JPSS2_VIIRS" : "viirs_oc",
     "SNPP_VIIRS" : "viirs_oc",
@@ -186,6 +188,8 @@ NUM_CHANNELS = {
     "TROP" : 1,
     "S3A_OLCI" : 11,
     "S3B_OLCI" : 11,
+    "OLCI" : 11,               # S3A + S3B OLCI
+    "VIIRS" : 5,               # SNPP + JPSS1 + JPSS2 VIIRS
     "JPSS1_VIIRS" : 5,
     "JPSS2_VIIRS" : 5,
     "SNPP_VIIRS" :  5,

@@ -296,8 +296,19 @@ def find_product(search_dirs, kind: str, sensor: str, date, token: str = "",
 
 
 def instrument_dirs(hab_yml: dict[str, Any], sensor: str) -> list[str]:
-    """out_dir entries for one instrument of the HAB post-inference YAML."""
-    block = hab_yml.get("instruments", {}).get(sensor, {})
+    """out_dir entries for one instrument of the HAB post-inference YAML.
+
+    A platform that is run as part of a sensor group (e.g. jpss1 inside viirs, s3b
+    inside olci) uses the group's out_dirs, where its per-scene products are written."""
+    instruments = hab_yml.get("instruments", {}) or {}
+    key = sensor
+    if sensor not in instruments:
+        try:
+            from sit_fuse.pipelines.habs.hab_sensor_groups import instrument_for_sensor
+            key = instrument_for_sensor(instruments, sensor) or sensor
+        except Exception:  # pragma: no cover - standalone use without the pipeline package
+            pass
+    block = instruments.get(key, {})
     out = []
     for key, val in block.items():
         if isinstance(val, dict) and "out_dir" in val:

@@ -44,6 +44,7 @@ from sit_fuse.pipelines.habs.uq.hab_context_encoder import default_encoder_cfg, 
 from sit_fuse.pipelines.habs.uq.hab_insitu import assign_splits, load_insitu, species_frame
 from sit_fuse.pipelines.habs.uq.hab_uq_common import (
     SENSORS, ranked_probability_score, species_spec, instrument_dirs, utcnow_iso)
+from sit_fuse.pipelines.habs.hab_sensor_groups import expand_sensors
 from sit_fuse.pipelines.habs.uq.hab_uq_matchups import build_sensor_matchups, sample_level
 
 LOG = logging.getLogger("hab-uq-train")
@@ -317,7 +318,9 @@ def train_species(hab_yml: dict[str, Any], use_key: str, out_dir: str | Path,
     clf_cfg = uq.get("classifier", {"model": "random_forest"})
     tgt_cfg = uq.get("target", {})
     cal_cfg = uq.get("calibration", {"method": "temperature", "prior_correction": True})
-    sensors = uq.get("sensors") or list(hab_yml["instruments"].keys())
+    # sensor groups (olci, viirs) expand to their platforms: UQ stays per platform
+    # (overpass time, band set), reading each platform's scenes from the group out_dir
+    sensors = expand_sensors(uq.get("sensors") or list(hab_yml["instruments"].keys()))
     sensors = [s for s in sensors if s in SENSORS]
     scope = uq.get("model_scope", "pooled")
     invalid = InvalidClusters.from_config(uq)

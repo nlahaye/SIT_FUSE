@@ -73,7 +73,7 @@ def concat_numpy_files(np_files, final_file):
     np.save(final_file, full)
 
 
-def torch_to_numpy(trch):
+def torch_to_numpy(trch, **kwargs):
     dat = trch.numpy()
 
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
@@ -81,7 +81,7 @@ def torch_to_numpy(trch):
 
     return dat
     
-def numpy_to_torch(npy):
+def numpy_to_torch(npy, **kwargs):
     dat = torch.from_numpy(npy)
 
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
@@ -173,7 +173,7 @@ def read_viirs_aerosol_type_geo(filename, **kwargs):
 
 
 def read_envi_bil(filename, **kwargs):
-    bil_file = Path(filenamne)
+    bil_file = Path(filename)
  
     dat = None
     with rasterio.open(bil_file) as src:
@@ -188,7 +188,7 @@ def read_envi_bil(filename, **kwargs):
 
 
 def read_envi_bil_geo(filename, **kwargs):
-    bil_file = Path(filenamne)
+    bil_file = Path(filename)
 
     latlon = None 
     with rasterio.open(bil_file) as src:
@@ -703,6 +703,69 @@ def _oc_grid_window(lat_1d, lon_1d, r0, r1, c0, c1):
     return lat, lon
 
 
+def _oc_box_bounds(filename, kwrg, kwargs):
+    """Inclusive row/column bounds of the lat/lon box on the L3m grid.
+
+    Returns (lat_1d, lon_1d, r0, r1, c0, c1) with the window [r0:r1, c0:c1].
+    The window covers every pixel inside the box (first to last selected row
+    and column), so it has the same size as read_oc_geo(filename, start_lat=...)
+    and the geo zarr built in gen_geo_zarr_oc_daily.
+    """
+    lat_1d, lon_1d, _, _, r_ind, c_ind = _oc_geo_select(filename, kwrg, kwargs)
+    if r_ind.size == 0:
+        raise ValueError("No L3m pixels inside the lat/lon box "
+                         f"[{kwargs['start_lat']}, {kwargs['end_lat']}] x [{kwargs['start_lon']}, {kwargs['end_lon']}] for {filename}")
+    return lat_1d, lon_1d, int(r_ind[0]), int(r_ind[-1]) + 1, int(c_ind[0]), int(c_ind[-1]) + 1
+
+
+def _oc_window(filename, kwrg, kwargs, need_latlon):
+    """Window and (optionally) its 2-D lat/lon for the OC L3m readers.
+
+    With a lat/lon box: the inclusive box window. Without one: the full grid.
+    lat/lon (float32, read_oc_geo values) are built only when need_latlon is True
+    or a box is given. Returns (r0, r1, c0, c1, lat, lon); r1/c1 are None for the full grid.
+    """
+    has_geo = "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs
+    lat = lon = None
+    if has_geo:
+        lat_1d, lon_1d, r0, r1, c0, c1 = _oc_box_bounds(filename, kwrg, kwargs)
+        lat, lon = _oc_grid_window(lat_1d, lon_1d, r0, r1, c0, c1)
+    else:
+        r0, r1, c0, c1 = 0, None, 0, None
+        if need_latlon:
+            lat_1d, lon_1d = _oc_geo_1d(filename, **kwrg)
+            lat, lon = _oc_grid_window(lat_1d, lon_1d, r0, r1, c0, c1)
+    return r0, r1, c0, c1, lat, lon
+
+
+def _oc_ocean_mask(lat, lon, kwargs):
+    """mask_oceans handling shared by the OC readers (unchanged logic)."""
+    tmp1 = None
+    tmp2 = None
+    if "mask_oceans" in kwargs:
+        land_temp = ocean_basins_50.mask(lon, lat)
+        land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
+        tmp1 = land_temp.isnull().to_numpy().astype(np.bool_)
+        if kwargs["mask_oceans"] is False:
+            tmp1 = np.logical_not(tmp1)
+
+    final_mask = None
+    if tmp1 is not None and tmp2 is not None:
+        final_mask = xr.apply_ufunc(np.logical_and, tmp1, tmp2, vectorize=True, dask="parallelized",\
+            input_core_dims=[[],[]], output_core_dims=[[],[]])
+    elif tmp1 is not None:
+        final_mask = tmp1
+    elif tmp2 is not None:
+        final_mask = tmp2
+    return final_mask
+
+
+def _oc_line_slices(kwargs):
+    if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
+        return slice(kwargs["start_line"], kwargs["end_line"]), slice(kwargs["start_sample"], kwargs["end_sample"])
+    return slice(None), slice(None)
+
+
 def read_pace_oc(filename, **kwargs):
     vrs = ["AOP.V3_2"] #["RRS.V3_0.Rrs"]
     internal_vars = ["Rrs"]
@@ -715,8 +778,7 @@ def read_pace_oc(filename, **kwargs):
         kwrg["nrt"] = True
     print(flename, internal_vars[0])
 
-    has_geo = "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs
-    has_lines = "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs
+    line_sl, samp_sl = _oc_line_slices(kwargs)
 
     with Dataset(flename) as f:
         f.set_auto_maskandscale(False)
@@ -727,60 +789,28 @@ def read_pace_oc(filename, **kwargs):
 
         # Work out the final window before reading, so only that window is loaded.
         # range slicing follows the same rules as numpy slicing (negatives, clipping).
-        rows, cols = range(n_rows), range(n_cols)
-        if has_geo:
-            # bounds from the 1-D lat/lon tests; equal to min/max of np.where on the 2-D grid
-            lat_1d, lon_1d, _, _, r_ind, c_ind = _oc_geo_select(filename, kwrg, kwargs)
-            print((lat_1d.shape[0], lon_1d.shape[0]), (lat_1d.shape[0], lon_1d.shape[0]), (n_bands, n_rows, n_cols))
-            row_bound = [min(r_ind), max(r_ind)]
-            col_bound = [min(c_ind), max(c_ind)]
-            del r_ind, c_ind
-            lat, lon = _oc_grid_window(lat_1d, lon_1d, row_bound[0], row_bound[1], col_bound[0], col_bound[1])
-            del lat_1d, lon_1d
-            rows = rows[row_bound[0]:row_bound[1]]
-            cols = cols[col_bound[0]:col_bound[1]]
-
-        line_sl = slice(None)
-        samp_sl = slice(None)
-        if has_lines:
-            line_sl = slice(kwargs["start_line"], kwargs["end_line"])
-            samp_sl = slice(kwargs["start_sample"], kwargs["end_sample"])
+        r0, r1, c0, c1, lat, lon = _oc_window(filename, kwrg, kwargs, "mask_oceans" in kwargs)
+        rows = range(n_rows)[r0:r1]
+        cols = range(n_cols)[c0:c1]
+        if lat is not None:
+            print(lat.shape, lon.shape, (n_bands, len(rows), len(cols)))
         out_rows = rows[line_sl]
         out_cols = cols[samp_sl]
 
         dat = np.empty((n_bands, len(out_rows), len(out_cols)), dtype=np.float32)
         if dat.size > 0:
-            c0, c1 = out_cols.start, out_cols.stop
+            oc0, oc1 = out_cols.start, out_cols.stop
             row_bytes = max(1, len(out_cols) * n_bands * _PACE_OC_BYTES_PER_ELEM)
             block = max(1, _PACE_OC_BLOCK_BYTES // row_bytes)
             for b0 in range(0, len(out_rows), block):
                 b1 = min(b0 + block, len(out_rows))
-                raw = ref[out_rows.start + b0:out_rows.start + b1, c0:c1, :]
+                raw = ref[out_rows.start + b0:out_rows.start + b1, oc0:oc1, :]
                 # float16 -> float32 cast happens on assignment, as in data.astype(np.float32)
                 dat[:, b0:b1, :] = np.moveaxis(_pace_oc_scale_block(raw, ref), 2, 0)
                 del raw
 
     #TODO Mask via shapefile
-
-    tmp1 = None
-    tmp2 = None
-    if "mask_oceans" in kwargs:
-        land_temp = ocean_basins_50.mask(lon, lat)
-        land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
-        tmp1 = land_temp.isnull().to_numpy().astype(np.bool_)
-
-        if kwargs["mask_oceans"] is False:
-            tmp1 = np.logical_not(tmp1)
-
-    final_mask = None
-    if tmp1 is not None and tmp2 is not None:
-        final_mask = xr.apply_ufunc(np.logical_and, tmp1, tmp2, vectorize=True, dask="parallelized",\
-            input_core_dims=[[],[]], output_core_dims=[[],[]])
-    elif tmp1 is not None:
-        final_mask = tmp1
-    elif tmp2 is not None:
-        final_mask = tmp2
-
+    final_mask = _oc_ocean_mask(lat, lon, kwargs)
     if final_mask is not None:
         print(final_mask)
         # the mask covers the lat/lon window; trim it to the line/sample window already applied
@@ -789,158 +819,27 @@ def read_pace_oc(filename, **kwargs):
     return dat
 
 
-def read_s3_oc(filename, **kwargs):
-    vrs = ["RRS.Rrs_400","RRS.Rrs_412","RRS.Rrs_443","RRS.Rrs_490","RRS.Rrs_510","RRS.Rrs_560","RRS.Rrs_620","RRS.Rrs_665","RRS.Rrs_674","RRS.Rrs_681", "RRS.Rrs_709"]
+def _oc_read_bands(filename, vrs, flenames, kwrg, kwargs):
+    """Windowed, scaled band stack for the multi-file OC L3m readers (S3, VIIRS, MODIS).
 
-    #vrs = ["CHL.chlor_a", "KD.Kd_490", "RRS.aot_865", "RRS.angstrom"]
-    kwrg = {}
-    # Resolve file names first (this also sets kwrg["nrt"] exactly as before),
-    # so the lat/lon selection is known before any band is read.
-    flenames = []
-    for i in range(len(vrs)):
-        base = filename + vrs[i] + ".4km"
-        flename = base + ".nc"
-        if not os.path.exists(flename) and kwargs.get("nrt", False):
-            flename = base + ".NRT.nc"
-            kwrg["nrt"] = True 
-        flenames.append(flename)
-
-    has_geo = "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs
-    has_lines = "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs
-
-    sel_win = None
-    if has_geo:
-        # Original: rows, cols = np.where(box on 2-D grid); dat[:, rows, cols] (flattened, row-major).
-        # Same elements in the same order: read the bounding box, then apply the box test inside it.
-        lat_1d, lon_1d, lat_ok, lon_ok, r_ind, c_ind = _oc_geo_select(filename, kwrg, kwargs)
-        print((lat_1d.shape[0], lon_1d.shape[0]), (lat_1d.shape[0], lon_1d.shape[0]), (len(vrs), lat_1d.shape[0], lon_1d.shape[0]))
-        if r_ind.size > 0:
-            r0, r1 = int(r_ind[0]), int(r_ind[-1]) + 1
-            c0, c1 = int(c_ind[0]), int(c_ind[-1]) + 1
-        else:
-            r0 = r1 = c0 = c1 = 0
-        sel_win = lat_ok[r0:r1, None] & lon_ok[None, c0:c1]
-        lat = np.broadcast_to(lat_1d[r0:r1, None], sel_win.shape)[sel_win]
-        lon = np.broadcast_to(lon_1d[None, c0:c1], sel_win.shape)[sel_win]
-        del lat_1d, lon_1d, lat_ok, lon_ok, r_ind, c_ind
-
-    dat = None
-    for i in range(len(vrs)):
-        flename = flenames[i]
-        # flename = filename + vrs[i] + ".4km.nc"
-        print(flename)
-        with Dataset(flename) as f:
-            f.set_auto_maskandscale(False)
-            start_ind = 4
-            if "KD" in vrs[i]:
-                start_ind = 3
-            ref = f.variables[vrs[i][start_ind:]]
-            rows, cols = range(ref.shape[0]), range(ref.shape[1])
-            if has_geo:
-                rows, cols = range(r0, r1), range(c0, c1)
-            elif has_lines:
-                # line/sample slicing folded into the read (no lat/lon selection in this case)
-                rows = rows[kwargs["start_line"]:kwargs["end_line"]]
-                cols = cols[kwargs["start_sample"]:kwargs["end_sample"]]
-            data = _read_window(ref, rows, cols).astype(np.float32)
-            try:
-                valid_data_ind = (data >= ref.valid_min) & (data <= ref.valid_max)
-                invalid_data_ind = (data < ref.valid_min) | (data > ref.valid_max)
-                try:
-                    data[valid_data_ind] = data[valid_data_ind] * ref.scale_factor 
-                except AttributeError:
-                    pass
-                try:
-                     data[valid_data_ind] = data[valid_data_ind] + ref.add_offset
-                except AttributeError:
-                    pass
-                data[invalid_data_ind] = -999999.0
-            except AttributeError:
-                pass
-        print(data.shape)
-        if has_geo:
-            data = data[sel_win]
-        if dat is None:
-            # the original float64 buffer only ever held float32 values, so float32 is exact
-            dat = np.zeros((len(vrs),) + data.shape, dtype=np.float32)
-        dat[i] = data
-        data = None
-
-    #TODO Mask via shapefile
-
-    tmp1 = None
-    tmp2 = None 
-    if "mask_oceans" in kwargs:
-        land_temp = ocean_basins_50.mask(lon, lat)
-        land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
-        tmp1 = land_temp.isnull().to_numpy().astype(np.bool_)
-        if kwargs["mask_oceans"] is False:
-            tmp1 = np.logical_not(tmp1)
-
-    final_mask = None
-    if tmp1 is not None and tmp2 is not None:
-        final_mask = xr.apply_ufunc(np.logical_and, tmp1, tmp2, vectorize=True, dask="parallelized",\
-            input_core_dims=[[],[]], output_core_dims=[[],[]])
-    elif tmp1 is not None:
-        final_mask = tmp1
-    elif tmp2 is not None:
-        final_mask = tmp2
-
-    if final_mask is not None:
-        print(final_mask)
-        dat[:,final_mask] = -999999
-
-    if has_lines and has_geo:
-        # unchanged behaviour: the selection output is (bands, N)
-        dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
-    return dat
-
-
-
-def _oc_bands_windowed(filename, vrs, flenames, kwrg, kwargs, label_shape_print):
-    """Shared windowed band reader for read_viirs_oc and read_modis_oc.
-
-    Returns (dat, lat, lon, line_sl, samp_sl, has_geo, pre_line_shape). lat/lon are
-    None when no lat/lon box is requested. Each band is read only over the final
-    window and scaled with exactly the same element-wise operations as before.
+    Returns (dat, lat, lon, line_sl, samp_sl): dat is (bands, rows, cols) float32 over
+    the lat/lon box (inclusive) or the full grid, with line/sample slicing applied;
+    lat/lon cover the box (or the full grid when mask_oceans is requested without a box).
     """
-    has_geo = "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs
-    has_lines = "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs
-
-    lat = None
-    lon = None
-    row_bound = None
-    if has_geo:
-        lat_1d, lon_1d, _, _, r_ind, c_ind = _oc_geo_select(filename, kwrg, kwargs)
-        if label_shape_print:
-            print((lat_1d.shape[0], lon_1d.shape[0]), (lat_1d.shape[0], lon_1d.shape[0]), (len(vrs), lat_1d.shape[0], lon_1d.shape[0]))
-        row_bound = [min(r_ind), max(r_ind)]
-        col_bound = [min(c_ind), max(c_ind)]
-        # [min:max) as in the original code
-        lat, lon = _oc_grid_window(lat_1d, lon_1d, row_bound[0], row_bound[1], col_bound[0], col_bound[1])
-        del lat_1d, lon_1d, r_ind, c_ind
-
-    line_sl = slice(None)
-    samp_sl = slice(None)
-    if has_lines:
-        line_sl = slice(kwargs["start_line"], kwargs["end_line"])
-        samp_sl = slice(kwargs["start_sample"], kwargs["end_sample"])
+    line_sl, samp_sl = _oc_line_slices(kwargs)
+    r0, r1, c0, c1, lat, lon = _oc_window(filename, kwrg, kwargs, "mask_oceans" in kwargs)
 
     dat = None
-    pre_line_shape = None
     for i in range(len(vrs)):
+        print(flenames[i])
         with Dataset(flenames[i]) as f:
             f.set_auto_maskandscale(False)
             start_ind = 4
             if "KD" in vrs[i]:
                 start_ind = 3
             ref = f.variables[vrs[i][start_ind:]]
-            rows, cols = range(ref.shape[0]), range(ref.shape[1])
-            if has_geo:
-                rows = rows[row_bound[0]:row_bound[1]]
-                cols = cols[col_bound[0]:col_bound[1]]
-            if pre_line_shape is None:
-                pre_line_shape = (len(vrs), len(rows), len(cols))
+            rows = range(ref.shape[0])[r0:r1]
+            cols = range(ref.shape[1])[c0:c1]
             data = _read_window(ref, rows[line_sl], cols[samp_sl]).astype(np.float32)
             try:
                 valid_data_ind = (data >= ref.valid_min) & (data <= ref.valid_max)
@@ -953,16 +852,43 @@ def _oc_bands_windowed(filename, vrs, flenames, kwrg, kwargs, label_shape_print)
                      data[valid_data_ind] = data[valid_data_ind] + ref.add_offset
                 except AttributeError:
                     pass
+                # invalid values are flagged only for this band's own valid range
+                data[invalid_data_ind] = -999999.0
             except AttributeError:
                 pass
-            # outside the try, as before: without valid_min this reuses the previous
-            # band's indices (or raises UnboundLocalError on the first band)
-            data[invalid_data_ind] = -999999.0
         if dat is None:
             dat = np.empty((len(vrs),) + data.shape, dtype=np.float32)
+            if lat is not None:
+                print(lat.shape, lon.shape, (len(vrs), len(rows), len(cols)))
         dat[i] = data
         data = None
-    return dat, lat, lon, line_sl, samp_sl, has_geo, pre_line_shape
+
+    #TODO Mask via shapefile
+    final_mask = _oc_ocean_mask(lat, lon, kwargs)
+    if final_mask is not None:
+        print(final_mask)
+        # the mask covers the lat/lon window; trim it to the line/sample window already applied
+        dat[:, np.asarray(final_mask)[line_sl, samp_sl]] = -999999
+    return dat
+
+
+def read_s3_oc(filename, **kwargs):
+    vrs = ["RRS.Rrs_400","RRS.Rrs_412","RRS.Rrs_443","RRS.Rrs_490","RRS.Rrs_510","RRS.Rrs_560","RRS.Rrs_620","RRS.Rrs_665","RRS.Rrs_674","RRS.Rrs_681", "RRS.Rrs_709"]
+
+    #vrs = ["CHL.chlor_a", "KD.Kd_490", "RRS.aot_865", "RRS.angstrom"]
+    kwrg = {}
+    flenames = []
+    for i in range(len(vrs)):
+        base = filename + vrs[i] + ".4km"
+        flename = base + ".nc"
+        if not os.path.exists(flename) and kwargs.get("nrt", False):
+            flename = base + ".NRT.nc"
+            kwrg["nrt"] = True 
+        flenames.append(flename)
+
+    # (bands, rows, cols) over the lat/lon box, like the other OC readers
+    return _oc_read_bands(filename, vrs, flenames, kwrg, kwargs)
+
 
 
 def read_viirs_oc(filename, **kwargs):
@@ -987,38 +913,7 @@ def read_viirs_oc(filename, **kwargs):
             kwrg["nrt"] = True
         flenames.append(flename)
 
-    dat, lat, lon, line_sl, samp_sl, has_geo, _ = _oc_bands_windowed(filename, vrs, flenames, kwrg, kwargs, True)
-
-    #TODO Mask via shapefile
-
-    tmp1 = None
-    tmp2 = None
-    if "mask_oceans" in kwargs:
-        if not has_geo:
-            raise UnboundLocalError("cannot access local variable 'lon' where it is not associated with a value")
-        land_temp = ocean_basins_50.mask(lon, lat)
-        land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
-        tmp1 = land_temp.isnull().to_numpy().astype(np.bool_)
-
-        if kwargs["mask_oceans"] is False:
-            tmp1 = np.logical_not(tmp1)
-
-    final_mask = None
-    if tmp1 is not None and tmp2 is not None:
-        final_mask = xr.apply_ufunc(np.logical_and, tmp1, tmp2, vectorize=True, dask="parallelized",\
-            input_core_dims=[[],[]], output_core_dims=[[],[]])
-    elif tmp1 is not None:
-        final_mask = tmp1
-    elif tmp2 is not None:
-        final_mask = tmp2
-
-    # (the original applied the same mask twice; once gives the same result)
-    if final_mask is not None:
-        print(final_mask)
-        # the mask covers the lat/lon window; trim it to the line/sample window already applied
-        dat[:, np.asarray(final_mask)[line_sl, samp_sl]] = -999999
-
-    return dat
+    return _oc_read_bands(filename, vrs, flenames, kwrg, kwargs)
 
 
 
@@ -1154,46 +1049,9 @@ def read_modis_oc(filename, **kwargs):
         if not os.path.exists(flename) and kwargs.get("nrt", False):
             flename = base + ".NRT.nc"
             kwrg["nrt"] = True
-        # flename = filename + vrs[i] + ".4km.nc"
-        print(flename)
         flenames.append(flename)
 
-    dat, lat, lon, line_sl, samp_sl, has_geo, pre_line_shape = _oc_bands_windowed(filename, vrs, flenames, kwrg, kwargs, True)
-
-    #TODO Mask via shapefile
-
-    tmp1 = None
-    tmp2 = None
-    if not has_geo:
-        # as before: lat/lon only exist when a lat/lon box is given
-        raise UnboundLocalError("cannot access local variable 'lat' where it is not associated with a value")
-    print(lat.shape, lon.shape, pre_line_shape)
-    if "mask_oceans" in kwargs:
-        land_temp = ocean_basins_50.mask(lon, lat)
-        land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
-        tmp1 = land_temp.isnull().to_numpy().astype(np.bool_)
-        if kwargs["mask_oceans"] is False:
-            tmp1 = np.logical_not(tmp1)
-
-    final_mask = None
-    if tmp1 is not None and tmp2 is not None:
-        final_mask = xr.apply_ufunc(np.logical_and, tmp1, tmp2, vectorize=True, dask="parallelized",\
-            input_core_dims=[[],[]], output_core_dims=[[],[]])
-    elif tmp1 is not None:
-        final_mask = tmp1
-    elif tmp2 is not None:
-        final_mask = tmp2
-
-    if final_mask is not None:
-        print(final_mask)
-        # the mask covers the lat/lon window; trim it to the line/sample window already applied
-        dat[:, np.asarray(final_mask)[line_sl, samp_sl]] = -999999
-
-    #plt.imshow(np.squeeze(dat[0]))
-    #plt.savefig(filename + "CHLOR_SUBSET.png")
-    #plt.clf() 
-
-    return dat
+    return _oc_read_bands(filename, vrs, flenames, kwrg, kwargs)
 
 
 def read_modis_aero_mask(filename, **kwargs):
@@ -1876,16 +1734,20 @@ def read_burn_severity_stacks(flename, **kwargs):
 def read_gtiff_generic(flename, **kwargs): 
 	ds = gdal.Open(flename, gdal.GA_ReadOnly)
 	has_lines = "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs
-	windowed = False
-	if has_lines and "mask_oceans" not in kwargs:
-		# read only the line/sample window (same values as reading everything and slicing)
-		rows = _slice_range(ds.RasterYSize, kwargs["start_line"], kwargs["end_line"])
-		cols = _slice_range(ds.RasterXSize, kwargs["start_sample"], kwargs["end_sample"])
-		if len(rows) > 0 and len(cols) > 0:
-			dat = ds.ReadAsArray(cols.start, rows.start, len(cols), len(rows))
-			windowed = True
-	if not windowed:
+	rows = range(ds.RasterYSize)
+	cols = range(ds.RasterXSize)
+	if has_lines:
+		rows = rows[kwargs["start_line"]:kwargs["end_line"]]
+		cols = cols[kwargs["start_sample"]:kwargs["end_sample"]]
+	if len(rows) == 0 or len(cols) == 0:
+		# empty window: same (empty) result as reading everything and slicing
 		dat = ds.ReadAsArray()
+		ds = None
+		if len(dat.shape) == 3:
+			return dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+		return dat[kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
+	# read only the line/sample window (the whole raster when none is given)
+	dat = ds.ReadAsArray(cols.start, rows.start, len(cols), len(rows))
 	ds = None
 	print(dat.shape)
 	#dat[np.where(dat.max() <= 0.0)] = -9999.0
@@ -1893,6 +1755,7 @@ def read_gtiff_generic(flename, **kwargs):
 	tmp1 = None
 	tmp2 = None
 	if "mask_oceans" in kwargs:
+		# lat/lon of the same window, so the mask lines up with dat
 		latlon = read_gtiff_generic_geo(flename, **kwargs)
 		land_temp = ocean_basins_50.mask(latlon[:,:,1], latlon[:,:,0])
 		land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
@@ -1913,14 +1776,9 @@ def read_gtiff_generic(flename, **kwargs):
 
 		if final_mask is not None:
 			print(final_mask)
-			dat[:,final_mask] = -9999.0
- 
+			# [..., mask] works for single-band (2-D) and multi-band (3-D) rasters
+			dat[..., final_mask] = -9999.0
 
-	if has_lines and not windowed:
-                if len(dat.shape) == 3:
-                    dat = dat[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
-                else:
-                    dat = dat[kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
 	return dat
 
 #TODO generalize pieces for other tasks
@@ -2009,7 +1867,12 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
             file_ext = ".tif"
             if "no_heir" in input_file_type: 
                 file_ext = ".no_heir.tif"
-            if "S3B" in input_file_type:     
+            if "+" in input_file_type:
+                # sensor group (e.g. S3A_OLCI_ERRNT+S3B_OLCI_ERRNT): every platform's scene of the day
+                grp_prefixes = input_file_type[:-len("_no_heir")] if input_file_type.endswith("_no_heir") else input_file_type
+                clust_fname = [os.path.join(clusters_dir, p + "." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext)
+                               for p in grp_prefixes.split("+")]
+            elif "S3B" in input_file_type:     
                 clust_fname = os.path.join(os.path.join(clusters_dir, "S3B_OLCI_ERRNT." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext))
             elif "S3A" in input_file_type:
                 clust_fname = os.path.join(os.path.join(clusters_dir, "S3A_OLCI_ERRNT." + pd.to_datetime(str(date)).strftime("%Y%m%d") + ".L3m.DAY" + file_ext))
@@ -2035,81 +1898,42 @@ def insitu_hab_to_multi_hist(insitu_fname, start_date, end_date, clusters_dir, n
 
         dat_train = False
         dat_test = False
-        clust_fname = glob(clust_fname)
-        # print(clust_fname)
-        
-        if len(clust_fname) < 1:
-            continue     
-        clust_fname = clust_fname[0]
-        if not os.path.exists(clust_fname):
-            clust_fname = clust_fname + "f"
-            if not os.path.exists(clust_fname):
+        # one pattern per scene (several for a sensor group); first hit of each pattern, as before
+        scene_fnames = []
+        for pat in (clust_fname if isinstance(clust_fname, list) else [clust_fname]):
+            hits = glob(pat)
+            if len(hits) < 1:
                 continue
-        clust = gdal.Open(clust_fname)
-        latLon = get_lat_lon(clust_fname)
-        clust = clust.ReadAsArray()
-        clust = clust * 1000
-        clust = clust.astype(np.int32)               
-        #print(np.unique(clust))
- 
-        lat = latLon[:,:,0].reshape(clust.shape[0]*clust.shape[1])
-        lon = latLon[:,:,1].reshape(clust.shape[0]*clust.shape[1])
-        clust = clust.reshape(clust.shape[0]*clust.shape[1])
-        inds_clust = np.where(clust >= 0)
-        lat = lat[inds_clust]
-        lon = lon[inds_clust]
-        clust = clust[inds_clust]
+            fn = hits[0]
+            if not os.path.exists(fn):
+                fn = fn + "f"
+                if not os.path.exists(fn):
+                    continue
+            scene_fnames.append(fn)
+        if len(scene_fnames) < 1:
+            continue
 
-
-        gdf = gpd.GeoDataFrame(clust, geometry=gpd.GeoSeries.from_xy(lon, lat), crs=4326)
         subset = insitu_df[(insitu_df['Datetime'] == date)]
-        #print(len(subset), date)
         gdf_insitu = gpd.GeoDataFrame(subset[use_key], geometry=gpd.GeoSeries.from_xy(subset['Longitude'], subset['Latitude']), crs=4326)
+        # per in-situ sample: union of the clusters within radius over the day's scenes, so a
+        # sample seen by several platforms of a group still gives one histogram row
+        sample_clusters = {}
+        for clust_fname in scene_fnames:
+            _insitu_scene_clusters(clust_fname, gdf_insitu, radius_degrees, sample_clusters)
 
-        #gdf_proj = gdf.to_crs({"init": "EPSG:3857"})
-        #gdf_insitu_proj = gdf_insitu.to_crs({"init": "EPSG:3857"})     
- 
-        dists = []
-        count = -1
         hist_data = []
-        #print("PRE-ITER", len(gdf_insitu))
-
-        # pixel geometries once per scene; gdf has a default RangeIndex, so positions == index2
-        pixel_geoms = np.asarray(gdf.geometry.values)
-        for index, poi in gdf_insitu.iterrows():
-            count = count + 1
-            # same neighbour set and order as the per-pixel iterrows loop:
-            # abs(poi2.geometry.distance(poi.geometry)) < radius_degrees
-            neighbours = _insitu_neighbours(pixel_geoms, poi.geometry, radius_degrees)
-            #print(poi.geometry)
-            #x = poi.geometry.buffer(0.011) #.unary_union
-            #print(gdf["geometry"])
-            #neighbours = gdf["geometry"].intersection(x)
-            #inds = gdf[~neighbours.is_empty]
-            #print(index, poi)
-            #print(inds, len(inds), len(clust))
-            #print(len(neighbours), "HERE")
-            if len(neighbours) < 1:
+        for count, (index, poi) in enumerate(gdf_insitu.iterrows()):
+            if count not in sample_clusters:
                 continue
-            clusters = clust[neighbours]
+            clusts = sample_clusters[count]
             clusters_index = [np.nan]*n_clusters
-            #print(np.unique(clusters))
-            clusts = np.unique(clusters).astype(np.int32)
-            #print(clusts, len(clusters_index))
             for c in clusts:
-                clusters_index[c] = (c in clusters)
+                clusters_index[c] = True
             hist_data.append(np.array(clusters_index))
             good_inds = np.where(np.isfinite(clusters_index))
             bad_inds = np.where(np.isnan(clusters_index))
-            #print(good_inds, "HERE")
-            #for j in range(len(clusters_index)):
             hist_data[-1][good_inds] = poi[use_key]
             hist_data[-1][bad_inds] = -1
-            #for j in good_inds[0]:
-            #    if clusters_index[j]:
-            #        hist_data[-1][j] = poi[use_key]
-            #    else:
-            #        hist_data[-1][j] = -1
 
         final_hist_data.extend(hist_data)
     fnl = np.array(final_hist_data, dtype=np.float32)
@@ -2316,28 +2140,33 @@ def read_oc_and_trop(fnames, **kwargs):
     trop_fname = fnames[1]
     oc_fname = fnames[0]
 
+    # line/sample slicing is applied once, to the stacked output at the end
+    line_keys = ("start_line", "end_line", "start_sample", "end_sample")
+    oc_kwargs = {k: v for k, v in kwargs.items() if k not in line_keys}
+
     dat1 = None
-    oc_lat = None
-    oc_lon = None
     print(oc_fname, trop_fname)
-    if "VIIRS" in oc_fname or "viirs" in oc_fname:
-        dat1 = read_viirs_oc(oc_fname, **kwargs)
+    if "PACE" in oc_fname or "pace" in oc_fname:
+        dat1 = read_pace_oc(oc_fname, **oc_kwargs)
+    elif "VIIRS" in oc_fname or "viirs" in oc_fname:
+        dat1 = read_viirs_oc(oc_fname, **oc_kwargs)
     elif "MODIS" in oc_fname or "modis" in oc_fname:
-        dat1 = read_modis_oc(oc_fname, **kwargs)
+        dat1 = read_modis_oc(oc_fname, **oc_kwargs)
     elif "S3" in oc_fname or "s3" in oc_fname:
-        dat1 = read_s3_oc(oc_fname, **kwargs)
+        dat1 = read_s3_oc(oc_fname, **oc_kwargs)
+    if dat1 is None:
+        raise ValueError(f"read_oc_and_trop: unsupported ocean colour file prefix {oc_fname}")
     print("HERE DAT", dat1.shape) 
 
+    # 1-D lat/lon of the ocean-colour window (same window the reader used)
+    kwrg = {"nrt": True} if kwargs.get("nrt", False) else {}
     if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs:
-        loc = read_oc_geo(filename, **kwrg)
-        lat = loc[0]
-        lon = loc[1]
-        print(lat.shape, lon.shape, dat.shape)
-        rows, cols = np.where((lat >= kwargs["start_lat"]) & (lat <= kwargs["end_lat"]) & (lon >= kwargs["start_lon"]) & (lon <= kwargs["end_lon"]))
-        row_bound = [min(rows), max(rows)]
-        col_bound = [min(cols), max(cols)]
-        lat = lat[row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]]
-        lon = lon[row_bound[0]:row_bound[1], col_bound[0]:col_bound[1]]
+        lat_1d, lon_1d, r0, r1, c0, c1 = _oc_box_bounds(oc_fname, kwrg, kwargs)
+        lat = lat_1d[r0:r1]
+        lon = lon_1d[c0:c1]
+    else:
+        lat, lon = _oc_geo_1d(oc_fname, **kwrg)
+    print(lat.shape, lon.shape, dat1.shape)
 
     print("HERE DAT", dat1.shape)
     sif_raw = read_sif(trop_fname, **kwargs)
@@ -2362,33 +2191,11 @@ def read_oc_and_trop(fnames, **kwargs):
     for i in range(dat1.shape[0]):
         oc_xr2.append(oc_xr["oc_" + str(i)])
 
-    #sif_aoi = sif_raw["sif"]
-    #sif_aoi = sif_raw.sel(**{"lat":slice(lat.min(), lat.max()), "lon":slice(lon.min(), lon.max())})
-    #sif_aoi = sif_aoi.interp_like(oc_xr2[0], method="nearest") #, assume_sorted=True, method_non_numeric="none")
-    #plt.imshow(sif_aoi)
-    #plt.savefig(trop_fname + ".LOW_RES.IMG.png")
-    #plt.clf()
-    #print(lat.shape, lon.shape)
-    #plt.imshow(sif_raw)
-    #plt.savefig(trop_fname + ".NO_MASK.IMG.png")
-    #plt.clf()
     sif_aoi_2 = sif_raw.interp_like(oc_xr2[0], method="nearest") #, assume_sorted=True, method_non_numeric="none")
     sif_aoi_2 = sif_aoi_2.reindex(lat=lat, lon=lon, method="nearest", tolerance=0.063)
  
-    #plt.imshow(sif_aoi_2)
-    #plt.savefig(trop_fname + ".REINDEXED_NO_MASK.IMG.png")
-    #plt.clf()
-
-    #tmp =  np.flipud(sif_aoi.to_numpy()) #np.flipud(np.fliplr(sif_raw["sif"].to_numpy()))
-    #tmp = np.fliplr(tmp)
-    #sif_aoi = xr.DataArray(tmp,\
-    #coords={'lat': sif_aoi.lat.data,'lon': sif_aoi.lon.data},\
-    #dims=["lat", "lon"])
- 
     print(sif_aoi_2)
     print(oc_xr)
-    #sif_aoi = sif_aoi.dropna(dim="lat", how="all")
-    #sif_aoi = sif_aoi.dropna(dim="lon", how="all")
     print(sif_aoi_2) 
     print(oc_xr2[0])
 
@@ -2423,33 +2230,15 @@ def read_oc_and_trop(fnames, **kwargs):
                 
     sif_aoi = np.array(sif_aoi_2.to_numpy())
     print(sif_aoi.shape)
-    #sif_aoi = np.fliplr(np.rot90(sif_aoi, 1))
-    #sif_aoi = np.rot90(sif_aoi, 3)
-    #tmp = np.array(oc_xr2)
-    #print(tmp.shape, sif_aoi.shape)
-    #sif_aoi = cv2.resize(sif_aoi, (tmp.shape[2], tmp.shape[1]), interpolation=cv2.INTER_CUBIC)
-    #print(sif_aoi.shape, (tmp.shape[1], tmp.shape[2]))
     if final_mask is not None:
         print(final_mask)
         sif_aoi[final_mask] = -999999
 
-    #sif_aoi = np.swapaxes(sif_aoi, 0,1)
     print("HERE SHAPE", dat1.shape, sif_aoi)
     dat2 = oc_xr2
-    #for i in range(dat1.shape[0]):
-    #    dat2.append(oc_xr2["oc_" + str(i)].to_numpy())
-    #    print("FINAL OC STATS", i, np.nanmin(dat2), np.nanmean(dat2), np.nanmax(dat2), np.nanstd(dat2))
     dat2 = np.array(dat2)
     dat2[np.where(np.isnan(dat2))] = -999999
-    #sif_aoi = cv2.resize(sif_aoi, (dat2.shape[1], dat2.shape[2]), interpolation=cv2.INTER_CUBIC)
     sif_aoi = np.expand_dims(sif_aoi, axis=0)
-    #sif_aoi = np.flip(sif_aoi, axis=1)
-    #plt.imshow(np.squeeze(sif_aoi), vmin=-10, vmax=10)
-    #plt.savefig(trop_fname + ".IMG.png")
-    #plt.clf()
-    #plt.imshow(np.squeeze(dat2[0,:,:]), vmin=-10, vmax=10)
-    #plt.savefig(trop_fname + ".DAT.IMG.png")
-    #plt.clf()
     print(sif_aoi.shape, dat2.shape)
     dat2 = np.concatenate((dat2, sif_aoi), axis=0)     #(dat2,np.swapaxes(sif_aoi, 1,2)), axis=0)
     dat2[np.where(np.isnan(dat2))] = -999999
@@ -2469,7 +2258,7 @@ def read_trop_mod_xr(flename, **kwargs):
     if "start_time" in  kwargs and "end_time" in kwargs:
         sif_temp = sif_raw.sel(time=slice(kwargs["start_time"], kwargs["end_time"]))
     if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs:
-        sif_temp = sif_temp.sel(**{'lon' : slice(kwargs["start_lon"], kwargs["end_lon"]), 'lat': slice(kwargs["start_lat"], kwargs["start_lat"])})
+        sif_temp = sif_temp.sel(**{'lon' : slice(kwargs["start_lon"], kwargs["end_lon"]), 'lat': slice(kwargs["start_lat"], kwargs["end_lat"])})
  
     vrs = ['nflh', 'aot_869', 'angstrom', 'sif', 'chlor_a', 'chl_ocx'] 
     print(kwargs.keys()) 
@@ -2502,6 +2291,38 @@ def read_trop_mod_xr(flename, **kwargs):
     return np.array(data1)
 
 
+def _insitu_scene_clusters(clust_fname, gdf_insitu, radius_degrees, sample_clusters):
+    """Add the unique cluster ids within radius_degrees of each in-situ sample
+    (keyed by row position in gdf_insitu) for one cluster GeoTIFF."""
+    clust = gdal.Open(clust_fname)
+    latLon = get_lat_lon(clust_fname)
+    clust = clust.ReadAsArray()
+    clust = clust * 1000
+    clust = clust.astype(np.int32)
+
+    lat = latLon[:,:,0].reshape(clust.shape[0]*clust.shape[1])
+    lon = latLon[:,:,1].reshape(clust.shape[0]*clust.shape[1])
+    clust = clust.reshape(clust.shape[0]*clust.shape[1])
+    inds_clust = np.where(clust >= 0)
+    lat = lat[inds_clust]
+    lon = lon[inds_clust]
+    clust = clust[inds_clust]
+
+    gdf = gpd.GeoDataFrame(clust, geometry=gpd.GeoSeries.from_xy(lon, lat), crs=4326)
+    # pixel geometries once per scene; gdf has a default RangeIndex, so positions == index2
+    pixel_geoms = np.asarray(gdf.geometry.values)
+    for count, (index, poi) in enumerate(gdf_insitu.iterrows()):
+        # same neighbour set as the per-pixel loop: abs(poi2.geometry.distance(poi.geometry)) < radius_degrees
+        neighbours = _insitu_neighbours(pixel_geoms, poi.geometry, radius_degrees)
+        if len(neighbours) < 1:
+            continue
+        clusts = np.unique(clust[neighbours]).astype(np.int32)
+        if count in sample_clusters:
+            sample_clusters[count] = np.union1d(sample_clusters[count], clusts).astype(np.int32)
+        else:
+            sample_clusters[count] = clusts
+
+
 def _insitu_neighbours(pixel_geoms, point_geom, radius_degrees):
     """Indices of pixels with abs(pixel.distance(point)) < radius_degrees, in ascending order.
 
@@ -2521,7 +2342,7 @@ def read_trop_mod_xr_geo(flename, **kwargs):
     if "start_time" in  kwargs and "end_time" in kwargs:
         sif_temp = sif_raw.sel(time=slice(kwargs["start_time"], kwargs["end_time"]))
     if "start_lat" in kwargs and "end_lat" in kwargs and "start_lon" in kwargs and "end_lon" in kwargs:
-        sif_temp = sif_temp.sel(**{'lon' : slice(kwargs["start_lon"], kwargs["end_lon"]), 'lat': slice(kwargs["start_lat"], kwargs["start_lat"])})
+        sif_temp = sif_temp.sel(**{'lon' : slice(kwargs["start_lon"], kwargs["end_lon"]), 'lat': slice(kwargs["start_lat"], kwargs["end_lat"])})
 
 
     print(sif_temp.variables["time"].min())
@@ -2615,12 +2436,14 @@ def get_scaler(scaler_name, cuda=True):
         return None, True
 
 def read_gtiff_generic_geo(flename, **kwargs):
-    latLon = get_lat_lon(flename)    
-
     if "start_line" in kwargs and "end_line" in kwargs and "start_sample" in kwargs and "end_sample" in kwargs:
-            latLon = latLon[:, kwargs["start_line"]:kwargs["end_line"], kwargs["start_sample"]:kwargs["end_sample"]]
-
-    return latLon
+        # latLon is (rows, cols, 2): slice rows and columns (only that window is computed)
+        ds = gdal.Open(flename)
+        rows = range(ds.RasterYSize)[kwargs["start_line"]:kwargs["end_line"]]
+        cols = range(ds.RasterXSize)[kwargs["start_sample"]:kwargs["end_sample"]]
+        ds = None
+        return _lat_lon_window(flename, rows, cols)
+    return get_lat_lon(flename)
 
 
 # Number of pixel centres transformed per call in get_lat_lon.
@@ -2628,13 +2451,25 @@ _LATLON_BLOCK_POINTS = 1 << 20
 
 
 def get_lat_lon(fname):
+    return _lat_lon_window(fname, None, None)
+
+def _lat_lon_window(fname, rows, cols):
+    """(len(rows), len(cols), 2) lat/lon of pixel centres; [..., 0] = lat, [..., 1] = lon.
+
+    rows/cols are step-1 ranges (None = all). Values are bit-identical to the
+    matching window of the original per-pixel get_lat_lon loop.
+    """
     # open the dataset and get the geo transform matrix
     print(fname)
     ds = gdal.Open(fname)
     xoffset, px_w, rot1, yoffset, px_h, rot2 = ds.GetGeoTransform()
     # Raster size from the header: the pixel values are not needed, so the
     # (possibly many-band) raster is no longer read just to get its shape.
-    n_rows, n_cols = ds.RasterYSize, ds.RasterXSize
+    if rows is None:
+        rows = range(ds.RasterYSize)
+    if cols is None:
+        cols = range(ds.RasterXSize)
+    n_rows, n_cols = len(rows), len(cols)
     latLon = np.zeros((n_rows, n_cols, 2))
 
     # get CRS from dataset 
@@ -2645,16 +2480,18 @@ def get_lat_lon(fname):
     crsGeo = osr.SpatialReference()
     crsGeo.ImportFromEPSG(4326) # 4326 is the EPSG id of lat/long crs 
     t = osr.CoordinateTransformation(crs, crsGeo)
+    if n_rows == 0 or n_cols == 0:
+        return latLon
 
     # Pixel-centre coordinates with the same float64 operations, in the same order,
     # as the per-pixel loop; transformed in blocks with TransformPoints.
-    j = np.arange(n_cols, dtype=np.float64)[None, :]
+    j = np.arange(cols.start, cols.stop, dtype=np.float64)[None, :]
     xj = px_w * j
     yj = px_h * j
     block = max(1, _LATLON_BLOCK_POINTS // max(1, n_cols))
-    for k0 in range(0, n_rows, block):
-        k1 = min(k0 + block, n_rows)
-        k = np.arange(k0, k1, dtype=np.float64)[:, None]
+    for b0 in range(0, n_rows, block):
+        b1 = min(b0 + block, n_rows)
+        k = np.arange(rows.start + b0, rows.start + b1, dtype=np.float64)[:, None]
         posX = xj + rot1 * k + (px_w * 0.5) + (rot1 * 0.5) + xoffset
         posY = yj + rot2 * k + (px_h * 0.5) + (rot2 * 0.5) + yoffset
         pts = np.column_stack((posX.ravel(), posY.ravel()))
@@ -2662,10 +2499,11 @@ def get_lat_lon(fname):
         res = np.asarray(t.TransformPoints(pts), dtype=np.float64)
         del pts
         # (lon, lat, z) = t.TransformPoint(posX, posY) in the original
-        latLon[k0:k1, :, 1] = res[:, 0].reshape(k1 - k0, n_cols)
-        latLon[k0:k1, :, 0] = res[:, 1].reshape(k1 - k0, n_cols)
+        latLon[b0:b1, :, 1] = res[:, 0].reshape(b1 - b0, n_cols)
+        latLon[b0:b1, :, 0] = res[:, 1].reshape(b1 - b0, n_cols)
         del res
     return latLon
+
 
 def genLatLon(fnames):
 
