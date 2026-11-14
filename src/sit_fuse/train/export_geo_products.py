@@ -10,7 +10,7 @@ script turns them into products that open directly in QGIS / GDAL:
                                     layers, band descriptions, units, scene
                                     time and model provenance in tags);
                                     swath (GCP) grids are warped to dst_crs
-  <model>_smoke_polygons.parquet    connected smoke regions from mask_layer,
+  <model>_<product>_polygons.parquet connected smoke / fire regions from mask_layer,
   (+ .gpkg)                         one row per region: scene_time (UTC),
                                     pair_id, area_km2, n_pixels, mean/max
                                     probability, mean uncertainty layers,
@@ -36,7 +36,10 @@ Scenes without georeferencing are skipped with a warning.
 
 Usage:
   python export_geo_products.py uq_config.yaml [--models random_forest ...]
-         [--inference-dir DIR] [--output-dir DIR]
+         [--inference-dir DIR] [--output-dir DIR] [-n THREADS] [--workers W]
+  # as launcher jobs (sit_fuse.train.plan_uq_jobs): one job per model, each merging its entry into the
+  # shared geo_products_manifest.json under a file lock
+  python export_geo_products.py uq_config.yaml --models M --update-manifest
 
 Config (all optional):
   geo_export:
@@ -445,7 +448,10 @@ def export_model(cfg: dict, model: str, layer_dir: Path, out_dir: Path, records:
 
     outs = {"rasters": written, "skipped": skipped}
     cat = lambda L: pd.concat(L, ignore_index=True) if L else None
-    outs["smoke_polygons"] = _write_vectors(cat(polys), out_dir / f"{model}_smoke_polygons", formats)
+    # Layer name follows the product (smoke | fire); geo_export.vectors.polygon_name overrides it.
+    prods = {str(s.get("product") or "").lower() for s in manifest["scenes"]} - {""}
+    pname = vcfg.get("polygon_name") or (f"{prods.pop()}_polygons" if len(prods) == 1 else "polygons")
+    outs["polygons"] = outs[pname] = _write_vectors(cat(polys), out_dir / f"{model}_{pname}", formats)
     outs["scene_footprints"] = _write_vectors(cat(foots), out_dir / f"{model}_scene_footprints", formats)
     if pix:
         outs["pixels"] = _write_vectors(cat(pix), out_dir / f"{model}_pixels", ["parquet"])
@@ -454,7 +460,12 @@ def export_model(cfg: dict, model: str, layer_dir: Path, out_dir: Path, records:
     return outs
 
 
-def run(cfg: dict, models=None, inference_dir=None, output_dir=None) -> dict:
+def _export_one(cfg, m, layer_dir, out_dir, records):
+    return export_model(cfg, m, Path(layer_dir), Path(out_dir), records)
+
+
+def run(cfg: dict, models=None, inference_dir=None, output_dir=None, update_manifest=False,
+        n_workers=1, threads=1) -> dict:
     gx = cfg.get("geo_export", {}) or {}
     ev = cfg.get("evaluation", {}) or {}
     inf = cfg.get("inference", {}) or {}
@@ -475,13 +486,21 @@ def run(cfg: dict, models=None, inference_dir=None, output_dir=None) -> dict:
             if r.get("head_outputs"):
                 records[r["head_outputs"]] = r
 
-    summary = {}
+    from sit_fuse.parallel_utils import cpu_map, update_json
+    todo = []
     for m in models:
         layer_dir = Path(tmpl.format(model=m))
         if not (layer_dir / "inference_manifest.json").exists():
             LOG.warning("%s: no inference_manifest.json in %s; skipped", m, layer_dir)
             continue
-        summary[m] = export_model(cfg, m, layer_dir, out_dir / m, records)
+        todo.append(m)
+    res = cpu_map(_export_one, [(cfg, m, str(tmpl.format(model=m)), str(out_dir / m), records) for m in todo],
+                  n_workers, threads)
+    summary = dict(zip(todo, res))
+    if update_manifest:
+        # several per-model jobs share one manifest: locked read-merge-write keeps every model's entry
+        return update_json(out_dir / "geo_products_manifest.json",
+                           lambda old: {**(old or {}), **json.loads(json.dumps(summary, default=str))})
     save_json(out_dir / "geo_products_manifest.json", summary)
     return summary
 
@@ -492,8 +511,15 @@ def main():
     ap.add_argument("--models", nargs="+", default=None)
     ap.add_argument("--inference-dir", default=None, help="template with {model}, or a single directory")
     ap.add_argument("--output-dir", default=None)
+    ap.add_argument("--update-manifest", action="store_true",
+                    help="merge these models into an existing geo_products_manifest.json (file-locked) instead "
+                         "of replacing it; used when models are exported by separate jobs")
+    from sit_fuse.parallel_utils import add_parallel_args, setup_compute
+    add_parallel_args(ap, shard=False, merge=False)
     a = ap.parse_args()
-    run(load_yaml(a.yaml_config), a.models, a.inference_dir, a.output_dir)
+    cfg = load_yaml(a.yaml_config)
+    n_workers, threads = setup_compute(cfg, a.num_threads, a.workers)
+    run(cfg, a.models, a.inference_dir, a.output_dir, a.update_manifest, n_workers, threads)
 
 
 if __name__ == "__main__":

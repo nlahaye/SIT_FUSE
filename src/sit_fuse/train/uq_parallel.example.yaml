@@ -1,0 +1,55 @@
+# Plan for running the UQ pipeline (feature table onward) with sit_fuse.local_launcher on one machine.
+#   python plan_uq_jobs.py uq_parallel.example.yaml          # writes plan_file
+#   python plan_uq_jobs.py uq_parallel.example.yaml --run    # writes and runs it
+#   python -m sit_fuse.local_launcher status /data/nlahaye/launch/uq_tempo_goes/uq_plan.yaml
+# Relative paths resolve against this file's directory.
+
+plan_file: /data/nlahaye/launch/uq_tempo_goes/uq_plan.yaml
+python: python                       # interpreter in the SIT-FUSE environment
+# train_dir: /path/to/SIT_FUSE/src/sit_fuse/train    # default: directory of plan_uq_jobs.py
+
+launcher:                            # passed through to sit_fuse.local_launcher
+  state_dir: /data/nlahaye/launch/uq_tempo_goes
+  cpus: -4                           # all cores but 4
+  gpus: 0                            # CPU-only stages
+  retries: 1
+  # env: {GDAL_CACHEMAX: "512"}      # PYTHONPATH (src + train) is added automatically
+
+# stages: [features, train, infer, evaluate, geo, visuals, fusion, joint_visuals]   # default: all
+
+resources:                           # cores per job (-n of the script; thread env vars set by the launcher)
+  features: 2
+  train: 16
+  train_workers: 8                   # parallel fold/model/bootstrap fits inside the training job (2 threads each)
+  infer: 2
+  evaluate: 4
+  compare: 2
+  geo: 2
+  fusion_fit: 8
+  fusion_apply: 2
+
+shards:                              # independent jobs per stage (per pipeline / per model / per fusion)
+  features: 8                        # matchup scenes, strided
+  inference: 8                       # inference scenes, strided, per model
+  fusion: 6                          # contiguous output-frame blocks
+
+pipelines:                           # one UQ config each; models from evaluation.models (or `models:`)
+  tempo_smoke:
+    uq_config: configs/uq_config.tempo.smoke.yaml
+    visuals_config: configs/uq_visuals.tempo.smoke.yaml
+  tempo_fire:
+    uq_config: configs/uq_config.tempo.fire.yaml
+    visuals_config: configs/uq_visuals.tempo.fire.yaml
+  goes_smoke:
+    uq_config: configs/uq_config.goes18.smoke.yaml
+    inference_shards: 24             # per-pipeline override (many more GOES scenes)
+  goes_fire:
+    uq_config: configs/uq_config.goes18.fire.yaml
+    inference_shards: 24
+    # models: [hist_gradient_boosting, soft_assignment]   # optional override
+
+fusion:                              # fit waits for the geo exports of the listed pipelines
+  smoke: {config: configs/fusion_config.smoke.yaml, after: [tempo_smoke, goes_smoke]}
+  fire:  {config: configs/fusion_config.fire.yaml,  after: [tempo_fire, goes_fire]}
+
+joint_visuals: configs/joint_visuals.yaml    # after all visuals and fusion merges

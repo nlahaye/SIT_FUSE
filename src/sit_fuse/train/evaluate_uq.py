@@ -52,7 +52,12 @@ instead (per_scene_reference_free.csv; pooled uncertainty, predicted
 fraction, selective retention, shift tests).
 
 Usage:
-    python evaluate_uq.py uq_config.yaml [--models random_forest soft_assignment ...]
+    python evaluate_uq.py uq_config.yaml [--models random_forest soft_assignment ...] [-n THREADS] [--workers W]
+    # as launcher jobs (sit_fuse.train.plan_uq_jobs): one job per model, then the cross-model tables
+    python evaluate_uq.py uq_config.yaml --models M
+    python evaluate_uq.py uq_config.yaml --compare-only    # model_comparison.csv, paired_comparison.csv
+--workers evaluates models in parallel processes. Each model's evaluation is unchanged (same seed per model),
+so the bootstrap resamples stay paired across models whether they run together or as separate jobs.
 """
 
 from __future__ import annotations
@@ -284,9 +289,11 @@ def _take(d, idx, scale=1.0):
 def concat(parts):
     if not parts:
         return None
-    ukeys = set.intersection(*[set(p["unc"]) for p in parts])
-    rkeys = set.union(*[set(p["refs"]) for p in parts])
-    qkeys = set.intersection(*[set(p["quant"]) for p in parts]) if all(p["quant"] for p in parts) else set()
+    # ordered (first-scene order) rather than set order, so output row order does not depend on PYTHONHASHSEED
+    ukeys = [k for k in parts[0]["unc"] if all(k in p["unc"] for p in parts)]
+    rkeys = list(dict.fromkeys(k for p in parts for k in p["refs"]))
+    qkeys = [k for k in parts[0]["quant"] if all(k in p["quant"] for p in parts)] \
+        if all(p["quant"] for p in parts) else []
     n = [p["P"].shape[0] for p in parts]
     return {
         "P": np.concatenate([p["P"] for p in parts]),
@@ -1285,6 +1292,7 @@ def evaluate_model(cfg, model):
     allp["err"] = (decide(allp["P"], thr if allp.get("thr") is None else allp["thr"])
                    != allp["refs"]["primary"]).astype(int)
     plot_outputs(eval_dir, rel_rows, curves, allp, summary["overall"], scene_df, C)
+    summary["bootstrap_groups"] = sorted(boot_parts)     # lets --compare-only pair separately run models
     save_json(eval_dir / "eval_summary.json", summary)
     o = summary["overall"]
     LOG.info("%s: IoU=%.3f ECE=%.3f NLL=%.3f -> %s", model, o["hard_vs_reference"]["target_macro_iou"],
@@ -1292,19 +1300,28 @@ def evaluate_model(cfg, model):
     return summary, reps, sorted(boot_parts)
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("yaml_config", type=Path)
-    ap.add_argument("--models", nargs="+", default=None)
-    a = ap.parse_args()
-    cfg = load_yaml(a.yaml_config)
+def _evaluate_one(cfg, model):
+    s, r, g = evaluate_model(cfg, model)
+    return s, r, g
+
+
+def _load_evaluated(cfg, model, out):
+    """eval_summary.json / bootstrap_replicates.csv of a model evaluated in an earlier (separate) run."""
+    d = out / model
+    if not (d / "eval_summary.json").exists():
+        raise FileNotFoundError(f"{d / 'eval_summary.json'} missing; evaluate {model} first.")
+    s = load_json(d / "eval_summary.json")
+    r = pd.read_csv(d / "bootstrap_replicates.csv") if (d / "bootstrap_replicates.csv").exists() else None
+    return s, r, s.get("bootstrap_groups")
+
+
+def compare_models(cfg, models, results, out):
+    """model_comparison.csv and paired_comparison.csv from {model: (summary, replicates, groups)}."""
     ev = cfg.get("evaluation", {}) or {}
-    models = a.models or ev.get("models") or [cfg.get("inference", {}).get("model")]
-    out = Path(ev.get("output_dir", Path(cfg["output_dir"]) / "evaluation"))
     rows, reps, groups = [], {}, {}
     for m in models:
-        s, r, g = evaluate_model(cfg, m)
-        row = {"model": m, **headline(s["overall"])}
+        s, r, g = results[m]
+        row = {"model": m, **headline(s.get("overall"))}
         if s.get("reference_free"):
             row.update({f"mean_{u}": v["mean"] for u, v in s["uncertainty"].items()})
             row.update(s.get("predicted_fraction", {}))
@@ -1315,6 +1332,7 @@ def main():
         rows.append(row)
         reps[m], groups[m] = r, g
     if len(rows) > 1:
+        out.mkdir(parents=True, exist_ok=True)
         pd.DataFrame(rows).to_csv(out / "model_comparison.csv", index=False)
         LOG.info("Model comparison: %s", out / "model_comparison.csv")
 
@@ -1324,7 +1342,7 @@ def main():
         a_ = (1 - level) / 2
         prow = []
         for m in models:
-            if m == ref_model or reps[m] is None or groups[m] != groups[ref_model]:
+            if m == ref_model or reps[m] is None or groups[m] is None or groups[m] != groups[ref_model]:
                 continue
             for k in sorted(set(reps[m].columns) & set(reps[ref_model].columns)):
                 dlt = (reps[m][k] - reps[ref_model][k]).dropna()
@@ -1336,6 +1354,28 @@ def main():
         if prow:
             pd.DataFrame(prow).to_csv(out / "paired_comparison.csv", index=False)
             LOG.info("Paired comparison vs %s: %s", ref_model, out / "paired_comparison.csv")
+
+
+def main():
+    from sit_fuse.parallel_utils import add_parallel_args, cpu_map, setup_compute
+    ap = argparse.ArgumentParser()
+    ap.add_argument("yaml_config", type=Path)
+    ap.add_argument("--models", nargs="+", default=None)
+    ap.add_argument("--compare-only", action="store_true",
+                    help="only build the cross-model tables from models evaluated in separate runs")
+    add_parallel_args(ap, shard=False, merge=False)
+    a = ap.parse_args()
+    cfg = load_yaml(a.yaml_config)
+    n_workers, threads = setup_compute(cfg, a.num_threads, a.workers)
+    ev = cfg.get("evaluation", {}) or {}
+    models = a.models or ev.get("models") or [cfg.get("inference", {}).get("model")]
+    out = Path(ev.get("output_dir", Path(cfg["output_dir"]) / "evaluation"))
+    if a.compare_only:
+        results = {m: _load_evaluated(cfg, m, out) for m in models}
+    else:
+        res = cpu_map(_evaluate_one, [(cfg, m) for m in models], n_workers, threads)
+        results = dict(zip(models, res))
+    compare_models(cfg, models, results, out)
 
 
 if __name__ == "__main__":

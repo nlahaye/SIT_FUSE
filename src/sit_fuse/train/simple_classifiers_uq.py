@@ -25,7 +25,10 @@ Baselines evaluated alongside the classifiers (no fitting beyond the encoder):
   hard_assignment, soft_assignment, assignment_ensemble
 
 Usage:
-    python simple_classifiers_uq.py uq_config.yaml
+    python simple_classifiers_uq.py uq_config.yaml [-n THREADS] [--workers W]
+--workers (or compute.num_workers) runs the fold encoders and all classifier fits (CV folds x models, final
+models, bootstrap members) in W worker processes, each with THREADS / W BLAS / OpenMP threads; bootstrap
+draws are made before dispatch, so results match a serial run.
 """
 
 from __future__ import annotations
@@ -166,6 +169,48 @@ class EncoderFactory:
             rows = df[df[self.G].isin(set(held))]
             parts.append(enc.transform(rows, feats))
         return pd.concat(parts).loc[df.index]
+
+
+# ---------------------------------------------------------------------------
+# Parallel pieces (module level so worker processes can run them)
+# ---------------------------------------------------------------------------
+
+def _prepare_fold(factory, cfg, C, baselines, df_tr, df_va, G):
+    """Fold encoder, inner-OOF training encoding and targets; validation encoding when df_va is given."""
+    fcfg = cfg.get("features", {})
+    dates_tr = sorted(df_tr[G].unique())
+    enc = factory.fit(dates_tr)
+    out = {"enc": enc, "X_tr": factory.encode_training(df_tr, dates_tr),
+           "T_tr": build_targets(enc.transform(df_tr, fcfg), enc, cfg["target"])}
+    if df_va is not None:
+        X_va = enc.transform(df_va, fcfg)
+        out.update(X_va=X_va, T_va=calibration_targets(X_va, enc, cfg, C),
+                   base={b: baseline_proba(b, X_va, enc) for b in baselines})
+        del out["enc"]
+    return out
+
+
+def _fit_task(model, X, idx, T, feats, cfg, levels, X_pred, C, path, return_prior, threads):
+    """
+    One soft-target fit: rows idx of X (all when None). Returns predicted probabilities on X_pred (CV fold),
+    (model, prior) when return_prior (final fit), or the saved path (bootstrap member).
+    threads: inside a worker, the model's own n_jobs is capped at the worker's share and restored afterwards.
+    """
+    m = clone(model)
+    nj = m.get_params().get("clf__n_jobs", "absent") if threads else "absent"
+    if nj != "absent":
+        m.set_params(clf__n_jobs=threads)
+    if idx is not None:
+        X, T = X.iloc[idx], T[idx]
+    res = fit_soft(m, X[feats], T, cfg, return_prior=return_prior, base_weight=level_weights(levels, X))
+    m, prior = res if return_prior else (res, None)
+    if nj != "absent":
+        m.set_params(clf__n_jobs=nj)
+    if path:
+        joblib.dump(m, path)
+    if X_pred is not None:
+        return full_proba(m, X_pred[feats], C)
+    return (m, prior) if return_prior else path
 
 
 # ---------------------------------------------------------------------------
@@ -354,7 +399,8 @@ def selective_rules(name, Pc, ref, w, frame, thr, calibrator, final_models, boot
             "target_coverage": sel_cfg.get("target_coverage"), "rules": rules}
 
 
-def run(cfg):
+def run(cfg, n_workers=1, threads=1):
+    from sit_fuse.parallel_utils import cpu_map
     out = Path(cfg["output_dir"])
     tdir = out / "training"
     tdir.mkdir(parents=True, exist_ok=True)
@@ -424,65 +470,75 @@ def run(cfg):
              len(cal_groups) if cal_mode == "calibration_dates" else 0, hold[G].nunique() if len(hold) else 0)
 
     # ---------------- grouped CV with fold-refit encoders ----------------
+    # Independent pieces (fold encoders, then every fold x model fit, final fit and bootstrap member) run in
+    # worker processes when n_workers > 1; draws and seeds are fixed beforehand, so results match a serial run.
     folds, n_splits = grouped_folds(dev_fit, cfg, G)
-    feats = None
+    folds = list(folds)
     oof = {n: np.zeros((len(dev_fit), C)) for n in names}
     oof_T = np.zeros((len(dev_fit), C))
     oof_frames = []
-
     for k, (tr, va) in enumerate(folds, 1):
-        df_tr, df_va = dev_fit.iloc[tr], dev_fit.iloc[va]
-        dates_tr = sorted(df_tr[G].unique())
         LOG.info("Fold %d/%d: %d train groups, %d validation groups", k, n_splits,
-                 len(dates_tr), df_va[G].nunique())
-        enc = factory.fit(dates_tr)
-        X_tr_frame = factory.encode_training(df_tr, dates_tr)
-        T_tr = build_targets(enc.transform(df_tr, cfg.get("features", {})), enc, cfg["target"])
-        X_va_frame = enc.transform(df_va, cfg.get("features", {}))
-        if feats is None:
-            feats = select_feature_columns(X_va_frame, cfg.get("features", {}))
-            LOG.info("Using %d features", len(feats))
-        oof_T[va] = calibration_targets(X_va_frame, enc, cfg, C)
-        oof_frames.append(X_va_frame.assign(_pos=va))
-        for name, model in models.items():
-            m = fit_soft(clone(model), X_tr_frame[feats], T_tr, cfg, base_weight=level_weights(levels, X_tr_frame))
-            oof[name][va] = full_proba(m, X_va_frame[feats], C)
-        for b in baselines:
-            oof[b][va] = baseline_proba(b, X_va_frame, enc)
-
-    oof_frame = pd.concat(oof_frames).sort_values("_pos").drop(columns="_pos")
-    w_oof = oof_frame["pop_weight"].to_numpy()
-
-    # ---------------- final encoder + models ----------------
+                 dev_fit.iloc[tr][G].nunique(), dev_fit.iloc[va][G].nunique())
     dates_fit = sorted(dev_fit[G].unique())
-    enc_final = factory.fit(dates_fit)
-    X_fit_frame = factory.encode_training(dev_fit, dates_fit)
-    T_fit = build_targets(enc_final.transform(dev_fit, cfg.get("features", {})), enc_final, cfg["target"])
-    final_models, train_priors = {}, {}
-    for n, m in models.items():
-        final_models[n], train_priors[n] = fit_soft(clone(m), X_fit_frame[feats], T_fit, cfg, return_prior=True,
-                                                    base_weight=level_weights(levels, X_fit_frame))
-        joblib.dump(final_models[n], tdir / f"{n}.joblib")
+    LOG.info("Fitting %d fold encoders + final encoder (%d workers)", len(folds), n_workers)
+    preps = cpu_map(_prepare_fold, [(factory, cfg, C, baselines, dev_fit.iloc[tr], dev_fit.iloc[va], G)
+                                    for tr, va in folds] + [(factory, cfg, C, [], dev_fit, None, G)],
+                    n_workers, threads)
+    final_prep = preps.pop()
+    feats = select_feature_columns(preps[0]["X_va"], cfg.get("features", {}))
+    LOG.info("Using %d features", len(feats))
+    for (tr, va), pr in zip(folds, preps):
+        oof_T[va] = pr["T_va"]
+        oof_frames.append(pr["X_va"].assign(_pos=va))
+        for b in baselines:
+            oof[b][va] = pr["base"][b]
 
-    # ---------------- bootstrap ensembles (grouped by date) ----------------
+    # final encoder + models, bootstrap ensembles (grouped by date): the same fit tasks as the CV folds
+    enc_final = final_prep["enc"]
+    X_fit_frame, T_fit = final_prep["X_tr"], final_prep["T_tr"]
     bs = cfg.get("bootstrap_ensemble", {})
-    boot_paths = {}
+    boot_draws = {}
     if bs.get("enabled", False):
         rng = np.random.default_rng(int(cfg.get("random_state", 42)))
         dates_arr = np.array(dates_fit)
+        gvals = X_fit_frame[G].to_numpy()
         for name in bs.get("models", ["logistic_regression"]):
             if name not in models:
                 continue
-            paths = []
+            boot_draws[name] = []
             for b in range(int(bs.get("n_models", 10))):
                 draw = rng.choice(dates_arr, size=dates_arr.size, replace=True)
-                idx = np.concatenate([np.where(X_fit_frame[G].to_numpy() == d)[0] for d in draw])
-                mb = fit_soft(clone(models[name]), X_fit_frame.iloc[idx][feats], T_fit[idx], cfg,
-                              base_weight=level_weights(levels, X_fit_frame.iloc[idx]))
-                p = tdir / f"{name}_bootstrap_{b:03d}.joblib"
-                joblib.dump(mb, p)
-                paths.append(str(p))
-            boot_paths[name] = paths
+                boot_draws[name].append(np.concatenate([np.where(gvals == d)[0] for d in draw]))
+    par = threads if n_workers > 1 else None
+    tasks, keys = [], []
+    for k, pr in enumerate(preps):
+        for n, m in models.items():
+            tasks.append((m, pr["X_tr"], None, pr["T_tr"], feats, cfg, levels, pr["X_va"], C, None, False, par))
+            keys.append(("oof", k, n))
+    for n, m in models.items():
+        tasks.append((m, X_fit_frame, None, T_fit, feats, cfg, levels, None, C, str(tdir / f"{n}.joblib"), True, par))
+        keys.append(("final", None, n))
+    for n, draws in boot_draws.items():
+        for b, idx in enumerate(draws):
+            tasks.append((models[n], X_fit_frame, idx, T_fit, feats, cfg, levels, None, C,
+                          str(tdir / f"{n}_bootstrap_{b:03d}.joblib"), False, par))
+            keys.append(("boot", b, n))
+    LOG.info("Fitting %d classifier tasks (%d CV, %d final, %d bootstrap) with %d workers x %d threads",
+             len(tasks), sum(k[0] == "oof" for k in keys), len(models), sum(k[0] == "boot" for k in keys),
+             n_workers, threads)
+    results = cpu_map(_fit_task, tasks, n_workers, threads)
+    final_models, train_priors, boot_paths = {}, {}, {}
+    for (kind, k, n), r in zip(keys, results):
+        if kind == "oof":
+            oof[n][folds[k][1]] = r
+        elif kind == "final":
+            final_models[n], train_priors[n] = r
+        else:
+            boot_paths.setdefault(n, []).append(r)
+
+    oof_frame = pd.concat(oof_frames).sort_values("_pos").drop(columns="_pos")
+    w_oof = oof_frame["pop_weight"].to_numpy()
 
     # ---------------- calibration ----------------
     calibrators, thresholds, metrics = {}, {}, {}
@@ -688,9 +744,13 @@ def run(cfg):
 
 
 def main():
+    from sit_fuse.parallel_utils import add_parallel_args, setup_compute
     ap = argparse.ArgumentParser()
     ap.add_argument("yaml_config", type=Path)
-    run(load_yaml(ap.parse_args().yaml_config))
+    add_parallel_args(ap, shard=False, merge=False)
+    a = ap.parse_args()
+    cfg = load_yaml(a.yaml_config)
+    run(cfg, *setup_compute(cfg, a.num_threads, a.workers))
 
 
 if __name__ == "__main__":

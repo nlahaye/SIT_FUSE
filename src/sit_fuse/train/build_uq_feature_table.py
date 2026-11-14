@@ -22,7 +22,12 @@ Outputs (output_dir):
   build_manifest.json
 
 Usage:
-    python build_uq_feature_table.py uq_config.yaml
+    python build_uq_feature_table.py uq_config.yaml [-n THREADS] [--workers W]
+    # as launcher jobs (sit_fuse.train.plan_uq_jobs): N shard jobs, then one merge job
+    python build_uq_feature_table.py uq_config.yaml --shard i/N    # -> <output_dir>/feature_shards/
+    python build_uq_feature_table.py uq_config.yaml --merge
+Scenes are independent; per-scene sampling is seeded by the scene's position in the matchup list, so serial,
+--workers and --shard/--merge runs write the same table.
 """
 
 from __future__ import annotations
@@ -122,98 +127,150 @@ def report_missing_classes(stages, matchups, target_cfg, C, missing, out_dir):
                "target": target_cfg})
 
 
-def run(cfg: dict) -> None:
-    out_dir = Path(cfg["output_dir"])
-    out_dir.mkdir(parents=True, exist_ok=True)
-    data_cfg = cfg["data"]
-    target_cfg = cfg["target"]
-    features_cfg = cfg.get("features", {})
-    samp_cfg = cfg.get("sampling", {})
-    C = len(target_cfg["classes"])
-    rs = int(cfg.get("random_state", 42))
-    product = str(data_cfg.get("product", "")).lower()
+_CTX = {}
 
+
+def _context(cfg: dict) -> dict:
+    """Per-process settings derived from the config (rebuilt once in each worker)."""
+    import json
+    key = json.dumps(cfg, sort_keys=True, default=str)
+    if key not in _CTX:
+        target_cfg = cfg["target"]
+        _CTX.clear()
+        _CTX[key] = {
+            "target_cfg": target_cfg, "features_cfg": cfg.get("features", {}),
+            "C": len(target_cfg["classes"]), "rs": int(cfg.get("random_state", 42)),
+            "caps": cfg.get("sampling", {}).get("max_samples_per_class_per_scene"),
+            "invalid": InvalidClusters.from_config(cfg), "levels": LabelLevels(cfg),
+        }
+    return _CTX[key]
+
+
+def select_matchups(cfg: dict) -> list:
+    data_cfg = cfg["data"]
+    product = str(data_cfg.get("product", "")).lower()
     splits = data_cfg.get("include_splits")  # e.g. [dev, calibration, holdout]
     matchups = [m for m in load_matchups(data_cfg["matchup_file"], require_truth=True, splits=splits)
                 if not product or m["product"] == product]
     if not matchups:
         raise ValueError(f"No matchups for product='{product}'.")
+    return matchups
 
+
+def process_scene(cfg: dict, i: int, m: dict) -> dict:
+    """
+    Features, full-scene counts and per-scene sample for matchup number i (1-based position in the full
+    matchup list; it seeds the per-scene sampling, so serial, worker and sharded runs give the same rows).
+    """
+    x = _context(cfg)
+    C, invalid, levels = x["C"], x["invalid"], x["levels"]
+    LOG.info("[%d] %s (%s)", i, m["pair_id"], m["date"])
+    bands, profile, tags = read_head_outputs(m["head_outputs"])
+    res = {"i": i, "pair_id": m["pair_id"], "date": m["date"], "head_settings": head_settings_from_tags(tags),
+           "head_outputs": str(m["head_outputs"]), "frame": None, "counts": None, "population": None,
+           "level_missing": [], "excluded": None}
+    ref = align_reference(m["truth"], profile, x["target_cfg"])
+    meta = {k: m[k] for k in ("pair_id", "date", "product", "split_group",
+                              "classifier_split", "encoder_split", "split_stratum")}
+    df, valid = scene_feature_frame(bands, profile, x["features_cfg"], m["pair_id"], ref=ref,
+                                    invalid=invalid)
+    if levels and not df.empty:
+        cons, miss = levels.consensus_label(m, profile)
+        res["level_missing"] = list(miss)
+        r_, c_ = df["row"].to_numpy(), df["col"].to_numpy()
+        df["cons_ref_label"] = cons[r_, c_].astype(np.int16)
+        df["label_level"] = levels.levels(df["ref_label"].to_numpy(), df["cons_ref_label"].to_numpy())
+    hv = head_valid_mask(bands)
+    res["stages"] = {
+        "truth": str(m["truth"]),
+        "reference_on_head_grid": _class_counts(ref[ref >= 0], C),
+        "reference_nodata_on_head_grid": int((ref < 0).sum()),
+        "and_head_valid": _class_counts(ref[hv & (ref >= 0)], C),
+        "and_not_excluded": _class_counts(df["ref_label"].to_numpy(), C) if not df.empty else [0] * C,
+    }
+    if invalid:
+        ex = excluded_cluster_mask(bands, invalid)
+        head_ok, ref_ok = np.isfinite(ex), ref >= 0
+        tgt = ref_ok & (ref > 0) & head_ok
+        res["excluded"] = {
+            "excluded_fraction": float(np.nanmean(ex)) if head_ok.any() else None,
+            "excluded_reference_target_fraction": float(ex[tgt].mean()) if tgt.any() else None,
+        }
+    if df.empty:
+        LOG.warning("%s: no valid pixels outside excluded clusters in the matched area; scene skipped.",
+                    m["pair_id"])
+        return res
+    res["counts"] = cluster_class_counts(bands, ref, valid, C, meta)
+    pop = df["ref_label"].value_counts().reindex(range(C), fill_value=0)
+    res["population"] = [int(pop[c]) for c in range(C)]
+    if x["caps"]:
+        df = sample_multiclass_by_group(
+            df, label_column="ref_label", group_column="pair_id",
+            max_samples_per_class=x["caps"], random_state=x["rs"] + i)
+    for k, v in meta.items():
+        df[k] = v
+    res["frame"] = df
+    return res
+
+
+def collect_scenes(cfg: dict, matchups: list, indices=None, n_workers=1, threads=1) -> list:
+    """process_scene over matchups[indices] (all by default), serially or in worker processes."""
+    from sit_fuse.parallel_utils import cpu_map
+    idx = range(len(matchups)) if indices is None else indices
+    return cpu_map(process_scene, [(cfg, k + 1, matchups[k]) for k in idx], n_workers, threads)
+
+
+def run(cfg: dict, n_workers: int = 1, threads: int = 1) -> None:
+    matchups = select_matchups(cfg)
+    finalize(cfg, matchups, collect_scenes(cfg, matchups, n_workers=n_workers, threads=threads))
+
+
+def finalize(cfg: dict, matchups: list, results: list) -> None:
+    """Combine per-scene results (in matchup order) into the feature table, counts and manifest."""
+    out_dir = Path(cfg["output_dir"])
+    out_dir.mkdir(parents=True, exist_ok=True)
+    target_cfg = cfg["target"]
+    features_cfg = cfg.get("features", {})
+    samp_cfg = cfg.get("sampling", {})
+    C = len(target_cfg["classes"])
+    rs = int(cfg.get("random_state", 42))
     invalid = InvalidClusters.from_config(cfg)
     if invalid:
         LOG.info("Excluding %d joint and %d parent clusters (%s)", len(invalid.joint),
                  len(invalid.parent), invalid.source or "inline")
-    excluded = {}
     levels = LabelLevels(cfg)
-    level_missing = {}
     if levels:
         LOG.info("Label levels: consensus references %s (require_all_observed=%s, consensus_positives=%s)",
                  levels.names, levels.require_all_observed, levels.consensus_positives)
 
-    caps = samp_cfg.get("max_samples_per_class_per_scene")
+    results = sorted(results, key=lambda r: r["i"])
+    if [r["i"] for r in results] != list(range(1, len(matchups) + 1)):
+        raise ValueError(f"Scene results cover {len(results)} of {len(matchups)} matchups; the matchup file or "
+                         "data.include_splits changed since the shards were written. Rerun the shards.")
     frames, counts, prevalence, population = [], [], {}, {}
-    stages = {}   # per-scene reference class counts at each masking stage
+    stages, excluded, level_missing = {}, {}, {}
     head_settings = None
-
-    for i, m in enumerate(matchups, 1):
-        LOG.info("[%d/%d] %s (%s)", i, len(matchups), m["pair_id"], m["date"])
-        bands, profile, tags = read_head_outputs(m["head_outputs"])
-        hs = head_settings_from_tags(tags)
+    for r in results:
+        hs = r["head_settings"]
         if head_settings is None:
             head_settings = hs
         elif hs != head_settings:
             raise ValueError(
-                f"{m['head_outputs']}: head export settings {hs} differ from "
-                f"earlier scenes {head_settings}. Re-export with one setting."
-            )
-
-        ref = align_reference(m["truth"], profile, target_cfg)
-        meta = {k: m[k] for k in ("pair_id", "date", "product", "split_group",
-                                  "classifier_split", "encoder_split", "split_stratum")}
-        df, valid = scene_feature_frame(bands, profile, features_cfg, m["pair_id"], ref=ref,
-                                        invalid=invalid)
-        if levels and not df.empty:
-            cons, miss = levels.consensus_label(m, profile)
-            for n in miss:
-                level_missing[n] = level_missing.get(n, 0) + 1
-            r_, c_ = df["row"].to_numpy(), df["col"].to_numpy()
-            df["cons_ref_label"] = cons[r_, c_].astype(np.int16)
-            df["label_level"] = levels.levels(df["ref_label"].to_numpy(), df["cons_ref_label"].to_numpy())
-        hv = head_valid_mask(bands)
-        stages[m["pair_id"]] = {
-            "truth": str(m["truth"]),
-            "reference_on_head_grid": _class_counts(ref[ref >= 0], C),
-            "reference_nodata_on_head_grid": int((ref < 0).sum()),
-            "and_head_valid": _class_counts(ref[hv & (ref >= 0)], C),
-            "and_not_excluded": _class_counts(df["ref_label"].to_numpy(), C) if not df.empty else [0] * C,
-        }
-        if invalid:
-            ex = excluded_cluster_mask(bands, invalid)
-            head_ok, ref_ok = np.isfinite(ex), ref >= 0
-            tgt = ref_ok & (ref > 0) & head_ok
-            excluded[m["pair_id"]] = {
-                "excluded_fraction": float(np.nanmean(ex)) if head_ok.any() else None,
-                "excluded_reference_target_fraction": float(ex[tgt].mean()) if tgt.any() else None,
-            }
-        if df.empty:
-            LOG.warning("%s: no valid pixels outside excluded clusters in the matched area; scene skipped.",
-                        m["pair_id"])
+                f"{r['head_outputs']}: head export settings {hs} differ from "
+                f"earlier scenes {head_settings}. Re-export with one setting.")
+        stages[r["pair_id"]] = r["stages"]
+        if r["excluded"] is not None:
+            excluded[r["pair_id"]] = r["excluded"]
+        for n in r["level_missing"]:
+            level_missing[n] = level_missing.get(n, 0) + 1
+        if r["frame"] is None:
             continue
-        counts.append(cluster_class_counts(bands, ref, valid, C, meta))
-
-        pop = df["ref_label"].value_counts().reindex(range(C), fill_value=0)
-        d = prevalence.setdefault(m["date"], {str(c): 0 for c in range(C)})
+        counts.append(r["counts"])
+        d = prevalence.setdefault(r["date"], {str(c): 0 for c in range(C)})
         for c in range(C):
-            d[str(c)] += int(pop[c])
-            population[(m["pair_id"], c)] = int(pop[c])
-
-        if caps:
-            df = sample_multiclass_by_group(
-                df, label_column="ref_label", group_column="pair_id",
-                max_samples_per_class=caps, random_state=rs + i)
-        for k, v in meta.items():
-            df[k] = v
-        frames.append(df)
+            d[str(c)] += r["population"][c]
+            population[(r["pair_id"], c)] = r["population"][c]
+        frames.append(r["frame"])
 
     if not frames:
         raise ValueError("No scene has valid pixels outside excluded clusters; check invalid_clusters "
@@ -293,9 +350,36 @@ def run(cfg: dict) -> None:
 
 
 def main():
+    from sit_fuse.parallel_utils import (add_parallel_args, atomic_write_bytes, infer_n_shards, parse_shard,
+                                         setup_compute, shard_files, shard_indices, shard_path)
+    import pickle
     ap = argparse.ArgumentParser()
     ap.add_argument("yaml_config", type=Path)
-    run(load_yaml(ap.parse_args().yaml_config))
+    add_parallel_args(ap)
+    a = ap.parse_args()
+    cfg = load_yaml(a.yaml_config)
+    n_workers, threads = setup_compute(cfg, a.num_threads, a.workers)
+    shard = parse_shard(a.shard)
+    sdir = Path(cfg["output_dir"]) / "feature_shards"
+    if shard is not None:            # one launcher job: scenes i, i+N, ... -> partial results
+        matchups = select_matchups(cfg)
+        idx = shard_indices(len(matchups), shard, "stride")
+        res = collect_scenes(cfg, matchups, idx, n_workers, threads)
+        p = shard_path(sdir, "scenes", shard)
+        atomic_write_bytes(p, pickle.dumps({"n_matchups": len(matchups), "results": res},
+                                           protocol=pickle.HIGHEST_PROTOCOL))
+        LOG.info("Shard %d/%d: %d scenes -> %s", shard[0], shard[1], len(res), p)
+    elif a.merge:                    # combine all shards; identical to a serial run
+        matchups = select_matchups(cfg)
+        n = a.n_shards or infer_n_shards(sdir, "scenes")
+        if not n:
+            raise FileNotFoundError(f"No feature shards in {sdir}; run with --shard i/N first.")
+        res = []
+        for p in shard_files(sdir, "scenes", n):
+            res += pickle.loads(p.read_bytes())["results"]
+        finalize(cfg, matchups, res)
+    else:
+        run(cfg, n_workers, threads)
 
 
 if __name__ == "__main__":
