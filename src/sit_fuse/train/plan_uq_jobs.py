@@ -18,6 +18,16 @@ Per pipeline (one UQ config, e.g. tempo_smoke / goes_fire):
 Per fusion (smoke / fire): fusion_fit (after the geo jobs of its pipelines) -> fusion_apply (shard) -> fusion_merge
 joint_visuals: after every visuals and fusion_merge job.
 
+Resume (resume: true, the default): stages whose outputs already exist are left out of the plan, so a run started
+without the launcher (or with a deleted state_dir) continues where it stopped. Finished = upstream finished and outputs
+at least as new as upstream outputs: features (build_manifest.json + pixel_features.parquet), train
+(training_summary.json), infer per model (inference_manifest.json, written after all scenes), evaluate per model
+(eval_summary.json with bootstrap_groups), compare (model_comparison.csv), geo per model (entry in
+geo_products_manifest.json). A model whose inference was interrupted is re-planned; its finished scenes are reused
+from the per-scene checkpoints (scene_results/) when those exist. Fusion and visuals rely on the launcher markers.
+--no-resume plans everything (the scripts still reuse matching scene checkpoints; add --overwrite to the inference
+commands to recompute them).
+
 Every script keeps its single-process default; shards / workers reproduce the serial outputs (see
 CHANGES_UQ_PARALLEL.md). Finished jobs are skipped through the launcher markers, so the plan can be regenerated and
 rerun at any time; `stages:` restricts the plan (dependencies on omitted stages are assumed satisfied).
@@ -53,7 +63,60 @@ def _models(pipe_spec, uq_cfg):
     return m
 
 
-def build_plan(cfg, base_dir):
+def _mtime(p):
+    try:
+        return Path(p).stat().st_mtime
+    except OSError:
+        return None
+
+
+def _newer(p, *deps):
+    """p exists and is at least as new as every existing dep."""
+    t = _mtime(p)
+    return t is not None and all(_mtime(d) is None or t >= _mtime(d) for d in deps)
+
+
+def finished(uq, models):
+    """
+    Stages of one UQ config whose outputs already exist (resume after a run without the launcher, or after the
+    launcher state was deleted). A stage counts as finished only when its upstream stage is finished and its
+    outputs are at least as new as the upstream outputs, so a rerun upstream invalidates everything below it.
+    Returns {"features": bool, "train": bool, "infer": {m: bool}, "evaluate": {m: bool}, "compare": bool,
+    "geo": {m: bool}}.
+    """
+    import json
+    out = Path(uq["output_dir"])
+    inf, ev, gx = uq.get("inference") or {}, uq.get("evaluation") or {}, uq.get("geo_export") or {}
+    bm, feat = out / "build_manifest.json", out / "pixel_features.parquet"
+    tsum = Path(inf.get("training_summary_path", out / "training" / "training_summary.json"))
+    d = {"features": bm.exists() and feat.exists()}
+    d["train"] = d["features"] and _newer(tsum, bm, feat)
+    edir = Path(ev.get("output_dir", out / "evaluation"))
+    gman = Path(gx.get("output_dir", out / "geo")) / "geo_products_manifest.json"
+    try:
+        geo_models = set(json.loads(gman.read_text())) if gman.exists() else set()
+    except Exception:  # noqa: BLE001
+        geo_models = set()
+    d["infer"], d["evaluate"], d["geo"], evs = {}, {}, {}, []
+    for m in models:
+        man = Path(inf["output_dir"]) / "inference_manifest.json" if inf.get("output_dir") else \
+            out / "inference" / m / "inference_manifest.json"
+        d["infer"][m] = d["train"] and _newer(man, tsum)          # written only after every scene finished
+        es = edir / m / "eval_summary.json"
+        ok = d["infer"][m] and _newer(es, man)
+        if ok:                                                    # older evaluations lack the pairing groups
+            try:
+                ok = "bootstrap_groups" in json.loads(es.read_text())
+            except Exception:  # noqa: BLE001
+                ok = False
+        d["evaluate"][m] = ok
+        evs.append(es)
+        d["geo"][m] = ok and m in geo_models and _newer(gman, es)
+    d["compare"] = all(d["evaluate"].values()) and _newer(edir / "model_comparison.csv", *evs)
+    return d
+
+
+def build_plan(cfg, base_dir, resume=None):
     def ab(p):
         return str(p if os.path.isabs(str(p)) else (base_dir / p).resolve())
 
@@ -78,12 +141,28 @@ def build_plan(cfg, base_dir):
         return f"cd {q(train_dir)} && {q(py)} {script} " + " ".join(args)
 
     pipes, fusions = cfg.get("pipelines") or {}, cfg.get("fusion") or {}
+    resume = cfg.get("resume", True) if resume is None else resume
     pc, inf_cases, model_cases, vis_cases = [], [], [], []
+    done = {}                                    # (stage, pipe[, model]) finished per existing outputs
+    report = []
     for name, sp in pipes.items():
         uq = ab(sp["uq_config"])
         c = {"pipe": name, "uq": uq}
         pc.append(c)
-        for m in _models(sp, _read(uq)):
+        uq_cfg = _read(uq)
+        models = _models(sp, uq_cfg)
+        if resume:
+            f = finished(uq_cfg, models)
+            done.update({("features", name): f["features"], ("train", name): f["train"],
+                         ("compare", name): f["compare"]})
+            for st in ("infer", "evaluate", "geo"):
+                done.update({(st, name, m): v for m, v in f[st].items()})
+            report.append(f"  {name}: features={'done' if f['features'] else 'run'} "
+                          f"train={'done' if f['train'] else 'run'} " + " ".join(
+                              f"{m}[infer={'done' if f['infer'][m] else 'run'},"
+                              f"eval={'done' if f['evaluate'][m] else 'run'},"
+                              f"geo={'done' if f['geo'][m] else 'run'}]" for m in models))
+        for m in models:
             model_cases.append(dict(c, model=m))
             inf_cases += [dict(c, model=m, shard=i) for i in range(int(sp.get("inference_shards",
                                                                              shards["inference"])))]
@@ -94,7 +173,13 @@ def build_plan(cfg, base_dir):
 
     J = []
 
+    skip_key = {"features": "features", "features_merge": "features", "train": "train", "infer": "infer",
+                "infer_merge": "infer", "evaluate": "evaluate", "compare": "compare", "geo": "geo"}
+
     def job(name, stage, cases, command, after=(), cpus=None, id_keys=("pipe",), **kw):
+        k = skip_key.get(name)
+        if k:                                    # drop work whose outputs already exist (resume)
+            cases = [c for c in cases if not done.get((k, c["pipe"]) + ((c["model"],) if "model" in c else ()))]
         if stage not in stages or not cases:
             return
         cpus = int(cpus or res[name])
@@ -134,8 +219,9 @@ def build_plan(cfg, base_dir):
         unknown = [p for p in after if p not in pipes]
         if unknown:
             raise ValueError(f"fusion {name}: after {unknown} are not pipelines")
+        geo_planned = {c["pipe"] for j in J if j["name"] == "geo" for c in j["cases"]}
         fc.append({"fusion": name, "fcfg": ab(sp["config"]), "nfs": int(sp.get("shards", shards["fusion"])),
-                   "_needs": [tok("geo", p) for p in after]})
+                   "_needs": [tok("geo", p) for p in after if p in geo_planned]})   # finished geo: no wait
     # needs are per job spec, so one fit spec per fusion (each waits only on its own pipelines' geo jobs)
     for c in fc:
         needs = c.pop("_needs") if "geo" in stages else []
@@ -167,19 +253,23 @@ def build_plan(cfg, base_dir):
     src = str(Path(train_dir).parents[1])          # .../SIT_FUSE/src, so `sit_fuse.*` imports resolve
     env.setdefault("PYTHONPATH", f"{src}:{train_dir}:" + os.environ.get("PYTHONPATH", ""))
     launcher["env"] = env
-    return {"launcher": launcher, "jobs": J}
+    return {"launcher": launcher, "jobs": J}, report
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("yaml_config", type=Path)
     ap.add_argument("--run", action="store_true", help="run the plan with sit_fuse.local_launcher")
+    ap.add_argument("--no-resume", action="store_true",
+                    help="plan every stage even when its outputs already exist (default: YAML resume, true)")
     argv = list(sys.argv[1:] if argv is None else argv)
     extra = argv[argv.index("--") + 1:] if "--" in argv else []     # after --: passed to `local_launcher run`
     a = ap.parse_args(argv[:len(argv) - len(extra) - (1 if "--" in argv else 0)])
     cfg = _read(a.yaml_config)
     base = a.yaml_config.resolve().parent
-    plan = build_plan(cfg, base)
+    plan, report = build_plan(cfg, base, False if a.no_resume else None)
+    if report:
+        print("existing outputs (done = skipped; launcher markers handle the rest):\n" + "\n".join(report))
     out = Path(cfg.get("plan_file") or base / f"{a.yaml_config.stem}.plan.yaml")
     out = out if out.is_absolute() else base / out
     out.parent.mkdir(parents=True, exist_ok=True)

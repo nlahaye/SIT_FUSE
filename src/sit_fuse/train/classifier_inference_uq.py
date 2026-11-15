@@ -31,6 +31,11 @@ Usage:
     # as launcher jobs (sit_fuse.train.plan_uq_jobs): N shard jobs per model, then one merge job
     python classifier_inference_uq.py uq_config.yaml --model M --shard i/N   # layers + <out>/shards/
     python classifier_inference_uq.py uq_config.yaml --model M --merge       # manifest + scene_areas.csv
+
+Resume: each finished scene is checkpointed to <out>/scene_results/<pair_id>.pkl (entry + area rows). A rerun
+(serial, workers or any shard layout) reuses a scene when its checkpoint signature (inference settings, training
+summary, target, features, excluded clusters) matches and all its layers exist; everything else is recomputed.
+Disable with inference.resume: false or --overwrite.
 Scenes are independent and written to separate files, so all modes give the same products.
 """
 from __future__ import annotations
@@ -168,8 +173,45 @@ def _context(cfg, model_name, threads=None, x=None):
         m = x["model"]
         if threads and m is not None and "clf__n_jobs" in m.get_params():
             m.set_params(clf__n_jobs=threads)
+        # signature of everything that determines a scene's products (per-scene checkpoints are reused only
+        # when it matches): inference settings, trained model summary, target and feature definitions
+        inf_sig = {k: v for k, v in (x["inf"] or {}).items() if k not in _NON_PRODUCT_KEYS}
+        x["sig"] = _sha({"name": x["name"], "inf": inf_sig, "meta": x["meta"], "target": cfg.get("target"),
+                         "features": x["features_cfg"], "invalid": x["invalid"].signature() if x["invalid"] else None})
         _CTX[key] = x
     return _CTX[key]
+
+
+_NON_PRODUCT_KEYS = ("resume", "n_jobs", "num_threads", "num_workers", "chunk_size")
+
+
+def _checkpoint(x, rec):
+    """Per-scene result file: <inference out_dir>/scene_results/<pair_id>.pkl."""
+    return x["out_dir"] / "scene_results" / f"{rec['pair_id']}.pkl"
+
+
+def _load_checkpoint(x, rec):
+    """Earlier result of this scene when its signature matches and all of its layers still exist, else None."""
+    import pickle
+    p = _checkpoint(x, rec)
+    if not p.exists():
+        return None
+    try:
+        d = pickle.loads(p.read_bytes())
+    except Exception:  # noqa: BLE001  (truncated / foreign file -> recompute)
+        return None
+    if d.get("sig") != _sha([x["sig"], rec]):
+        return None
+    entry = d["result"][0]
+    if not all(Path(f).exists() for f in (entry.get("layers") or {}).values()):
+        return None
+    return d["result"]
+
+
+def _save_checkpoint(x, rec, result):
+    import pickle
+    from sit_fuse.parallel_utils import atomic_write_bytes
+    atomic_write_bytes(_checkpoint(x, rec), pickle.dumps({"sig": _sha([x["sig"], rec]), "result": result}))
 
 
 def infer_scene(cfg, model_name, k, threads=None):
@@ -184,6 +226,25 @@ def infer_scene(cfg, model_name, k, threads=None):
                        "sel", "sel_rule", "quantiles", "target_classes", "members_src", "out_dir", "chunk",
                        "features_cfg", "invalid", "provenance_common", "meta", "inf"))
     rec = x["records"][k]
+    resume = bool(inf.get("resume", True))
+    if resume:
+        done = _load_checkpoint(x, rec)
+        if done is not None:
+            LOG.info("%s: reusing finished scene (scene_results checkpoint)", rec["pair_id"])
+            return done
+    result = _infer_scene(x, rec)
+    if resume:
+        _save_checkpoint(x, rec, result)
+    return result
+
+
+def _infer_scene(x, rec):
+    (name, C, feats, enc, cal, thr, thr_groups_cfg, thr_by_group, model, sel, sel_rule, quantiles,
+     target_classes, members_src, out_dir, chunk, features_cfg, invalid, provenance_common, meta, inf) = (
+        x[v] for v in ("name", "C", "feats", "enc", "cal", "thr", "thr_groups_cfg", "thr_by_group", "model",
+                       "sel", "sel_rule", "quantiles", "target_classes", "members_src", "out_dir", "chunk",
+                       "features_cfg", "invalid", "provenance_common", "meta", "inf"))
+    cfg = x["cfg"]
     area_rows = []
     bands, profile, tags = read_head_outputs(rec["head_outputs"])
     if head_settings_from_tags(tags) != meta["head_settings"]:
@@ -344,9 +405,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("yaml_config", type=Path)
     ap.add_argument("--model", default=None)
+    ap.add_argument("--overwrite", action="store_true",
+                    help="recompute every scene (ignore scene_results checkpoints; same as inference.resume: false)")
     add_parallel_args(ap)
     a = ap.parse_args()
     cfg = load_yaml(a.yaml_config)
+    if a.overwrite:
+        cfg.setdefault("inference", {})["resume"] = False
     n_workers, threads = setup_compute(cfg, a.num_threads, a.workers)
     shard = parse_shard(a.shard)
     if a.merge:
