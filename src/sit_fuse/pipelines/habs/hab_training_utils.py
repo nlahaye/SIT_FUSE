@@ -66,6 +66,68 @@ def build_trop_fname(yml_conf, datetm):
 
 
 
+# Band files each reader opens per scene (sit_fuse.utils read_*_oc): <prefix><band>.4km.nc,
+# falling back to <prefix><band>.4km.NRT.nc when reader_kwargs.nrt is true.
+_VIIRS_SNPP_BANDS = ["RRS.Rrs_410", "RRS.Rrs_443", "RRS.Rrs_486", "RRS.Rrs_551", "RRS.Rrs_671"]
+_VIIRS_JPSS_BANDS = ["RRS.Rrs_411", "RRS.Rrs_445", "RRS.Rrs_489", "RRS.Rrs_556", "RRS.Rrs_667"]
+_OLCI_BANDS = ["RRS.Rrs_400", "RRS.Rrs_412", "RRS.Rrs_443", "RRS.Rrs_490", "RRS.Rrs_510", "RRS.Rrs_560",
+               "RRS.Rrs_620", "RRS.Rrs_665", "RRS.Rrs_674", "RRS.Rrs_681", "RRS.Rrs_709"]
+_MODIS_BANDS = ["RRS.Rrs_412", "RRS.Rrs_443", "RRS.Rrs_469", "RRS.Rrs_488", "RRS.Rrs_531", "RRS.Rrs_547",
+                "RRS.Rrs_555", "RRS.Rrs_645", "RRS.Rrs_667", "RRS.Rrs_678"]
+
+
+def _required_bands(prefix):
+    """Reader band list for a scene prefix, or None (PACE single file, GOES, unknown)."""
+    b = os.path.basename(prefix)
+    if b.startswith(("S3A_OLCI", "S3B_OLCI")):
+        return _OLCI_BANDS
+    if b.startswith("SNPP_VIIRS"):
+        return _VIIRS_SNPP_BANDS
+    if b.startswith(("JPSS1_VIIRS", "JPSS2_VIIRS")):
+        return _VIIRS_JPSS_BANDS
+    if b.startswith(("AQUA_MODIS", "TERRA_MODIS")):
+        return _MODIS_BANDS
+    return None
+
+
+def _missing_bands(prefix, allow_nrt=True):
+    bands = _required_bands(prefix)
+    if bands is None:
+        return None
+    return [v for v in bands if not (os.path.exists(prefix + v + ".4km.nc")
+                                     or (allow_nrt and os.path.exists(prefix + v + ".4km.NRT.nc")))]
+
+
+def _reader_complete_entries(entries, n_files, allow_nrt=True, report=None):
+    """Unique entries whose scene has every band file the reader opens.
+
+    Ocean-colour scenes are checked against the reader's band list, so extra files
+    matched by input_oc_re (aot_862, angstrom, NRT + refined copies of a band) do not
+    reject a scene. Other entries (PACE, GOES, ...) keep the match-count rule."""
+    counts, first = {}, {}
+    for e in entries:
+        k = tuple(e) if isinstance(e, list) else e
+        counts[k] = counts.get(k, 0) + 1
+        first.setdefault(k, e)
+    out = []
+    for k in sorted(counts, key=str):
+        e = first[k]
+        prefix = e[0] if isinstance(e, (list, tuple)) else e
+        miss = _missing_bands(prefix, allow_nrt)
+        ok = (counts[k] == n_files) if miss is None else (len(miss) == 0)
+        if report is not None:
+            plat = os.path.basename(prefix).split(".")[0]
+            r = report.setdefault(plat, {"scenes": 0, "complete": 0, "incomplete": 0, "example_missing": None})
+            r["scenes"] += 1
+            r["complete" if ok else "incomplete"] += 1
+            if not ok and r["example_missing"] is None:
+                r["example_missing"] = (os.path.basename(prefix), miss if miss is not None else
+                                        f"{counts[k]} matched files, expected {n_files}")
+        if ok:
+            out.append(e)
+    return out
+
+
 def _complete_entries(entries, n_files):
     """Sorted unique entries that were matched exactly n_files times."""
     counts = {}
@@ -97,13 +159,19 @@ def find_train_test_fpaths(yml_conf, config_dict, instrument, key):
     # One or more (input_oc_dir, input_oc_re) sources: sensor groups (e.g. VIIRS =
     # SNPP + JPSS1 + JPSS2, OLCI = S3A + S3B) list one directory per platform.
     # Entries keep their own platform prefix, so every scene is read with its own bands.
-    for in_dir, in_re in oc_sources(yml_conf["instruments"][instrument][key]):
+    sources = oc_sources(yml_conf["instruments"][instrument][key])
+    matched_per_source = {}
+    for in_dir, in_re in sources:
+      if not os.path.isdir(in_dir):
+          print(f"WARNING: {instrument}/{key}: input_oc_dir does not exist: {in_dir}")
+      matched_per_source[in_dir] = 0
       for root, dirs, files in os.walk(in_dir):
          
         for fle in files:
 
             mtch = re.search(str(in_re), fle)
             if mtch:
+                matched_per_source[in_dir] += 1
                 if "GOES" in instrument:
                     dt = datetime.strptime(mtch.group(2), "%Y%j%H%M%S")
                 else:
@@ -125,8 +193,25 @@ def find_train_test_fpaths(yml_conf, config_dict, instrument, key):
 
     # A scene is complete when all NUM_CHANNELS[instrument] band files matched
     # (one match per band file). Counted per entry, so the last scene is kept too.
-    final_test_fnames = _complete_entries(test_fnames, NUM_CHANNELS[instrument])
-    final_train_fnames = _complete_entries(train_fnames, NUM_CHANNELS[instrument])
+    # Scene completeness: every band file the reader opens exists (refined, or NRT when
+    # reader_kwargs.nrt is true); see _reader_complete_entries.
+    allow_nrt = bool(((config_dict.get("data") or {}).get("reader_kwargs") or {}).get("nrt", True))
+    report = {}
+    final_test_fnames = _reader_complete_entries(test_fnames, NUM_CHANNELS[instrument], allow_nrt, report)
+    final_train_fnames = _reader_complete_entries(train_fnames, NUM_CHANNELS[instrument], allow_nrt, report)
+
+    print(f"{instrument}/{key} input files matched per input_oc_dir:")
+    for d, n_m in matched_per_source.items():
+        print(f"   {n_m:8d}  {d}")
+        if n_m == 0:
+            print(f"WARNING: {instrument}/{key}: no file in {d} matched input_oc_re")
+    print(f"{instrument}/{key} scenes per platform (complete / incomplete):")
+    for plat, r in sorted(report.items()):
+        print(f"   {plat:16s} {r['complete']:6d} / {r['incomplete']:6d}"
+              + (f"   e.g. {r['example_missing']}" if r["example_missing"] else ""))
+    for plat, r in sorted(report.items()):
+        if r["complete"] == 0:
+            print(f"WARNING: {instrument}/{key}: {plat} has no complete scene and is left out of the model")
 
 
     if use_split:
