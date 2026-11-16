@@ -53,6 +53,7 @@ LOG = logging.getLogger("hab-uq-train")
 HAB_NON_FEATURES = {
     "value", "log10_value", "fold", "pix_weight", "n_match_pixels", "day_offset",
     "hours_offset", "ref_label", "weight", "time_block",
+    "abs_day_offset",   # added below only when features.use_day_offset is true
 }
 HAB_NON_FEATURE_PREFIXES = ("ref_soft_", "sensor_")
 
@@ -65,7 +66,7 @@ def hab_feature_columns(df: pd.DataFrame, features_cfg: dict[str, Any],
         cols += [f"sensor_is_{s}" for s in sensors]
     if features_cfg.get("use_day_offset", False):
         cols.append("abs_day_offset")
-    return cols
+    return list(dict.fromkeys(cols))     # unique, order kept (sklearn rejects duplicate names)
 
 
 def add_sensor_columns(df: pd.DataFrame, sensors: list[str]) -> pd.DataFrame:
