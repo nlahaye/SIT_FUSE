@@ -26,6 +26,12 @@ Baselines evaluated alongside the classifiers (no fitting beyond the encoder):
 
 Usage:
     python simple_classifiers_uq.py uq_config.yaml [-n THREADS] [--workers W]
+    python simple_classifiers_uq.py uq_config.yaml --recalibrate [SRC_TRAINING_DIR]
+--recalibrate reuses the fitted encoder, classifiers, bootstrap members and out-of-fold predictions
+(SRC_TRAINING_DIR, default <output_dir>/training) and refits only the calibration stage: calibrator
+(calibration.method), decision thresholds (threshold_rows / threshold_label_level / threshold_groups /
+threshold_overrides) and selective cutoffs. With a new output_dir the original models are referenced,
+not copied; with the same output_dir the previous calibration is moved to training/previous_calibration_<time>/.
 --workers (or compute.num_workers) runs the fold encoders and all classifier fits (CV folds x models, final
 models, bootstrap members) in W worker processes, each with THREADS / W BLAS / OpenMP threads; bootstrap
 draws are made before dispatch, so results match a serial run.
@@ -35,7 +41,10 @@ from __future__ import annotations
 
 import argparse
 import copy
+import json
 import logging
+import shutil
+import time
 from pathlib import Path
 
 import joblib
@@ -360,7 +369,7 @@ def summarize(P, frame, T, C, threshold, members=None):
 # ---------------------------------------------------------------------------
 
 def selective_rules(name, Pc, ref, w, frame, thr, calibrator, final_models, boot_paths,
-                    feats, C, cal_mode, tdir, sel_cfg):
+                    feats, C, cal_mode, model_paths, sel_cfg):
     """
     Uncertainty thresholds for the selective discrete product, chosen on the
     calibration rows (calibration groups, or grouped OOF rows under
@@ -377,7 +386,7 @@ def selective_rules(name, Pc, ref, w, frame, thr, calibrator, final_models, boot
         if name == "random_forest":
             members = forest_member_probabilities(final_models[name], frame[feats], C)
         elif name in boot_paths:
-            members = bootstrap_member_probabilities(tdir / f"{name}.joblib", frame[feats], boot_paths[name], C)
+            members = bootstrap_member_probabilities(model_paths[name], frame[feats], boot_paths[name], C)
         if members is not None:
             _, tot, exp_, mi, var = ensemble_decomposition(calibrator.transform_members(members))
             u.update(ensemble_total_entropy=tot, ensemble_expected_entropy=exp_,
@@ -399,11 +408,106 @@ def selective_rules(name, Pc, ref, w, frame, thr, calibrator, final_models, boot
             "target_coverage": sel_cfg.get("target_coverage"), "rules": rules}
 
 
-def run(cfg, n_workers=1, threads=1):
+def _signature_json(sig):
+    return json.dumps(json.loads(json.dumps(sig, default=str)), sort_keys=True)
+
+
+def load_fitted(src, cfg, models, names, table, G, C):
+    """
+    Fitted pieces of a previous simple_classifiers_uq.py run (src = its training dir) for
+    --recalibrate: final classifiers, effective training priors, bootstrap members, final context
+    encoder, feature columns and out-of-fold predictions. The feature signature must match cfg.
+    """
+    src = Path(src)
+    summ = load_json(src / "training_summary.json")
+    meta = summ["metadata"]
+    if meta.get("feature_signature") is not None and \
+            _signature_json(meta["feature_signature"]) != _signature_json(uq_feature_signature(cfg)):
+        raise ValueError(f"--recalibrate: feature settings (features / context_encoder / target classes / "
+                         f"invalid_clusters) differ from the run in {src}; retrain instead.")
+    missing = [n for n in models if n not in (meta.get("model_paths") or {})]
+    if missing:
+        raise ValueError(f"--recalibrate: {src} has no fitted model(s) {missing}; retrain or drop them from models.")
+    model_paths = {n: str(meta["model_paths"][n]) for n in models}
+    final_models = {n: joblib.load(model_paths[n]) for n in models}
+    pri = meta.get("effective_training_priors") or {}
+    train_priors = {n: (None if pri.get(n) is None else np.asarray(pri[n], dtype=float)) for n in models}
+    boot_paths = {n: list(v) for n, v in (meta.get("bootstrap_manifest") or {}).items() if n in models}
+    enc_final = joblib.load(meta["context_encoder_path"])
+    feats = list(meta["feature_columns"])
+    oof_df = read_table(src / "oof_predictions.parquet")
+    absent = [n for n in names if f"{n}_p0" not in oof_df.columns]
+    if absent:
+        raise ValueError(f"--recalibrate: no out-of-fold predictions for {absent} in {src}.")
+    oof = {n: oof_df[[f"{n}_p{c}" for c in range(C)]].to_numpy(dtype=float) for n in names}
+    oof_T = oof_df[[f"soft_target_p{c}" for c in range(C)]].to_numpy(dtype=float)
+    oof_frame = oof_df[[c for c in oof_df.columns if not c.endswith(tuple(f"_p{k}" for k in range(C)))]].copy()
+    oof_frame["date"] = oof_frame["date"].astype(str)
+    # scene-level columns used by threshold groups / breakdowns (not stored with the predictions)
+    scene_cols = [c for c in ("split_stratum", "encoder_split", "classifier_split", G)
+                  if c in table.columns and c not in oof_frame.columns]
+    if scene_cols:
+        lut = table[["pair_id"] + scene_cols].drop_duplicates("pair_id")
+        oof_frame = oof_frame.merge(lut, on="pair_id", how="left")
+    LOG.info("Recalibrating from %s: %d models, %d bootstrap sets, %d OOF rows", src, len(final_models),
+             len(boot_paths), len(oof_frame))
+    return dict(model_paths=model_paths, final_models=final_models, train_priors=train_priors,
+                boot_paths=boot_paths, enc_final=enc_final, feats=feats, oof=oof, oof_T=oof_T,
+                oof_frame=oof_frame, metrics=summ.get("metrics", {}), meta=meta)
+
+
+def _summary_or_previous(fn, previous, what):
+    """summarize() needs encoder columns that stored OOF predictions lack: keep the previous value."""
+    try:
+        return fn()
+    except KeyError as e:
+        LOG.info("%s not recomputed under --recalibrate (stored OOF predictions lack column %s); %s.", what, e,
+                 "kept from the source run" if previous is not None else "left empty")
+        return previous
+
+
+def parse_threshold_overrides(spec, names, tg_cfg):
+    """
+    calibration.threshold_overrides: {model: t} or {model: {pooled: t, groups: {group: t}}}.
+    Fixed cutoffs (e.g. chosen from evaluate_uq.py threshold_diagnostics) that replace the selected
+    ones for that model; groups not listed use the pooled cutoff (pooled: null keeps the selected one).
+    """
+    out = {}
+    for n, v in (spec or {}).items():
+        n = str(n)
+        if n not in names:
+            LOG.warning("threshold_overrides: no such model %s (available: %s)", n, list(names))
+            continue
+        if isinstance(v, dict):
+            groups = {str(k): float(x) for k, x in (v.get("groups") or {}).items()}
+            if groups and not tg_cfg:
+                raise ValueError(f"threshold_overrides.{n}.groups needs calibration.threshold_groups.")
+            out[n] = {"pooled": None if v.get("pooled") is None else float(v["pooled"]), "groups": groups}
+        else:
+            out[n] = {"pooled": float(v), "groups": {}}
+    return out
+
+
+def run(cfg, n_workers=1, threads=1, recalibrate_from=None):
     from sit_fuse.parallel_utils import cpu_map
     out = Path(cfg["output_dir"])
     tdir = out / "training"
     tdir.mkdir(parents=True, exist_ok=True)
+    recal = recalibrate_from is not None
+    src = Path(recalibrate_from) if recal and str(recalibrate_from) else tdir
+    if recal:
+        if not (src / "training_summary.json").exists():
+            raise FileNotFoundError(f"--recalibrate: no training_summary.json in {src}.")
+        bm = out / "build_manifest.json"
+        if not bm.exists() and (src.parent / "build_manifest.json").exists():
+            shutil.copy2(src.parent / "build_manifest.json", bm)
+        if src.resolve() == tdir.resolve():
+            bak = tdir / f"previous_calibration_{time.strftime('%Y%m%dT%H%M%S')}"
+            bak.mkdir()
+            for f in ("calibrators.joblib", "training_summary.json", "holdout_predictions.parquet"):
+                if (tdir / f).exists():
+                    shutil.copy2(tdir / f, bak / f)
+            LOG.info("Previous calibration copied to %s", bak)
     manifest = load_json(out / "build_manifest.json")
     table = read_table(manifest["pixel_features"])
     C_cfg = len(cfg["target"]["classes"])
@@ -460,7 +564,10 @@ def run(cfg, n_workers=1, threads=1):
         raise ValueError("calibration.mode=calibration_groups needs calibration groups. "
                          f"split.mode={mode}; classifier_split rows in feature table: {in_table}. "
                          + " ".join(hint) + ". Or use calibration.mode: cross_fit.")
-    if cal_mode != "calibration_dates" and cal_groups:
+    if recal and cal_mode != "calibration_dates":
+        LOG.info("--recalibrate with calibration.mode=cross_fit: calibrating on the stored out-of-fold predictions "
+                 "(development groups); the %d calibration groups are not used.", len(cal_groups))
+    elif cal_mode != "calibration_dates" and cal_groups:
         LOG.warning("calibration.mode=cross_fit: %d calibration groups are used as development data.",
                     len(cal_groups))
     dev_fit = dev[~dev[G].isin(cal_groups)] if cal_mode == "calibration_dates" else dev
@@ -469,75 +576,86 @@ def run(cfg, n_workers=1, threads=1):
              len(dev), len(dev_fit), len(hold), dev[G].nunique(),
              len(cal_groups) if cal_mode == "calibration_dates" else 0, hold[G].nunique() if len(hold) else 0)
 
-    # ---------------- grouped CV with fold-refit encoders ----------------
-    # Independent pieces (fold encoders, then every fold x model fit, final fit and bootstrap member) run in
-    # worker processes when n_workers > 1; draws and seeds are fixed beforehand, so results match a serial run.
-    folds, n_splits = grouped_folds(dev_fit, cfg, G)
-    folds = list(folds)
-    oof = {n: np.zeros((len(dev_fit), C)) for n in names}
-    oof_T = np.zeros((len(dev_fit), C))
-    oof_frames = []
-    for k, (tr, va) in enumerate(folds, 1):
-        LOG.info("Fold %d/%d: %d train groups, %d validation groups", k, n_splits,
-                 dev_fit.iloc[tr][G].nunique(), dev_fit.iloc[va][G].nunique())
-    dates_fit = sorted(dev_fit[G].unique())
-    LOG.info("Fitting %d fold encoders + final encoder (%d workers)", len(folds), n_workers)
-    preps = cpu_map(_prepare_fold, [(factory, cfg, C, baselines, dev_fit.iloc[tr], dev_fit.iloc[va], G)
-                                    for tr, va in folds] + [(factory, cfg, C, [], dev_fit, None, G)],
-                    n_workers, threads)
-    final_prep = preps.pop()
-    feats = select_feature_columns(preps[0]["X_va"], cfg.get("features", {}))
-    LOG.info("Using %d features", len(feats))
-    for (tr, va), pr in zip(folds, preps):
-        oof_T[va] = pr["T_va"]
-        oof_frames.append(pr["X_va"].assign(_pos=va))
-        for b in baselines:
-            oof[b][va] = pr["base"][b]
+    if recal:
+        F = load_fitted(src, cfg, models, names, table, G, C)
+        model_paths, final_models, train_priors = F["model_paths"], F["final_models"], F["train_priors"]
+        boot_paths, enc_final, feats = F["boot_paths"], F["enc_final"], F["feats"]
+        oof, oof_T, oof_frame, prev_metrics = F["oof"], F["oof_T"], F["oof_frame"], F["metrics"]
+        n_splits = int((cfg.get("cross_validation") or {}).get("n_splits", 5))
+        if not (tdir / "oof_predictions.parquet").exists():
+            shutil.copy2(src / "oof_predictions.parquet", tdir / "oof_predictions.parquet")
+    else:
+        prev_metrics = {}
+        model_paths = {n: str(tdir / f"{n}.joblib") for n in models}
+        # ---------------- grouped CV with fold-refit encoders ----------------
+        # Independent pieces (fold encoders, then every fold x model fit, final fit and bootstrap member) run in
+        # worker processes when n_workers > 1; draws and seeds are fixed beforehand, so results match a serial run.
+        folds, n_splits = grouped_folds(dev_fit, cfg, G)
+        folds = list(folds)
+        oof = {n: np.zeros((len(dev_fit), C)) for n in names}
+        oof_T = np.zeros((len(dev_fit), C))
+        oof_frames = []
+        for k, (tr, va) in enumerate(folds, 1):
+            LOG.info("Fold %d/%d: %d train groups, %d validation groups", k, n_splits,
+                     dev_fit.iloc[tr][G].nunique(), dev_fit.iloc[va][G].nunique())
+        dates_fit = sorted(dev_fit[G].unique())
+        LOG.info("Fitting %d fold encoders + final encoder (%d workers)", len(folds), n_workers)
+        preps = cpu_map(_prepare_fold, [(factory, cfg, C, baselines, dev_fit.iloc[tr], dev_fit.iloc[va], G)
+                                        for tr, va in folds] + [(factory, cfg, C, [], dev_fit, None, G)],
+                        n_workers, threads)
+        final_prep = preps.pop()
+        feats = select_feature_columns(preps[0]["X_va"], cfg.get("features", {}))
+        LOG.info("Using %d features", len(feats))
+        for (tr, va), pr in zip(folds, preps):
+            oof_T[va] = pr["T_va"]
+            oof_frames.append(pr["X_va"].assign(_pos=va))
+            for b in baselines:
+                oof[b][va] = pr["base"][b]
 
-    # final encoder + models, bootstrap ensembles (grouped by date): the same fit tasks as the CV folds
-    enc_final = final_prep["enc"]
-    X_fit_frame, T_fit = final_prep["X_tr"], final_prep["T_tr"]
-    bs = cfg.get("bootstrap_ensemble", {})
-    boot_draws = {}
-    if bs.get("enabled", False):
-        rng = np.random.default_rng(int(cfg.get("random_state", 42)))
-        dates_arr = np.array(dates_fit)
-        gvals = X_fit_frame[G].to_numpy()
-        for name in bs.get("models", ["logistic_regression"]):
-            if name not in models:
-                continue
-            boot_draws[name] = []
-            for b in range(int(bs.get("n_models", 10))):
-                draw = rng.choice(dates_arr, size=dates_arr.size, replace=True)
-                boot_draws[name].append(np.concatenate([np.where(gvals == d)[0] for d in draw]))
-    par = threads if n_workers > 1 else None
-    tasks, keys = [], []
-    for k, pr in enumerate(preps):
+        # final encoder + models, bootstrap ensembles (grouped by date): the same fit tasks as the CV folds
+        enc_final = final_prep["enc"]
+        X_fit_frame, T_fit = final_prep["X_tr"], final_prep["T_tr"]
+        bs = cfg.get("bootstrap_ensemble", {})
+        boot_draws = {}
+        if bs.get("enabled", False):
+            rng = np.random.default_rng(int(cfg.get("random_state", 42)))
+            dates_arr = np.array(dates_fit)
+            gvals = X_fit_frame[G].to_numpy()
+            for name in bs.get("models", ["logistic_regression"]):
+                if name not in models:
+                    continue
+                boot_draws[name] = []
+                for b in range(int(bs.get("n_models", 10))):
+                    draw = rng.choice(dates_arr, size=dates_arr.size, replace=True)
+                    boot_draws[name].append(np.concatenate([np.where(gvals == d)[0] for d in draw]))
+        par = threads if n_workers > 1 else None
+        tasks, keys = [], []
+        for k, pr in enumerate(preps):
+            for n, m in models.items():
+                tasks.append((m, pr["X_tr"], None, pr["T_tr"], feats, cfg, levels, pr["X_va"], C, None, False, par))
+                keys.append(("oof", k, n))
         for n, m in models.items():
-            tasks.append((m, pr["X_tr"], None, pr["T_tr"], feats, cfg, levels, pr["X_va"], C, None, False, par))
-            keys.append(("oof", k, n))
-    for n, m in models.items():
-        tasks.append((m, X_fit_frame, None, T_fit, feats, cfg, levels, None, C, str(tdir / f"{n}.joblib"), True, par))
-        keys.append(("final", None, n))
-    for n, draws in boot_draws.items():
-        for b, idx in enumerate(draws):
-            tasks.append((models[n], X_fit_frame, idx, T_fit, feats, cfg, levels, None, C,
-                          str(tdir / f"{n}_bootstrap_{b:03d}.joblib"), False, par))
-            keys.append(("boot", b, n))
-    LOG.info("Fitting %d classifier tasks (%d CV, %d final, %d bootstrap) with %d workers x %d threads",
-             len(tasks), sum(k[0] == "oof" for k in keys), len(models), sum(k[0] == "boot" for k in keys),
-             n_workers, threads)
-    results = cpu_map(_fit_task, tasks, n_workers, threads)
-    final_models, train_priors, boot_paths = {}, {}, {}
-    for (kind, k, n), r in zip(keys, results):
-        if kind == "oof":
-            oof[n][folds[k][1]] = r
-        elif kind == "final":
-            final_models[n], train_priors[n] = r
-        else:
-            boot_paths.setdefault(n, []).append(r)
+            tasks.append((m, X_fit_frame, None, T_fit, feats, cfg, levels, None, C, str(tdir / f"{n}.joblib"), True, par))
+            keys.append(("final", None, n))
+        for n, draws in boot_draws.items():
+            for b, idx in enumerate(draws):
+                tasks.append((models[n], X_fit_frame, idx, T_fit, feats, cfg, levels, None, C,
+                              str(tdir / f"{n}_bootstrap_{b:03d}.joblib"), False, par))
+                keys.append(("boot", b, n))
+        LOG.info("Fitting %d classifier tasks (%d CV, %d final, %d bootstrap) with %d workers x %d threads",
+                 len(tasks), sum(k[0] == "oof" for k in keys), len(models), sum(k[0] == "boot" for k in keys),
+                 n_workers, threads)
+        results = cpu_map(_fit_task, tasks, n_workers, threads)
+        final_models, train_priors, boot_paths = {}, {}, {}
+        for (kind, k, n), r in zip(keys, results):
+            if kind == "oof":
+                oof[n][folds[k][1]] = r
+            elif kind == "final":
+                final_models[n], train_priors[n] = r
+            else:
+                boot_paths.setdefault(n, []).append(r)
 
-    oof_frame = pd.concat(oof_frames).sort_values("_pos").drop(columns="_pos")
+        oof_frame = pd.concat(oof_frames).sort_values("_pos").drop(columns="_pos")
     w_oof = oof_frame["pop_weight"].to_numpy()
 
     # ---------------- calibration ----------------
@@ -567,6 +685,7 @@ def run(cfg, n_workers=1, threads=1):
 
     # option A: calibration label level
     cal_level = str(ccfg.get("label_level", "primary")).lower()
+    cal_all = (cal_frame, w_cal, P_cal)            # before label-level filtering (threshold_label_level)
     keep = calibration_rows(cal_frame, levels, cal_level)
     if noise_T is not None and cal_level != "primary":
         LOG.warning("noise_correction with label_level=%s: the transition matrix describes primary labels "
@@ -600,7 +719,49 @@ def run(cfg, n_workers=1, threads=1):
     # positives keep the pooled threshold. null = one pooled threshold.
     tg_cfg = ccfg.get("threshold_groups") or None
     thresholds_by_group, threshold_group_info = {}, {}
-    cal_keys = frame_group_keys(cal_frame, tg_cfg) if tg_cfg else None
+    # Rows the cutoffs are chosen on (the calibrator is always fit on the calibration rows):
+    #   calibration (default) | holdout | calibration+holdout. Holdout-chosen cutoffs make the
+    #   discrete holdout metrics (IoU / F1 / areas) optimistic; probabilistic metrics are unaffected.
+    thr_rows = str(ccfg.get("threshold_rows", "calibration")).lower().replace(" ", "")
+    if thr_rows not in ("calibration", "holdout", "calibration+holdout"):
+        raise ValueError(f"calibration.threshold_rows={thr_rows!r}: use calibration | holdout | calibration+holdout")
+    thr_level = str(ccfg.get("threshold_label_level") or cal_level).lower()
+    if "holdout" in thr_rows and hold.empty:
+        raise ValueError("calibration.threshold_rows uses holdout rows but there are no holdout scenes.")
+    X_ho = enc_final.transform(hold, cfg.get("features", {})) if not hold.empty else None
+    P_ho_raw = {}
+
+    def holdout_proba(n):
+        if n not in P_ho_raw:
+            P_ho_raw[n] = (full_proba(final_models[n], X_ho[feats], C) if n in models
+                           else baseline_proba(n, X_ho, enc_final))
+        return P_ho_raw[n]
+
+    def threshold_rows(n):
+        """(P, ref, w, group keys, dates) of the cutoff-selection rows for model n."""
+        parts = []
+        if "calibration" in thr_rows:
+            fr, ww, PP = (cal_frame, w_cal, calibrators[n].transform(P_cal[n])) if thr_level == cal_level else \
+                (cal_all[0], cal_all[1], calibrators[n].transform(cal_all[2][n]))
+            if thr_level != cal_level:
+                mk = calibration_rows(fr, levels, thr_level)
+                fr, ww, PP = fr[mk], ww[mk], PP[mk]
+            parts.append((fr, ww, PP))
+        if "holdout" in thr_rows:
+            mk = calibration_rows(X_ho, levels, thr_level)
+            parts.append((X_ho[mk], X_ho["pop_weight"].to_numpy()[mk], calibrators[n].transform(holdout_proba(n))[mk]))
+        Pt = np.concatenate([p[2] for p in parts])
+        rt = np.concatenate([p[0]["ref_label"].to_numpy() for p in parts]).astype(int)
+        wt = np.concatenate([p[1] for p in parts])
+        kt = np.concatenate([frame_group_keys(p[0], tg_cfg) for p in parts]) if tg_cfg else None
+        dt = np.concatenate([p[0]["date"].astype(str).to_numpy() for p in parts])
+        return Pt, rt, wt, kt, dt
+
+    thr_fixed = parse_threshold_overrides(ccfg.get("threshold_overrides"), names, tg_cfg)
+    threshold_source = {}
+    if thr_rows != "calibration" or thr_level != cal_level:
+        LOG.info("Cutoffs chosen on %s rows at label level %s (calibrator: calibration rows, %s)",
+                 thr_rows, thr_level, cal_level)
 
     def row_thresholds(frame, n):
         """Per-row decision threshold (group threshold, else pooled)."""
@@ -610,29 +771,41 @@ def run(cfg, n_workers=1, threads=1):
         return np.array([thresholds_by_group[n].get(k, thresholds[n]) for k in keys], dtype=float)
     for n in names:
         calibrators[n] = fit_calibrator(n, P_cal[n], Y_cal, w_cal, train_priors.get(n), cfg, noise_T)
+        LOG.info("Calibrator %s: %s", n, {k: v for k, v in calibrators[n].describe().items()
+                                          if k in ("method", "temperature", "platt_a", "platt_b")})
         Pc = calibrators[n].transform(P_cal[n])
         ref_cal = cal_frame["ref_label"].to_numpy()
+        Pt, rt, wt, kt, dt = threshold_rows(n)
         m_n = threshold_metrics[n] = thr_overrides.get(n, thr_metric)
         if C == 2:
-            thresholds[n], _ = select_threshold(Pc[:, 1], ref_cal, w_cal, m_n, grid=thr_grid)
+            thresholds[n], _ = select_threshold(Pt[:, 1], rt, wt, m_n, grid=thr_grid)
         else:
-            thresholds[n], _ = select_threshold_multiclass(Pc, ref_cal, w_cal, m_n, grid=thr_grid)
-        LOG.info("Threshold %s: %.4g (%s)", n, thresholds[n], m_n)
+            thresholds[n], _ = select_threshold_multiclass(Pt, rt, wt, m_n, grid=thr_grid)
+        threshold_source[n] = thr_rows
+        LOG.info("Threshold %s: %.4g (%s, %s rows)", n, thresholds[n], m_n, thr_rows)
         if thresholds[n] <= thr_grid.min() * (1 + 1e-9):
             LOG.warning("Threshold %s is at the grid floor (%.2g): the optimum may lie lower. Set "
                         "calibration.threshold_grid: {scale: log, min: <smaller>} (e.g. prevalence / 10).",
                         n, thr_grid.min())
         if tg_cfg:
             thresholds_by_group[n], threshold_group_info[n] = select_threshold_by_group(
-                Pc, ref_cal, w_cal, cal_keys, m_n, thr_grid, thresholds[n], tg_cfg,
-                dates=cal_frame["date"].to_numpy() if "date" in cal_frame.columns else None)
+                Pt, rt, wt, kt, m_n, thr_grid, thresholds[n], tg_cfg, dates=dt)
             for g, gi in threshold_group_info[n].items():
                 LOG.info("Threshold %s [%s]: %.4g (%s; positive weight %.0f, %s dates)", n, g,
                          gi["threshold"], gi["source"], gi["positive_weight"], gi["n_dates"])
+        if n in thr_fixed:
+            fx = thr_fixed[n]
+            if fx["pooled"] is not None:
+                thresholds[n] = fx["pooled"]
+            # an override is the model's full cutoff specification: groups not listed use the pooled cutoff
+            thresholds_by_group[n] = dict(fx["groups"])
+            threshold_group_info[n] = {g: {"threshold": t, "source": "override"} for g, t in fx["groups"].items()}
+            threshold_source[n] = "override"
+            LOG.info("Threshold %s: override pooled=%s groups=%s", n, fx["pooled"], fx["groups"] or None)
         if sel_cfg.get("enabled", True):
             selective[n] = selective_rules(n, Pc, ref_cal, w_cal, cal_frame, thresholds.get(n),
                                            calibrators[n], final_models, boot_paths, feats, C,
-                                           cal_mode, tdir, sel_cfg)
+                                           cal_mode, model_paths, sel_cfg)
         metrics[n] = {
             "cv_type": f"GroupKFold(n_splits={n_splits}) by {G}",
             "selective_calibration": selective.get(n),
@@ -643,29 +816,33 @@ def run(cfg, n_workers=1, threads=1):
             "threshold_by_group": thresholds_by_group.get(n),
             "threshold_group_calibration": threshold_group_info.get(n),
             "threshold_grid": {"n": int(thr_grid.size), "min": float(thr_grid.min()), "max": float(thr_grid.max())},
-            "oof_uncalibrated": summarize(oof[n], oof_frame, oof_T, C, 0.5),
-            "oof_calibrated": summarize(calibrators[n].transform(oof[n]), oof_frame, oof_T, C, thresholds.get(n)),
+            "threshold_source": threshold_source.get(n),
+            "oof_uncalibrated": _summary_or_previous(
+                lambda: summarize(oof[n], oof_frame, oof_T, C, 0.5),
+                (prev_metrics.get(n) or {}).get("oof_uncalibrated"), f"{n} oof_uncalibrated"),
+            "oof_calibrated": _summary_or_previous(
+                lambda: summarize(calibrators[n].transform(oof[n]), oof_frame, oof_T, C, thresholds.get(n)),
+                None, f"{n} oof_calibrated"),
         }
 
     # ---------------- holdout ----------------
     holdout_preds = None
     if not hold.empty:
-        X_ho = enc_final.transform(hold, cfg.get("features", {}))
         T_ho = calibration_targets(X_ho, enc_final, cfg, C)
         holdout_preds = X_ho[["pair_id", "date", "row", "col", "ref_label", "pop_weight"]
                          + [c for c in ("label_level", "cons_ref_label") if c in X_ho.columns]].copy()
         for n in names:
             members = None
             if n in models:
-                P = full_proba(final_models[n], X_ho[feats], C)
+                P = holdout_proba(n)
                 if n == "random_forest":
                     members = calibrators[n].transform_members(
                         forest_member_probabilities(final_models[n], X_ho[feats], C))
                 elif n in boot_paths:
                     members = calibrators[n].transform_members(bootstrap_member_probabilities(
-                        tdir / f"{n}.joblib", X_ho[feats], boot_paths[n], C))
+                        model_paths[n], X_ho[feats], boot_paths[n], C))
             else:
-                P = baseline_proba(n, X_ho, enc_final)
+                P = holdout_proba(n)
             Pc = calibrators[n].transform(P)
             thr_ho = row_thresholds(X_ho, n)
             metrics[n]["holdout_calibrated"] = summarize(Pc, X_ho, T_ho, C, thr_ho, members)
@@ -701,7 +878,8 @@ def run(cfg, n_workers=1, threads=1):
             oof_out[f"{n}_p{c}"] = oof[n][:, c].astype(np.float32)
         for c in range(C):
             oof_out[f"soft_target_p{c}"] = oof_T[:, c].astype(np.float32)
-    write_table(oof_out, tdir / "oof_predictions.parquet")
+    if not recal:
+        write_table(oof_out, tdir / "oof_predictions.parquet")
     if holdout_preds is not None:
         write_table(holdout_preds, tdir / "holdout_predictions.parquet")
 
@@ -714,7 +892,8 @@ def run(cfg, n_workers=1, threads=1):
             "target": cfg["target"],
             "models": list(models),
             "baselines": baselines,
-            "model_paths": {n: str(tdir / f"{n}.joblib") for n in models},
+            "model_paths": model_paths,
+            "recalibrated_from": str(src) if recal else None,
             "context_encoder_path": str(tdir / "context_encoder.joblib"),
             "calibrators_path": str(tdir / "calibrators.joblib"),
             "bootstrap_manifest": boot_paths,
@@ -723,6 +902,10 @@ def run(cfg, n_workers=1, threads=1):
             "threshold_groups": tg_cfg,
             "thresholds_by_group": thresholds_by_group,
             "threshold_group_calibration": threshold_group_info,
+            "threshold_rows": thr_rows,
+            "threshold_label_level": thr_level,
+            "threshold_source": threshold_source,
+            "threshold_overrides": {n: v for n, v in thr_fixed.items()} or None,
             "label_levels": levels.describe() if levels else None,
             "calibration_label_level": cal_level,
             "noise_correction": noise_info,
@@ -747,10 +930,13 @@ def main():
     from sit_fuse.parallel_utils import add_parallel_args, setup_compute
     ap = argparse.ArgumentParser()
     ap.add_argument("yaml_config", type=Path)
+    ap.add_argument("--recalibrate", nargs="?", const="", default=None, metavar="SRC_TRAINING_DIR",
+                    help="refit only calibrators / thresholds / selective cutoffs, reusing the fitted models "
+                         "in SRC_TRAINING_DIR (default <output_dir>/training)")
     add_parallel_args(ap, shard=False, merge=False)
     a = ap.parse_args()
     cfg = load_yaml(a.yaml_config)
-    run(cfg, *setup_compute(cfg, a.num_threads, a.workers))
+    run(cfg, *setup_compute(cfg, a.num_threads, a.workers), recalibrate_from=a.recalibrate)
 
 
 if __name__ == "__main__":

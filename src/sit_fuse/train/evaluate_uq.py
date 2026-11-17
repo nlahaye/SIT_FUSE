@@ -1004,8 +1004,15 @@ def threshold_diagnostics(parts, C, thr, manifest, cfg, ev):
                 an optimistic upper bound (tests whether any cutoff separates
                 fire from background), not a skill estimate
       chance    F1 of a random mask with the reference prevalence
+      transfer  leave-one-date-out: the oracle cutoff of the group's other
+                evaluated dates applied to each date (groups with >= 2 dates);
+                an honest estimate of what a cutoff tuned on evaluation scenes
+                delivers on unseen dates of the same event / season
     Groups: evaluation.threshold_diagnostics.groups (default: the training
     calibration.threshold_groups, else split_stratum event prefix).
+    threshold_selection records how the training run chose the applied
+    cutoffs (calibration.threshold_rows / threshold_overrides); with holdout
+    rows or overrides the discrete holdout metrics are optimistic.
     """
     tcfg = ev.get("threshold_diagnostics", {})
     if tcfg is False or thr is None:
@@ -1019,6 +1026,17 @@ def threshold_diagnostics(parts, C, thr, manifest, cfg, ev):
     keys = [conformal_group_key(p["meta"], gcfg) for p in parts]
     out = {"groups_config": gcfg, "metric": metric,
            "note": "oracle_* thresholds are chosen on the evaluated scenes (upper bound only)", "groups": {}}
+    ts = Path(cfg["output_dir"]) / "training" / "training_summary.json"
+    if ts.exists():
+        tm = load_json(ts).get("metadata", {})
+        src = (tm.get("threshold_source") or {}).get(manifest.get("model"))
+        out["threshold_selection"] = {"threshold_rows": tm.get("threshold_rows", "calibration"),
+                                      "threshold_label_level": tm.get("threshold_label_level"),
+                                      "source": src, "recalibrated_from": tm.get("recalibrated_from")}
+        if src in ("holdout", "calibration+holdout", "override"):
+            LOG.warning("Cutoffs for %s were chosen with %s: discrete holdout metrics (IoU / F1 / areas) are "
+                        "optimistic; use threshold_diagnostics transfer_* for an honest estimate.",
+                        manifest.get("model"), src)
     for g in sorted({k for k in keys if k is not None}):
         sub = concat([p for p, k in zip(parts, keys) if k == g])
         m = sub["refs"]["primary"] >= 0
@@ -1048,10 +1066,35 @@ def threshold_diagnostics(parts, C, thr, manifest, cfg, ev):
             "oracle_threshold": float(t_or), f"oracle_{metric}": float(s_or),
             "chance_f1": float(2 * prev / (1 + prev)),
         }
+        gparts = [p for p, k in zip(parts, keys) if k == g]
+        dates = sorted({p["meta"].get("date", "") for p in gparts})
+        if len(dates) >= 2:
+            preds, refs, ws, ts_ = [], [], [], []
+            for d in dates:
+                tr = concat([p for p in gparts if p["meta"].get("date", "") != d])
+                te = concat([p for p in gparts if p["meta"].get("date", "") == d])
+                mt, me = tr["refs"]["primary"] >= 0, te["refs"]["primary"] >= 0
+                if not (tr["refs"]["primary"][mt] != 0).any() or not me.any():
+                    continue
+                if C == 2:
+                    t_d, _ = select_threshold(tr["P"][mt][:, 1], tr["refs"]["primary"][mt], tr["w"][mt], metric, grid=grid)
+                else:
+                    t_d, _ = select_threshold_multiclass(tr["P"][mt], tr["refs"]["primary"][mt], tr["w"][mt],
+                                                         metric, grid=grid)
+                preds.append(decide(te["P"][me], t_d))
+                refs.append(te["refs"]["primary"][me])
+                ws.append(te["w"][me])
+                ts_.append(float(t_d))
+            if preds:
+                s_tr = hard_metrics(np.concatenate(preds), np.concatenate(refs), np.concatenate(ws), C)
+                out["groups"][g].update({"transfer_thresholds": dict(zip(dates, ts_)) if len(ts_) == len(dates)
+                                         else ts_, f"transfer_{metric}": float(s_tr[f"target_macro_{metric}"]),
+                                         "n_dates": len(dates)})
         LOG.info("Cutoff diagnostic [%s]: applied %s=%.3f (t=%.3g), pooled %.3f, oracle %.3f (t=%.3g), "
-                 "PR-AUC/prevalence=%.1f", g, metric, out["groups"][g][f"applied_{metric}"],
+                 "transfer %s, PR-AUC/prevalence=%.1f", g, metric, out["groups"][g][f"applied_{metric}"],
                  out["groups"][g]["applied_threshold"], out["groups"][g][f"pooled_{metric}"], s_or, t_or,
-                 out["groups"][g]["pr_auc_over_prevalence"])
+                 ("%.3f" % out["groups"][g][f"transfer_{metric}"]) if f"transfer_{metric}" in out["groups"][g]
+                 else "n/a (< 2 dates)", out["groups"][g]["pr_auc_over_prevalence"])
     return out
 
 
