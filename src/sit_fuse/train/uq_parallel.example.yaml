@@ -49,7 +49,8 @@ pipelines:                           # one UQ config each; models from evaluatio
     # models: [hist_gradient_boosting, soft_assignment]   # optional override
 
 fusion:                              # fit waits for the geo exports of the listed pipelines
-  smoke: {config: configs/fusion_config.smoke.yaml, after: [tempo_smoke, goes_smoke]}
+  smoke: {config: configs/fusion_config.smoke.yaml, after: [tempo_smoke, goes_smoke],
+          visuals: configs/fusion_visuals.smoke.yaml}   # optional: make_fusion_visuals.py after the merge
   fire:  {config: configs/fusion_config.fire.yaml,  after: [tempo_fire, goes_fire]}
 
 joint_visuals: configs/joint_visuals.yaml    # after all visuals and fusion merges

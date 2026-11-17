@@ -111,6 +111,7 @@ DEFAULT_SUMMARY = ["p_1", "predictive_entropy", "ensemble_mutual_information",
                    "ensemble_variance", "selective_flag"]
 CATEGORICAL = ("pred_label", "pred_label_selective", "selective_flag", "excluded_cluster_mask")
 TIME_RE = re.compile(r"(\d{8}T\d{6})Z?")
+ABI_TIME_RE = re.compile(r"_s(\d{13})\d?_e")          # GOES ABI start time: _sYYYYJJJHHMMSS[t]_e
 
 
 # ---------------------------------------------------------------------------
@@ -215,10 +216,13 @@ def scene_time(scene: dict, record: dict | None):
     for v in ((record or {}).get("sit_fuse_timestamp"), (record or {}).get("scene_time")):
         if v:
             return pd.Timestamp(v).tz_convert("UTC") if pd.Timestamp(v).tzinfo else pd.Timestamp(v, tz="UTC")
-    for s in (scene.get("pair_id", ""), scene.get("head_outputs", "")):
+    for s in (scene.get("pair_id", ""), scene.get("head_outputs", ""), (record or {}).get("head_outputs", "")):
         m = TIME_RE.search(Path(str(s)).name)
         if m:
             return pd.Timestamp(pd.to_datetime(m.group(1), format="%Y%m%dT%H%M%S"), tz="UTC")
+        m = ABI_TIME_RE.search(Path(str(s)).name)
+        if m:
+            return pd.Timestamp(pd.to_datetime(m.group(1), format="%Y%j%H%M%S"), tz="UTC")
     return pd.NaT
 
 

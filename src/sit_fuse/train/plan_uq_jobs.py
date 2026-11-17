@@ -16,6 +16,7 @@ Per pipeline (one UQ config, e.g. tempo_smoke / goes_fire):
     geo       (model, --update-manifest; after its evaluate, which supplies the area calibration)
     visuals   (after all geo jobs + compare of the pipeline)
 Per fusion (smoke / fire): fusion_fit (after the geo jobs of its pipelines) -> fusion_apply (shard) -> fusion_merge
+  [-> fusion_visuals with fusion.<name>.visuals: <make_fusion_visuals.py config>]
 joint_visuals: after every visuals and fusion_merge job.
 
 Resume (resume: true, the default): stages whose outputs already exist are left out of the plan, so a run started
@@ -223,6 +224,7 @@ def build_plan(cfg, base_dir, resume=None):
         fc.append({"fusion": name, "fcfg": ab(sp["config"]), "nfs": int(sp.get("shards", shards["fusion"])),
                    "_needs": [tok("geo", p) for p in after if p in geo_planned]})   # finished geo: no wait
     # needs are per job spec, so one fit spec per fusion (each waits only on its own pipelines' geo jobs)
+    sp_vis = {n: sp.get("visuals") for n, sp in fusions.items()}
     for c in fc:
         needs = c.pop("_needs") if "geo" in stages else []
         job(f"fusion_fit_{c['fusion']}", "fusion", [c], cmd("fuse_multiscale_products.py", "-c {fcfg}",
@@ -236,6 +238,10 @@ def build_plan(cfg, base_dir, resume=None):
                 cmd("fuse_multiscale_products.py", "-c {fcfg}", "--stage merge --n-shards {nfs}", "-n {cpus}"),
                 after=[f"fusion_apply_{c['fusion']}"], cpus=res["fusion_merge"], id_keys=("fusion",),
                 provides=[tok("fusion", "all")])
+            if sp_vis.get(c["fusion"]):              # fusion.<name>.visuals: make_fusion_visuals.py config
+                job(f"fusion_visuals_{c['fusion']}", "fusion", [dict(c, fvis=ab(sp_vis[c["fusion"]]))],
+                    cmd("make_fusion_visuals.py", "-c {fvis}"), after=[f"fusion_merge_{c['fusion']}"],
+                    cpus=res.get("fusion_visuals", 1), id_keys=("fusion",))
     jv = cfg.get("joint_visuals")
     if jv:
         jv = jv if isinstance(jv, dict) else {"config": jv}

@@ -1,0 +1,25 @@
+# Figures for the fused GOES-18 + TEMPO smoke product (make_fusion_visuals.py)
+#   python make_fusion_visuals.py -c fusion_visuals.example.yaml [--only skill reliability timeseries cases]
+fusion_config: fusion_config.example.smoke.yaml      # output_dir, product, references are read from it
+# fusion_dir: /data/nlahaye/output/Learnergy/FUSION/UQ_SMOKE   # default: fusion_config output_dir
+output_dir: /data/nlahaye/output/Learnergy/FUSION/UQ_SMOKE/visuals
+cache_dir: /data/nlahaye/output/Learnergy/FUSION/cache
+formats: [png, pdf]
+basemap: {enabled: true}                  # local: {coastline: <shp or zip>, borders: ..., states: ...}
+
+grids: [fine, coarse]
+references: [viirs_smoke, adp_smoke]      # VIIRS first: ADP uses ABI tests, so it is not independent of GOES
+methods: [fused, tempo, goes, noisy_or, max, mean]
+metrics: [pr_auc, f1, iou, brier, ece]
+pattern_metrics: [pr_auc, brier]
+scopes: [both, tempo_only, goes_only]
+
+timeseries:
+  splits: [holdout]                       # production runs: [production]
+  # dates: [2024-07-26, 2025-01-11]       # default: every date in those splits
+
+cases:
+  grid: fine
+  auto: {n: 6, splits: [holdout], by: area_expected_km2}   # strongest frame on each of the top-n days
+  # frames: [2024-07-26T21:00:00Z, 2025-01-11T20:40:00Z]   # or explicit fused frame times
+  # extent: [-122.5, -119.0, 38.5, 41.0]                    # [W, E, S, N] zoom

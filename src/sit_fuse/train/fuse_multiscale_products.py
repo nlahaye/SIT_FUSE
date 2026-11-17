@@ -42,6 +42,10 @@ Steps
     agreement of a GOES-containing product with them is not independent validation; use observed VIIRS
     references for the independent comparison.
 
+Production: with fusion.models_from (the fitting run's output_dir or fusion_models.pkl), apply / merge / all reuse
+those fitted weights, recalibration and thresholds on new source products (e.g. classifier_split: production;
+output.splits: [production]); with no references the evaluation tables are empty.
+
 Leakage: a fused frame is `calibration` only when every contributing source frame is calibration, `holdout`
 only when every one is holdout; anything else is `mixed` and excluded from fitting and evaluation.
 """
@@ -331,16 +335,13 @@ class Aligner:
 
 
 def frame_split(layers: dict[str, Layer | None]) -> str:
+    """calibration / holdout / dev / production when every contributing source frame has that split, else mixed."""
     parts = set()
     for L in layers.values():
         if L is not None:
             parts |= set(L.split.split("|"))
-    if parts == {"calibration"}:
-        return "calibration"
-    if parts == {"holdout"}:
-        return "holdout"
-    if parts == {"dev"}:
-        return "dev"
+    if len(parts) == 1:
+        return next(iter(parts))
     return "mixed" if parts else "none"
 
 
@@ -670,6 +671,40 @@ def apply(cfg, product, sources, grids, al, models, shard=None):
     return rows, acc
 
 
+def reliability_table(acc, n_bins=10) -> pd.DataFrame:
+    """Area-weighted reliability (mean probability vs observed frequency) per grid / reference / method / scope."""
+    edges = np.linspace(0, 1, n_bins + 1)
+    out = []
+    for (gname, rn, name, scope), a in acc.items():
+        p, y, w = (np.concatenate(a[f]) for f in ("p", "y", "w"))
+        if len(y) == 0:
+            continue
+        b = np.clip(np.digitize(p, edges[1:-1]), 0, n_bins - 1)
+        for k in range(n_bins):
+            m = b == k
+            if not m.any():
+                continue
+            out.append({"grid": gname, "reference": rn, "method": name, "scope": scope, "bin": k,
+                        "bin_lo": edges[k], "bin_hi": edges[k + 1], "n": int(m.sum()), "weight": float(w[m].sum()),
+                        "mean_p": float(np.average(p[m], weights=w[m])),
+                        "obs_freq": float(np.average(y[m], weights=w[m]))})
+    return pd.DataFrame(out, columns=["grid", "reference", "method", "scope", "bin", "bin_lo", "bin_hi", "n",
+                                      "weight", "mean_p", "obs_freq"])
+
+
+def load_models(cfg: dict):
+    """Fitted fusion models: fusion.models_from (a fusion_models.pkl or the output_dir of the fitting run, e.g. to
+    apply weights fitted on the evaluation periods to a production period), else <output_dir>/fusion_models.pkl."""
+    import pickle
+    src = (cfg.get("fusion") or {}).get("models_from")
+    p = Path(src) if src else Path(cfg["output_dir"]) / "fusion_models.pkl"
+    if p.is_dir():
+        p = p / "fusion_models.pkl"
+    if not p.exists():
+        raise FileNotFoundError(f"{p}: run --stage fit first (or set fusion.models_from)")
+    return pickle.loads(p.read_bytes())
+
+
 def evaluate_fused(cfg, models, rows, acc):
     """fused_frames.csv and fusion_evaluation.csv from the frame rows and pooled holdout pixels."""
     out = Path(cfg["output_dir"])
@@ -697,6 +732,8 @@ def evaluate_fused(cfg, models, rows, acc):
         res.append(r)
     res = pd.DataFrame(res)
     res.to_csv(out / "fusion_evaluation.csv", index=False)
+    reliability_table(acc, int(cfg.get("fusion", {}).get("reliability_bins", 10))).to_csv(
+        out / "fusion_reliability.csv", index=False)
     LOG.info("evaluation (%s frames):\n%s", eval_split, res.to_string(index=False) if len(res) else "none")
     return res
 
@@ -721,7 +758,7 @@ def main(argv=None):
     out.mkdir(parents=True, exist_ok=True)
     shard, sdir = parse_shard(a.shard), out / "fusion_shards"
     if a.stage == "merge":                 # combine apply shards; same tables as a single apply
-        models = pickle.loads((out / "fusion_models.pkl").read_bytes())
+        models = load_models(cfg)
         n = a.n_shards or infer_n_shards(sdir, "apply")
         if not n:
             raise FileNotFoundError(f"No apply shards in {sdir}; run --stage apply --shard i/N first.")
@@ -736,10 +773,13 @@ def main(argv=None):
         evaluate_fused(cfg, models, rows, acc)
         return
     product, sources, grids, al = build(cfg)
-    if a.stage in ("fit", "all"):
+    reuse = bool((cfg.get("fusion") or {}).get("models_from"))
+    if a.stage == "fit" and reuse:
+        raise ValueError("fusion.models_from is set: this config applies fitted models; run --stage apply / merge")
+    if a.stage in ("fit", "all") and not reuse:
         models = fit(cfg, product, sources, grids, al)
     else:
-        models = pickle.loads((out / "fusion_models.pkl").read_bytes())
+        models = load_models(cfg)
     if a.stage in ("apply", "all"):
         rows, acc = apply(cfg, product, sources, grids, al, models, shard)
         if shard is not None:

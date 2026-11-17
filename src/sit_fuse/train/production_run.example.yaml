@@ -1,0 +1,76 @@
+# Production run of the trained TEMPO / GOES-18 smoke (and fire) UQ pipelines on a new period (no reference data).
+#   python build_production_run.py production_run.example.yaml          # write configs + launcher plan
+#   python -m sit_fuse.local_launcher run <output_root>/launch/production_plan.yaml   (or add --run above)
+# Paths marked EDIT are placeholders.
+output_root: /data/nlahaye/output/Learnergy/PRODUCTION_2026_09       # EDIT: new run root (never the training output_dir)
+start: 2026-09-01T00:00:00Z                                          # [start, end) UTC; outside every evaluation date
+end: 2026-09-15T00:00:00Z
+bbox: [-125.0, -114.0, 32.0, 42.5]        # [W, E, S, N]; optional: keep only inputs that intersect it
+# split_stratum: event_2026_09            # optional: event key for per-group thresholds (else season / pooled)
+python: python
+resume: true
+launcher:
+  cpus: 48
+  gpus: [0, 1, 2, 3]
+  state_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_09/launch
+resources: {infer: 6, infer_merge: 2, geo: 4}
+shards: {inference: 16}
+export: {shards: 4, cpus: 6, gpu: 1}      # head export jobs per distinct encoder (one GPU each)
+
+sensors:
+  tempo:
+    inputs: /data/nlahaye/remoteSensing/RAD_L1_V04                   # TEMPO radiance GeoTIFFs used by the encoder
+    pattern: "TEMPO_RAD_L1_V04_*.tif"                                # .RGB.tif / .UV_RGB.tif / head outputs excluded
+  goes:
+    inputs: /data/nlahaye/remoteSensing/GOES18_ABI_16band            # EDIT: 16-band ABI GeoTIFFs
+    pattern: "OR_ABI-L1b-RadC-M6C01_G18_s*.tif"
+
+pipelines:                                # evaluated UQ configs; models, calibrators, thresholds are reused
+  tempo_smoke:
+    sensor: tempo
+    uq_config: uq_config.example.yaml
+    export_config: export_config.example.yaml          # export YAML used for training (encoder + head settings)
+    models: [hist_gradient_boosting]
+  tempo_fire:
+    sensor: tempo
+    uq_config: uq_config.example_fire_new.yaml
+    export_config: export_config.example.yaml          # EDIT if the fire encoder differs
+    models: [hist_gradient_boosting]
+  goes_smoke:
+    sensor: goes
+    uq_config: goes18/g18_uq_config_smoke.yaml
+    export_config: goes18/g18_export_smoke.yaml
+    models: [hist_gradient_boosting]
+  goes_fire:
+    sensor: goes
+    uq_config: goes18/g18_uq_config_fire.yaml
+    export_config: goes18/g18_export_fire.yaml
+    models: [hist_gradient_boosting]
+
+fusion:                                   # optional: apply the evaluation-period GOES + TEMPO fusion (frozen weights)
+  smoke:
+    config: fusion_config.example.smoke.yaml          # the evaluation fusion config that was fitted (--stage fit)
+    # models_from: /data/nlahaye/output/Learnergy/FUSION/UQ_SMOKE   # default: that config's output_dir
+    pipelines: {tempo: tempo_smoke, goes: goes_smoke}  # fusion source -> production pipeline (model must match)
+    shards: 6
+    cpus: 2
+    # grids: [fine]                                    # default: the grids of the fitted fusion
+  # fire: {config: fusion_config.example.fire.yaml, pipelines: {tempo: tempo_fire, goes: goes_fire}, shards: 6}
+
+animation:                                # optional: overlay animations after the geo export (make_overlay_animations.py)
+  model: hist_gradient_boosting           # per pipeline override: models: {goes_fire: random_forest}
+  include: [tempo_smoke, goes_smoke, tempo_fire, goes_fire, fused_smoke]   # <sensor>_<product>; fused_<product>
+  fusion_grid: fine                       # fused products drawn from <output_root>/fusion_<name>/<grid>
+  shards: 4                               # animation jobs (days are split across them)
+  cpus: 6
+  bbox: [-122.5, -119.0, 38.5, 41.0]      # animation box (defaults to bbox above)
+  resolution: 0.01
+  split_by: day
+  frames: {base: tempo, goes_window_minutes: 10, tempo_max_age_minutes: 60}
+  fps: 3
+  formats: [mp4, gif]
+  basemap: {enabled: true}
+  observations:
+    tempo_rgb: {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .RGB.tif}          # EDIT
+    tempo_uv_rgb: {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .UV_RGB.tif}    # EDIT
+    goes: {}                              # dir / pattern default to sensors.goes; add kappa0_from: <L1b NetCDF dir>

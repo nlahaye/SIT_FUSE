@@ -1,0 +1,56 @@
+# Multi-panel animations of SIT-FUSE smoke (and fire) probabilities over the observations.
+#   python make_overlay_animations.py -c overlay_animation.example.yaml --workers 8 [--shard i/N] [--dry-run]
+name: park_2026
+output_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_09/animations
+cache_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_09/animations/_cache   # basemap cache
+time_range: [2026-09-03T14:00:00Z, 2026-09-05T02:00:00Z]     # UTC, [start, end)
+bbox: [-122.5, -119.0, 38.5, 41.0]                            # [W, E, S, N] deg
+resolution: 0.01                                              # display grid (deg); all layers are resampled to it
+split_by: day                    # day: one movie per TEMPO observing day (base tempo) / UTC day (base goes); none
+frames:
+  base: tempo                    # tempo: one frame per TEMPO scan | goes: one frame per GOES scene
+  goes_window_minutes: 10        # GOES scene must be within this of the frame time
+  tempo_max_age_minutes: 60      # base goes: latest TEMPO scan at most this old (tempo_causal: true)
+  # goes_every_minutes: 20       # base goes: thin GOES frames
+  # utc_hours: [14, 26]          # keep frames in this UTC hour range
+  tempo_day_shift_hours: -6      # TEMPO observing day (scan ids S001.. reset each day)
+
+observations:                    # omit any of them
+  tempo_rgb:    {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .RGB.tif}       # stretch: auto | [lo, hi]
+  tempo_uv_rgb: {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .UV_RGB.tif}
+  goes:
+    dir: /data/nlahaye/remoteSensing/GOES18_ABI_16band
+    pattern: "OR_ABI-L1b-RadC-M6C01_G18_s*.tif"
+    bands: {blue: 1, red: 2, veggie: 3, ir: 13}   # band index in the 16-band GeoTIFF
+    # kappa0_from: /data/nlahaye/remoteSensing/GOES18_L1b_nc   # L1b NetCDFs: kappa0 -> reflectance factor
+    # kappa0: {blue: 0.0015, red: 0.0019, veggie: 0.0032}       # or give kappa0 per band
+    # (neither: image-based scale for display only, no SZA correction)
+    gamma: 2.2
+    night: ir                    # inverted band 13 across the terminator | none
+
+products:                        # export_geo_products.py outputs (geo_dir = geo_export.output_dir)
+  tempo_smoke: {geo_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_09/tempo_smoke/geo, model: hist_gradient_boosting}
+  goes_smoke:  {geo_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_09/goes_smoke/geo,  model: hist_gradient_boosting}
+  # optional fire overlays, drawn like smoke with the fire style (and pixel markers)
+  tempo_fire:  {geo_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_09/tempo_fire/geo, model: hist_gradient_boosting, product: fire}
+  goes_fire:   {geo_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_09/goes_fire/geo,  model: hist_gradient_boosting, product: fire}
+  # fused GOES + TEMPO product (fuse_multiscale_products.py output_dir/<grid>); matched in time like GOES
+  fused_smoke: {geo_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_09/fusion_smoke/fine, model: fused, sensor: fused}
+  # keys: layer (p_1), mask_layer (pred_label), sensor (tempo | goes | fused; from the name), style (smoke | fire)
+
+# panels: default = one per observation with that sensor's products (smoke, then fire), plus
+#         one panel of the fused product(s) over GOES true colour
+# panels:
+#   - {title: TEMPO RGB + smoke + fire, obs: tempo_rgb, overlays: [tempo_smoke, tempo_fire]}
+#   - {title: TEMPO UV RGB + smoke, obs: tempo_uv_rgb, overlays: [tempo_smoke]}
+#   - {title: GOES true colour + smoke + fire, obs: goes, overlays: [goes_smoke, goes_fire]}
+#   - {title: GOES true colour + fused smoke, obs: goes, overlays: [fused_smoke]}
+style:                           # overrides of the defaults (see uq_viz/overlay.py DEFAULT_STYLE)
+  smoke: {cmap: cool, alpha_max: 0.65, p_min: 0.15, p_max: 0.9, contour: true}
+  fire:  {cmap: autumn_r, alpha_max: 0.9, p_min: 0.05, p_max: 0.7, points: true}
+title: SIT-FUSE smoke and fire probabilities
+fps: 3
+dpi: 130
+formats: [mp4, gif]
+keep_frames: false
+basemap: {enabled: true}         # local: {coastline: <shp or zip>, states: ...} for offline runs
