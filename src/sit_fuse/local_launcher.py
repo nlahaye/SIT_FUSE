@@ -180,7 +180,8 @@ def load_plan(path):
     for spec in specs:                  # after: natural join on shared grid keys (or `on`)
         name = spec["name"]
         for dep in _values(spec.get("after") or []):
-            dname, on = (dep, None) if isinstance(dep, str) else (dep["name"], dep.get("on"))
+            # `on:` unquoted is the YAML 1.1 boolean True under safe_load: accept both keys
+            dname, on = (dep, None) if isinstance(dep, str) else (dep["name"], dep.get("on", dep.get(True)))
             if dname not in by_name:
                 raise ValueError(f"{name}: after {dname!r} is not a job name")
             for j in by_name[name]:
@@ -242,6 +243,8 @@ def detect_gpus(spec="auto"):
         return [str(g) for g in spec]
     if isinstance(spec, int) or (isinstance(spec, str) and spec.isdigit()):
         return [str(i) for i in range(int(spec))]
+    if isinstance(spec, str) and "," in spec:     # id list as a string, e.g. "6," or "4,5" (as on the command line)
+        return [g.strip() for g in spec.split(",") if g.strip()]
     vis = os.environ.get("CUDA_VISIBLE_DEVICES")
     if vis not in (None, ""):
         return [g.strip() for g in vis.split(",") if g.strip()]
