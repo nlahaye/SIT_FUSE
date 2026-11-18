@@ -474,8 +474,8 @@ class Launcher:
         out = {}
         for j in self.jobs:            # topological order (load_plan)
             s = None if j.id in self.forced else self.state.status(j)
-            if s == FAILED and self.rerun_failed and j.id in self.selected:
-                s = None
+            if s == FAILED and self.rerun_failed and j.id in self.selected and j.id not in self.attempts:
+                s = None               # one more try per --rerun-failed invocation (then it stays failed)
             if s is None:
                 if j.id in self.running:
                     s = RUNNING
