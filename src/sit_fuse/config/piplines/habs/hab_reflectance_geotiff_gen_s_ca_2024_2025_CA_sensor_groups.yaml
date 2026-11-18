@@ -99,7 +99,9 @@ uq:
   label_level: heir          # heir | no_heir (label_only mode)
   no_heir_value: parent
   use_proba: true
-  radius_degrees: 0.09       # production SoCal radius
+  radius_degrees: 0.09       # production SoCal radius (planar degrees; ~10 km N-S, ~8.4 km E-W at 33N)
+  radius_km: 10              # great-circle radius; overrides radius_degrees (coastal masking, pier sites)
+  # distance_weighting: {sigma_km: 5}   # optional Gaussian down-weighting of far pixels (default: uniform)
   max_day_offset: 1          # 0 = production same-day; 1 adds +/-1 d rows with temporal weights
   encoder_use_offset_days: false
   temporal_weighting: {tau_days: 1.5, sigma_hours: 6.0}

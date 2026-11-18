@@ -10,7 +10,11 @@ Two input modes per sensor/day:
                 code (scene_feature_frame, ContextEncoder) runs unchanged.
 
 Matching replicates insitu_hab_to_multi_hist: every valid pixel whose centre
-is within `radius_degrees` (planar degree distance) of a sample is a match;
+is within `radius_degrees` (planar degree distance) of a sample is a match.
+If `radius_km` is set it takes precedence and the distance is great-circle
+(KD-tree on unit-sphere coordinates, exact chord threshold), so the circle is
+the same size in km at every latitude and in every direction;
+optional Gaussian distance weights (`distance_weighting.sigma_km`);
 same-day by default, optionally +/- `max_day_offset` days with a temporal
 weight. Matching is vectorized with a KD-tree instead of nested iterrows.
 """
@@ -131,26 +135,55 @@ def load_scene(search_dirs, sensor: str, date, uq_cfg: dict[str, Any]):
 # Spatial matching
 # ---------------------------------------------------------------------------
 
-class PixelIndex:
-    """KD-tree over valid pixel centres (degrees) of one scene."""
+EARTH_RADIUS_KM = 6371.0088
 
-    def __init__(self, profile, valid: np.ndarray):
+
+def _unit_xyz(lon, lat):
+    lo, la = np.radians(np.asarray(lon, float)), np.radians(np.asarray(lat, float))
+    c = np.cos(la)
+    return np.column_stack([c * np.cos(lo), c * np.sin(lo), np.sin(la)])
+
+
+def matchup_radius(uq_cfg: dict[str, Any]) -> tuple[float, bool]:
+    """(radius, geodesic): radius_km (great-circle) if set, else radius_degrees (planar)."""
+    km = uq_cfg.get("radius_km")
+    if km is not None:
+        return float(km), True
+    return float(uq_cfg.get("radius_degrees", 0.09)), False
+
+
+class PixelIndex:
+    """KD-tree over valid pixel centres of one scene (degrees, or unit-sphere xyz if geodesic)."""
+
+    def __init__(self, profile, valid: np.ndarray, geodesic: bool = False):
         lat, lon = pixel_centers(profile)
         crs = profile.get("crs")
         if crs is not None and not getattr(crs, "is_geographic", True):
             from rasterio.warp import transform as _tr
             xs, ys = _tr(crs, "EPSG:4326", lon.ravel(), lat.ravel())
             lon, lat = np.reshape(xs, lon.shape), np.reshape(ys, lat.shape)
+        self.geodesic = geodesic
         self.rows, self.cols = np.nonzero(valid)
         self.lat = lat[self.rows, self.cols]
         self.lon = lon[self.rows, self.cols]
-        self.tree = cKDTree(np.column_stack([self.lon, self.lat])) if self.rows.size else None
+        pts = _unit_xyz(self.lon, self.lat) if geodesic else np.column_stack([self.lon, self.lat])
+        self.tree = cKDTree(pts) if self.rows.size else None
 
-    def query(self, lon, lat, radius_deg):
+    def query(self, lon, lat, radius):
+        """radius in degrees (planar) or km (geodesic=True)."""
         if self.tree is None:
             return [np.zeros(0, np.int64) for _ in np.atleast_1d(lon)]
+        if self.geodesic:
+            chord = 2.0 * np.sin(float(radius) / (2.0 * EARTH_RADIUS_KM))
+            return self.tree.query_ball_point(_unit_xyz(lon, lat), r=chord * (1 - 1e-9))
         # production uses strict '<'; shrink by a hair to match
-        return self.tree.query_ball_point(np.column_stack([lon, lat]), r=radius_deg * (1 - 1e-9))
+        return self.tree.query_ball_point(np.column_stack([lon, lat]), r=radius * (1 - 1e-9))
+
+
+def _haversine_km(lon0, lat0, lon, lat):
+    lo0, la0, lo, la = map(np.radians, (float(lon0), float(lat0), np.asarray(lon, float), np.asarray(lat, float)))
+    a = np.sin((la - la0) / 2) ** 2 + np.cos(la0) * np.cos(la) * np.sin((lo - lo0) / 2) ** 2
+    return 2 * EARTH_RADIUS_KM * np.arcsin(np.sqrt(np.clip(a, 0, 1)))
 
 
 def temporal_weight(day_offset, hours_offset, cfg: dict[str, Any]) -> np.ndarray:
@@ -187,7 +220,8 @@ def build_sensor_matchups(samples: pd.DataFrame, sensor: str, search_dirs,
                 unique_per_sample (production-equivalent histogram counts),
                 pixels, fractional (1/n_pixels per sample).
     """
-    radius = float(uq_cfg.get("radius_degrees", 0.09))
+    radius, geodesic = matchup_radius(uq_cfg)
+    sigma_km = (uq_cfg.get("distance_weighting") or {}).get("sigma_km")
     max_off = int(uq_cfg.get("max_day_offset", 0))
     tcfg = uq_cfg.get("temporal_weighting", {})
     num_child = int(uq_cfg["num_child"])
@@ -207,7 +241,7 @@ def build_sensor_matchups(samples: pd.DataFrame, sensor: str, search_dirs,
         if sub.empty:
             continue
         valid = head_valid_mask(bands, invalid)
-        pix = PixelIndex(prof, valid)
+        pix = PixelIndex(prof, valid, geodesic=geodesic)
         hits = pix.query(sub["Longitude"].to_numpy(), sub["Latitude"].to_numpy(), radius)
         if not any(len(h) for h in hits):
             continue
@@ -223,7 +257,8 @@ def build_sensor_matchups(samples: pd.DataFrame, sensor: str, search_dirs,
             h = np.asarray(h, dtype=np.int64)
             rr, cc = pix.rows[h], pix.cols[h]
             fi = rc_index.reindex(pd.MultiIndex.from_arrays([rr, cc])).to_numpy()
-            fi = fi[np.isfinite(fi)].astype(np.int64)
+            ok = np.isfinite(fi)
+            fi = fi[ok].astype(np.int64)
             if fi.size == 0:
                 continue
             day_off = int((srow["date"] - pd.Timestamp(sdate)).days)
@@ -244,8 +279,14 @@ def build_sensor_matchups(samples: pd.DataFrame, sensor: str, search_dirs,
                 r[c] = float(srow[c])
             for k in ("split", "fold", "split_group", "Location_Code", "value", "log10_value"):
                 r[k] = srow[k]
-            r["pix_weight"] = wt / n                     # each sample-scene sums to wt
+            dist = _haversine_km(srow["Longitude"], srow["Latitude"], pix.lon[h][ok], pix.lat[h][ok])
+            if sigma_km:                                 # optional Gaussian down-weighting of far pixels
+                wd = np.exp(-0.5 * (dist / float(sigma_km)) ** 2)
+                r["pix_weight"] = wt * wd / max(wd.sum(), 1e-12)
+            else:
+                r["pix_weight"] = wt / n                 # each sample-scene sums to wt
             r["n_match_pixels"] = n
+            r["match_dist_km"] = dist
             r["input_mode"] = mode
             rows_out.append(r)
 
@@ -300,6 +341,10 @@ def sample_level(P: np.ndarray, rows: pd.DataFrame, how: str = "mean") -> tuple[
         day_offset=("day_offset", "first"), hours_offset=("hours_offset", "first"),
         n_pixels=("pix_weight", "size")).reset_index(drop=True)
     meta["weight"] = ws
+    if "match_dist_km" in rows.columns:
+        d = rows["match_dist_km"].to_numpy(dtype=np.float64)
+        meta["min_dist_km"] = pd.Series(d).groupby(codes).min().to_numpy()
+        meta["mean_dist_km"] = pd.Series(d).groupby(codes).mean().to_numpy()
     soft = [c for c in rows.columns if c.startswith("ref_soft_")]
     if soft:
         meta = pd.concat([meta, rows.groupby(codes)[soft].first().reset_index(drop=True)], axis=1)

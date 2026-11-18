@@ -51,7 +51,7 @@ LOG = logging.getLogger("hab-uq-train")
 
 # matchup bookkeeping that must never become a feature (target leakage / ids)
 HAB_NON_FEATURES = {
-    "value", "log10_value", "fold", "pix_weight", "n_match_pixels", "day_offset",
+    "value", "log10_value", "fold", "pix_weight", "n_match_pixels", "match_dist_km", "day_offset",
     "hours_offset", "ref_label", "weight", "time_block",
     "abs_day_offset",   # added below only when features.use_day_offset is true
 }
