@@ -19,6 +19,9 @@ resampling of the existing RAD_L1_V04 archive; only filenames / geo_filenames / 
 
 Authentication (earthaccess.login): ~/.netrc entry for urs.earthdata.nasa.gov, or EARTHDATA_USERNAME /
 EARTHDATA_PASSWORD (or EARTHDATA_TOKEN), else an interactive prompt (--persist writes ~/.netrc).
+Downloads use HTTPS with an Earthdata-authenticated session (timeouts, retries, per-file progress); --access s3
+uses direct S3 and is only valid on AWS us-west-2. earthaccess.download() is not used: when earthaccess detects
+us-west-2 it silently switches to S3, and its HTTPS path has no timeouts or progress output.
 Granules already on disk (same name, non-zero size) are not downloaded again; with --convert, granules whose
 GeoTIFF already exists (next to the .nc, as in the archive) are not converted again. Without --bbox the search uses
 the template's lon_bounds / lat_bounds (granules that do not touch the GeoTIFF grid are skipped).
@@ -36,6 +39,9 @@ import logging
 import os
 import re
 import sys
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 LOG = logging.getLogger("pull-tempo-rad-l1")
@@ -80,6 +86,97 @@ def search(short_name, version, start, end, bbox=None, scans=None):
             continue
         out.append((t, name, g))
     return sorted(out, key=lambda x: x[0])
+
+
+def granule_links(g, access="external"):
+    """.nc data links of a granule (external = https://data.asdc..., direct = s3://asdc-prod-protected/...)."""
+    links = [u for u in g.data_links(access=access) if u.split("?")[0].endswith(".nc")]
+    return links or list(g.data_links(access=access))
+
+
+class Downloader:
+    """Per-file download with timeouts, retries, a .part temp file and progress logging.
+
+    access="https": Earthdata-authenticated requests session (one per thread), works anywhere.
+    access="s3":    direct S3 (only from AWS us-west-2) with the ASDC s3credentials endpoint; the temporary
+                    credentials expire after ~1 h, so they are refreshed every 45 min.
+    """
+
+    def __init__(self, access, out_dir: Path, timeout=(30, 300), retries=4, endpoint=None):
+        self.access, self.out_dir, self.timeout, self.retries, self.endpoint = access, out_dir, timeout, retries, endpoint
+        self._tl = threading.local()
+        self._s3, self._s3_t, self._lock = None, 0.0, threading.Lock()
+
+    def _session(self):
+        import earthaccess
+        if not hasattr(self._tl, "session"):
+            self._tl.session = earthaccess.get_requests_https_session()
+        return self._tl.session
+
+    def _s3fs(self):
+        import earthaccess
+        with self._lock:
+            if self._s3 is None or time.time() - self._s3_t > 45 * 60:
+                LOG.info("requesting S3 credentials from %s", self.endpoint)
+                self._s3 = earthaccess.get_s3_filesystem(endpoint=self.endpoint)
+                self._s3_t = time.time()
+            return self._s3
+
+    def _get_once(self, url, dst: Path):
+        part = dst.with_name(dst.name + ".part")
+        if self.access == "s3":
+            self._s3fs().get_file(url, str(part))          # single-file get (not get([url], ...))
+        else:
+            with self._session().get(url, stream=True, allow_redirects=True, timeout=self.timeout) as r:
+                if r.status_code in (401, 403) and "eula" in (r.text or "").lower():
+                    raise RuntimeError(f"EULA not accepted for {url} (accept it at urs.earthdata.nasa.gov)")
+                r.raise_for_status()
+                with open(part, "wb") as f:
+                    for chunk in r.iter_content(chunk_size=4 * 1024 * 1024):
+                        f.write(chunk)
+        if part.stat().st_size == 0:
+            raise RuntimeError(f"empty download for {url}")
+        part.replace(dst)
+
+    def get(self, url):
+        dst = self.out_dir / Path(url.split("?")[0]).name
+        last = None
+        for k in range(self.retries):
+            try:
+                t0 = time.time()
+                self._get_once(url, dst)
+                return dst, dst.stat().st_size, time.time() - t0
+            except Exception as e:  # noqa: BLE001
+                last = e
+                dst.with_name(dst.name + ".part").unlink(missing_ok=True)
+                LOG.warning("%s: attempt %d/%d failed: %s", dst.name, k + 1, self.retries, e)
+                time.sleep(min(60, 5 * 2 ** k))
+        raise RuntimeError(f"{dst.name}: {last}")
+
+
+def download_all(granules, out_dir: Path, access, threads, timeout, retries):
+    endpoint = None
+    if access == "s3":
+        for u in granules[0]["umm"].get("RelatedUrls", []):
+            if "/s3credentials" in u.get("URL", ""):
+                endpoint = u["URL"]
+    dl = Downloader(access, out_dir, timeout=timeout, retries=retries, endpoint=endpoint)
+    urls = [granule_links(g, "direct" if access == "s3" else "external")[0] for g in granules]
+    LOG.info("first URL: %s", urls[0])
+    done, failed, nbytes, t0 = 0, [], 0, time.time()
+    with ThreadPoolExecutor(max_workers=threads) as ex:
+        futs = {ex.submit(dl.get, u): u for u in urls}
+        for f in as_completed(futs):
+            try:
+                dst, size, sec = f.result()
+                done += 1
+                nbytes += size
+                LOG.info("[%d/%d] %s  %.0f MB in %.0f s  (total %.1f GB, %.1f MB/s)", done + len(failed), len(urls),
+                         dst.name, size / 1e6, sec, nbytes / 1e9, nbytes / 1e6 / max(time.time() - t0, 1e-6))
+            except Exception as e:  # noqa: BLE001
+                failed.append(str(e))
+                LOG.error("[%d/%d] %s", done + len(failed), len(urls), e)
+    return failed
 
 
 DEFAULT_TEMPLATE = Path(__file__).resolve().parents[2] / "config" / "preprocess" / "colocate_and_resample" / \
@@ -133,6 +230,11 @@ def main(argv=None):
     ap.add_argument("--short-name", default="TEMPO_RAD_L1")
     ap.add_argument("--version", default="V04")
     ap.add_argument("--threads", type=int, default=4, help="parallel downloads")
+    ap.add_argument("--access", choices=["https", "s3"], default="https",
+                    help="https (default, any machine) or s3 (direct S3; only from AWS us-west-2)")
+    ap.add_argument("--timeout", type=float, nargs=2, default=[30, 300], metavar=("CONNECT", "READ"),
+                    help="HTTPS connect / read-stall timeouts in seconds")
+    ap.add_argument("--retries", type=int, default=4)
     ap.add_argument("--dry-run", action="store_true", help="list the granules only (no login, no download)")
     ap.add_argument("--persist", action="store_true", help="store the Earthdata login in ~/.netrc")
     ap.add_argument("--convert", action="store_true",
@@ -178,8 +280,14 @@ def main(argv=None):
             if not ((a.out_dir / name).exists() and (a.out_dir / name).stat().st_size > 0)
             and not (a.convert and (a.out_dir / name).with_suffix(".tif").exists())]
     LOG.info("downloading %d granule(s) (%d already present) to %s", len(todo), len(found) - len(todo), a.out_dir)
-    if todo:
-        earthaccess.download(todo, local_path=str(a.out_dir), threads=a.threads)
+    # leftovers of an interrupted run: our .part files and earthaccess.download() temp files (partial_XXXXXXXX)
+    stale = list(a.out_dir.glob("TEMPO_RAD_L1_*.nc.part")) + \
+        [p for p in a.out_dir.glob("partial_*") if p.is_file() and re.fullmatch(r"partial_[A-Za-z0-9_]{8}", p.name)]
+    if stale:
+        LOG.info("removing %d incomplete download(s) from an earlier run", len(stale))
+    for p in stale:
+        p.unlink(missing_ok=True)
+    failed = download_all(todo, a.out_dir, a.access, a.threads, tuple(a.timeout), a.retries) if todo else []
     ncs = [a.out_dir / name for _, name, _ in found if (a.out_dir / name).exists()]
     missing = [name for _, name, _ in found if not (a.out_dir / name).exists()
                and not (a.convert and (a.out_dir / name).with_suffix(".tif").exists())]
@@ -187,7 +295,8 @@ def main(argv=None):
         LOG.warning("%d granule(s) missing after download (rerun to retry): %s", len(missing), missing[:5])
 
     report = {"short_name": a.short_name, "version": a.version, "start": start.isoformat(), "end": end.isoformat(),
-              "bbox": bbox, "granules": [n for _, n, _ in found], "missing": missing}
+              "bbox": bbox, "granules": [n for _, n, _ in found], "missing": missing,
+              "download_errors": failed}
     tag = f"{start:%Y%m%dT%H%M%SZ}_{end:%Y%m%dT%H%M%SZ}"
     if a.convert:
         new = [p for p in ncs if not p.with_suffix(".tif").exists()]
