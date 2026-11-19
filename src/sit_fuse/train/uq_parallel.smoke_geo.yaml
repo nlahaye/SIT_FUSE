@@ -1,0 +1,27 @@
+# Re-generate the evaluation-period geo products (export_geo_products.py) for TEMPO and GOES-18 smoke.
+#   cd SIT_FUSE/src/sit_fuse/train
+#   python plan_uq_jobs.py uq_parallel.smoke_geo.yaml                     # prints geo=run per model
+#   python plan_uq_jobs.py uq_parallel.smoke_geo.yaml --run -- --dry-run  # check the commands
+#   python plan_uq_jobs.py uq_parallel.smoke_geo.yaml --run
+# Only the geo stage is planned; inference and evaluation outputs (inference/{model}, evaluation/) must still exist.
+# Outputs: SF_TEMPO_V04/UQ/geo and GOES_TEMPO_UPDATED/UQ_SMOKE_RECAL/geo (geo_export.output_dir of each config).
+# CPU only (no GPU); 2 pipelines x up to 6 models = up to 12 jobs x 4 threads = 48 CPUs.
+
+plan_file: /data/nlahaye/output/Learnergy/launch_smoke_geo_regen/uq_plan.yaml
+python: python
+launcher:
+  state_dir: /data/nlahaye/output/Learnergy/launch_smoke_geo_regen   # NEW dir: old markers would skip the deleted geo jobs
+  cpus: 48
+  gpus: 0
+  retries: 1
+stages: [geo]
+resume: true                     # models whose geo manifest entry still exists are skipped
+resources: {geo: 4}
+
+pipelines:
+  tempo_smoke:
+    uq_config: uq_config.example.yaml                    # TEMPO smoke (output_dir SF_TEMPO_V04/UQ)
+    # models: [hist_gradient_boosting]                   # default: evaluation.models of the config (all evaluated)
+  goes_smoke:
+    uq_config: goes18/g18_uq_config_smoke_recal.yaml     # recalibrated GOES-18 smoke (GOES_TEMPO_UPDATED/UQ_SMOKE_RECAL)
+    # models: [hist_gradient_boosting]
