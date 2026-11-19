@@ -48,7 +48,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from sit_fuse.pipelines.habs.uq.hab_uq_common import NODATA, SpeciesSpec, species_spec
+from sit_fuse.pipelines.habs.uq.hab_uq_common import NODATA, SpeciesSpec, date_windows, species_spec
 
 LOG = logging.getLogger(__name__)
 
@@ -347,18 +347,23 @@ def animate_species(yml: dict[str, Any], use_key: str, out_root, streams=None) -
     spec = species_spec(use_key, uq.get("species", {}).get(use_key))
     fused_dir = str(Path(out_root) / "fused")
     out_dir = Path(cfg.get("out_dir") or Path(out_root) / "animations")
-    start, end = uq.get("start_date", yml.get("start_date")), uq.get("end_date", yml.get("end_date"))
-    files = list_fused(fused_dir, spec.fname_token, start, end)
-    if not files:
-        LOG.warning("%s: no fused products in %s (run the fuse stage first)", use_key, fused_dir)
-        return []
-    insitu = insitu_points(yml, spec, files[0][0], files[-1][0]) if cfg.get("insitu_overlay", True) else None
+    # one animation per uq.date_windows entry (suffix _YYYYMMDD_YYYYMMDD when there are several)
+    windows = date_windows(uq, yml) or [(None, None)]
     res = []
-    for st in streams or cfg["streams"]:
-        r = animate_stream(files, spec, st, str(out_dir / f"SITFUSE_MULTI.{spec.fname_token}.{st}"), cfg,
-                           insitu, uq.get("sensors"))
-        if r:
-            res.append(r)
+    for start, end in windows:
+        files = list_fused(fused_dir, spec.fname_token, start, end)
+        if not files:
+            LOG.warning("%s: no fused products in %s for %s..%s (run the fuse stage first)",
+                        use_key, fused_dir, start, end)
+            continue
+        insitu = insitu_points(yml, spec, files[0][0], files[-1][0]) if cfg.get("insitu_overlay", True) else None
+        tag = f"_{start:%Y%m%d}_{end:%Y%m%d}" if len(windows) > 1 else ""
+        for st in streams or cfg["streams"]:
+            r = animate_stream(files, spec, st, str(out_dir / f"SITFUSE_MULTI.{spec.fname_token}.{st}{tag}"), cfg,
+                               insitu, uq.get("sensors"))
+            if r:
+                r["window"] = tag.lstrip("_") or None
+                res.append(r)
     _update_manifest(out_dir, res)
     return res
 
@@ -367,7 +372,8 @@ def _update_manifest(out_dir: Path, entries: list[dict[str, Any]]):
     out_dir.mkdir(parents=True, exist_ok=True)
     mf = out_dir / "manifest.json"
     old = json.loads(mf.read_text()) if mf.exists() else []
-    keep = [e for e in old if (e["species"], e["stream"]) not in {(r["species"], r["stream"]) for r in entries}]
+    new = {(r["species"], r["stream"], r.get("window")) for r in entries}
+    keep = [e for e in old if (e["species"], e["stream"], e.get("window")) not in new]
     mf.write_text(json.dumps(keep + entries, indent=2, default=str))
 
 

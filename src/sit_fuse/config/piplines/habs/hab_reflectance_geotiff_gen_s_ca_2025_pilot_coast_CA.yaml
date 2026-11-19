@@ -24,6 +24,18 @@
 #     --existing /mnt/data1/habs/insitu_augmented/combined_augmented.csv \
 #     --out-dir /mnt/data1/habs/insitu_augmented_clean
 #   then hab_uq_pipeline --stages train,evaluate
+# WINDOWS run (uq_pilot_coast_windows_piers): three date windows (uq.date_windows) chosen for
+#   pDA and Pseudo-nitzschia spread inside the existing 2024-03..2025-12 inference span:
+#   B 2024-05-01..06-30 (high P. delicatissima, pDA < 0.1), A + pilot 2024-12-01..2025-06-15,
+#   C 2025-07-15..08-31 (summer pDA 0.1-1.8 ng/mL). Full California domain. IFCB rows are
+#   excluded (uq.insitu_filter exclude_methods: [ifcb]); piers only (combined_full + ERDDAP).
+#   1) day roles for the windows (seed search spreads alert events over calibration/test):
+#      python -m sit_fuse.pipelines.habs.uq.hab_uq_pilot_plan -y <this yaml> --mode resplit \
+#        --seed-search 50 --out /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/uq_pilot_windows/pilot_date_roles.csv
+#   2) head outputs for the new window days (pilot days already exported are skipped):
+#      hab_inference_pipeline --stages heads   (inference.date_windows)
+#   3) hab_uq_pipeline --stages train,evaluate   [then infer,fuse,animate: fusion and
+#      animations run per window]
 
 reuse_context: False #True
 
@@ -110,22 +122,29 @@ validation_only: False
 
 uq:
   input_mode: head_outputs 
-  out_dir: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/uq_pilot_coast_ifcbw_clean/"   # was uq_pilot_coast_ifcbw/, uq_pilot_coast/
+  out_dir: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/uq_pilot_coast_windows_piers/"   # was uq_pilot_coast_ifcbw_clean/, uq_pilot_coast_ifcbw/, uq_pilot_coast/
   # augmented in-situ table written by sit_fuse.pipelines.habs.insitu.pull_insitu_hab
   # non-strict (source/method columns): required by sample_weighting and insitu_filter
   insitu_file: "/mnt/data1/habs/insitu_augmented_clean/combined_augmented.csv" # was insitu_augmented_chain/
-  start_date: &pilot_start "2025-01-15"   # PILOT window: same as the first pilot (must match the roles file)
-  end_date: &pilot_end "2025-06-15"
+  # Date windows (inclusive); replace start_date/end_date in every UQ stage (in-situ load,
+  # day roles, inference, fusion, animation). Must match the roles file below.
+  date_windows: &pilot_windows
+    - ["2024-05-01", "2024-06-30"]   # B: high P. delicatissima, pDA < 0.1 (cells without toxin)
+    - ["2024-12-01", "2025-06-15"]   # A (winter pDA, Jan PN) + first pilot window 2025-01-15..06-15
+    - ["2025-07-15", "2025-08-31"]   # C: summer pDA 0.1-1.8 ng/mL
+  start_date: &pilot_start "2024-05-01"   # overall bounds of date_windows (was 2025-01-15)
+  end_date: &pilot_end "2025-08-31"       # (was 2025-06-15)
   species_run: [Pseudo_nitzschia_seriata_group, Pseudo_nitzschia_delicatissima_group, pDA]
   max_depth_m: 1.0           # also enforced at ingestion (insitu_sources cleaning.max_depth_m)
   # Train AND evaluate on one provenance only (rerun from --stages train; needs the
   # non-strict insitu_file). e.g. oos_piers, or {sources: [...], methods: [...], location_codes: [...]}
   # insitu_filter: oos_piers
+  insitu_filter: {exclude_methods: [ifcb]}   # IFCB left out for now (piers: combined_full + ERDDAP)
   # Down-weight high-cadence IFCB per site-day: each IFCB (station, week) carries total weight
   # block_weight, split over its site-days (and same-day replicates), so a near-daily IFCB week
   # counts like one weekly pier sample. Train + calibration only; test scoring unchanged.
   sample_weighting:
-    enabled: true
+    enabled: false           # was true; no IFCB rows with insitu_filter above
     methods: [ifcb]
     period: W                # W = site-week budget; D = only split same-day replicates
     block_weight: 1.0        # raise (e.g. 2-3) to give IFCB more total weight than the piers
@@ -154,7 +173,7 @@ uq:
   splits:
     # resplit mode: day roles written by hab_uq_pilot_plan --mode resplit (overrides scene_split days).
     # Comment out to keep the scene-split (encoder/context-held-out) test days instead.
-    date_roles_file: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/uq_pilot/pilot_date_roles.csv"
+    date_roles_file: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/uq_pilot_windows/pilot_date_roles.csv"   # was uq_pilot/; written by hab_uq_pilot_plan (header step 1)
     block: "14D"             # was 30D; more station x block groups in a short window
     group_by: [station, block]
     fractions: {train: 0.6, calibration: 0.2, test: 0.2}
@@ -206,7 +225,7 @@ uq:
     subset_insitu_file: "/mnt/data1/habs/insitu_augmented_clean/combined_augmented.csv"   # was insitu_augmented_chain/
     subsets:
       oos_piers: {sources: oos_piers}              # combined_full + calhabmap_erddap (CalHABMAP piers, as in the 2026 paper)
-      non_pier: {exclude_sources: oos_piers}       # IFCB, SeaBASS, cruise, other tables
+      # non_pier: {exclude_sources: oos_piers}     # IFCB, SeaBASS, cruise; empty while IFCB is excluded
     subset_recalibrate_fusion: false               # true: fusion weights from subset calibration rows only
 
   fusion:
@@ -218,7 +237,7 @@ uq:
     transition_stay: 0.7
 
   animation:                 # hab_uq_animate: one MP4 per species x stream from uq.out_dir/fused
-    out_dir: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/uq_pilot_coast_ifcbw_clean/animations/"
+    out_dir: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/uq_pilot_coast_windows_piers/animations/"   # one MP4 per window
     streams: [filtered, fused]   # filtered = gap-filled daily; fused = observed days only
     format: mp4              # mp4 (H.264, plays in PowerPoint) | gif
     fps: 4
@@ -243,7 +262,8 @@ run_head_export: true
 inference:
   stages: [heads]
   input_lists: [files_test, files_train]
-  start_date: *pilot_start        # = uq.start_date / end_date (pilot window only)
+  date_windows: *pilot_windows    # = uq.date_windows (replaces start_date / end_date)
+  start_date: *pilot_start        # overall bounds, used only without date_windows
   end_date: *pilot_end
   overwrite: false                # existing *.head_outputs.tif are skipped
   model_configs:                  # required: see note below

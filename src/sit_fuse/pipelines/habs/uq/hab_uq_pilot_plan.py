@@ -21,6 +21,11 @@ Usage
       --species Pseudo_nitzschia_seriata_group Pseudo_nitzschia_delicatissima_group pDA \
       --window-days 150 [--start 2025-02-01 --end 2025-06-30] \
       [--mode resplit --block-days 14 --buffer-days 2 --out pilot_date_roles.csv]
+
+Several disjoint windows: set uq.date_windows in the YAML (or pass
+--windows 2024-05-01:2024-06-30 2024-12-01:2025-06-15 ...). Ranking is then
+skipped and --mode resplit deals 14-day blocks of all windows together (blocks
+never span two windows), so every split draws from every window's events.
 """
 
 from __future__ import annotations
@@ -31,7 +36,7 @@ import pandas as pd
 import yaml
 
 from sit_fuse.pipelines.habs.uq.hab_insitu import insitu_filter_config, load_insitu, species_frame
-from sit_fuse.pipelines.habs.uq.hab_uq_common import species_spec
+from sit_fuse.pipelines.habs.uq.hab_uq_common import date_windows, insitu_date_kwargs, species_spec, window_days
 
 ROLES = ("train", "calibration", "test")
 
@@ -39,9 +44,9 @@ ROLES = ("train", "calibration", "test")
 def species_events(yml, species, start=None, end=None):
     """One row per (sample, species): date, station, value, event (>= first alert threshold)."""
     uq = yml["uq"]
+    dk = {"start_date": start, "end_date": end} if (start or end) else insitu_date_kwargs(uq)
     ins = load_insitu(uq.get("insitu_file", yml.get("insitu_file")), max_depth_m=uq.get("max_depth_m", 1.0),
-                      start_date=start or uq.get("start_date"), end_date=end or uq.get("end_date"),
-                      filters=insitu_filter_config(yml))
+                      filters=insitu_filter_config(yml), **dk)
     out = []
     for k in species:
         spec = species_spec(k, uq.get("species", {}).get(k))
@@ -92,7 +97,7 @@ def rank_windows(ev, roles, window_days, step_days=14, mode="scene_split"):
 
 
 def resplit(ev, start, end, block_days=14, buffer_days=2, fractions=(0.6, 0.2, 0.2), seed=0,
-            scene_roles_map=None):
+            scene_roles_map=None, windows=None):
     """
     Day roles for [start, end]: time blocks ranked by event share (summed over
     species, each normalized by its window total), then dealt to roles in groups
@@ -100,12 +105,25 @@ def resplit(ev, start, end, block_days=14, buffer_days=2, fractions=(0.6, 0.2, 0
     splits (stratified random, seeded). Days within buffer_days of a test
     block are excluded. With scene_roles_map, test is given preferentially to
     the blocks with the most scene-split test (encoder/context-held-out) days.
+    `windows` ([(start, end), ...]) restricts the days to those windows; blocks
+    are numbered within each window so none spans a gap.
     """
-    start, end = pd.Timestamp(start), pd.Timestamp(end)
-    days = pd.date_range(start, end, freq="D")
-    blk = ((days - start).days // block_days).to_numpy()
-    w = ev[(ev["date"] >= start) & (ev["date"] <= end)].copy()
-    w["block"] = (w["date"] - start).dt.days // block_days
+    if windows:
+        parts, off = [], 0
+        for s, e in windows:
+            d = pd.date_range(s, e, freq="D")
+            b = (d - s).days // block_days
+            parts.append(pd.Series(b + off, index=d))
+            off += int(b.max()) + 1
+        bmap = pd.concat(parts)
+        days, blk = bmap.index, bmap.to_numpy()
+    else:
+        start, end = pd.Timestamp(start), pd.Timestamp(end)
+        days = pd.date_range(start, end, freq="D")
+        blk = ((days - start).days // block_days).to_numpy()
+        bmap = pd.Series(blk, index=days)
+    w = ev[ev["date"].isin(days)].copy()
+    w["block"] = w["date"].map(bmap)
     tot = w.groupby("species")["event"].sum().clip(lower=1)
     share = (w[w["event"]].groupby(["block", "species"]).size() / tot).groupby(level=0).sum()
     nsamp = w.groupby("block").size()
@@ -139,13 +157,34 @@ def resplit(ev, start, end, block_days=14, buffer_days=2, fractions=(0.6, 0.2, 0
     role_of_block = dict(zip(blocks["block"], blocks["role"]))
     roles = pd.Series([role_of_block[b] for b in blk], index=days)
     if buffer_days > 0:
+        # by calendar distance, so a gap between windows is not treated as adjacency
         is_test = roles.eq("test").to_numpy()
+        t = np.sort(days[is_test].values.astype("datetime64[D]").astype(np.int64))
+        di = days.values.astype("datetime64[D]").astype(np.int64)
         near = np.zeros(len(days), dtype=bool)
-        for k in range(1, buffer_days + 1):
-            near[k:] |= is_test[:-k]
-            near[:-k] |= is_test[k:]
+        if len(t):
+            j = np.clip(np.searchsorted(t, di), 1, len(t)) - 1
+            jn = np.clip(j + 1, 0, len(t) - 1)
+            near = np.minimum(np.abs(di - t[j]), np.abs(di - t[jn])) <= buffer_days
         roles[(~is_test) & near] = "excluded"
     return roles, blocks
+
+
+def best_seed(ev, start, end, a, roles=None, windows=None) -> int:
+    """Seed whose resplit maximizes min alert events over species x {calibration, test} (ties: more test)."""
+    best = None
+    for seed in range(a.seed_search):
+        r, _ = resplit(ev, start, end, a.block_days, a.buffer_days, tuple(a.fractions), seed, roles,
+                       windows=windows)
+        m = {d.strftime("%Y%m%d"): v for d, v in r.items()}
+        e = ev[ev["event"]]
+        t = e.assign(role=e["date"].dt.strftime("%Y%m%d").map(m)).groupby(["species", "role"]).size()
+        t = t.unstack(fill_value=0).reindex(columns=["calibration", "test"], fill_value=0)
+        t = t.reindex(ev["species"].unique(), fill_value=0)
+        key = (int(t.to_numpy().min()), int(t["test"].sum()), -seed)
+        if best is None or key > best[0]:
+            best = (key, seed)
+    return best[1]
 
 
 def main():
@@ -153,17 +192,25 @@ def main():
     ap.add_argument("-y", "--yaml", required=True)
     ap.add_argument("--species", nargs="+", default=None, help="default: uq.species_run or the four main products")
     ap.add_argument("--start"), ap.add_argument("--end")
+    ap.add_argument("--windows", nargs="+", default=None,
+                    help="START:END ... (default uq.date_windows); overrides --start/--end and ranking")
     ap.add_argument("--window-days", type=int, default=150)
     ap.add_argument("--mode", choices=["scene_split", "resplit"], default="scene_split")
     ap.add_argument("--block-days", type=int, default=14)
     ap.add_argument("--buffer-days", type=int, default=2)
     ap.add_argument("--fractions", type=float, nargs=3, default=[0.6, 0.2, 0.2])
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--seed-search", type=int, default=0,
+                    help="try seeds 0..N-1 (resplit) and keep the one maximizing the minimum alert-event "
+                         "count over species x {calibration, test}")
     ap.add_argument("--out", default="pilot_date_roles.csv")
     a = ap.parse_args()
 
     with open(a.yaml) as f:                      # as sit_fuse.utils.read_yaml (no heavy imports)
         yml = yaml.load(f, Loader=yaml.FullLoader)
+    if a.windows:
+        yml["uq"]["date_windows"] = [w.split(":") for w in a.windows]
+    windows = date_windows(yml["uq"]) if yml["uq"].get("date_windows") else None
     species = a.species or yml["uq"].get("species_run") or [
         "Total_Phytoplankton", "Pseudo_nitzschia_seriata_group", "Pseudo_nitzschia_delicatissima_group", "pDA"]
     ev = species_events(yml, species)
@@ -178,20 +225,33 @@ def main():
     m = ev.groupby(["month", "species"])["event"].agg(["size", "sum"]).unstack("species")
     print("\n== monthly samples (size) / events (sum)\n", m.to_string())
 
-    print(f"\n== top {a.window_days}-day windows (mode={a.mode})")
-    rk = rank_windows(ev, roles, a.window_days, mode=a.mode)
-    print(rk.head(8).to_string(index=False))
-    start = pd.Timestamp(a.start) if a.start else pd.Timestamp(rk.iloc[0]["start"])
-    end = pd.Timestamp(a.end) if a.end else pd.Timestamp(rk.iloc[0]["end"])
-    print(f"\n== chosen window {start.date()} .. {end.date()}")
-
-    w = ev[(ev["date"] >= start) & (ev["date"] <= end)].copy()
+    if windows:
+        start, end = windows[0][0], windows[-1][1]
+        print("\n== date windows: " + ", ".join(f"{s.date()} .. {e.date()}" for s, e in windows))
+        w = ev[ev["date"].isin(window_days(windows))].copy()
+        for s, e in windows:
+            ww = w[(w["date"] >= s) & (w["date"] <= e)]
+            print(f"  {s.date()} .. {e.date()}: samples per species "
+                  f"{ww.groupby('species').size().to_dict()}, events {ww.groupby('species')['event'].sum().to_dict()}")
+    else:
+        print(f"\n== top {a.window_days}-day windows (mode={a.mode})")
+        rk = rank_windows(ev, roles, a.window_days, mode=a.mode)
+        print(rk.head(8).to_string(index=False))
+        start = pd.Timestamp(a.start) if a.start else pd.Timestamp(rk.iloc[0]["start"])
+        end = pd.Timestamp(a.end) if a.end else pd.Timestamp(rk.iloc[0]["end"])
+        print(f"\n== chosen window {start.date()} .. {end.date()}")
+        w = ev[(ev["date"] >= start) & (ev["date"] <= end)].copy()
     if a.mode == "scene_split":
         _, gw = summarize(w, roles)
         print(gw.to_string())
         print("\nYAML: uq.start_date / uq.end_date =", start.date(), end.date(), "(keep scene_split day roles)")
         return
-    r, blocks = resplit(ev, start, end, a.block_days, a.buffer_days, tuple(a.fractions), a.seed, roles)
+    seed = a.seed
+    if a.seed_search > 0:
+        seed = best_seed(ev, start, end, a, roles, windows)
+        print(f"\n== seed search over {a.seed_search} seeds -> seed {seed}")
+    r, blocks = resplit(ev, start, end, a.block_days, a.buffer_days, tuple(a.fractions), seed, roles,
+                        windows=windows)
     rmap = {d.strftime("%Y%m%d"): v for d, v in r.items()}
     _, gw = summarize(w, rmap)
     print(gw.to_string())
@@ -200,8 +260,9 @@ def main():
         held = np.mean([roles.get(d) == "test" for d in tdays]) if tdays else 0.0
         print(f"\npilot test days that are scene-split test days (encoder/context-held-out): {held:.0%}")
     pd.DataFrame({"date": list(rmap), "role": list(rmap.values())}).to_csv(a.out, index=False)
-    print(f"\nwrote {a.out}  ->  uq.splits.date_roles_file: {a.out}; uq.start_date/end_date = "
-          f"{start.date()} / {end.date()}")
+    span = ("uq.date_windows as above" if windows else
+            f"uq.start_date/end_date = {start.date()} / {end.date()}")
+    print(f"\nwrote {a.out}  ->  uq.splits.date_roles_file: {a.out}; {span}")
 
 
 if __name__ == "__main__":
