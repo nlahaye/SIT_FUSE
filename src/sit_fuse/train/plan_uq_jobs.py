@@ -148,7 +148,10 @@ def build_plan(cfg, base_dir, resume=None):
     report = []
     for name, sp in pipes.items():
         uq = ab(sp["uq_config"])
-        c = {"pipe": name, "uq": uq}
+        ge = sp.get("geo_every_minutes")         # e.g. 60: hourly geo products from 5-min GOES inference
+        c = {"pipe": name, "uq": uq, "geo_extra": (f"--every-minutes {ge:g}" + (
+            f" --offset-minutes {float(sp['geo_offset_minutes']):g}" if sp.get("geo_offset_minutes") else ""))
+            if ge else ""}
         pc.append(c)
         uq_cfg = _read(uq)
         models = _models(sp, uq_cfg)
@@ -209,7 +212,7 @@ def build_plan(cfg, base_dir, resume=None):
     job("compare", "evaluate", pc, cmd("evaluate_uq.py", "{uq}", "--compare-only", "-n {cpus}"),
         after=["evaluate"])
     job("geo", "geo", model_cases,
-        cmd("export_geo_products.py", "{uq}", "--models {model} --update-manifest", "-n {cpus}"),
+        cmd("export_geo_products.py", "{uq}", "--models {model} --update-manifest {geo_extra}", "-n {cpus}"),
         after=["evaluate"], id_keys=("pipe", "model"), provides=[tok("geo", "{pipe}")])
     job("visuals", "visuals", vis_cases, cmd("make_uq_visuals.py", "-c {vis}", "{products}"),
         after=["geo", "compare"], provides=[tok("visuals", "all")])

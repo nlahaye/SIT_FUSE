@@ -37,6 +37,7 @@ Scenes without georeferencing are skipped with a warning.
 Usage:
   python export_geo_products.py uq_config.yaml [--models random_forest ...]
          [--inference-dir DIR] [--output-dir DIR] [-n THREADS] [--workers W]
+         [--every-minutes 60 [--offset-minutes 0]]   # hourly subset of 5-min GOES scenes
   # as launcher jobs (sit_fuse.train.plan_uq_jobs): one job per model, each merging its entry into the
   # shared geo_products_manifest.json under a file lock
   python export_geo_products.py uq_config.yaml --models M --update-manifest
@@ -80,6 +81,9 @@ Config (all optional):
       enabled: false
       stride: 4
       layers: null             # null = geo_export.layers
+    every_minutes: null        # e.g. 60: export only the first scene of each UTC hour (GOES 5-min -> hourly);
+    offset_minutes: 0          #   same binning as build_production_run.py sensors.<s>.every_minutes.
+                               #   --every-minutes / --offset-minutes override; 0 / null = every scene
 """
 
 from __future__ import annotations
@@ -355,6 +359,26 @@ def area_columns(a_all: dict, scene: dict, conf: dict | None, mode: str) -> dict
     return out
 
 
+def thin_scenes(scenes: list, records: dict, every, offset=0) -> list:
+    """First scene (by scene time) of each <every>-minute UTC bin, per product; scenes without a time are kept."""
+    if not every:
+        return scenes
+    off = pd.Timedelta(minutes=float(offset or 0))
+    keep, timed = [], []
+    for s in scenes:
+        t = scene_time(s, records.get(s.get("pair_id")) or records.get(s.get("head_outputs")))
+        (timed.append((t, s.get("pair_id", ""), s)) if t is not None else keep.append(s))
+    seen = set()
+    for t, _, s in sorted(timed, key=lambda x: (x[0], x[1])):
+        k = (str(s.get("product") or ""), (t - off).floor(f"{int(every)}min"))
+        if k not in seen:
+            seen.add(k)
+            keep.append(s)
+    LOG.info("every_minutes=%s: %d of %d scenes kept (%d without a scene time)", every, len(keep), len(scenes),
+             len(scenes) - len(timed))
+    return keep
+
+
 def export_model(cfg: dict, model: str, layer_dir: Path, out_dir: Path, records: dict) -> dict:
     import geopandas as gpd
     from rasterio.crs import CRS
@@ -382,9 +406,10 @@ def export_model(cfg: dict, model: str, layer_dir: Path, out_dir: Path, records:
             LOG.warning("%s: no area_interval_calibration.json (%s); conformal area intervals omitted", model, cpath)
 
     polys, foots, pix, skipped, written = [], [], [], [], []
-    for scene in manifest["scenes"]:
-        if scene.get("skipped"):
-            continue
+    scenes = [sc for sc in manifest["scenes"] if not sc.get("skipped")]
+    every = gx.get("every_minutes")
+    scenes = thin_scenes(scenes, records, every, gx.get("offset_minutes", 0))
+    for scene in scenes:
         pid = scene["pair_id"]
         lpaths = scene.get("layers", {})
         names = [n for n in (want or list(lpaths)) if n in lpaths]
@@ -450,7 +475,8 @@ def export_model(cfg: dict, model: str, layer_dir: Path, out_dir: Path, records:
                                   geometry=gpd.points_from_xy(df["x"], df["y"]), crs=grid_crs)
             pix.append(g2.to_crs(vec_crs))
 
-    outs = {"rasters": written, "skipped": skipped}
+    outs = {"rasters": written, "skipped": skipped, "every_minutes": every or None,
+            "n_scenes": len(scenes)}
     cat = lambda L: pd.concat(L, ignore_index=True) if L else None
     # Layer name follows the product (smoke | fire); geo_export.vectors.polygon_name overrides it.
     prods = {str(s.get("product") or "").lower() for s in manifest["scenes"]} - {""}
@@ -469,8 +495,15 @@ def _export_one(cfg, m, layer_dir, out_dir, records):
 
 
 def run(cfg: dict, models=None, inference_dir=None, output_dir=None, update_manifest=False,
-        n_workers=1, threads=1) -> dict:
+        n_workers=1, threads=1, every_minutes=None, offset_minutes=None) -> dict:
     gx = cfg.get("geo_export", {}) or {}
+    if every_minutes is not None or offset_minutes is not None:   # CLI overrides geo_export.every_minutes
+        gx = dict(gx)
+        if every_minutes is not None:
+            gx["every_minutes"] = every_minutes or None
+        if offset_minutes is not None:
+            gx["offset_minutes"] = offset_minutes
+        cfg = {**cfg, "geo_export": gx}
     ev = cfg.get("evaluation", {}) or {}
     inf = cfg.get("inference", {}) or {}
     out = Path(cfg["output_dir"])
@@ -518,12 +551,17 @@ def main():
     ap.add_argument("--update-manifest", action="store_true",
                     help="merge these models into an existing geo_products_manifest.json (file-locked) instead "
                          "of replacing it; used when models are exported by separate jobs")
+    ap.add_argument("--every-minutes", type=float, default=None,
+                    help="export only the first scene of each N-minute UTC bin (60: hourly); 0 = every scene; "
+                         "default geo_export.every_minutes")
+    ap.add_argument("--offset-minutes", type=float, default=None, help="shift the bins (default 0)")
     from sit_fuse.parallel_utils import add_parallel_args, setup_compute
     add_parallel_args(ap, shard=False, merge=False)
     a = ap.parse_args()
     cfg = load_yaml(a.yaml_config)
     n_workers, threads = setup_compute(cfg, a.num_threads, a.workers)
-    run(cfg, a.models, a.inference_dir, a.output_dir, a.update_manifest, n_workers, threads)
+    run(cfg, a.models, a.inference_dir, a.output_dir, a.update_manifest, n_workers, threads,
+        a.every_minutes, a.offset_minutes)
 
 
 if __name__ == "__main__":
