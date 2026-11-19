@@ -51,7 +51,8 @@ LOG = logging.getLogger("hab-uq-train")
 
 # matchup bookkeeping that must never become a feature (target leakage / ids)
 HAB_NON_FEATURES = {
-    "value", "log10_value", "fold", "pix_weight", "n_match_pixels", "match_dist_km", "day_offset",
+    "value", "log10_value", "fold", "pix_weight", "n_match_pixels", "match_dist_km", "match_fallback",
+    "day_offset",
     "hours_offset", "ref_label", "weight", "time_block",
     "abs_day_offset",   # added below only when features.use_day_offset is true
 }
@@ -142,7 +143,36 @@ def cross_fit_encode(rows: pd.DataFrame, counts: pd.DataFrame, n_classes: int, n
 # Classifier + members
 # ---------------------------------------------------------------------------
 
-def _fit_one(model_proto, X, T, w, seed=None):
+def class_weight_vector(ye, we, n_classes: int, cfg: dict[str, Any] | None) -> np.ndarray | None:
+    """
+    classifier.class_weighting: {mode: inverse | sqrt_inverse | none, max_weight: 10}
+
+    Weights from the *weighted* class mass of the soft-expanded rows (sum of
+    soft-target x sample weight per bin), unlike sklearn's class_weight
+    'balanced', which counts expanded rows and is ~uniform with measurement
+    soft labels. w_c = (majority mass / mass_c) ** p (p = 1 inverse, 0.5 sqrt),
+    capped at max_weight (ratio to the majority bin), then rescaled so the total
+    training weight is unchanged.
+    """
+    cfg = cfg or {}
+    mode = str(cfg.get("mode", "none")).lower()
+    if mode in ("none", "off", "false", ""):
+        return None
+    pw = {"inverse": 1.0, "sqrt_inverse": 0.5}.get(mode)
+    if pw is None:
+        pw = float(cfg.get("power", 1.0)) if mode == "power" else None
+    if pw is None:
+        raise ValueError(f"Unknown classifier.class_weighting.mode: {mode}")
+    mass = np.bincount(np.asarray(ye, int), weights=np.asarray(we, float), minlength=n_classes)
+    present = mass > 0
+    cw = np.ones(n_classes)
+    cw[present] = (mass[present].max() / mass[present]) ** pw     # majority bin = 1
+    cw = np.minimum(cw, float(cfg.get("max_weight", 10.0)))
+    cw *= mass.sum() / max((mass * cw).sum(), EPS)
+    return cw
+
+
+def _fit_one(model_proto, X, T, w, seed=None, class_weighting=None):
     m = copy.deepcopy(model_proto)
     if seed is not None:
         try:
@@ -150,6 +180,9 @@ def _fit_one(model_proto, X, T, w, seed=None):
         except Exception:
             pass
     Xe, ye, we = expand_soft_targets(X, T, base_weight=w)
+    cw = class_weight_vector(ye, we, T.shape[1], class_weighting)
+    if cw is not None:
+        we = we * cw[ye]              # pi_train (prior correction) sees the reweighted mass
     m.fit(Xe, ye, clf__sample_weight=we)
     return m, ye, we
 
@@ -194,7 +227,8 @@ def fit_classifier(X, T, w, groups, clf_cfg: dict[str, Any], n_classes: int, see
         m = EncoderOnlyModel(n_classes, clf_cfg.get("encoder_mix"))
         return {"model": m, "members": [], "pi_train": None, "pi_target": pi_target, "name": name}
     proto = build_models({**clf_cfg, "models": [name]})[name]
-    model, ye, we = _fit_one(proto, X, T, w)
+    cwc = clf_cfg.get("class_weighting")
+    model, ye, we = _fit_one(proto, X, T, w, class_weighting=cwc)
     pi_train = effective_training_prior(model, ye, we, n_classes)
     members = []
     B = int(clf_cfg.get("n_bootstrap_members", 0 if name == "random_forest" else 10))
@@ -208,7 +242,8 @@ def fit_classifier(X, T, w, groups, clf_cfg: dict[str, Any], n_classes: int, see
             keep = wb > 0
             if keep.sum() < 10:
                 continue
-            mb, _, _ = _fit_one(proto, X[keep], T[keep], wb[keep], seed=seed + b + 1)
+            mb, _, _ = _fit_one(proto, X[keep], T[keep], wb[keep], seed=seed + b + 1,
+                                class_weighting=cwc)
             members.append(mb)
     return {"model": model, "members": members, "pi_train": pi_train, "pi_target": pi_target,
             "name": name}
@@ -289,7 +324,8 @@ def make_calibrator(cal_cfg: dict[str, Any], fit: dict[str, Any], C: int) -> Pro
     return ProbabilityCalibrator(cal_cfg.get("method", "temperature"),
                                  pi_train=fit["pi_train"] if pc else None,
                                  pi_true=fit["pi_target"] if pc else None,
-                                 noise_T=noise_T)
+                                 noise_T=noise_T,
+                                 prior_strength=float(cal_cfg.get("prior_correction_strength", 1.0)))
 
 
 def calibration_diagnostics(P_raw, Q, y, w, C, n_bins=10) -> dict[str, float]:

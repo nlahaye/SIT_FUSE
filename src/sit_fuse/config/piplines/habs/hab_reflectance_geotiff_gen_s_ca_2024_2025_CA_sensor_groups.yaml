@@ -102,6 +102,12 @@ uq:
   radius_degrees: 0.09       # production SoCal radius (planar degrees; ~10 km N-S, ~8.4 km E-W at 33N)
   radius_km: 10              # great-circle radius; overrides radius_degrees (coastal masking, pier sites)
   # distance_weighting: {sigma_km: 5}   # optional Gaussian down-weighting of far pixels (default: uniform)
+  nearest_fallback:          # samples with no valid pixel within radius_km (coastal mask, piers)
+    enabled: true
+    max_km: 20               # search limit for the nearest valid pixels
+    k: 3                     # number of nearest valid pixels used
+    decay_km: 5              # sample weight *= exp(-(d_nearest - radius_km) / decay_km)
+    use_in_encoder: false    # keep fallback rows out of the cluster->class lookup counts
   max_day_offset: 1          # 0 = production same-day; 1 adds +/-1 d rows with temporal weights
   encoder_use_offset_days: false
   temporal_weighting: {tau_days: 1.5, sigma_hours: 6.0}
@@ -137,17 +143,19 @@ uq:
   target:
     mode: blended_ensemble   # reference | cluster_agreement | assignment_ensemble | blended | blended_ensemble
     reference: measurement   # measurement (log-normal soft labels) | onehot
-    blend_lambda: 0.3
+    blend_lambda: 0.1        # was 0.3; less pull toward the majority-bin cluster lookup
 
   classifier:
     model: auto              # auto | encoder_only | hist_gradient_boosting | random_forest (auto = lowest calibration-set RPS)
-    candidates: [encoder_only, hist_gradient_boosting, random_forest]
+    candidates: [hist_gradient_boosting, random_forest]   # encoder_only cannot use class weights
+    class_weighting: {mode: sqrt_inverse, max_weight: 10}  # none | sqrt_inverse | inverse
     random_forest: {n_estimators: 300, max_depth: 8, min_samples_leaf: 5, min_samples_split: 10,
-                    class_weight: balanced_subsample, max_samples: 0.7}
+                    class_weight: null, max_samples: 0.7}   # null: class_weighting replaces sklearn 'balanced'
     n_bootstrap_members: 0   # >0: group-bootstrap refits (use for non-forest models)
   max_members: 100
 
-  calibration: {method: temperature, prior_correction: true, min_samples: 30}
+  calibration: {method: temperature, prior_correction: true, prior_correction_strength: 0.5,
+                min_samples: 30}     # strength 1 = full undo of class weighting, 0 = none
   selective: {target_coverage: 0.8, bin_tolerance: 0}
 
   species:                   # optional overrides of hab_uq_common.DEFAULT_SPECIES

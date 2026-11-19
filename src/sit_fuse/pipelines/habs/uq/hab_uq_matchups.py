@@ -15,6 +15,11 @@ If `radius_km` is set it takes precedence and the distance is great-circle
 (KD-tree on unit-sphere coordinates, exact chord threshold), so the circle is
 the same size in km at every latitude and in every direction;
 optional Gaussian distance weights (`distance_weighting.sigma_km`);
+optional nearest-valid-pixel fallback (`nearest_fallback`) for samples with
+no valid pixel inside the radius (coastal masking, pier sites): the k nearest
+valid pixels within `max_km` are used, the sample-scene weight is multiplied
+by exp(-(d_nearest - radius_km) / decay_km), and rows are flagged
+`match_fallback = 1`;
 same-day by default, optionally +/- `max_day_offset` days with a temporal
 weight. Matching is vectorized with a KD-tree instead of nested iterrows.
 """
@@ -180,6 +185,39 @@ class PixelIndex:
         return self.tree.query_ball_point(np.column_stack([lon, lat]), r=radius * (1 - 1e-9))
 
 
+def nearest_fallback_config(uq_cfg: dict[str, Any]) -> dict[str, Any] | None:
+    """uq.nearest_fallback: {enabled, max_km: 20, k: 3, decay_km: 5, use_in_encoder: false}."""
+    fb = uq_cfg.get("nearest_fallback") or {}
+    if not fb.get("enabled", False):
+        return None
+    return {"max_km": float(fb.get("max_km", 20.0)), "k": max(int(fb.get("k", 3)), 1),
+            "decay_km": max(float(fb.get("decay_km", 5.0)), 1e-6),
+            "use_in_encoder": bool(fb.get("use_in_encoder", False))}
+
+
+def radius_as_km(radius: float, geodesic: bool, lat: float) -> float:
+    """Matchup radius in km (planar degree radius converted at the sample latitude, E-W scale)."""
+    return float(radius) if geodesic else float(radius) * 111.32 * np.cos(np.radians(lat))
+
+
+def nearest_valid(pix: "PixelIndex", lon, lat, k: int, max_km: float) -> list[np.ndarray]:
+    """Indices (into pix) of up to k nearest valid pixels within max_km (great-circle)."""
+    lon, lat = np.atleast_1d(lon), np.atleast_1d(lat)
+    if pix.tree is None:
+        return [np.zeros(0, np.int64) for _ in lon]
+    if pix.geodesic:
+        tree = pix.tree
+    else:
+        if getattr(pix, "_geo_tree", None) is None:
+            pix._geo_tree = cKDTree(_unit_xyz(pix.lon, pix.lat))
+        tree = pix._geo_tree
+    chord = 2.0 * np.sin(float(max_km) / (2.0 * EARTH_RADIUS_KM))
+    d, idx = tree.query(_unit_xyz(lon, lat), k=k, distance_upper_bound=chord)
+    idx = idx.reshape(len(lon), -1)
+    n = len(pix.rows)
+    return [row[row < n].astype(np.int64) for row in idx]
+
+
 def _haversine_km(lon0, lat0, lon, lat):
     lo0, la0, lo, la = map(np.radians, (float(lon0), float(lat0), np.asarray(lon, float), np.asarray(lat, float)))
     a = np.sin((la - la0) / 2) ** 2 + np.cos(la0) * np.cos(la) * np.sin((lo - lo0) / 2) ** 2
@@ -222,6 +260,8 @@ def build_sensor_matchups(samples: pd.DataFrame, sensor: str, search_dirs,
     """
     radius, geodesic = matchup_radius(uq_cfg)
     sigma_km = (uq_cfg.get("distance_weighting") or {}).get("sigma_km")
+    fb = nearest_fallback_config(uq_cfg)
+    n_fb = 0
     max_off = int(uq_cfg.get("max_day_offset", 0))
     tcfg = uq_cfg.get("temporal_weighting", {})
     num_child = int(uq_cfg["num_child"])
@@ -243,6 +283,16 @@ def build_sensor_matchups(samples: pd.DataFrame, sensor: str, search_dirs,
         valid = head_valid_mask(bands, invalid)
         pix = PixelIndex(prof, valid, geodesic=geodesic)
         hits = pix.query(sub["Longitude"].to_numpy(), sub["Latitude"].to_numpy(), radius)
+        is_fb = np.zeros(len(hits), dtype=bool)
+        if fb is not None:
+            empty = np.array([len(h) == 0 for h in hits])
+            if empty.any():
+                near = nearest_valid(pix, sub["Longitude"].to_numpy()[empty],
+                                     sub["Latitude"].to_numpy()[empty], fb["k"], fb["max_km"])
+                hits = list(hits)
+                for j, nh in zip(np.nonzero(empty)[0], near):
+                    if len(nh):
+                        hits[j], is_fb[j] = nh, True
         if not any(len(h) for h in hits):
             continue
         pair_id = f"{sensor}.{pd.Timestamp(sdate).strftime('%Y%m%d')}"
@@ -251,7 +301,7 @@ def build_sensor_matchups(samples: pd.DataFrame, sensor: str, search_dirs,
             [feat["row"].to_numpy(), feat["col"].to_numpy()]))
 
         t_over = nominal_overpass_utc(sensor, sdate, sub["Longitude"].to_numpy())
-        for (i, srow), h, tov in zip(sub.iterrows(), hits, t_over):
+        for (i, srow), h, tov, fbk in zip(sub.iterrows(), hits, t_over, is_fb):
             if len(h) == 0:
                 continue
             h = np.asarray(h, dtype=np.int64)
@@ -280,6 +330,10 @@ def build_sensor_matchups(samples: pd.DataFrame, sensor: str, search_dirs,
             for k in ("split", "fold", "split_group", "Location_Code", "value", "log10_value"):
                 r[k] = srow[k]
             dist = _haversine_km(srow["Longitude"], srow["Latitude"], pix.lon[h][ok], pix.lat[h][ok])
+            if fbk:                                      # nearest-valid fallback: distance penalty
+                r_km = radius_as_km(radius, geodesic, srow["Latitude"])
+                wt *= float(np.exp(-max(dist.min() - r_km, 0.0) / fb["decay_km"]))
+                n_fb += 1
             if sigma_km:                                 # optional Gaussian down-weighting of far pixels
                 wd = np.exp(-0.5 * (dist / float(sigma_km)) ** 2)
                 r["pix_weight"] = wt * wd / max(wd.sum(), 1e-12)
@@ -287,11 +341,14 @@ def build_sensor_matchups(samples: pd.DataFrame, sensor: str, search_dirs,
                 r["pix_weight"] = wt / n                 # each sample-scene sums to wt
             r["n_match_pixels"] = n
             r["match_dist_km"] = dist
+            r["match_fallback"] = int(fbk)
             r["input_mode"] = mode
             rows_out.append(r)
 
             # encoder counts (exact same-day only unless allowed)
             if day_off != 0 and not uq_cfg.get("encoder_use_offset_days", False):
+                continue
+            if fbk and not fb["use_in_encoder"]:
                 continue
             jl = r["joint_label"].to_numpy().astype(np.int64)
             pl = r["parent_label"].to_numpy().astype(np.int64)
@@ -310,8 +367,11 @@ def build_sensor_matchups(samples: pd.DataFrame, sensor: str, search_dirs,
                     "date": str(pd.Timestamp(srow["date"]).date()),
                     "split_group": srow["split_group"], "sample_uid": srow["sample_uid"],
                     "split": srow["split"], "fold": srow["fold"], "sensor": sensor}))
-        LOG.info("%s %s: %d samples matched (%s)", sensor, pair_id, sum(len(h) > 0 for h in hits), mode)
+        LOG.info("%s %s: %d samples matched (%d nearest-fallback) (%s)", sensor, pair_id,
+                 sum(len(h) > 0 for h in hits), int(is_fb.sum()), mode)
 
+    if fb is not None:
+        LOG.info("%s: %d sample-scenes matched by nearest-valid fallback", sensor, n_fb)
     rows = pd.concat(rows_out, ignore_index=True) if rows_out else pd.DataFrame()
     counts = pd.concat(counts_out, ignore_index=True) if counts_out else pd.DataFrame(
         columns=["level", "cluster", "class", "count", "date", "split_group"])
@@ -345,6 +405,8 @@ def sample_level(P: np.ndarray, rows: pd.DataFrame, how: str = "mean") -> tuple[
         d = rows["match_dist_km"].to_numpy(dtype=np.float64)
         meta["min_dist_km"] = pd.Series(d).groupby(codes).min().to_numpy()
         meta["mean_dist_km"] = pd.Series(d).groupby(codes).mean().to_numpy()
+    meta["match_fallback"] = (rows["match_fallback"].groupby(codes).max().to_numpy().astype(int)
+                              if "match_fallback" in rows.columns else 0)
     soft = [c for c in rows.columns if c.startswith("ref_soft_")]
     if soft:
         meta = pd.concat([meta, rows.groupby(codes)[soft].first().reset_index(drop=True)], axis=1)

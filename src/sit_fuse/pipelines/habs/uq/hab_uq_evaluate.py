@@ -180,6 +180,22 @@ def evaluate_bundle(bundle, frame: pd.DataFrame, out_dir, n_boot: int = 500,
     pi = bundle["pi_true"]
     report = {"species": bundle["species"], "overall": score_block(P, meta, spec, pi, base),
               "overall_ci": grouped_bootstrap(P, meta, spec, pi, n_boot=n_boot)}
+    uq = bundle.get("uq_cfg") or {}
+    clf = uq.get("classifier") or {}
+    report["run_config"] = {
+        "model_name": bundle.get("model_name"),
+        "model_selection_calibration_rps": bundle.get("model_selection_calibration_rps"),
+        "input_mode": sorted(frame["input_mode"].dropna().unique().tolist())
+        if "input_mode" in frame.columns else None,
+        "blend_lambda": (uq.get("target") or {}).get("blend_lambda"),
+        "class_weighting": clf.get("class_weighting"),
+        "prior_correction": (uq.get("calibration") or {}).get("prior_correction", True),
+        "prior_correction_strength": (uq.get("calibration") or {}).get("prior_correction_strength", 1.0),
+        "radius_km": uq.get("radius_km"), "nearest_fallback": uq.get("nearest_fallback"),
+        "n_test_fallback": int(meta["match_fallback"].sum()) if "match_fallback" in meta else 0,
+    }
+    if "match_fallback" in meta.columns and meta["match_fallback"].nunique() > 1:
+        strata = tuple(strata) + ("match_fallback",)
     for col in strata:
         report[f"by_{col}"] = {}
         for k, idx in meta.groupby(col).indices.items():
