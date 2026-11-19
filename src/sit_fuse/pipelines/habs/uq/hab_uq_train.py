@@ -8,7 +8,11 @@ sensor (or pooled across sensors), reusing sit_fuse.train.sf_uq_utils:
   2. encoder       HABContextEncoder (production histogram-mode rule, smoothed
                    agreement tables, bootstrap assignment ensemble), cross-fit
                    over split groups so classifier rows never see their own
-                   samples in the cluster->bin tables
+                   samples in the cluster->bin tables. Optional production
+                   dual-level matchup (hab_spatial_tier): counts pooled over a
+                   sensor group's platforms (context_encoder.pool_sensor_group)
+                   and a tier-2 spatial table per platform and fold
+                   (context_encoder.spatial_tier)
   3. targets       build_targets modes, with the one-hot reference optionally
                    replaced by measurement-uncertainty soft labels
   4. classifier    classifier_utils.build_models (+ expand_soft_targets)
@@ -46,6 +50,7 @@ from sit_fuse.pipelines.habs.uq.hab_uq_common import (
     SENSORS, insitu_date_kwargs, ranked_probability_score, species_spec, instrument_dirs, utcnow_iso)
 from sit_fuse.pipelines.habs.hab_sensor_groups import expand_sensors
 from sit_fuse.pipelines.habs.uq.hab_uq_matchups import build_sensor_matchups, sample_level
+from sit_fuse.pipelines.habs.uq.hab_spatial_tier import pool_group_counts
 
 LOG = logging.getLogger("hab-uq-train")
 
@@ -55,14 +60,20 @@ HAB_NON_FEATURES = {
     "day_offset",
     "hours_offset", "ref_label", "weight", "time_block",
     "abs_day_offset",   # added below only when features.use_day_offset is true
+    "assign_tier",      # coverage diagnostic (joint / parent / spatial / none)
 }
 HAB_NON_FEATURE_PREFIXES = ("ref_soft_", "sensor_")
 
 
 def hab_feature_columns(df: pd.DataFrame, features_cfg: dict[str, Any],
                         sensors: list[str] | None = None) -> list[str]:
+    groups = features_cfg.get("groups")
+    spatial_on = groups is not None and "spatial_tier" in groups
     cols = [c for c in select_feature_columns(df, features_cfg)
-            if c not in HAB_NON_FEATURES and not c.startswith(HAB_NON_FEATURE_PREFIXES)]
+            if c not in HAB_NON_FEATURES and not c.startswith(HAB_NON_FEATURE_PREFIXES)
+            and (spatial_on or not c.startswith("sp_tier_"))]
+    if spatial_on:       # spatial_tier group: sp_tier_c, sp_tier_mass (encoder tier 2)
+        cols += sorted(c for c in df.columns if c.startswith("sp_tier_") and c not in cols)
     if sensors and len(sensors) > 1:
         cols += [f"sensor_is_{s}" for s in sensors]
     if features_cfg.get("use_day_offset", False):
@@ -115,14 +126,18 @@ def hab_targets(df: pd.DataFrame, encoder, target_cfg: dict[str, Any]) -> np.nda
 # ---------------------------------------------------------------------------
 
 def cross_fit_encode(rows: pd.DataFrame, counts: pd.DataFrame, n_classes: int, num_child: int,
-                     enc_cfg: dict[str, Any], features_cfg: dict[str, Any], seed: int = 42):
+                     enc_cfg: dict[str, Any], features_cfg: dict[str, Any], seed: int = 42,
+                     spatial_for=None):
     """
     Train rows: features from an encoder fit on train counts of the other
     folds. Calibration/test rows: features from the encoder fit on all train
     counts (the encoder used at inference time).
+    spatial_for(fold or None) -> SpatialTable | None: tier-2 table whose source
+    parent assignments exclude that fold (None = all train counts).
     """
+    sp = spatial_for or (lambda k: None)
     train_counts = counts[counts["split"] == "train"]
-    final = fit_encoder(train_counts, n_classes, num_child, enc_cfg, seed)
+    final = fit_encoder(train_counts, n_classes, num_child, enc_cfg, seed, spatial=sp(None))
     parts = []
     tr = rows[rows["split"] == "train"]
     for k in sorted(tr["fold"].unique()):
@@ -131,7 +146,7 @@ def cross_fit_encode(rows: pd.DataFrame, counts: pd.DataFrame, n_classes: int, n
         if c_k.empty:
             parts.append(final.transform(sub, features_cfg))
             continue
-        enc_k = fit_encoder(c_k, n_classes, num_child, enc_cfg, seed + int(k) + 1)
+        enc_k = fit_encoder(c_k, n_classes, num_child, enc_cfg, seed + int(k) + 1, spatial=sp(k))
         parts.append(enc_k.transform(sub, features_cfg))
     other = rows[rows["split"] != "train"]
     if len(other):
@@ -394,6 +409,7 @@ def train_species(hab_yml: dict[str, Any], use_key: str, out_dir: str | Path,
 
     rows_all, counts_all = [], {}
     enc_by_sensor = {}
+    built = {}
     for s in sensors:
         if matchups is not None and s in matchups:
             rows, counts = matchups[s]
@@ -405,10 +421,20 @@ def train_species(hab_yml: dict[str, Any], use_key: str, out_dir: str | Path,
             continue
         if sw is not None:
             rows, counts = apply_sample_weights(rows, counts, sw)
-        enc_rows, enc = cross_fit_encode(rows, counts, C, num_child, enc_cfg, features_cfg, seed)
+        built[s] = (rows, counts)
+    enc_counts = {s: c for s, (_, c) in built.items()}
+    if enc_cfg.get("pool_sensor_group", False):
+        # production context assignment of a sensor group: one histogram over its platforms
+        enc_counts = pool_group_counts(enc_counts)
+    spatial_by_sensor = _spatial_providers(hab_yml, uq, enc_cfg, samples, built, enc_counts,
+                                           C, num_child, invalid, seed)
+    for s, (rows, counts) in built.items():
+        enc_rows, enc = cross_fit_encode(rows, enc_counts[s], C, num_child, enc_cfg, features_cfg, seed,
+                                         spatial_for=spatial_by_sensor.get(s))
         enc_by_sensor[s] = enc
         counts_all[s] = counts
         rows_all.append(enc_rows)
+    del built
     if not rows_all:
         raise RuntimeError(f"No matchups for {use_key}")
     used = list(enc_by_sensor)
@@ -457,6 +483,38 @@ def train_species(hab_yml: dict[str, Any], use_key: str, out_dir: str | Path,
     bundle["path"] = str(out)
     bundle["_frame"] = df          # in-memory only (evaluation without rematching)
     return bundle
+
+
+def _spatial_providers(hab_yml, uq, enc_cfg, samples, built, enc_counts, C, num_child, invalid, seed):
+    """{sensor: spatial_for(fold)} for context_encoder.spatial_tier, else {}."""
+    from sit_fuse.pipelines.habs.uq.hab_spatial_tier import (
+        collect_cooccurrence, parent_assignment, spatial_days, spatial_table, spatial_tier_config)
+    from sit_fuse.pipelines.habs.uq.hab_uq_common import date_windows
+    cfg = spatial_tier_config(enc_cfg)
+    if cfg is None or not built:
+        return {}
+    roles = split_config(hab_yml).get("date_roles")
+    days = spatial_days(samples, roles, date_windows(uq, hab_yml), cfg, seed)
+    dirs = {s: uq.get("product_dirs", {}).get(s) or instrument_dirs(hab_yml, s) for s in built}
+    LOG.info("spatial tier: %d training days, mode %s, sources %s", len(days), cfg["mode"], cfg["sources"])
+    cooc = collect_cooccurrence(list(built), dirs, days, uq, cfg, invalid, hab_yml.get("platform_priority"))
+    rule = enc_cfg.get("assignment", {})
+    cache = {}
+
+    def assign(o, k):
+        if (o, k) not in cache:
+            c = enc_counts[o]
+            c = c[c["split"] == "train"]
+            if k is not None:
+                c = c[c["fold"] != k]
+            cache[(o, k)] = parent_assignment(c, C, rule)
+        return cache[(o, k)]
+
+    def provider(s):
+        srcs = sorted(cooc[s]["src"].unique()) if len(cooc[s]) else []
+        return lambda k: spatial_table(cooc[s], {o: assign(o, k) for o in srcs if o in enc_counts},
+                                       C, num_child)
+    return {s: provider(s) for s in built}
 
 
 def _fit_scopes(df, used, scope, enc_by_sensor, feat_cols, tgt_cfg, clf_cfg, C, seed):
