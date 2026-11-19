@@ -201,12 +201,12 @@ uq:
     blend_lambda: 0.1        # was 0.3; less pull toward the majority-bin cluster lookup
 
   classifier:
-    model: auto              # auto | encoder_only | hist_gradient_boosting | random_forest (auto = lowest calibration-set RPS)
+    model: random_forest     # was auto; auto picks by calibration RPS on ~7 pDA alert events (noisy)
     candidates: [hist_gradient_boosting, random_forest]   # was [encoder_only, ...]; encoder_only cannot use class weights
     class_weighting: {mode: sqrt_inverse, max_weight: 10}  # none | sqrt_inverse | inverse
-    random_forest: {n_estimators: 300, max_depth: 8, min_samples_leaf: 5, min_samples_split: 10,
+    random_forest: {n_estimators: 300, max_depth: 8, min_samples_leaf: 15, min_samples_split: 30,   # was 5 / 10: no leaf from one bloom day
                     class_weight: null, max_samples: 0.7}   # was balanced_subsample; class_weighting replaces it
-    n_bootstrap_members: 0   # >0: group-bootstrap refits (use for non-forest models)
+    n_bootstrap_members: 20  # was 0; refits on station x block bootstrap draws (spread reflects event-day dependence)
   max_members: 30            # was 100 (pilot)
 
   calibration: {method: temperature, prior_correction: true, prior_correction_strength: 0.0,   # was 0.5
