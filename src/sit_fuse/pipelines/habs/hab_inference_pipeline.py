@@ -34,6 +34,8 @@ YAML (top level, all optional):
     input_lists: [files_test, files_train]
     start_date / end_date      restrict scenes by YYYYMMDD in the file name
     date_windows               [[start, end], ...]; replaces start_date / end_date
+    extend_input_lists: false  add window days missing from the model YAML lists when the
+                               files exist on disk (naming taken from the listed entries)
     overwrite: false
     model_configs: {modis: {no_trop: /path/train_model_modis.yaml}}
     data_overrides:            deep-merged into each model YAML's data: block for
@@ -179,7 +181,64 @@ def scene_entries(sf_yaml, inf_cfg) -> list:
             if str(e) not in seen:
                 seen.add(str(e))
                 out.append(e)
+    if inf_cfg.get("extend_input_lists"):
+        if not wins and start and end:
+            wins = [(start, end)]
+        if wins:
+            all_entries = [e for k in lists for e in (sf_yaml["data"].get(k) or [])]
+            added = extend_entries(all_entries, out, wins)
+            LOG.info("extend_input_lists: %d listed scenes in window, %d added from disk", len(out), len(added))
+            out = sorted(out + added, key=lambda e: (_entry_date(e) or "", str(e)))
     return out
+
+
+def _entry_templates(entries) -> dict[str, list]:
+    """Date-free templates of the listed entries, grouped by file family (basename before the date),
+    most frequent first. Entries are file stems / paths, or lists of them (multi-file scenes)."""
+    from collections import Counter
+    fams: dict[str, Counter] = {}
+    for e in entries:
+        d = _entry_date(e)
+        if not d:
+            continue
+        els = list(e) if isinstance(e, (list, tuple)) else [e]
+        tpl = tuple(str(x).replace(d, "{d}") for x in els)
+        fam = _entry_base(e).split(d)[0]
+        fams.setdefault(fam, Counter())[(tpl, isinstance(e, (list, tuple)))] += 1
+    return {f: [t for t, _ in c.most_common()] for f, c in fams.items()}
+
+
+def _entry_exists(elements) -> bool:
+    return all(os.path.exists(x) or glob.glob(glob.escape(x) + "*") for x in elements)
+
+
+def extend_entries(entries, present, wins) -> list:
+    """
+    inference.extend_input_lists: the model YAML file lists only cover the encoder's
+    data period (e.g. OLCI 2024-03..2026-09, nothing in 2023). For every day inside
+    the windows with no listed scene of a file family, build the entry from the listed
+    naming templates and add it when every file exists on disk (stems match by prefix,
+    as the readers do). Days without data are skipped silently; the count is logged.
+    """
+    import pandas as pd
+    have = {(_entry_base(e).split(_entry_date(e))[0], _entry_date(e)) for e in present if _entry_date(e)}
+    seen = {str(e) for e in present}
+    added = []
+    for fam, tpls in _entry_templates(entries).items():
+        for a, b in wins:
+            for day in pd.date_range(a, b, freq="D").strftime("%Y%m%d"):
+                if (fam, day) in have:
+                    continue
+                for tpl, is_list in tpls:
+                    els = [x.replace("{d}", day) for x in tpl]
+                    cand = els if is_list else els[0]
+                    if str(cand) in seen or not _entry_exists(els):
+                        continue
+                    added.append(cand)
+                    seen.add(str(cand))
+                    have.add((fam, day))
+                    break
+    return added
 
 
 def head_output_name(instrument, entry) -> str:

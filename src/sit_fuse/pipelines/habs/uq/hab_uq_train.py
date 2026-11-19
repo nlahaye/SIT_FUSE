@@ -45,6 +45,8 @@ from sit_fuse.train.sf_uq_utils import (
     expand_soft_targets, forest_member_probabilities, full_proba,
     predictive_entropy_norm, select_feature_columns, select_selective_threshold)
 from sit_fuse.pipelines.habs.uq.hab_context_encoder import default_encoder_cfg, fit_encoder
+from sit_fuse.pipelines.habs.uq.hab_uq_selection import (
+    decide, fit_interval_calibration, selection_components, selection_loss, select_decision_rule)
 from sit_fuse.pipelines.habs.uq.hab_insitu import assign_splits, insitu_filter_config, load_insitu, species_frame
 from sit_fuse.pipelines.habs.uq.hab_uq_common import (
     SENSORS, insitu_date_kwargs, ranked_probability_score, species_spec, instrument_dirs, utcnow_iso)
@@ -452,19 +454,50 @@ def train_species(hab_yml: dict[str, Any], use_key: str, out_dir: str | Path,
     model_name = clf_cfg.get("model", "auto")
     candidates = (clf_cfg.get("candidates", ["encoder_only", "hist_gradient_boosting", "random_forest"])
                   if model_name == "auto" else [model_name])
-    trials = {}
+    sel_cfg = dict(clf_cfg.get("selection") or {"metric": "rps"})
+    cw_grid = list(clf_cfg.get("class_weighting_grid") or [clf_cfg.get("class_weighting")])
+    g_grid = prior_strength_grid(cal_cfg)
+    n_fit = len(candidates) * len(cw_grid)
+    B = int(clf_cfg.get("n_bootstrap_members", 0))
+    # bootstrap members do not change the selection score (main-model probabilities): skip
+    # them while searching and refit the selected configuration with members afterwards
+    lean = n_fit > 1 and B > 0 and not sel_cfg.get("search_members", False)
+    trials, best = {}, None
     for cand in candidates:
-        cfg_c = {**clf_cfg, "model": cand}
-        fits = _fit_scopes(df, used, scope, enc_by_sensor, feat_cols, tgt_cfg, cfg_c, C, seed)
-        trials[cand] = (fits, *_calibrate(df, fits, used, scope, feat_cols, C, cal_cfg, uq, pi_true))
-    sel_key = min(trials, key=lambda k: trials[k][4])
-    fits, calibrators, selective, skill, cal_score = trials[sel_key]
-    model_selection = {k: float(v[4]) for k, v in trials.items()}
+        for cw in cw_grid:
+            cfg_c = {**clf_cfg, "model": cand, "class_weighting": cw}
+            fits = _fit_scopes(df, used, scope, enc_by_sensor, feat_cols, tgt_cfg,
+                               {**cfg_c, "n_bootstrap_members": 0} if lean else cfg_c, C, seed)
+            # encoder_only has no class weights / training prior: prior strength is a no-op
+            for g in (g_grid[:1] if cand == "encoder_only" else g_grid):
+                cal_g = {**cal_cfg, "prior_correction_strength": g}
+                res = _calibrate(df, fits, used, scope, feat_cols, C, cal_g, uq, pi_true, spec, sel_cfg)
+                name = trial_name(cand, cw, g, cand == "encoder_only" or not cal_cfg.get("prior_correction", True))
+                trials[name] = {"score": res["score"], "components": res["components"], "model": cand,
+                                "class_weighting": cw, "prior_correction_strength": g}
+                if best is None or res["score"] < best[0]:
+                    best = (res["score"], name, cfg_c, cal_g, fits, res)
+    _, sel_key, cfg_sel, cal_sel, fits, res = best
+    if lean and cfg_sel["model"] != "encoder_only":
+        fits = _fit_scopes(df, used, scope, enc_by_sensor, feat_cols, tgt_cfg, cfg_sel, C, seed)
+        res = _calibrate(df, fits, used, scope, feat_cols, C, cal_sel, uq, pi_true, spec, sel_cfg)
+    decision = select_decision_rule(res["Q"], res["y"], res["w"], uq.get("decision")) \
+        if res["Q"] is not None else {"rule": "argmax", "selected_by": "no calibration samples"}
+    if decision["rule"] != "argmax":
+        # selective thresholds use the decision rule's errors
+        res = _calibrate(df, fits, used, scope, feat_cols, C, cal_sel, uq, pi_true, spec, sel_cfg,
+                         decision_rule=decision["rule"])
+    calibrators, selective, skill = res["calibrators"], res["selective"], res["skill"]
+    interval_cal = fit_interval_calibration(res["Q"], res["lv"], res["w"], spec, uq.get("intervals"))
+    model_selection = {k: float(v["score"]) for k, v in trials.items()}
     missing = [s for s in used if calibrators.get(s) is None and calibrators.get("_pooled") is None]
     if missing and cal_cfg.get("require", True):
         raise RuntimeError(f"{use_key}: no calibrator for {missing} (no calibration matchups and no "
                            "pooled fallback); set calibration.require: false to allow raw probabilities")
-    LOG.info("%s model selection (calibration RPS): %s -> %s", use_key, model_selection, sel_key)
+    LOG.info("%s model selection (calibration %s): %s -> %s", use_key, sel_cfg.get("metric", "rps"),
+             model_selection, sel_key)
+    LOG.info("%s decision rule: %s; interval calibration: %s", use_key, decision,
+             None if interval_cal is None else {k: interval_cal[k] for k in ("tail", "pad_dex", "calibration_coverage")})
 
     bundle = {
         "format": "sitfuse-hab-uq-v1", "created": utcnow_iso(), "species": use_key,
@@ -472,7 +505,13 @@ def train_species(hab_yml: dict[str, Any], use_key: str, out_dir: str | Path,
         "model_scope": scope, "encoders": enc_by_sensor, "fits": fits,
         "feature_columns": feat_cols, "calibrators": calibrators, "selective": selective,
         "skill": skill, "pi_true": pi_true, "uq_cfg": uq,
-        "model_name": sel_key, "model_selection_calibration_rps": model_selection,
+        "model_name": cfg_sel["model"], "model_trial": sel_key,
+        "model_selection_calibration_rps": {k: v["components"]["rps"] for k, v in trials.items()},
+        "model_selection": {"metric": sel_cfg.get("metric", "rps"), "weights": sel_cfg.get("weights"),
+                            "scores": model_selection, "trials": trials, "selected": sel_key},
+        "class_weighting": cfg_sel.get("class_weighting"),
+        "prior_correction_strength": cal_sel.get("prior_correction_strength"),
+        "decision": decision, "interval_calibration": interval_cal,
         "split_summary": samples.groupby("split")["sample_uid"].nunique().to_dict(),
         "sample_weighting": sw_info,
     }
@@ -532,8 +571,32 @@ def _fit_scopes(df, used, scope, enc_by_sensor, feat_cols, tgt_cfg, clf_cfg, C, 
     return fits
 
 
-def _calibrate(df, fits, used, scope, feat_cols, C, cal_cfg, uq, pi_true):
-    """Per-sensor calibrators (pooled fallback), selective thresholds, skill, mean calibration RPS."""
+def prior_strength_grid(cal_cfg: dict[str, Any]) -> list[float]:
+    """calibration.prior_correction_strength: number, or 'fit' with prior_strength_grid."""
+    g = cal_cfg.get("prior_correction_strength", 1.0)
+    if isinstance(g, str):
+        if g.lower() != "fit":
+            raise ValueError(f"calibration.prior_correction_strength must be a number or 'fit', got {g!r}")
+        return [float(x) for x in cal_cfg.get("prior_strength_grid", [0.0, 0.25, 0.5, 0.75, 1.0])]
+    return [float(g)]
+
+
+def trial_name(model: str, cw: dict | None, g: float, no_prior: bool = False) -> str:
+    cw = cw or {}
+    mode = str(cw.get("mode", "none"))
+    tag = mode if mode in ("none", "off") else f"{mode}{cw.get('power', '') if mode == 'power' else ''}" \
+        f"_max{cw.get('max_weight', 10)}"
+    return f"{model}|{tag}" + ("" if no_prior else f"|g{g:g}")
+
+
+def _calibrate(df, fits, used, scope, feat_cols, C, cal_cfg, uq, pi_true, spec=None, sel_cfg=None,
+               decision_rule="argmax"):
+    """
+    Per-sensor calibrators (pooled fallback), selective thresholds, skill, and the selection
+    score (classifier.selection; default: sample-count-weighted mean calibration RPS, as before).
+    Also returns the pooled calibrated calibration-sample probabilities (Q, y, w, lv) used for
+    the decision rule and interval calibration.
+    """
     calibrators, selective, skill = {}, {}, {}
     min_cal = int(cal_cfg.get("min_samples", 30))
     raw = {}
@@ -553,7 +616,7 @@ def _calibrate(df, fits, used, scope, feat_cols, C, cal_cfg, uq, pi_true):
         yp = np.concatenate([v[1]["ref_label"].to_numpy().astype(int) for v in raw.values()])
         wp = np.concatenate([v[1]["weight"].to_numpy() for v in raw.values()])
         calibrators["_pooled"] = make(next(iter(raw.values()))[2]).fit(Pp, np.eye(C)[yp], wp)
-    scores, wts = [], []
+    scores, wts, Qs, ys, ws, lvs = [], [], [], [], [], []
     for s, (Ps, meta, key) in raw.items():
         y = meta["ref_label"].to_numpy().astype(int)
         w = meta["weight"].to_numpy()
@@ -561,16 +624,29 @@ def _calibrate(df, fits, used, scope, feat_cols, C, cal_cfg, uq, pi_true):
         calibrators[s] = c
         Q = c.transform(Ps) if c is not None else Ps
         u = predictive_entropy_norm(Q)
-        sel_cfg = uq.get("selective", {})
-        err = (np.abs(Q.argmax(1) - y) > int(sel_cfg.get("bin_tolerance", 0))).astype(float)
-        selective[s] = select_selective_threshold(u, err, w, target_error=sel_cfg.get("target_error"),
-                                                  target_coverage=sel_cfg.get("target_coverage", 0.8))
+        sel_cfg_s = uq.get("selective", {})
+        err = (np.abs(decide(Q, decision_rule) - y) > int(sel_cfg_s.get("bin_tolerance", 0))).astype(float)
+        selective[s] = select_selective_threshold(u, err, w, target_error=sel_cfg_s.get("target_error"),
+                                                  target_coverage=sel_cfg_s.get("target_coverage", 0.8))
         skill[s] = skill_summary(Q, y, w, pi_true)
         skill[s]["calibration"] = calibration_diagnostics(Ps, Q, y, w, C)
         skill[s]["calibrator_source"] = "sensor" if len(y) >= min_cal else "pooled"
         scores.append(skill[s]["rps"] * len(y)); wts.append(len(y))
-    score = float(np.sum(scores) / max(np.sum(wts), 1)) if wts else np.inf
-    return calibrators, selective, skill, score
+        Qs.append(Q); ys.append(y); ws.append(w)
+        lvs.append(meta["log10_value"].to_numpy(float) if "log10_value" in meta else np.full(len(y), np.nan))
+    out = {"calibrators": calibrators, "selective": selective, "skill": skill,
+           "Q": np.vstack(Qs) if Qs else None, "y": np.concatenate(ys) if ys else None,
+           "w": np.concatenate(ws) if ws else None, "lv": np.concatenate(lvs) if lvs else None}
+    metric = str((sel_cfg or {}).get("metric", "rps")).lower()
+    if not Qs:
+        out.update(score=np.inf, components={"rps": np.inf})
+    elif metric == "rps" or spec is None:
+        rps = float(np.sum(scores) / max(np.sum(wts), 1))
+        out.update(score=rps, components={"rps": rps})
+    else:
+        comp = selection_components(out["Q"], out["y"], out["w"], out["lv"], spec, pi_true, decision_rule)
+        out.update(score=selection_loss(comp, sel_cfg), components=comp)
+    return out
 
 
 def source_sample_weights(samples: pd.DataFrame, cfg: dict[str, Any] | None):

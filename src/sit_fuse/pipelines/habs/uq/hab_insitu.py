@@ -190,6 +190,11 @@ def assign_splits(df: pd.DataFrame, cfg: dict[str, Any] | None = None) -> pd.Dat
                               calibration_groups mode). Matters most for
                               head-output / MC / OOD features, which are
                               in-distribution by construction on those scenes.
+      holdout_locations: [SMP, MBF]   stations held out entirely (true out-of-sample
+                              stations). Applied last: their rows go to `test` on
+                              every non-excluded day and never to train/calibration;
+                              rows on encoder-seen days become `excluded` unless
+                              holdout_include_encoder_seen: true. Adds holdout_location.
     Adds split_group, split, fold (and encoder_seen when a window is given).
     """
     cfg = cfg or {}
@@ -246,4 +251,17 @@ def assign_splits(df: pd.DataFrame, cfg: dict[str, Any] | None = None) -> pd.Dat
         seen = (dt.dt.normalize() >= lo) & (dt.dt.normalize() <= hi)
         out["encoder_seen"] = seen.to_numpy()
         out.loc[seen & out["split"].isin(["calibration", "test"]), "split"] = "train"
+    hold = {str(h).strip().upper() for h in (cfg.get("holdout_locations") or [])}
+    if hold:
+        h = out["Location_Code"].astype(str).str.strip().str.upper().isin(hold).to_numpy()
+        out["holdout_location"] = h
+        keep = h & (out["split"] != "excluded").to_numpy()
+        out.loc[keep, "split"] = "test"
+        if win and not cfg.get("holdout_include_encoder_seen", False):
+            out.loc[h & out["encoder_seen"].to_numpy(), "split"] = "excluded"
+        missing = hold - set(out["Location_Code"].astype(str).str.strip().str.upper())
+        if missing:
+            import logging
+            logging.getLogger("hab-insitu").warning("holdout_locations not in the in-situ table: %s",
+                                                     sorted(missing))
     return out

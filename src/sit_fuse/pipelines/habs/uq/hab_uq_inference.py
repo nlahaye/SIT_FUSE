@@ -7,13 +7,17 @@ SIT-FUSE cluster GeoTIFF):
 
 Bands
   p_{c}                       calibrated P(concentration bin c)
-  pred_label                  argmax bin (comparable to production product)
+  pred_label                  decision-rule bin (bundle decision.rule; argmax for older bundles)
+  pred_label_argmax           argmax bin, written only when the decision rule is not argmax
   pred_label_selective        pred_label, -1 where flagged by selective rule
   selective_flag              1 retained / 0 flagged
   confidence                  P(pred_label)
   context_assignment_bin      bin of the (train-only) histogram-mode assignment
   expected_log10_conc         E[log10 X] (log-uniform within bins)
-  log10_conc_q05/q50/q95      credible interval of log10 concentration
+  log10_conc_q05/q50/q95      nominal quantiles of log10 concentration
+  log10_conc_lo90/hi90        recalibrated 90 % interval (bundle interval_calibration tails /
+                              pad, fit on calibration samples with censored-aware coverage);
+                              written only when uq.intervals.recalibrate was set at training
   exceed_p_{thr}              P(X >= alert threshold) (e.g. 1e4 cells/L, 0.5 ng/mL)
   ordinal_sd                  SD of bin index (ordinal spread)
   predictive_entropy          total uncertainty / log(C)
@@ -44,13 +48,17 @@ from sit_fuse.pipelines.habs.uq.hab_uq_common import (
     log10_concentration_quantile, overpass_hours_utc, ordinal_moments, species_spec,
     pixel_centers, utcnow_iso)
 from sit_fuse.pipelines.habs.uq.hab_uq_matchups import load_scene
+from sit_fuse.pipelines.habs.uq.hab_uq_selection import decide, interval_bounds
 from sit_fuse.pipelines.habs.uq.hab_uq_train import add_sensor_columns, member_probabilities
 
 LOG = logging.getLogger("hab-uq-inference")
 
 LAYER_DESCRIPTIONS = {
     "p_": "Calibrated probability of concentration bin",
-    "pred_label": "Most probable concentration bin",
+    "pred_label": "Concentration bin from the bundle decision rule",
+    "pred_label_argmax": "Most probable concentration bin",
+    "log10_conc_lo90": "Recalibrated 90% interval, lower log10 concentration",
+    "log10_conc_hi90": "Recalibrated 90% interval, upper log10 concentration",
     "pred_label_selective": "Most probable bin; -1 where flagged as uncertain",
     "selective_flag": "1 = retained by calibrated selective rule",
     "confidence": "Probability of the most probable bin",
@@ -74,22 +82,28 @@ def _thr_name(t: float) -> str:
 
 
 def summarize_probabilities(Q: np.ndarray, members: np.ndarray | None, spec, selective_thr: float | None,
-                            quantiles=(0.05, 0.5, 0.95)) -> dict[str, np.ndarray]:
+                            quantiles=(0.05, 0.5, 0.95), decision: str = "argmax",
+                            interval_cal: dict | None = None) -> dict[str, np.ndarray]:
     out = {}
     C = Q.shape[1]
     for c in range(C):
         out[f"p_{c}"] = Q[:, c]
-    pred = Q.argmax(1)
+    pred = decide(Q, decision)
+    if decision != "argmax":
+        out["pred_label_argmax"] = Q.argmax(1).astype(np.float32)
     u = predictive_entropy_norm(Q)
     out["pred_label"] = pred.astype(np.float32)
     keep = u <= (np.inf if selective_thr is None else selective_thr)
     out["pred_label_selective"] = np.where(keep, pred, -1).astype(np.float32)
     out["selective_flag"] = keep.astype(np.float32)
-    out["confidence"] = Q.max(1)
+    out["confidence"] = np.take_along_axis(Q, pred[:, None], 1)[:, 0]
     out["expected_log10_conc"] = expected_log10_concentration(Q, spec.edges, spec.detection_floor)
     for q in quantiles:
         out[f"log10_conc_q{int(round(q * 100)):02d}"] = log10_concentration_quantile(
             Q, spec.edges, q, spec.detection_floor)
+    if interval_cal:
+        out["log10_conc_lo90"], out["log10_conc_hi90"] = interval_bounds(
+            Q, spec, interval_cal["tail"], interval_cal.get("pad_dex", 0.0))
     for t in spec.alert_thresholds:
         out[f"exceed_p_{_thr_name(t)}"] = exceedance_probability(Q, spec.edges, t, spec.detection_floor)
     out["ordinal_sd"] = ordinal_moments(Q)[1]
@@ -106,6 +120,12 @@ def summarize_probabilities(Q: np.ndarray, members: np.ndarray | None, spec, sel
 # features that only exist in head_outputs.tif with MC / OOD bands (label_only
 # synthesizes the standard head bands, but not these)
 HEAD_ONLY_PREFIXES = ("mc_", "ood_")
+
+
+def bundle_summary_options(bundle: dict[str, Any]) -> dict[str, Any]:
+    """Decision rule and interval calibration stored at training (defaults for older bundles)."""
+    return {"decision": (bundle.get("decision") or {}).get("rule", "argmax"),
+            "interval_cal": bundle.get("interval_calibration")}
 
 
 def scene_calibrator(bundle: dict[str, Any], sensor: str):
@@ -158,7 +178,7 @@ def predict_frame(bundle: dict[str, Any], sensor: str, feat: pd.DataFrame,
         Mq = cal.transform_members(M) if (cal is not None and M is not None) else M
         if Mq is not None and bundle["uq_cfg"].get("use_member_mean", False):
             Q = Mq.mean(0)
-        d = summarize_probabilities(Q, Mq, spec, sel)
+        d = summarize_probabilities(Q, Mq, spec, sel, **bundle_summary_options(bundle))
         d["context_assignment_bin"] = enc.soft_matrix(f, "assign_hard").argmax(1).astype(np.float32)
         d["assignment_vote_variance"] = f["assign_vote_var"].to_numpy()
         pieces.append(d)
@@ -209,6 +229,9 @@ def run_scene(bundle: dict[str, Any], sensor: str, date, search_dirs, out_dir,
             "bin_edges": list(spec.edges), "units": spec.units, "created": utcnow_iso(),
             "model_bundle": bundle.get("path", ""), "selective": bundle["selective"].get(sensor),
             "calibrator": _describe(scene_calibrator(bundle, sensor)),
+            "decision": bundle.get("decision"),
+            "interval_calibration": {k: v for k, v in (bundle.get("interval_calibration") or {}).items()
+                                     if k != "grid"} or None,
             "calibration_diagnostics": (bundle.get("skill", {}).get(sensor) or {}).get("calibration"),
             "layer_descriptions": {k: next((d for p, d in LAYER_DESCRIPTIONS.items() if k.startswith(p)), k)
                                    for k in arrays}}

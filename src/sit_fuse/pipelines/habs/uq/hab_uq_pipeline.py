@@ -60,7 +60,7 @@ def run_hab_uq_pipeline(yml, stages=("train", "evaluate", "infer", "fuse"), spec
              evaluation and animation always use uq.date_windows so splits and in-situ load are unchanged.
     """
     from sit_fuse.pipelines.habs.uq.hab_uq_train import train_species
-    from sit_fuse.pipelines.habs.uq.hab_uq_evaluate import evaluate_bundle, predict_samples, score_block
+    from sit_fuse.pipelines.habs.uq.hab_uq_evaluate import eval_options, evaluate_bundle, predict_samples, score_block
     from sit_fuse.pipelines.habs.uq.hab_uq_inference import run_inference
     from sit_fuse.pipelines.habs.uq.hab_multisensor_fusion import fuse_samples, run_fusion
 
@@ -106,7 +106,8 @@ def run_hab_uq_pipeline(yml, stages=("train", "evaluate", "infer", "fuse"), spec
             Pt, mt, _ = predict_samples(bundle, frame, "test")
             if Pc is not None and Pt is not None and len(bundle["sensors"]) > 1:
                 fz = fuse_samples(bundle, Pc, mc, Pt, mt, method=uq.get("fusion", {}).get("pool", "log"))
-                rep["fused"] = score_block(fz["P_test"], fz["meta_test"], spec, bundle["pi_true"])
+                rep["fused"] = score_block(fz["P_test"], fz["meta_test"], spec, bundle["pi_true"],
+                                           **eval_options(bundle))
                 rep["fused"]["weights"] = fz["weights"]
                 bundle["fusion_weights"] = fz["weights"]
                 joblib.dump({k: v for k, v in bundle.items() if k != "path"}, bundle["path"])

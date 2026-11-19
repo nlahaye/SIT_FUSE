@@ -1,6 +1,11 @@
 """
 Evaluation-only subsets of the held-out test samples by in-situ provenance
 (source, method, station), e.g. the OOS pier network used in the 2026 paper.
+OOS = Ocean Observing System (CalHABMAP piers: combined_full + calhabmap_erddap), not
+out-of-sample. These subsets reuse the same split, so pier stations also appear in
+training; for stations never seen in training set uq.splits.holdout_locations and add a
+{location_codes: [...]} subset. A subset that contains every test sample (e.g. oos_piers
+while uq.insitu_filter keeps only pier rows) is flagged identical_to_full_test_set.
 
 Models, calibrators, splits and fusion weights are unchanged: the trained
 bundle and the cached matchup frame (models/matchups_<token>.parquet) are
@@ -18,7 +23,9 @@ Config (optional; CLI flags override):
     evaluation:
       subsets:
         oos_piers: {sources: oos_piers}            # combined_full + calhabmap_erddap
+        non_pier: {exclude_sources: oos_piers}
         ifcb: {methods: [ifcb]}
+        holdout_piers: {location_codes: [SMP, MBF]}  # with uq.splits.holdout_locations
       subset_insitu_file: /path/combined_augmented.csv
       subset_recalibrate_fusion: false             # true: fusion weights from subset calibration rows
 
@@ -47,12 +54,13 @@ import yaml
 from sit_fuse.pipelines.habs.uq.hab_insitu import (
     SOURCE_PRESETS, insitu_mask, load_insitu, species_frame)
 from sit_fuse.pipelines.habs.uq.hab_uq_common import insitu_date_kwargs, species_spec
-from sit_fuse.pipelines.habs.uq.hab_uq_evaluate import grouped_bootstrap, predict_samples, score_block
+from sit_fuse.pipelines.habs.uq.hab_uq_evaluate import (
+    eval_options, grouped_bootstrap, prediction_table, predict_samples, score_block)
 
 LOG = logging.getLogger(__name__)
 PROV = ("source", "method")
 SUMMARY_KEYS = ("balanced_accuracy", "weighted_f1", "macro_f1", "accuracy", "qwk", "rps",
-                "rpss_vs_climatology", "classwise_ece", "interval_90_coverage")
+                "rpss_vs_climatology", "classwise_ece", "interval_90_coverage", "interval_90_recal_coverage")
 
 
 def default_subsets() -> dict[str, dict]:
@@ -126,7 +134,9 @@ def evaluate_subsets(bundle: dict, frame: pd.DataFrame, yml: dict, out_dir, subs
     if mc is not None:
         mc = mc.drop(columns=[c for c in PROV if c in mc.columns]).join(prov, on="sample_uid")
     pi = bundle["pi_true"]
+    eo = eval_options(bundle)
     root = Path(out_dir)
+    n_all = int(meta["sample_uid"].nunique())
     reports, rows = {}, []
     for name, flt in subsets.items():
         m = insitu_mask(meta.fillna({c: "" for c in PROV if c in meta.columns}), flt)
@@ -136,28 +146,36 @@ def evaluate_subsets(bundle: dict, frame: pd.DataFrame, yml: dict, out_dir, subs
                "stations": sorted(meta.loc[m, "Location_Code"].astype(str).unique().tolist()),
                "sources": meta.loc[m, "source"].value_counts().to_dict() if "source" in meta else None,
                "events_by_threshold": _events(meta[m], spec)}
+        # a provenance subset equal to the whole test set is not a separate test (e.g. oos_piers
+        # while uq.insitu_filter leaves only pier rows); flag it instead of reporting it as one
+        rep["identical_to_full_test_set"] = bool(m.all())
+        rep["share_of_test_samples"] = n / max(n_all, 1)
+        if m.all():
+            LOG.warning("%s/%s: subset contains every test sample (%d); it repeats the full evaluation. "
+                        "Check uq.insitu_filter (training/eval provenance) against the subset filter.",
+                        bundle["species"], name, n)
         if m.sum() < 5:
             rep["error"] = "fewer than 5 test rows in subset"
             reports[name] = rep
             LOG.warning("%s/%s: %s", bundle["species"], name, rep["error"])
             continue
         Pm, mm, bm = P[m], meta[m].reset_index(drop=True), base[m]
-        rep["overall"] = score_block(Pm, mm, spec, pi, bm)
+        rep["overall"] = score_block(Pm, mm, spec, pi, bm, **eo)
         rep["overall_ci"] = grouped_bootstrap(Pm, mm, spec, pi, n_boot=n_boot,
-                                              keys=("rps", "weighted_f1", "balanced_accuracy", "macro_f1"))
-        rep["by_sensor"] = {s: score_block(Pm[i], mm.iloc[i], spec, pi, bm[i])
+                                              keys=("rps", "weighted_f1", "balanced_accuracy", "macro_f1"),
+                                              decision=eo["decision"])
+        rep["by_sensor"] = {s: score_block(Pm[i], mm.iloc[i], spec, pi, bm[i], **eo)
                             for s, i in mm.groupby("sensor").indices.items() if len(i) >= 5}
         if Pc is not None and len(bundle["sensors"]) > 1:
             cm = insitu_mask(mc.fillna({c: "" for c in PROV if c in mc.columns}), flt) \
                 if ev.get("subset_recalibrate_fusion", False) else np.ones(len(mc), bool)
             fz = fuse_samples(bundle, Pc[cm], mc[cm].reset_index(drop=True), Pm, mm,
                               method=uq.get("fusion", {}).get("pool", "log"))
-            rep["fused"] = score_block(fz["P_test"], fz["meta_test"], spec, pi)
+            rep["fused"] = score_block(fz["P_test"], fz["meta_test"], spec, pi, **eo)
             rep["fused"]["weights"] = fz["weights"]
         d = root / name
         d.mkdir(parents=True, exist_ok=True)
-        pd.concat([mm, pd.DataFrame(Pm, columns=[f"p_{c}" for c in range(Pm.shape[1])]),
-                   pd.Series(bm, name="production_bin")], axis=1).to_csv(
+        prediction_table(Pm, mm, bm, spec, eo).to_csv(
             d / f"hab_uq_test_predictions_{spec.fname_token}.csv", index=False)
         with open(d / f"hab_uq_evaluation_{spec.fname_token}.json", "w") as f:
             json.dump(rep, f, indent=2, default=lambda o: o.tolist() if hasattr(o, "tolist") else str(o))
@@ -166,6 +184,7 @@ def evaluate_subsets(bundle: dict, frame: pd.DataFrame, yml: dict, out_dir, subs
             if not blk:
                 continue
             r = {"species": bundle["species"], "subset": name, "product": prod,
+                 "identical_to_full": rep["identical_to_full_test_set"],
                  "n_samples": n, "n_rows": int(m.sum()) if prod != "fused" else int(rep["fused"]["n_samples"]),
                  **{k: blk.get(k) for k in SUMMARY_KEYS}}
             for t, e in (blk.get("exceedance") or {}).items():

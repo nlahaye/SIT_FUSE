@@ -12,7 +12,13 @@ Metrics
   probabilistic NLL, multiclass Brier, ranked probability score (RPS) and skill
                 vs climatology (RPSS), class-wise ECE (sf_uq_utils.reliability_table)
   exceedance    per alert threshold: Brier, ECE, ROC AUC, reliability table
-  intervals     coverage of the q05-q95 log10 interval, mean width (dex)
+  intervals     coverage of the q05-q95 log10 interval, mean width (dex). Left-censored
+                observations (at or below the detection floor) count as covered when the
+                lower bound reaches bin 0 (hab_uq_selection.interval_covered); the previous
+                uncensored check is kept as interval_90_coverage_legacy. With
+                uq.intervals.recalibrate, interval_90_recal_* scores the calibrated tails.
+  decision      hard metrics use the bundle's decision rule (uq.decision); uq_argmax keeps
+                the argmax scores when the rule differs
   selective     risk-coverage (AURC) on predictive entropy, metrics at the
                 calibrated selective threshold
   baseline      the same metrics for the production-analogue hard assignment
@@ -39,6 +45,7 @@ import pandas as pd
 
 from sit_fuse.train.sf_uq_utils import (
     EPS, full_proba, predictive_entropy_norm, reliability_table, risk_coverage)
+from sit_fuse.pipelines.habs.uq.hab_uq_selection import decide, interval_bounds, interval_report
 from sit_fuse.pipelines.habs.uq.hab_uq_common import (
     exceedance_probability, log10_concentration_quantile, ranked_probability_score, species_spec)
 from sit_fuse.pipelines.habs.uq.hab_uq_matchups import sample_level
@@ -90,7 +97,7 @@ def hard_scores(pred, y, w, C) -> dict[str, float]:
     }
 
 
-def prob_scores(P, y, w, spec, pi_clim, log10_obs=None) -> dict[str, Any]:
+def prob_scores(P, y, w, spec, pi_clim, log10_obs=None, interval_cal=None) -> dict[str, Any]:
     C = P.shape[1]
     wn = np.asarray(w, float) / max(np.sum(w), EPS)
     Y = np.eye(C)[y]
@@ -122,21 +129,32 @@ def prob_scores(P, y, w, spec, pi_clim, log10_obs=None) -> dict[str, Any]:
                 from sklearn.metrics import roc_auc_score
                 d["roc_auc"] = float(roc_auc_score(ye, pe, sample_weight=w))
             out["exceedance"][f"{t:g}"] = d
-        lo = log10_concentration_quantile(P, spec.edges, 0.05, spec.detection_floor)
-        hi = log10_concentration_quantile(P, spec.edges, 0.95, spec.detection_floor)
-        lv = np.asarray(log10_obs)
-        out["interval_90_coverage"] = float(np.average((lv >= lo) & (lv <= hi), weights=w))
-        out["interval_90_mean_width_dex"] = float(np.average(hi - lo, weights=w))
+        # nominal q05-q95, censored-aware (non-detects at the detection floor count as covered
+        # when the lower bound reaches bin 0); _legacy keeps the previous uncensored check
+        out.update(interval_report(P, log10_obs, w, spec, 0.05, 0.0, "interval_90"))
+        if interval_cal:
+            out.update(interval_report(P, log10_obs, w, spec, interval_cal["tail"],
+                                       interval_cal.get("pad_dex", 0.0), "interval_90_recal"))
     return out
 
 
-def score_block(P, meta, spec, pi_clim, baseline=None, selective_thr=None) -> dict[str, Any]:
+def eval_options(bundle) -> dict[str, Any]:
+    """Decision rule and interval calibration stored in a bundle (argmax / none for older bundles)."""
+    return {"decision": (bundle.get("decision") or {}).get("rule", "argmax"),
+            "interval_cal": bundle.get("interval_calibration")}
+
+
+def score_block(P, meta, spec, pi_clim, baseline=None, selective_thr=None, decision="argmax",
+                interval_cal=None) -> dict[str, Any]:
     C = P.shape[1]
     y = meta["ref_label"].to_numpy().astype(int)
     w = meta["weight"].to_numpy(dtype=float)
-    pred = P.argmax(1)
-    res = {"n_samples": int(len(y)), "uq": {**hard_scores(pred, y, w, C),
-                                             **prob_scores(P, y, w, spec, pi_clim, meta["log10_value"].to_numpy())}}
+    pred = decide(P, decision)
+    res = {"n_samples": int(len(y)), "decision_rule": decision,
+           "uq": {**hard_scores(pred, y, w, C),
+                  **prob_scores(P, y, w, spec, pi_clim, meta["log10_value"].to_numpy(), interval_cal)}}
+    if decision != "argmax":
+        res["uq_argmax"] = hard_scores(P.argmax(1), y, w, C)      # previous decision, for comparison
     u = predictive_entropy_norm(P)
     res["uq"]["risk_coverage_entropy"] = risk_coverage(u, (pred != y), w)
     if selective_thr is not None and np.isfinite(selective_thr):
@@ -159,7 +177,8 @@ def _baseline_tier1(meta: pd.DataFrame, C: int) -> dict[str, float]:
             "rps": float(np.average(ranked_probability_score(np.eye(C)[b], y), weights=w))}
 
 
-def grouped_bootstrap(P, meta, spec, pi_clim, n_boot=500, seed=0, keys=("rps", "weighted_f1", "qwk", "nll")):
+def grouped_bootstrap(P, meta, spec, pi_clim, n_boot=500, seed=0, keys=("rps", "weighted_f1", "qwk", "nll"),
+                      decision="argmax"):
     rng = np.random.default_rng(seed)
     groups = meta["split_group"].to_numpy()
     ug = np.unique(groups)
@@ -169,7 +188,7 @@ def grouped_bootstrap(P, meta, spec, pi_clim, n_boot=500, seed=0, keys=("rps", "
         draw = rng.choice(ug, size=ug.size, replace=True)
         idx = np.concatenate([idx_by_g[g] for g in draw])
         m = meta.iloc[idx]
-        r = {**hard_scores(P[idx].argmax(1), m["ref_label"].to_numpy().astype(int),
+        r = {**hard_scores(decide(P[idx], decision), m["ref_label"].to_numpy().astype(int),
                            m["weight"].to_numpy(float), P.shape[1]),
              **prob_scores(P[idx], m["ref_label"].to_numpy().astype(int), m["weight"].to_numpy(float),
                            spec, pi_clim)}
@@ -215,6 +234,18 @@ def predict_samples(bundle, frame: pd.DataFrame, split: str = "test"):
     return np.vstack(outP), pd.concat(outM, ignore_index=True), np.concatenate(outB)
 
 
+def prediction_table(P, meta, base, spec, eo) -> pd.DataFrame:
+    """Test predictions: probabilities, decision, nominal and recalibrated interval bounds."""
+    cols = {f"p_{c}": P[:, c] for c in range(P.shape[1])}
+    cols["production_bin"] = base
+    cols["pred_label"] = decide(P, eo["decision"])
+    cols["log10_lo90"], cols["log10_hi90"] = interval_bounds(P, spec, 0.05)
+    ic = eo.get("interval_cal")
+    if ic:
+        cols["log10_lo90_recal"], cols["log10_hi90_recal"] = interval_bounds(P, spec, ic["tail"], ic.get("pad_dex", 0.0))
+    return pd.concat([meta.reset_index(drop=True), pd.DataFrame(cols)], axis=1)
+
+
 def evaluate_bundle(bundle, frame: pd.DataFrame, out_dir, n_boot: int = 500,
                     strata=("sensor", "Location_Code", "season")) -> dict[str, Any]:
     spec = species_spec(bundle["species"], bundle["spec"])
@@ -225,8 +256,9 @@ def evaluate_bundle(bundle, frame: pd.DataFrame, out_dir, n_boot: int = 500,
         lambda m: {12: "DJF", 1: "DJF", 2: "DJF", 3: "MAM", 4: "MAM", 5: "MAM",
                    6: "JJA", 7: "JJA", 8: "JJA"}.get(m, "SON"))
     pi = bundle["pi_true"]
-    report = {"species": bundle["species"], "overall": score_block(P, meta, spec, pi, base),
-              "overall_ci": grouped_bootstrap(P, meta, spec, pi, n_boot=n_boot)}
+    eo = eval_options(bundle)
+    report = {"species": bundle["species"], "overall": score_block(P, meta, spec, pi, base, **eo),
+              "overall_ci": grouped_bootstrap(P, meta, spec, pi, n_boot=n_boot, decision=eo["decision"])}
     has_t1 = "production_bin_tier1" in meta.columns
     if has_t1:
         report["overall"]["production_baseline_tier1"] = _baseline_tier1(meta, P.shape[1])
@@ -238,6 +270,14 @@ def evaluate_bundle(bundle, frame: pd.DataFrame, out_dir, n_boot: int = 500,
     report["run_config"] = {
         "model_name": bundle.get("model_name"),
         "model_selection_calibration_rps": bundle.get("model_selection_calibration_rps"),
+        "model_trial": bundle.get("model_trial"),
+        "model_selection": {k: v for k, v in (bundle.get("model_selection") or {}).items() if k != "trials"},
+        "selected_class_weighting": bundle.get("class_weighting"),
+        "selected_prior_correction_strength": bundle.get("prior_correction_strength"),
+        "decision": bundle.get("decision"),
+        "interval_calibration": {k: v for k, v in (bundle.get("interval_calibration") or {}).items() if k != "grid"}
+        or None,
+        "holdout_locations": ((uq.get("splits") or {}).get("holdout_locations")),
         "input_mode": sorted(frame["input_mode"].dropna().unique().tolist())
         if "input_mode" in frame.columns else None,
         "blend_lambda": (uq.get("target") or {}).get("blend_lambda"),
@@ -260,14 +300,13 @@ def evaluate_bundle(bundle, frame: pd.DataFrame, out_dir, n_boot: int = 500,
             if len(idx) < 5:
                 continue
             thr = bundle["selective"].get(k, {}).get("threshold") if col == "sensor" else None
-            report[f"by_{col}"][str(k)] = score_block(P[idx], meta.iloc[idx], spec, pi, base[idx], thr)
+            report[f"by_{col}"][str(k)] = score_block(P[idx], meta.iloc[idx], spec, pi, base[idx], thr, **eo)
             if has_t1:
                 report[f"by_{col}"][str(k)]["production_baseline_tier1"] = _baseline_tier1(
                     meta.iloc[idx], P.shape[1])
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
-    pd.concat([meta, pd.DataFrame(P, columns=[f"p_{c}" for c in range(P.shape[1])]),
-               pd.Series(base, name="production_bin")], axis=1).to_csv(
+    prediction_table(P, meta, base, spec, eo).to_csv(
         out / f"hab_uq_test_predictions_{spec.fname_token}.csv", index=False)
     with open(out / f"hab_uq_evaluation_{spec.fname_token}.json", "w") as f:
         json.dump(report, f, indent=2, default=lambda o: o.tolist() if hasattr(o, "tolist") else str(o))

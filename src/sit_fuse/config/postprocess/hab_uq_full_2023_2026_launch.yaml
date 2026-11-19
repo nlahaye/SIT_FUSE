@@ -1,0 +1,106 @@
+# Local-launcher plan for the FULL run 2023-01-01..2026-09-30 (uq_full_2023_2026_ifcb), full California domain.
+# HAB YAML: hab_reflectance_geotiff_gen_s_ca_2023_2026_full_CA.yaml (copy to {yaml} below).
+#
+#   insitu ─► roles ─┐
+#                    ├─► train_eval x species ─┬─► subset_eval x species
+#   heads x instrument x year ─────────────────┘ └─► infer_fuse x species x year ─► animate
+#
+#   python -m sit_fuse.local_launcher list   hab_uq_full_2023_2026_launch.yaml
+#   python -m sit_fuse.local_launcher run    hab_uq_full_2023_2026_launch.yaml --dry-run
+#   python -m sit_fuse.local_launcher run    hab_uq_full_2023_2026_launch.yaml   (inside the MemoryMax scope below)
+#   python -m sit_fuse.local_launcher status hab_uq_full_2023_2026_launch.yaml
+#
+# Heads do not depend on in-situ data and start immediately (priority 1); existing *.head_outputs.tif in the
+# pilot_coast_products/ dirs (pilot window days) are skipped. 2023 days come from inference.extend_input_lists:
+# check the "extend_input_lists: N listed scenes in window, M added from disk" line in each heads log.
+# PACE starts 2024-03 (pace x 2023 finds no scenes and finishes quickly).
+# Resume: rerun the same command (markers/<job>.done). Failed jobs: --rerun-failed. One stage: --only 'heads.*'.
+# Every command passes -n <cpus> so compute.num_threads in the HAB YAML does not override the allocation.
+
+# Resource budget (16 cores, 2 GPUs, 181 GB): at most 1 GPU, 9 cores (60 %), ~108 GB (60 %).
+#   GPU / cores: enforced here (gpus: [0]; cpus: 9 with pin_cpus, so each job and its loader workers
+#   are bound to its own cores among 0-8). Memory: the launcher does not meter memory, so run it inside
+#   a cgroup with MemoryMax=108G (see the run commands in the reply / below):
+#   systemd-run --user --scope -p MemoryMax=108G -p MemoryHigh=100G -p MemorySwapMax=0 \
+#     python -m sit_fuse.local_launcher run hab_uq_full_2023_2026_launch.yaml
+launcher:
+  state_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/launch/uq_full_2023_2026
+  gpus: [0]               # one GPU only (was auto = both)
+  cpus: 9                 # 60 % of 16 cores (was 32)
+  pin_cpus: true          # bind jobs to cores 0-8; DataLoader workers inherit the affinity
+  max_parallel: null
+  retries: 0
+  nice: 10
+
+vars:
+  py: python
+  yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/postprocess/hab_reflectance_geotiff_gen_s_ca_2023_2026_full_CA.yaml
+  sources: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/postprocess/insitu_class_match/insitu_sources.example.yaml
+  root: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526
+  insitu_dir: /mnt/data1/habs/insitu_augmented_ifcb_2023_2026     # = uq.insitu_file directory in the HAB YAML
+  roles: "{root}/uq_full_2023_2026/date_roles.csv"                 # = uq.splits.date_roles_file
+
+jobs:
+  # 0) In-situ table: piers re-pulled from SCCOOS ERDDAP, CalCOFI, and IFCB with the PN chain correction
+  #    (insitu_sources pn_chain_correction). Cached IFCB bins are reused; only bins missing from the
+  #    cache (e.g. after the last pull) are requested. Writes combined_augmented.csv + _strict.csv.
+  - name: insitu
+    cmd: "{py} -m sit_fuse.pipelines.habs.insitu.pull_insitu_hab -y {sources} --out-dir {insitu_dir}"
+    cpus: 1
+    gpu: 0
+    provides: ["{insitu_dir}/combined_augmented.csv"]
+
+  # 1) Day roles for 2023-01..2026-09 (seed search spreads alert events over calibration / test).
+  - name: roles
+    cmd: "{py} -m sit_fuse.pipelines.habs.uq.hab_uq_pilot_plan -y {yaml} --mode resplit --seed-search 50 --out {roles}"
+    cpus: 1
+    gpu: 0
+    needs: ["{insitu_dir}/combined_augmented.csv"]
+    provides: ["{roles}"]
+    after: [{name: insitu, on: []}]
+
+  # 2) Head outputs, one job per instrument x year. Windows must lie inside uq.date_windows.
+  - name: heads
+    cmd: "{py} -m sit_fuse.pipelines.habs.hab_inference_pipeline -y {yaml} --stages heads --instruments {inst} --window {win} -n 4"
+    grid:
+      inst: [pace, olci, viirs, modis]
+      win: ["2023-01-01:2023-12-31", "2024-01-01:2024-12-31", "2025-01-01:2025-12-31", "2026-01-01:2026-09-30"]
+    cpus: 4               # was 6; two heads jobs share GPU 0 (gpu 0.5) on 8 of the 9 cores
+    gpu: 0.5
+    priority: 1
+
+  # 3) Train (model x class weighting x prior strength search, decision rule, interval calibration)
+  #    and evaluate, one job per species, after the roles file and ALL head jobs.
+  - name: train_eval
+    cmd: "{py} -m sit_fuse.pipelines.habs.uq.hab_uq_pipeline -y {yaml} --stages train,evaluate --species {sp} -n 4"
+    grid:
+      sp: [Pseudo_nitzschia_seriata_group, Pseudo_nitzschia_delicatissima_group, pDA]
+    cpus: 4               # was 8; two species at a time (use --max-parallel 1 if memory is tight)
+    gpu: 0
+    after: [{name: roles, on: []}, {name: heads, on: []}]
+
+  # 4) Provenance subsets (oos_piers, non_pier, ifcb[, holdout_piers]) of the test samples.
+  - name: subset_eval
+    cmd: "{py} -m sit_fuse.pipelines.habs.uq.hab_uq_subset_eval -y {yaml} --species {sp}"
+    grid:
+      sp: [Pseudo_nitzschia_seriata_group, Pseudo_nitzschia_delicatissima_group, pDA]
+    cpus: 2
+    gpu: 0
+    after: [{name: train_eval, on: [sp]}]
+
+  # 5) Per-sensor *.uq.tif and fusion per species x year (after that species' model).
+  - name: infer_fuse
+    cmd: "{py} -m sit_fuse.pipelines.habs.uq.hab_uq_pipeline -y {yaml} --stages infer,fuse --species {sp} --window {win} -n 3"
+    grid:
+      sp: [Pseudo_nitzschia_seriata_group, Pseudo_nitzschia_delicatissima_group, pDA]
+      win: ["2023-01-01:2023-12-31", "2024-01-01:2024-12-31", "2025-01-01:2025-12-31", "2026-01-01:2026-09-30"]
+    cpus: 3               # was 4; three at a time
+    gpu: 0
+    after: [{name: train_eval, on: [sp]}]
+
+  # 6) Animations, one job (shared animations/manifest.json).
+  - name: animate
+    cmd: "{py} -m sit_fuse.pipelines.habs.uq.hab_uq_pipeline -y {yaml} --stages animate -n 2"
+    cpus: 2
+    gpu: 0
+    after: [{name: infer_fuse, on: []}]

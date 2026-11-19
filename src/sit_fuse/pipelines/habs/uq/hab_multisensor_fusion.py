@@ -264,7 +264,8 @@ def fuse_day(uq_dir: str, date, species_token: str, sensors: list[str], weights:
 def run_fusion(uq_dir, out_dir, dates, bundle: dict[str, Any], method="log", temporal_filter=True,
                ref_local_hour=10.0, tau_hours=4.0, stay=0.7, quality="selective"):
     """Daily fused products + optional ordinal Bayesian filter across days."""
-    from sit_fuse.pipelines.habs.uq.hab_uq_inference import summarize_probabilities
+    from sit_fuse.pipelines.habs.uq.hab_uq_inference import bundle_summary_options, summarize_probabilities
+    so = bundle_summary_options(bundle)   # decision rule; per-sensor interval tails applied to fused P
     spec = species_spec(bundle["species"], bundle["spec"])
     C, sensors = bundle["n_classes"], bundle["sensors"]
     w = bundle.get("fusion_weights") or dict(zip(sensors, skill_weights(bundle, sensors)))
@@ -282,12 +283,12 @@ def run_fusion(uq_dir, out_dir, dates, bundle: dict[str, Any], method="log", tem
         if days[k][0] is not None:
             Fk = days[k][0].reshape(-1, C)
             ok = np.isfinite(Fk).all(1)
-            s = summarize_probabilities(np.where(ok[:, None], Fk, 1.0 / C), None, spec, None)
+            s = summarize_probabilities(np.where(ok[:, None], Fk, 1.0 / C), None, spec, None, **so)
             layers.update({f"fused_{n}": np.where(ok, v, NODATA).reshape(Hh, Ww) for n, v in s.items()})
             layers.update(days[k][1])
         if filt is not None:
             post, since = filt[k]
-            s = summarize_probabilities(post, None, spec, None)
+            s = summarize_probabilities(post, None, spec, None, **so)
             layers.update({f"filtered_{n}": v.reshape(Hh, Ww) for n, v in s.items()})
             layers["days_since_observation"] = np.where(np.isfinite(since), since, NODATA).reshape(Hh, Ww)
         if not layers:
