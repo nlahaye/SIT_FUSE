@@ -17,7 +17,13 @@ Metrics
                 calibrated selective threshold
   baseline      the same metrics for the production-analogue hard assignment
                 (histogram-mode context assignment, train-only) so UQ products
-                are compared with what the HAB pipeline ships today
+                are compared with what the HAB pipeline ships today: joint ->
+                own parent -> spatial tier 2 when context_encoder.spatial_tier is
+                on (production_baseline), plus the tier-1-only analogue
+                (production_baseline_tier1)
+  coverage      share of test pixels / samples whose hard assignment comes from
+                the joint cluster, its parent, the spatial tier or none
+                (assignment_coverage), and all scores per dominant tier (by_assign_tier)
 CIs: grouped bootstrap over split groups (station x time block).
 Stratification: sensor, station, season, and any extra column.
 """
@@ -37,6 +43,30 @@ from sit_fuse.pipelines.habs.uq.hab_uq_common import (
     exceedance_probability, log10_concentration_quantile, ranked_probability_score, species_spec)
 from sit_fuse.pipelines.habs.uq.hab_uq_matchups import sample_level
 from sit_fuse.pipelines.habs.uq.hab_uq_train import add_sensor_columns
+from sit_fuse.pipelines.habs.uq.hab_context_encoder import TIER_NAMES
+
+
+def assignment_coverage(frame: pd.DataFrame, meta: pd.DataFrame, split: str = "test") -> dict[str, Any]:
+    """Pixel and sample shares of the hard-assignment tier, overall and per sensor."""
+    if "assign_tier" not in frame.columns:
+        return {}
+    rows = frame[frame["split"] == split]
+
+    def block(r, m):
+        t = np.clip(r["assign_tier"].to_numpy().astype(int), 0, len(TIER_NAMES) - 1)
+        n = np.bincount(t, minlength=len(TIER_NAMES)).astype(float)
+        w = np.bincount(t, weights=r["pix_weight"].to_numpy(float), minlength=len(TIER_NAMES))
+        out = {"n_pixels": int(n.sum()),
+               "pixel_share": {k: float(v) for k, v in zip(TIER_NAMES, n / max(n.sum(), 1))},
+               "weighted_pixel_share": {k: float(v) for k, v in zip(TIER_NAMES, w / max(w.sum(), EPS))}}
+        if "assign_tier" in m.columns:
+            vc = m["assign_tier"].value_counts(normalize=True)
+            out["sample_share_dominant"] = {k: float(vc.get(k, 0.0)) for k in TIER_NAMES}
+        return out
+    res = {"overall": block(rows, meta), "by_sensor": {}}
+    for s, r in rows.groupby("sensor"):
+        res["by_sensor"][str(s)] = block(r, meta[meta["sensor"] == s])
+    return res
 
 
 def _qwk(y, p, C, w):
@@ -121,6 +151,14 @@ def score_block(P, meta, spec, pi_clim, baseline=None, selective_thr=None) -> di
     return res
 
 
+def _baseline_tier1(meta: pd.DataFrame, C: int) -> dict[str, float]:
+    b = meta["production_bin_tier1"].to_numpy().astype(int)
+    y = meta["ref_label"].to_numpy().astype(int)
+    w = meta["weight"].to_numpy(dtype=float)
+    return {**hard_scores(b, y, w, C),
+            "rps": float(np.average(ranked_probability_score(np.eye(C)[b], y), weights=w))}
+
+
 def grouped_bootstrap(P, meta, spec, pi_clim, n_boot=500, seed=0, keys=("rps", "weighted_f1", "qwk", "nll")):
     rng = np.random.default_rng(seed)
     groups = meta["split_group"].to_numpy()
@@ -162,6 +200,15 @@ def predict_samples(bundle, frame: pd.DataFrame, split: str = "test"):
         # production analogue: majority of hard context-assigned bins in radius
         H = np.column_stack([sub[f"assign_hard_{c}"].to_numpy() for c in range(C)])
         Hs, _ = sample_level(H, sub)
+        if f"assign_hard_t1_{C - 1}" in sub.columns:
+            H1 = np.column_stack([sub[f"assign_hard_t1_{c}"].to_numpy() for c in range(C)])
+            meta["production_bin_tier1"] = sample_level(H1, sub)[0].argmax(1)
+        if "assign_tier" in sub.columns:
+            t = np.clip(sub["assign_tier"].to_numpy().astype(int), 0, len(TIER_NAMES) - 1)
+            Ts, _ = sample_level(np.eye(len(TIER_NAMES))[t], sub)
+            for i, nm in enumerate(TIER_NAMES):
+                meta[f"tier_share_{nm}"] = Ts[:, i]
+            meta["assign_tier"] = np.asarray(TIER_NAMES, dtype=object)[Ts.argmax(1)]
         outP.append(Q); outM.append(meta); outB.append(Hs.argmax(1))
     if not outP:
         return None, None, None
@@ -180,6 +227,12 @@ def evaluate_bundle(bundle, frame: pd.DataFrame, out_dir, n_boot: int = 500,
     pi = bundle["pi_true"]
     report = {"species": bundle["species"], "overall": score_block(P, meta, spec, pi, base),
               "overall_ci": grouped_bootstrap(P, meta, spec, pi, n_boot=n_boot)}
+    has_t1 = "production_bin_tier1" in meta.columns
+    if has_t1:
+        report["overall"]["production_baseline_tier1"] = _baseline_tier1(meta, P.shape[1])
+    cov = assignment_coverage(frame, meta)
+    if cov:
+        report["assignment_coverage"] = cov
     uq = bundle.get("uq_cfg") or {}
     clf = uq.get("classifier") or {}
     report["run_config"] = {
@@ -194,9 +247,13 @@ def evaluate_bundle(bundle, frame: pd.DataFrame, out_dir, n_boot: int = 500,
         "radius_km": uq.get("radius_km"), "nearest_fallback": uq.get("nearest_fallback"),
         "sample_weighting": bundle.get("sample_weighting"),
         "n_test_fallback": int(meta["match_fallback"].sum()) if "match_fallback" in meta else 0,
+        "pool_sensor_group": (uq.get("context_encoder") or {}).get("pool_sensor_group", False),
+        "spatial_tier": (uq.get("context_encoder") or {}).get("spatial_tier"),
     }
     if "match_fallback" in meta.columns and meta["match_fallback"].nunique() > 1:
         strata = tuple(strata) + ("match_fallback",)
+    if "assign_tier" in meta.columns:
+        strata = tuple(strata) + ("assign_tier",)
     for col in strata:
         report[f"by_{col}"] = {}
         for k, idx in meta.groupby(col).indices.items():
@@ -204,6 +261,9 @@ def evaluate_bundle(bundle, frame: pd.DataFrame, out_dir, n_boot: int = 500,
                 continue
             thr = bundle["selective"].get(k, {}).get("threshold") if col == "sensor" else None
             report[f"by_{col}"][str(k)] = score_block(P[idx], meta.iloc[idx], spec, pi, base[idx], thr)
+            if has_t1:
+                report[f"by_{col}"][str(k)]["production_baseline_tier1"] = _baseline_tier1(
+                    meta.iloc[idx], P.shape[1])
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     pd.concat([meta, pd.DataFrame(P, columns=[f"p_{c}" for c in range(P.shape[1])]),

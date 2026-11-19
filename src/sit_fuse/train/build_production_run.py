@@ -25,8 +25,16 @@ With a `fusion:` section ({name: {config: <evaluation fusion config>, pipelines:
 shards, cpus, grids}}) it writes <output_root>/configs/fusion_<name>.yaml (sources -> the production geo dirs,
 fusion.models_from -> the evaluation fusion output_dir, references {}, output.splits [production]) and adds
 fusion_apply (shards, after both geo exports) -> fusion_merge jobs; fused rasters land in <output_root>/fusion_<name>/.
+A fusion with `sources: evaluation` (+ `dates: [YYYY-MM-DD, ...]`, optional `splits`) keeps the evaluation config's
+geo dirs instead (e.g. past events such as the LA / Park fires) and applies the frozen weights to all splits of those
+days; it needs no production pipeline and runs right away. Fused products are available to the animations as
+fused_<fusion name> (and fused_<product> when there is one production fusion).
 With an `animation:` section it also writes <output_root>/configs/overlay_animation.yaml (make_overlay_animations.py)
-with the product geo dirs (and fused products, sensor: fused) filled in.
+with the product geo dirs (and fused products, sensor: fused) filled in. With `animation.sets: {name: overrides}`
+each set (bbox, time_range, resolution, split_by, frames, include, shards, cpus, title, observations, products ...;
+unset keys come from animation:) writes <output_root>/configs/overlay_animation_<name>.yaml and an animate_<name> job
+(output <animation output_dir>/<name>/). A set with explicit `products` (evaluation geo dirs) uses only those plus
+its own include list. --animation-sets a b limits the plan to those sets.
 
 The plan reuses plan_uq_jobs.build_plan for inference and geo export (stages [infer, geo]; no evaluation, since there
 is no reference), adds the head-export jobs before inference and the animation jobs after the geo export. Rerunning
@@ -76,20 +84,38 @@ def _abs(base, p):
     return str(p if p.is_absolute() else (base / p).resolve())
 
 
-def list_inputs(sc, t0, t1, bbox, base):
-    """Inputs of one sensor in [t0, t1) (and intersecting bbox [W, E, S, N])."""
+def list_inputs(sc, t0, t1, bbox, base, name="sensor"):
+    """Inputs of one sensor in [t0, t1) (and intersecting bbox [W, E, S, N]).
+
+    sensors.<s>.bbox_filter: true (default) | false. Files without readable georeferencing (no CRS / GCPs,
+    e.g. GOES GeoTIFFs whose lat/lon come from the netCDF geo reader) are kept, since they cannot be tested.
+    Returns (inputs, counts); counts explains where candidates were dropped."""
     dirs = sc["inputs"] if isinstance(sc["inputs"], list) else [sc["inputs"]]
     pat = sc.get("pattern", "*.tif")
     rec = bool(sc.get("recursive", False))
     excl = sc.get("exclude", DEFAULT_EXCLUDE)
+    n = {"dirs_missing": [], "matched": 0, "excluded": 0, "no_time": 0, "outside_time": 0,
+         "no_georef_kept": 0, "outside_bbox": 0, "subsampled": 0, "first_times": []}
     cand = []
     for d in dirs:
-        for p in sorted(glob.glob(str(Path(_abs(base, d)) / ("**" if rec else "") / pat), recursive=rec)):
-            n = Path(p).name
-            if any(e in n for e in excl):
+        dd = Path(_abs(base, d))
+        if not dd.is_dir():
+            n["dirs_missing"].append(str(dd))
+            continue
+        for p in sorted(glob.glob(str(dd / ("**" if rec else "") / pat), recursive=rec)):
+            n["matched"] += 1
+            fn = Path(p).name
+            if any(e in fn for e in excl):
+                n["excluded"] += 1
                 continue
-            t = time_from_name(n)
-            if t is None or not (t0 <= t < t1):
+            t = time_from_name(fn)
+            if t is None:
+                n["no_time"] += 1
+                continue
+            if len(n["first_times"]) < 3:
+                n["first_times"].append(str(t))
+            if not (t0 <= t < t1):
+                n["outside_time"] += 1
                 continue
             cand.append((p, t))
     cand.sort(key=lambda x: (x[1], x[0]))
@@ -102,16 +128,24 @@ def list_inputs(sc, t0, t1, bbox, base):
         groups = list(bins.values())
     else:
         groups = [[c] for c in cand]
+    use_bbox = bbox is not None and bool(sc.get("bbox_filter", True))
     out = []
     for g in groups:
         for p, t in g:                       # first input of the bin that intersects the bbox
-            if bbox is not None:
+            if use_bbox:
                 b = file_bounds_4326(p)
-                if b is None or not (b[0] < bbox[1] and b[2] > bbox[0] and b[1] < bbox[3] and b[3] > bbox[2]):
+                if b is None:
+                    n["no_georef_kept"] += 1
+                elif not (b[0] < bbox[1] and b[2] > bbox[0] and b[1] < bbox[3] and b[3] > bbox[2]):
+                    n["outside_bbox"] += 1
                     continue
             out.append((p, t))
             break
-    return out
+    n["subsampled"] = len(cand) - len(out) - n["outside_bbox"]
+    if n["no_georef_kept"]:
+        print(f"NOTE {name}: {n['no_georef_kept']} input(s) have no CRS/GCPs; kept without the bbox test "
+              f"(set sensors.{name}.bbox_filter: false to skip the test)")
+    return out, n
 
 
 def head_settings(pipe, uq, base):
@@ -173,6 +207,8 @@ def main(argv=None):
                    help="add the animation jobs (overrides animation.enabled)")
     g.add_argument("--no-animation", dest="animation", action="store_false",
                    help="write the animation config but add no animation jobs")
+    ap.add_argument("--animation-sets", nargs="+", default=None, metavar="SET",
+                    help="only these animation.sets (default: all)")
     argv = list(sys.argv[1:] if argv is None else argv)
     extra = argv[argv.index("--") + 1:] if "--" in argv else []
     a = ap.parse_args(argv[:len(argv) - len(extra) - (1 if "--" in argv else 0)])
@@ -188,11 +224,20 @@ def main(argv=None):
     n_ex_shards = int(ex_cfg.get("shards", 1))
 
     inputs = {}
+    used_sensors = {p["sensor"] for p in pipes.values()}
     for s, sc in sensors.items():
-        inputs[s] = list_inputs(sc, t0, t1, bbox, base)
+        inputs[s], cnt = list_inputs(sc, t0, t1, bbox, base, s)
         print(f"{s}: {len(inputs[s])} inputs in [{t0:%Y-%m-%d %H:%M}, {t1:%Y-%m-%d %H:%M}) UTC"
-              + (f" in bbox {bbox}" if bbox else "")
+              + (f" in bbox {bbox}" if bbox and sc.get("bbox_filter", True) else "")
               + (f", first per {sc['every_minutes']} min" if sc.get("every_minutes") else ""))
+        if not inputs[s] and s in used_sensors:
+            raise SystemExit(
+                f"ERROR {s}: no inputs selected, so its scenes.yaml would be empty.\n"
+                f"  inputs {sc['inputs']}, pattern {sc.get('pattern', '*.tif')!r}\n"
+                f"  missing dirs {cnt['dirs_missing']}; files matching pattern {cnt['matched']}; "
+                f"excluded by name {cnt['excluded']}; no time in name {cnt['no_time']}; "
+                f"outside [start, end) {cnt['outside_time']} (first parsed times {cnt['first_times']}); "
+                f"outside bbox {cnt['outside_bbox']}")
 
     exports = {}                    # key -> {name, settings, sensor, pipes}
     planner_pipes, summary, scene_hash = {}, [], {}
@@ -291,10 +336,16 @@ def main(argv=None):
     for fname, fs in (cfg.get("fusion") or {}).items():
         ecfg_path = _abs(base, fs["config"])
         fcfg = copy.deepcopy(_read(ecfg_path))
+        ev_src = str(fs.get("sources", "production")).lower() == "evaluation"
         fmap = fs.get("pipelines") or {}
         if isinstance(fmap, list):              # [tempo_smoke, goes_smoke] -> by sensor
             fmap = {pipes[x]["sensor"]: x for x in fmap}
         for src, sc in (fcfg.get("sources") or {}).items():
+            if ev_src:                          # evaluation-period geo products (e.g. past events), no production deps
+                for k in ("geo_dir", "manifest"):
+                    if sc.get(k):
+                        sc[k] = _abs(Path(ecfg_path).parent, sc[k])
+                continue
             pipe = fmap.get(src)
             if pipe not in pipes:
                 raise ValueError(f"fusion {fname}: source {src!r} needs a production pipeline (fusion.{fname}.pipelines)")
@@ -307,32 +358,50 @@ def main(argv=None):
         if not (Path(fit_dir) / "fusion_models.pkl").exists() and not str(fit_dir).endswith(".pkl"):
             print(f"WARNING fusion {fname}: {fit_dir}/fusion_models.pkl not found (fit the evaluation fusion first)")
         fout = root / f"fusion_{fname}"
-        fcfg.update({"output_dir": str(fout), "references": {},
-                     "output": dict(fcfg.get("output") or {}, splits=["production"])})
+        if ev_src:                              # all classifier splits of the selected days
+            splits = fs.get("splits") or ["calibration", "holdout", "dev", "mixed", "none"]
+            fcfg.update({"output_dir": str(fout), "references": {},
+                         "output": dict(fcfg.get("output") or {}, splits=list(splits))})
+            if fs.get("dates"):
+                fcfg["temporal"] = dict(fcfg.get("temporal") or {}, dates=[str(d) for d in fs["dates"]])
+        else:
+            fcfg.update({"output_dir": str(fout), "references": {},
+                         "output": dict(fcfg.get("output") or {}, splits=["production"])})
         fcfg["fusion"] = dict(fcfg.get("fusion") or {}, models_from=str(fit_dir))
         if fs.get("grids"):
             fcfg["grids"] = {g: v for g, v in fcfg["grids"].items() if g in fs["grids"]}
             fcfg["fusion"]["grids"] = [g for g in fcfg["fusion"].get("grids", fs["grids"]) if g in fs["grids"]]
         fpath = _write(cdir / f"fusion_{fname}.yaml", fcfg)
         nfs, fcpus = int(fs.get("shards", 1)), int(fs.get("cpus", 2))
-        used = sorted(set(fmap[x] for x in fcfg["sources"]))
-        sh = hashlib.sha1(" ".join(scene_hash[x] for x in used).encode()).hexdigest()[:10]
+        used = [] if ev_src else sorted(set(fmap[x] for x in fcfg["sources"]))
+        sh = hashlib.sha1(" ".join(scene_hash[x] for x in used).encode()).hexdigest()[:10] if used else "evaluation"
         sh += " cfg " + hashlib.sha1(Path(fpath).read_bytes()).hexdigest()[:8]   # config edits -> rerun
         fu = f"cd {td} && {py} fuse_multiscale_products.py -c {shlex.quote(str(fpath))}"
-        fu_jobs.append({"name": f"fusion_apply_{fname}", "cmd": fu + f" --stage apply --shard {{shard}}/{nfs} -n {fcpus}"
-                        f" # scenes {sh}", "cases": [{"shard": i} for i in range(nfs)], "id_keys": ["shard"],
-                        "cpus": fcpus, "needs": [str(state / "tokens" / f"geo_{x}") for x in used]})
         ftok = str(state / "tokens" / f"fusion_{fname}")
-        fu_jobs.append({"name": f"fusion_merge_{fname}", "cmd": fu + f" --stage merge --n-shards {nfs} -n 1 # scenes {sh}",
-                        "cases": [{}], "id_keys": [], "cpus": 1, "after": [f"fusion_apply_{fname}"], "provides": [ftok]})
-        grid = (cfg.get("animation") or {}).get("fusion_grid", fs.get("animation_grid", "fine"))
+        fneeds = [str(state / "tokens" / f"geo_{x}") for x in used]
+        if nfs > 1:                             # apply shards -> merge
+            fu_jobs.append({"name": f"fusion_apply_{fname}", "cmd": fu + f" --stage apply --shard {{shard}}/{nfs} "
+                            f"-n {fcpus} # scenes {sh}", "cases": [{"shard": i} for i in range(nfs)],
+                            "id_keys": ["shard"], "cpus": fcpus, "needs": fneeds})
+            fu_jobs.append({"name": f"fusion_merge_{fname}", "cmd": fu + f" --stage merge --n-shards {nfs} -n 1 "
+                            f"# scenes {sh}", "cases": [{}], "id_keys": [], "cpus": 1,
+                            "after": [f"fusion_apply_{fname}"], "provides": [ftok]})
+        else:                                   # one shard: a single apply writes the final outputs (no merge)
+            fu_jobs.append({"name": f"fusion_apply_{fname}", "cmd": fu + f" --stage apply -n {fcpus} # scenes {sh}",
+                            "cases": [{}], "id_keys": [], "cpus": fcpus, "needs": fneeds, "provides": [ftok]})
+        grid = fs.get("animation_grid") or (cfg.get("animation") or {}).get("fusion_grid", "fine")
         fprod = str(fcfg.get("product", "smoke")).lower()
-        fused_prods[f"fused_{fprod}" if len(cfg["fusion"]) == 1 else f"fused_{fname}"] = {
-            "geo_dir": str(fout / grid), "model": "fused", "product": fprod, "style": fprod, "sensor": "fused",
-            "_tok": ftok}
-        summary.append(f"  fusion {fname}: sources {fmap} -> {fout} (weights from {fit_dir}, {nfs} shard(s))")
+        spec = {"geo_dir": str(fout / grid), "model": "fused", "product": fprod, "style": fprod, "sensor": "fused",
+                "_tok": ftok}
+        fused_prods[f"fused_{fname}"] = spec                    # always available by fusion name
+        prod_fusions = [n for n, x in (cfg.get("fusion") or {}).items()
+                        if str(x.get("sources", "production")).lower() != "evaluation"]
+        if not ev_src and len(prod_fusions) == 1:
+            fused_prods[f"fused_{fprod}"] = spec                # single production fusion: fused_<product> alias
+        summary.append(f"  fusion {fname}: sources {'evaluation geo dirs' if ev_src else fmap} -> {fout} "
+                       f"(weights from {fit_dir}, {nfs} shard(s))")
 
-    # overlay animations
+    # overlay animations: one set (animation:) or several (animation.sets: {name: overrides})
     an_jobs = []
     an = cfg.get("animation")
     an_on = bool(an) and (a.animation if a.animation is not None else bool(an.get("enabled", True)))
@@ -348,43 +417,72 @@ def main(argv=None):
                 "style": prod,
                 "sensor": p["sensor"], "_tok": str(state / "tokens" / f"geo_{name}")}
         prods.update(fused_prods)
-        obs = copy.deepcopy(an.get("observations") or {})
-        if "goes" in sensors and "goes" in obs and not obs["goes"].get("dir"):
-            obs["goes"]["dir"] = sensors["goes"]["inputs"]
-            obs["goes"].setdefault("pattern", sensors["goes"].get("pattern", "OR_ABI-*.tif"))
-        for o in obs.values():
-            if o.get("dir"):
-                o["dir"] = _abs(base, o["dir"]) if not isinstance(o["dir"], list) else [_abs(base, x) for x in o["dir"]]
-        acfg = {k: v for k, v in an.items() if k not in ("observations", "models", "model", "products", "shards",
-                                                         "include", "cpus", "fusion_grid")}
-        acfg.update({"output_dir": _abs(base, an.get("output_dir", root / "animations")),
-                     "time_range": an.get("time_range") or [str(cfg["start"]), str(cfg["end"])],
-                     "bbox": an.get("bbox") or cfg.get("bbox"), "observations": obs,
-                     "products": {k: {kk: vv for kk, vv in v.items() if not kk.startswith("_")}
-                                  for k, v in prods.items() if not an.get("include") or k in an["include"]}})
-        if not acfg["bbox"]:
-            raise ValueError("animation needs a bbox (animation.bbox or bbox)")
-        acfg.pop("enabled", None)
-        fb = (acfg.get("frames") or {}).get("base", "tempo")
-        ev = (sensors.get("goes") or {}).get("every_minutes")
-        if ev and fb == "tempo" and float((acfg.get("frames") or {}).get("goes_window_minutes", 10)) < float(ev) / 2:
-            print(f"WARNING animation: GOES inputs are subsampled to {ev} min but frames.base is tempo with a "
-                  f"goes_window_minutes below {float(ev) / 2:g}; GOES / fused overlays will be missing on most "
-                  f"frames (use frames: {{base: goes, goes_every_minutes: {ev}}})")
-        apath = _write(cdir / "overlay_animation.yaml", acfg)
-        n_an = int(an.get("shards", 1))
-        needs = [v["_tok"] for k, v in prods.items() if not an.get("include") or k in an["include"]]
-        acpus = int(an.get("cpus", 4))
+        sets = an.get("sets") or {None: {}}
+        only = set(a.animation_sets or []) or None
+        an_hash = hashlib.sha1(" ".join(sorted(scene_hash.values())).encode()).hexdigest()[:10]
+        for sname, so in sets.items():
+            if only and sname not in only:
+                continue
+            ans = dict({k: v for k, v in an.items() if k != "sets"}, **(so or {}))
+            obs = copy.deepcopy(ans.get("observations") or {})
+            if "goes" in sensors and "goes" in obs and not obs["goes"].get("dir"):
+                obs["goes"]["dir"] = sensors["goes"]["inputs"]
+                obs["goes"].setdefault("pattern", sensors["goes"].get("pattern", "OR_ABI-*.tif"))
+            for o in obs.values():
+                if o.get("dir"):
+                    o["dir"] = _abs(base, o["dir"]) if not isinstance(o["dir"], list) else [_abs(base, x) for x in o["dir"]]
+                if o.get("kappa0_from"):
+                    o["kappa0_from"] = _abs(base, o["kappa0_from"])
+            # products: production / fused (by name, filtered by include) + explicit set products (e.g. evaluation
+            # geo dirs for past events). A set with explicit products uses only those plus its include list.
+            set_prods = {k: dict(v, geo_dir=_abs(base, v["geo_dir"]), **({"manifest": _abs(base, v["manifest"])}
+                                                                     if v.get("manifest") else {}))
+                     for k, v in ((so or {}).get("products") or {}).items()}
+            inc = ans.get("include")
+            if (so or {}).get("products") and "include" not in (so or {}):
+                inc = []
+            pick = {k: v for k, v in prods.items() if (k in inc if inc else not set_prods)}
+            miss = [k for k in (inc or []) if k not in prods and k not in set_prods]
+            if miss:
+                raise ValueError(f"animation set {sname}: include {miss} not available (have {sorted(prods)})")
+            pick.update(set_prods)
+            acfg = {k: v for k, v in ans.items() if k not in ("observations", "models", "model", "products", "shards",
+                                                              "include", "cpus", "fusion_grid", "enabled")}
+            adir = an.get("output_dir", root / "animations")
+            acfg.update({"output_dir": _abs(base, ans.get("output_dir") if (so or {}).get("output_dir")
+                                            else (Path(str(adir)) / sname if sname else adir)),
+                         "time_range": ans.get("time_range") or [str(cfg["start"]), str(cfg["end"])],
+                         "bbox": ans.get("bbox") or cfg.get("bbox"), "observations": obs,
+                         "products": {k: {kk: vv for kk, vv in v.items() if not kk.startswith("_")}
+                                      for k, v in pick.items()}})
+            if sname:
+                acfg.setdefault("name", sname)
+            if not acfg["bbox"]:
+                raise ValueError(f"animation {sname or ''} needs a bbox (animation.bbox or bbox)")
+            fb = (acfg.get("frames") or {}).get("base", "tempo")
+            ev = (sensors.get("goes") or {}).get("every_minutes")
+            if ev and fb == "tempo" and not set_prods and \
+                    float((acfg.get("frames") or {}).get("goes_window_minutes", 10)) < float(ev) / 2:
+                print(f"WARNING animation {sname or ''}: GOES inputs are subsampled to {ev} min but frames.base is "
+                      f"tempo with a goes_window_minutes below {float(ev) / 2:g}; GOES / fused overlays will be "
+                      f"missing on most frames (use frames: {{base: goes, goes_every_minutes: {ev}}})")
+            apath = _write(cdir / (f"overlay_animation_{sname}.yaml" if sname else "overlay_animation.yaml"), acfg)
+            n_an = int(ans.get("shards", 1))
+            needs = [v["_tok"] for v in pick.values() if v.get("_tok")]
+            acpus = int(ans.get("cpus", 4))
+            summary.append(f"  animation {sname or 'default'}: {acfg['time_range'][0]} .. {acfg['time_range'][1]}, "
+                           f"bbox {acfg['bbox']}, products {sorted(acfg['products'])}, {n_an} shard(s)")
+            if an_on:
+                an_jobs.append({"name": f"animate_{sname}" if sname else "animate",
+                                "cmd": f"cd {td} && {py} make_overlay_animations.py -c {shlex.quote(str(apath))}"
+                                f" --shard {{shard}}/{n_an} -n {acpus} --workers {acpus}"
+                                f" # scenes {an_hash if needs else 'evaluation'}"
+                                f" cfg {hashlib.sha1(Path(apath).read_bytes()).hexdigest()[:8]}",
+                                "cases": [{"shard": i} for i in range(n_an)], "id_keys": ["shard"],
+                                "cpus": acpus, "needs": needs})
         if not an_on:
-            print(f"  animation: disabled; config written to {apath} (enable with animation.enabled: true or "
+            print(f"  animation: disabled; configs written to {cdir} (enable with animation.enabled: true or "
                   f"--animation and rebuild; finished jobs are skipped)")
-    if an and an_on:
-        an_jobs.append({"name": "animate", "cmd": f"cd {td} && {py} make_overlay_animations.py -c {shlex.quote(str(apath))}"
-                        f" --shard {{shard}}/{n_an} -n {acpus} --workers {acpus}"
-                        f" # scenes {hashlib.sha1(' '.join(sorted(scene_hash.values())).encode()).hexdigest()[:10]}"
-                        f" cfg {hashlib.sha1(Path(apath).read_bytes()).hexdigest()[:8]}",
-                        "cases": [{"shard": i} for i in range(n_an)], "id_keys": ["shard"],
-                        "cpus": acpus, "needs": needs})
     plan["jobs"] = ex_jobs + plan["jobs"] + fu_jobs + an_jobs
     out = Path(_abs(base, cfg.get("plan_file", state / "production_plan.yaml")))
     _write(out, plan)

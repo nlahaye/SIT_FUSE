@@ -11,6 +11,10 @@
 #
 # Resume: rerun the same command; finished jobs (markers/<job>.done) and existing head_outputs.tif are skipped.
 # Failed jobs need --rerun-failed; --only 'heads.*' (or 'train_eval.*', ...) runs one stage.
+# Tier-2 rerun (uq.context_encoder.spatial_tier, uq.out_dir ..._tier2 in the HAB YAML): heads and roles are
+# unchanged, so only train_eval reruns (the YAML path is unchanged, hence --force):
+#   python -m sit_fuse.local_launcher run hab_uq_pilot_coast_windows_launch.yaml --only 'train_eval.spPseudo_nitzschia*' --force
+# then infer_fuse / animate only if tier-2 products are wanted (--only 'infer_fuse.spPseudo_nitzschia*' 'animate' --force).
 # Every command passes -n <cpus> so compute.num_threads: medium in the HAB YAML does not override the
 # launcher's per-job core allocation.
 

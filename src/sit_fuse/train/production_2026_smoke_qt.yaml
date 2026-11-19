@@ -1,0 +1,142 @@
+# QUICK TEST production run: GOES-18 + TEMPO smoke (individual, fused, animations), hourly GOES,
+# hist_gradient_boosting only. Same week as the GOES fire quick test (25-31 July 2026; edit start/end if that
+# test uses other dates).
+#   cd SIT_FUSE/src/sit_fuse/train
+#   python build_production_run.py production_2026_smoke_qt.yaml                 # writes configs + plan, prints scene counts
+#   python build_production_run.py production_2026_smoke_qt.yaml --run -- --dry-run
+#   python build_production_run.py production_2026_smoke_qt.yaml --run           # heads -> infer -> geo -> fusion -> animation
+#   python -m sit_fuse.local_launcher status /data/nlahaye/output/Learnergy/PRODUCTION_2026_07/launch/production_plan.yaml
+#   only some animation sets: ... --run --animation-sets oregon_0726 big_grass_0726
+# Needs /data/nlahaye/output/Learnergy/FUSION/UQ_SMOKE_RECAL/fusion_models.pkl (uq_parallel.smoke_fusion_pilot.yaml).
+# Animation sets (animation.sets): Oregon fires and Big Grass on 26 July and over the week (production products),
+# LA and Park fires (evaluation-period products + fusion of those days with the same frozen weights).
+# Relative paths resolve against this file's directory (src/sit_fuse/train).
+# CHECK = path assumed from the evaluation setup; confirm it exists before running.
+
+output_root: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07
+start: 2026-07-25T00:00:00Z            # [start, end) UTC
+end: 2026-08-01T06:00:00Z              # includes the evening of 31 July Pacific time (TEMPO / GOES daylight to ~03 UTC)
+bbox: [-125.0, -110.0, 40.0, 49.0]     # [W, E, S, N]: Oregon, Washington, Idaho; inside the GOES/fusion grid (-125.45..-101.98, 31.31..49.01)
+# split_stratum: not set -> pooled cutoffs (no 2026 event group was calibrated)
+python: python
+resume: true
+launcher:
+  cpus: 48
+  gpus: [0, 1, 2, 3]
+  state_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07/launch
+resources: {infer: 6, infer_merge: 2, geo: 4}
+shards: {inference: 16}
+export: {shards: 4, cpus: 6, gpu: 1}   # head export jobs per encoder (one GPU each)
+
+sensors:
+  tempo:
+    inputs: /data/nlahaye/remoteSensing/RAD_L1_V04                      # CHECK: July 2026 TEMPO V04 radiance GeoTIFFs
+    pattern: "TEMPO_RAD_L1_V04_*.tif"                                   # .RGB.tif / .UV_RGB.tif / head outputs are excluded
+  goes:
+    inputs: /data/nlahaye/remoteSensing/GOES_TEMPO/new_data_2026_07     # CHECK: July 2026 GOES-18 16-band GeoTIFFs (fuse_goes_tempo_3.yaml output)
+    pattern: "OR_ABI-L1b-RadC-M6C01_G18_s*.tif"
+    every_minutes: 60                   # hourly GOES products: first scene of each UTC hour; remove for every 5-min scene
+    # offset_minutes: 0                 # shift the hourly bins (e.g. 30 -> first scene at/after HH:30)
+    bbox_filter: false                  # CONUS scenes always cover the bbox; skips the footprint test
+
+pipelines:                              # evaluated configs; trained models, calibrators and cutoffs are reused
+  tempo_smoke:
+    sensor: tempo
+    uq_config: uq_config.example.yaml                    # TEMPO smoke (output_dir SF_TEMPO_V04/UQ)
+    export_config: export_config.example.yaml
+    models: [hist_gradient_boosting]
+  goes_smoke:
+    sensor: goes
+    uq_config: goes18/g18_uq_config_smoke_recal.yaml     # recalibrated GOES run (output_dir GOES_TEMPO_UPDATED/UQ_SMOKE_RECAL)
+    export_config: goes18/g18_export_smoke.yaml
+    models: [hist_gradient_boosting]
+
+fusion:                                 # frozen evaluation-period fusion (weights, recalibration, cutoffs)
+  smoke:                                # production week (fused_smoke in the animations)
+    config: configs/fusion_config.smoke.yaml             # evaluation fusion config (fit it first)
+    models_from: /data/nlahaye/output/Learnergy/FUSION/UQ_SMOKE_RECAL   # must contain fusion_models.pkl
+    pipelines: {tempo: tempo_smoke, goes: goes_smoke}
+    shards: 6
+    cpus: 2
+  smoke_events:                         # LA / Park fire days from the evaluation geo products (fused_smoke_events)
+    config: configs/fusion_config.smoke.yaml             # its sources = evaluation geo dirs (GOES recal + TEMPO)
+    models_from: /data/nlahaye/output/Learnergy/FUSION/UQ_SMOKE_RECAL
+    sources: evaluation                 # no production dependency: starts right away
+    dates: [2024-07-24, 2024-07-25, 2024-07-26, 2024-07-27, 2024-07-28, 2024-07-29, 2024-07-30, 2024-07-31,
+            2024-08-01, 2025-01-07, 2025-01-08, 2025-01-09, 2025-01-10, 2025-01-11, 2025-01-12, 2025-01-13,
+            2025-01-14]                 # UTC days (TEMPO / GOES evening scans fall on the next UTC day)
+    shards: 4
+    cpus: 2
+
+animation:                              # defaults for every set below
+  enabled: true
+  model: hist_gradient_boosting
+  include: [tempo_smoke, goes_smoke, fused_smoke]
+  fusion_grid: fine
+  shards: 1
+  cpus: 8                               # frame-rendering workers per job
+  resolution: 0.01
+  frames: {base: goes, goes_every_minutes: 60, goes_window_minutes: 10, tempo_max_age_minutes: 60}
+  fps: 3
+  formats: [mp4, gif]
+  basemap: {enabled: true}
+  observations:
+    tempo_rgb: {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .RGB.tif}         # CHECK
+    tempo_uv_rgb: {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .UV_RGB.tif}   # CHECK
+    goes:
+      kappa0_from: /data/nlahaye/remoteSensing/GOES_TEMPO/new_data_2026_07   # L1b NetCDFs (reflectance scaling); drop for display-only scaling
+  # bboxes [W, E, S, N] from the NIFC WFIGS 2026 final perimeters plus a margin for the smoke:
+  #   Big Grass -117.42..-116.33, 42.05..42.92 | Rowe Creek Cx -120.91..-119.84, 44.34..44.95
+  #   Grasshopper -121.60..-121.20, 45.24..45.40 | Coleman Creek -118.42..-117.48, 43.39..43.80
+  #   Hay Creek Cx -120.70..-120.21, 44.86..45.26 | Second Flat -119.45..-119.05, 43.54..43.79
+  # Outputs: <output_root>/animations/<set>/anim_<set>_<segment>.mp4|.gif
+  sets:
+    oregon_0726:                        # (1) all six fires, 26 July (Pacific daylight 12 UTC 26th .. 06 UTC 27th)
+      bbox: [-122.0, -115.9, 41.65, 45.8]
+      time_range: [2026-07-26T12:00:00Z, 2026-07-27T06:00:00Z]
+      split_by: none
+    big_grass_0726:                     # (2) Big Grass zoom, 26 July
+      bbox: [-117.65, -116.1, 41.85, 43.1]
+      resolution: 0.005
+      time_range: [2026-07-26T12:00:00Z, 2026-07-27T06:00:00Z]
+      split_by: none
+    oregon_week:                        # (3) as (1), full week, one movie (split_by: day -> one per UTC day)
+      bbox: [-122.0, -115.9, 41.65, 45.8]
+      split_by: none                    # time_range: the run's start .. end
+      cpus: 16
+    big_grass_week:                     # (3) as (2), full week
+      bbox: [-117.65, -116.1, 41.85, 43.1]
+      resolution: 0.005
+      split_by: none
+      cpus: 16
+    la_fires_2025:                      # (4) Palisades / Eaton, evaluation products, one movie per TEMPO day
+      bbox: [-119.8, -117.3, 33.2, 34.8]
+      time_range: [2025-01-07T00:00:00Z, 2025-01-14T06:00:00Z]
+      split_by: day
+      shards: 4
+      cpus: 4
+      frames: {base: tempo, goes_window_minutes: 10, tempo_max_age_minutes: 60}   # evaluation GOES are not thinned
+      products: &eval_products
+        tempo_smoke: {geo_dir: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ/geo, model: hist_gradient_boosting,
+                      manifest: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ/geo/geo_products_manifest.json, sensor: tempo}
+        goes_smoke: {geo_dir: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/UQ_SMOKE_RECAL/geo, model: hist_gradient_boosting,
+                     manifest: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/UQ_SMOKE_RECAL/geo/geo_products_manifest.json,
+                     sensor: goes}
+      include: [fused_smoke_events]
+      observations: &eval_obs
+        tempo_rgb: {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .RGB.tif}         # CHECK
+        tempo_uv_rgb: {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .UV_RGB.tif}   # CHECK
+        goes:
+          dir: /data/nlahaye/remoteSensing/GOES_TEMPO/new_data          # evaluation GOES-18 16-band GeoTIFFs
+          pattern: "OR_ABI-L1b-RadC-M6C01_G18_s*.tif"
+          kappa0_from: /data/nlahaye/remoteSensing/GOES_TEMPO/new_data
+    park_fire_2024:                     # (4) Park Fire, evaluation products, one movie per TEMPO day
+      bbox: [-122.5, -119.0, 38.5, 41.0]
+      time_range: [2024-07-24T00:00:00Z, 2024-08-01T06:00:00Z]
+      split_by: day
+      shards: 4
+      cpus: 4
+      frames: {base: tempo, goes_window_minutes: 10, tempo_max_age_minutes: 60}
+      products: *eval_products
+      include: [fused_smoke_events]
+      observations: *eval_obs
