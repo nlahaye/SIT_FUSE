@@ -192,6 +192,7 @@ def evaluate_bundle(bundle, frame: pd.DataFrame, out_dir, n_boot: int = 500,
         "prior_correction": (uq.get("calibration") or {}).get("prior_correction", True),
         "prior_correction_strength": (uq.get("calibration") or {}).get("prior_correction_strength", 1.0),
         "radius_km": uq.get("radius_km"), "nearest_fallback": uq.get("nearest_fallback"),
+        "sample_weighting": bundle.get("sample_weighting"),
         "n_test_fallback": int(meta["match_fallback"].sum()) if "match_fallback" in meta else 0,
     }
     if "match_fallback" in meta.columns and meta["match_fallback"].nunique() > 1:

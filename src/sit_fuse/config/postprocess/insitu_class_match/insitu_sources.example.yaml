@@ -31,7 +31,13 @@ sources:
       aggregate: window             # pool fixed-site bins within the satellite window
       window_utc_hours: [16, 24]    # 09-17 PDT: covers S3 (~18 UTC) and VIIRS/PACE/MODIS (~20-22 UTC)
       pn_width_split_um: 3.0 
-      pn_cell_length_um: null       # set (e.g. 70) to convert PN chain ROIs to cells
+      pn_cell_length_um: null       # legacy single-length chain correction (superseded below)
+      # PN chain ROIs -> cells per width group (stepped colonies): n = 1 + (L_roi - L)/(L(1 - overlap)).
+      # seriata: P. australis/multiseries/pungens ~70-145 um, overlap 1/3-1/4;
+      # delicatissima: P. delicatissima ~64 +/- 14 um, overlap 1/7-1/10 (ICES leaflet 185; Hasle 1965)
+      pn_chain_correction:
+        seriata: {cell_length_um: 100, overlap: 0.30}
+        delicatissima: {cell_length_um: 64, overlap: 0.125}
       score_threshold: 0.0 
       cache_dir: /data/habs/ifcb_cache
       max_bins_per_day: 6           # evenly spaced bins per site-day (null = all; each bin = 2 requests)

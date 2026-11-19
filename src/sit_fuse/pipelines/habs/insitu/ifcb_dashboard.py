@@ -13,7 +13,11 @@ Concentration = (ROIs assigned to class) / ml_analyzed * 1000  [cells/L, ROI-bas
 
 Caveats encoded as provenance/sigma, not hidden:
   * ROI != cell for chain formers (Pseudo-nitzschia, Chaetoceros). Optional
-    chain correction: cells_per_roi = max(1, MajorAxisLength_um / pn_cell_length_um).
+    Pseudo-nitzschia chain correction (stepped colonies of overlapping cells):
+      pn_chain_correction: {seriata: {cell_length_um, overlap}, delicatissima: {...}}
+      cells_per_roi = max(1, 1 + (L_roi - L_cell) / (L_cell * (1 - overlap)))
+    with L_roi = MajorAxisLength and the group from the width split. Legacy
+    pn_cell_length_um (one length, no overlap): cells_per_roi = max(1, L_roi / L).
   * PN seriata vs delicatissima group is a width split (default 3 um, CalHABMAP
     light-microscopy convention); IFCB width at ~3.4 px/um is near resolution,
     so these columns get a larger sigma_dex (ifcb_width_split).
@@ -97,7 +101,8 @@ DEFAULTS = {
     "pixels_per_um": 3.4,
     "pn_width_split_um": 3.0,
     "width_feature": "RepresentativeWidth",   # or MinorAxisLength
-    "pn_cell_length_um": None,     # e.g. 70 -> chain correction
+    "pn_cell_length_um": None,     # legacy single-length chain correction (e.g. 70)
+    "pn_chain_correction": None,   # per-group {seriata|delicatissima: {cell_length_um, overlap}}
     "aggregate": "daily",          # bin | daily | window
     "window_utc_hours": [16, 24],  # aggregate only bins in this UTC window (aggregate=window)
     "min_ml_analyzed": 1.0,
@@ -251,6 +256,20 @@ def _subsample_per_day(meta: pd.DataFrame, k: int) -> pd.DataFrame:
     return pd.concat(keep) if keep else meta
 
 
+def chain_cells(length_um: np.ndarray, grp: dict[str, Any]) -> np.ndarray:
+    """
+    Cells in a stepped Pseudo-nitzschia colony from its imaged length: n cells
+    of length L overlapping by a fraction f span L + (n - 1) L (1 - f).
+    Unknown length (no features) -> 1 cell.
+    """
+    L = float(grp["cell_length_um"])
+    f = float(grp.get("overlap", 0.0))
+    if not (L > 0 and 0 <= f < 1):
+        raise ValueError(f"pn_chain_correction: need cell_length_um > 0 and 0 <= overlap < 1, got {grp}")
+    n = 1.0 + (np.asarray(length_um, dtype=np.float64) - L) / (L * (1.0 - f))
+    return np.maximum(1.0, np.nan_to_num(n, nan=1.0))
+
+
 def bin_counts(scores: pd.DataFrame, feats: pd.DataFrame | None, cfg: dict[str, Any]) -> dict[str, float]:
     """Per-bin ROI counts (cell-equivalents) per CalHABMAP column + extras."""
     cls_cols = [c for c in scores.columns if c != "pid"]
@@ -268,14 +287,22 @@ def bin_counts(scores: pd.DataFrame, feats: pd.DataFrame | None, cfg: dict[str, 
         esd = f.reindex(roi)["EquivDiameter"].to_numpy(np.float64) / ppu
     cells = np.ones(len(roi))
     is_pn = np.isin(lab, PN_CLASSES)
-    if cfg.get("pn_cell_length_um"):
+    split = cfg["pn_width_split_um"]
+    # width unknown -> seriata (conservative for alerts)
+    is_del = is_pn & np.isfinite(width) & (width < split)
+    chain = cfg.get("pn_chain_correction")
+    if chain:
+        for grp, m in (("seriata", is_pn & ~is_del), ("delicatissima", is_del)):
+            g = chain.get(grp)
+            if g and m.any():
+                cells[m] = chain_cells(length[m], g)
+    elif cfg.get("pn_cell_length_um"):
         cells[is_pn] = np.maximum(1.0, np.nan_to_num(length[is_pn] / cfg["pn_cell_length_um"], nan=1.0))
     out: dict[str, float] = {}
     for col in set(CLASS_MAP.values()) | {"Other_Diatoms", "Other_Dinoflagellates",
                                            "Pseudo_nitzschia_seriata_group",
                                            "Pseudo_nitzschia_delicatissima_group", "Total_Phytoplankton"}:
         out[col] = 0.0
-    split = cfg["pn_width_split_um"]
     phyto = ~np.isin(lab, list(NON_PHYTO) + ["unclassified"])
     for i in range(len(lab)):
         c, n = lab[i], cells[i]
@@ -283,8 +310,8 @@ def bin_counts(scores: pd.DataFrame, feats: pd.DataFrame | None, cfg: dict[str, 
             continue
         out["Total_Phytoplankton"] += n
         if c in PN_CLASSES:
-            # width unknown -> seriata (conservative for alerts); counted under both in pn_total
-            key = ("Pseudo_nitzschia_delicatissima_group" if np.isfinite(width[i]) and width[i] < split
+            # counted under both in pn_total
+            key = ("Pseudo_nitzschia_delicatissima_group" if is_del[i]
                    else "Pseudo_nitzschia_seriata_group")
             out[key] += n
         elif c in CLASS_MAP:
