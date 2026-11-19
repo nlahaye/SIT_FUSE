@@ -3,7 +3,8 @@ CalHABMAP pier/buoy time series from the SCCOOS ERDDAP (tabledap).
 
 The ERDDAP variables are exactly the first 40 columns of combined_full.csv
 (units row: cells/L, ng/mL, mg/m3, uM), so reformatting is a column copy plus
-time/SampleID conversion. Full timestamps are kept in sample_time_utc.
+time/SampleID conversion. The units row is checked against
+EXPECTED_UNITS (converted if a known alternative, error otherwise). Full timestamps are kept in sample_time_utc.
 https://erddap.sccoos.org/erddap/tabledap/index.html
 """
 
@@ -15,7 +16,7 @@ import time as _time
 import pandas as pd
 import requests
 
-from sit_fuse.pipelines.habs.insitu.calhabmap_format import CALHABMAP_COLUMNS, to_calhabmap
+from sit_fuse.pipelines.habs.insitu.calhabmap_format import CALHABMAP_COLUMNS, harmonize_units, to_calhabmap
 
 ERDDAP = "https://erddap.sccoos.org/erddap/tabledap"
 
@@ -44,7 +45,10 @@ def fetch_dataset(dataset_id: str, start: str, end: str, base: str = ERDDAP,
         if r.status_code == 404 and "nRows = 0" in r.text:
             return pd.DataFrame()
         if r.ok:
-            return pd.read_csv(io.StringIO(r.text), skiprows=[1])     # row 1 = units
+            units = pd.read_csv(io.StringIO(r.text), nrows=1, dtype=str).iloc[0].to_dict()  # row 1 = units
+            df = pd.read_csv(io.StringIO(r.text), skiprows=[1])
+            df.attrs["units"] = units
+            return df
         _time.sleep(2 ** k)
     r.raise_for_status()
     return pd.DataFrame()
@@ -58,6 +62,7 @@ def pull_calhabmap(datasets=None, start="2015-01-01", end=None, sigma_dex=None) 
         df = fetch_dataset(ds, start, end)
         if df.empty:
             continue
+        df = harmonize_units(df, df.attrs.get("units", {}), ds)   # raises on unexpected units
         code = CALHABMAP_DATASETS.get(ds, ds)
         df["Location_Code"] = df["Location_Code"].fillna(code) if "Location_Code" in df else code
         df["sample_time_utc"] = pd.to_datetime(df["time"], utc=True, errors="coerce")

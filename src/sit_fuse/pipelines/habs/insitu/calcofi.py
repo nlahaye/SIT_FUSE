@@ -23,7 +23,7 @@ import numpy as np
 import pandas as pd
 import requests
 
-from sit_fuse.pipelines.habs.insitu.calhabmap_format import DEFAULT_SIGMA_DEX, to_calhabmap
+from sit_fuse.pipelines.habs.insitu.calhabmap_format import DEFAULT_SIGMA_DEX, to_calhabmap, unit_factor
 
 ERDDAP = "https://erddap.calcofi.io/erddap/tabledap"
 
@@ -52,10 +52,17 @@ def _cruise_time(cruise_key: str) -> pd.Timestamp:
 
 def pull_venrick(start="1996-01-01", end=None) -> pd.DataFrame:
     obs = _get("calcofi_phytoplankton",
-               "sample_key,cruise_key,latitude,longitude,depth,scientific_name,measurement_value"
+               "sample_key,cruise_key,latitude,longitude,depth,scientific_name,measurement_value,units"
                "&measurement_type=%22phytoplankton_abundance%22")
     if obs.empty:
         return obs
+    # units are per row on this server (cells/L for all rows as of 2026-11); convert or raise
+    fac = {u: unit_factor("Total_Phytoplankton", u, "calcofi_venrick") for u in obs["units"].unique()}
+    obs["measurement_value"] = pd.to_numeric(obs["measurement_value"], errors="coerce") * obs["units"].map(fac)
+    bad = obs["measurement_value"].isna() | (obs["measurement_value"] < 0)
+    if bad.any():     # server holds a few negative abundances (-1, -13); drop before summing totals
+        print(f"[calcofi_venrick] dropped {int(bad.sum())} missing/negative abundance records")
+        obs = obs[~bad]
     obs["sample_time_utc"] = obs["cruise_key"].map(_cruise_time)
     obs = obs[obs["sample_time_utc"].notna()]
     obs = obs[obs["sample_time_utc"] >= pd.Timestamp(start, tz="UTC")]

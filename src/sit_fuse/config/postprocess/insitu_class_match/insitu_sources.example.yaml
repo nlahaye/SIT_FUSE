@@ -2,9 +2,14 @@
 out_dir: /mnt/data1/habs/insitu_augmented
 start: "2018-01-01"
 end: "2026-10-01"
-bbox: [-135.0, 30.0, -116.0, 49.0] 
+bbox: [-135.0, 30.0, -116.0, 49.0]
 
-
+# applied to the merged table (including --existing inputs)
+cleaning:
+  collapse_repeated_samples: true   # same source/station/date/method/sample id -> one row (first non-null)
+  negatives_to_nan: true            # negative concentrations are invalid
+  max_depth_m: 1.0                  # drop samples deeper than 1 m (depth, else Sample Depth)
+  keep_missing_depth: true          # fixed piers / IFCB without depth are surface samples
 
 # cross-source dedup (same Location_Code / date / method): earlier entries win
 priority: [combined_full, calhabmap_erddap, ifcb_dashboard, seabass_pace_pax, nwfsc_2015,
