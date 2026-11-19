@@ -282,6 +282,15 @@ def skill_summary(P: np.ndarray, y: np.ndarray, w: np.ndarray, P_clim: np.ndarra
 # Driver
 # ---------------------------------------------------------------------------
 
+def read_date_roles(path) -> dict[str, str]:
+    """{YYYYMMDD: train|calibration|test|excluded} from a CSV with columns date, role."""
+    t = pd.read_csv(path, dtype=str)
+    col = "role" if "role" in t.columns else "split"
+    d = pd.to_datetime(t["date"], format="mixed").dt.strftime("%Y%m%d")
+    m = {"val": "calibration"}
+    return {k: m.get(v, v) for k, v in zip(d, t[col].str.strip().str.lower())}
+
+
 def split_config(hab_yml: dict[str, Any]) -> dict[str, Any]:
     """uq.splits, plus the encoder training window when splits.encoder_unseen_eval."""
     cfg = dict(hab_yml.get("uq", {}).get("splits") or {})
@@ -290,6 +299,9 @@ def split_config(hab_yml: dict[str, Any]) -> dict[str, Any]:
             cfg["encoder_train_window"] = [hab_yml["train_min_date"], hab_yml["train_max_date"]]
         else:
             LOG.warning("splits.encoder_unseen_eval set but train_min_date/train_max_date missing")
+    if not cfg.get("date_roles") and cfg.get("date_roles_file"):
+        # explicit day roles (e.g. written by hab_uq_pilot_plan --mode resplit); overrides scene_split
+        cfg["date_roles"] = read_date_roles(cfg.pop("date_roles_file"))
     if not cfg.get("date_roles"):
         from sit_fuse.pipelines.habs.hab_scene_split import uq_date_roles
         roles = uq_date_roles(hab_yml)
@@ -367,6 +379,11 @@ def train_species(hab_yml: dict[str, Any], use_key: str, out_dir: str | Path,
                           max_depth_m=uq.get("max_depth_m", 1.0),
                           start_date=uq.get("start_date"), end_date=uq.get("end_date"))
         samples = assign_splits(species_frame(ins, spec), split_config(hab_yml))
+    n_ex = int((samples["split"] == "excluded").sum())
+    if n_ex:
+        # buffer / unlisted days are never used; skip them before raster matching
+        LOG.info("%s: %d excluded samples skipped before matching", use_key, n_ex)
+        samples = samples[samples["split"] != "excluded"].reset_index(drop=True)
 
     rows_all, counts_all = [], {}
     enc_by_sensor = {}
