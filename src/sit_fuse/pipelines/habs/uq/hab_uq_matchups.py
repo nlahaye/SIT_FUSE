@@ -329,6 +329,9 @@ def build_sensor_matchups(samples: pd.DataFrame, sensor: str, search_dirs,
                 r[c] = float(srow[c])
             for k in ("split", "fold", "split_group", "Location_Code", "value", "log10_value"):
                 r[k] = srow[k]
+            for k in ("source", "method"):              # provenance, for source-subset evaluation
+                if k in srow.index:
+                    r[k] = srow[k]
             dist = _haversine_km(srow["Longitude"], srow["Latitude"], pix.lon[h][ok], pix.lat[h][ok])
             if fbk:                                      # nearest-valid fallback: distance penalty
                 r_km = radius_as_km(radius, geodesic, srow["Latitude"])
@@ -410,4 +413,7 @@ def sample_level(P: np.ndarray, rows: pd.DataFrame, how: str = "mean") -> tuple[
     soft = [c for c in rows.columns if c.startswith("ref_soft_")]
     if soft:
         meta = pd.concat([meta, rows.groupby(codes)[soft].first().reset_index(drop=True)], axis=1)
+    prov = [c for c in ("source", "method") if c in rows.columns]
+    if prov:
+        meta = pd.concat([meta, rows.groupby(codes)[prov].first().reset_index(drop=True)], axis=1)
     return Ps, meta

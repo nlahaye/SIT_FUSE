@@ -28,12 +28,68 @@ from sit_fuse.pipelines.habs.uq.hab_uq_common import (
     EPS, SpeciesSpec, concentration_to_class, measurement_soft_labels)
 
 
+# CalHABMAP / SCCOOS-CeNCOOS pier network: the original combined_full table and
+# its ERDDAP extension written by pull_insitu_hab (insitu_sources.example.yaml)
+SOURCE_PRESETS = {"oos_piers": ["combined_full", "calhabmap_erddap"]}
+
+
+def _as_list(v):
+    if v is None:
+        return None
+    return [v] if isinstance(v, str) else list(v)
+
+
+def filter_insitu(df: pd.DataFrame, flt: dict[str, Any] | None) -> pd.DataFrame:
+    """
+    Subset in-situ rows by provenance (uq.insitu_filter or an evaluation subset).
+
+    flt keys (all optional, combined with AND):
+      sources / exclude_sources            `source` values, or a preset name
+                                           (oos_piers = combined_full + calhabmap_erddap)
+      methods / exclude_methods            `method` values (microscopy, ifcb, elisa, ...)
+      location_codes / exclude_location_codes
+    Source and method filters need the provenance columns written by the
+    non-strict pull_insitu_hab table (combined_augmented.csv); the strict
+    42-column table has none, so those filters raise instead of silently
+    keeping every row. Station filters work on either table.
+    """
+    if not flt:
+        return df
+    keep = insitu_mask(df, flt)
+    return df[keep].reset_index(drop=True)
+
+
+def insitu_mask(df: pd.DataFrame, flt: dict[str, Any] | None) -> np.ndarray:
+    """Boolean row mask for filter_insitu (also used on sample-level evaluation meta)."""
+    keep = np.ones(len(df), bool)
+    for col, inc, exc in (("source", "sources", "exclude_sources"),
+                          ("method", "methods", "exclude_methods"),
+                          ("Location_Code", "location_codes", "exclude_location_codes")):
+        a, b = _as_list((flt or {}).get(inc)), _as_list((flt or {}).get(exc))
+        if a is None and b is None:
+            continue
+        if col not in df.columns or (col != "Location_Code" and not df.attrs.get(f"has_{col}", True)):
+            raise ValueError(
+                f"in-situ filter on '{col}' but the table has no {col} column (strict CSV). "
+                "Point uq.insitu_file (or --insitu) at the non-strict combined_augmented.csv, "
+                "or filter by location_codes.")
+        expand = (lambda v: [x for k in v for x in SOURCE_PRESETS.get(k, [k])]) if col == "source" else (lambda v: v)
+        vals = df[col].astype(str)
+        if a is not None:
+            keep &= vals.isin(expand(a)).to_numpy()
+        if b is not None:
+            keep &= ~vals.isin(expand(b)).to_numpy()
+    return keep
+
+
 def load_insitu(path: str, max_depth_m: float | None = 1.0,
-                start_date=None, end_date=None) -> pd.DataFrame:
+                start_date=None, end_date=None, filters: dict[str, Any] | None = None) -> pd.DataFrame:
     """
     Read the combined_full.csv format (or xlsx) exactly as
     insitu_hab_to_multi_hist does (Datetime = pd.to_datetime(time),
     latitude/longitude -> Latitude/Longitude) and add UQ bookkeeping columns.
+    `filters` (uq.insitu_filter) is applied after sample_uid is assigned, so
+    uids match an unfiltered load of the same table.
     """
     df = pd.read_excel(path) if str(path).endswith((".xlsx", ".xls")) else pd.read_csv(path)
     df = df.copy()
@@ -56,13 +112,26 @@ def load_insitu(path: str, max_depth_m: float | None = 1.0,
         df = df[df["Datetime"] <= pd.Timestamp(end_date)]
     if "Location_Code" not in df.columns:
         df["Location_Code"] = "UNK"
-    if "source" not in df.columns:
+    has_src, has_mth = "source" in df.columns, "method" in df.columns
+    if not has_src:
         df["source"] = "combined_full"
+    if not has_mth:
+        df["method"] = "microscopy"
+    df["source"] = df["source"].fillna("combined_full")
+    df["method"] = df["method"].fillna("microscopy")
     df["sample_uid"] = [
         hashlib.md5(f"{s}|{d}|{la:.4f}|{lo:.4f}|{i}".encode()).hexdigest()[:12]
         for i, (s, d, la, lo) in enumerate(zip(df["Location_Code"], df["Datetime"].astype(str),
                                                df["Latitude"], df["Longitude"]))]
-    return df.reset_index(drop=True)
+    df = df.reset_index(drop=True)
+    df.attrs.update(has_source=has_src, has_method=has_mth)
+    return filter_insitu(df, filters) if filters else df
+
+
+def insitu_filter_config(yml: dict[str, Any]) -> dict[str, Any] | None:
+    """uq.insitu_filter; a bare preset string (e.g. oos_piers) means sources: [preset]."""
+    f = (yml.get("uq") or {}).get("insitu_filter")
+    return {"sources": [f]} if isinstance(f, str) else (f or None)
 
 
 def species_frame(df: pd.DataFrame, spec: SpeciesSpec, sigma_col: str | None = None) -> pd.DataFrame:
