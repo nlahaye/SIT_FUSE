@@ -53,7 +53,12 @@ def _species_run(yml):
     return HAB_USE_KEYS[yml["roi"]]
 
 
-def run_hab_uq_pipeline(yml, stages=("train", "evaluate", "infer", "fuse")):
+def run_hab_uq_pipeline(yml, stages=("train", "evaluate", "infer", "fuse"), species=None, windows=None):
+    """
+    species: optional subset of _species_run(yml) (one launcher job per species).
+    windows: optional [(start, end)] for infer / fuse only (one job per date window); training,
+             evaluation and animation always use uq.date_windows so splits and in-situ load are unchanged.
+    """
     from sit_fuse.pipelines.habs.uq.hab_uq_train import train_species
     from sit_fuse.pipelines.habs.uq.hab_uq_evaluate import evaluate_bundle, predict_samples, score_block
     from sit_fuse.pipelines.habs.uq.hab_uq_inference import run_inference
@@ -68,7 +73,13 @@ def run_hab_uq_pipeline(yml, stages=("train", "evaluate", "infer", "fuse")):
     if "export_heads" in stages:
         from sit_fuse.pipelines.habs.hab_inference_pipeline import run_head_output_export
         run_head_output_export(yml)
-    for use_key in _species_run(yml):
+    run_keys = list(_species_run(yml))
+    if species:
+        unknown = [k for k in species if k not in run_keys]
+        if unknown:
+            raise ValueError(f"--species: not in uq.species_run / HAB_USE_KEYS: {unknown}")
+        run_keys = [k for k in run_keys if k in species]
+    for use_key in run_keys:
         spec = species_spec(use_key, uq.get("species", {}).get(use_key))
         bpath = out_root / "models" / f"hab_uq_{spec.fname_token}.joblib"
         bundle = None
@@ -115,14 +126,14 @@ def run_hab_uq_pipeline(yml, stages=("train", "evaluate", "infer", "fuse")):
             summary.setdefault(use_key, {})["ablation"] = run_ablation(yml, use_key, out_root)
         # uq.date_windows (else uq.start_date / end_date): inference on the union of days,
         # fusion per window so the temporal filter does not bridge the gaps between windows
-        windows = date_windows(uq, yml)
-        dates = window_days(windows)
+        win = date_windows({"date_windows": windows}) if windows else date_windows(uq, yml)
+        dates = window_days(win)
         if "infer" in stages:
             dirs = {s: uq.get("product_dirs", {}).get(s) or instrument_dirs(yml, s) for s in bundle["sensors"]}
             run_inference(bundle["path"], dates, bundle["sensors"], dirs, str(out_root / "products"))
         if "fuse" in stages:
             fcfg = uq.get("fusion", {})
-            for w in windows:
+            for w in win:
                 run_fusion(str(out_root / "products"), str(out_root / "fused"), window_days([w]), bundle,
                            method=fcfg.get("pool", "log"), temporal_filter=fcfg.get("temporal_filter", True),
                            ref_local_hour=fcfg.get("ref_local_hour", 10.0), tau_hours=fcfg.get("tau_hours", 4.0),
@@ -202,8 +213,13 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("-y", "--yaml", required=True)
     ap.add_argument("--stages", default="train,evaluate,infer,fuse")
+    ap.add_argument("--species", default=None, help="comma list of species keys; default: uq.species_run")
+    ap.add_argument("--window", action="append", default=None, metavar="START:END",
+                    help="infer / fuse only these date windows (repeatable); training keeps uq.date_windows")
     add_num_threads_arg(ap)
     a = ap.parse_args()
     apply_num_threads_arg(a)
     from sit_fuse.utils import read_yaml
-    run_hab_uq_pipeline(read_yaml(a.yaml), tuple(a.stages.split(",")))
+    run_hab_uq_pipeline(read_yaml(a.yaml), tuple(a.stages.split(",")),
+                        species=None if a.species is None else a.species.split(","),
+                        windows=None if a.window is None else [w.split(":", 1) for w in a.window])
