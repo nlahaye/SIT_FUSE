@@ -100,6 +100,11 @@ def head_path(hdir, f):
     return p
 
 
+def unusable(hdir, items):
+    """Stand-in scenes that cannot be used: no head output in hdir and no original input to export one from."""
+    return [f for f, _ in items if f in STAND_IN and not Path(f).exists() and not head_path(hdir, f).exists()]
+
+
 STAND_IN_SUFFIXES: list[str] = []        # union of all sensors' canonical stand-in suffixes
 DEFAULT_EXCLUDE = [".RGB.tif", ".UV_RGB.tif", ".head_outputs.tif", ".clust.", "full_geo", ".proba"]
 
@@ -130,7 +135,8 @@ def list_inputs(sc, t0, t1, bbox, base, name="sensor"):
     the input, e.g. the TEMPO RGB / UV_RGB GeoTIFFs) when the full inputs were moved. Each stand-in maps back to
     <stem>.tif in the same directory (or sensors.<s>.original_dir), so scene ids and head-output names stay those
     of the original inputs; the stand-in is used for the time / bbox selection and as the georeference
-    (sit_fuse_context_free) while the original is missing. Head outputs must already exist for such scenes.
+    (sit_fuse_context_free) while the original is missing. Scenes with neither a head output nor an original input
+    are skipped with a warning (the run continues with the scenes that are available).
 
     sensors.<s>.bbox_filter: true (default) | false. Files without readable georeferencing (no CRS / GCPs,
     e.g. GOES GeoTIFFs whose lat/lon come from the netCDF geo reader) are kept, since they cannot be tested.
@@ -225,7 +231,7 @@ def list_inputs(sc, t0, t1, bbox, base, name="sensor"):
               f"(set sensors.{name}.bbox_filter: false to skip the test)")
     if sufs:
         print(f"NOTE {name}: {n['stand_in']} scene(s) selected from {'/'.join(sufs)} stand-ins; "
-              f"{n['original_missing']} original input(s) not on disk (head outputs must exist for those)")
+              f"{n['original_missing']} original input(s) not on disk (used only where head outputs exist)")
     return out, n
 
 
@@ -324,6 +330,7 @@ def main(argv=None):
                    f"sensors.{s}.stand_in_suffix: .RGB.tif"))
 
     exports = {}                    # key -> {name, settings, sensor, pipes}
+    skipped = {}                    # export name -> stand-in scenes without heads (dropped from scenes.yaml)
     planner_pipes, summary, scene_hash = {}, [], {}
     for name, p in pipes.items():
         p = dict(p, _name=name, _uq_path=_abs(base, p["uq_config"]))
@@ -337,7 +344,17 @@ def main(argv=None):
         hdir = root / "heads" / e["name"]
         product = str(p.get("product") or uq["data"].get("product") or "").lower()
         recs = []
+        skip = unusable(hdir, inputs[s])
+        if skip and e["name"] not in skipped:
+            skipped[e["name"]] = skip
+            have = sorted(x.name for x in hdir.glob("*.head_outputs.tif"))[:2] if hdir.is_dir() else []
+            print(f"WARNING heads/{e['name']}: skipping {len(skip)} of {len(inputs[s])} scene(s) with no head output "
+                  f"and no original input on disk (stand-in only), e.g. {[Path(x).name for x in skip[:3]]}; "
+                  f"expected e.g. {head_path(hdir, skip[0]).name}, existing e.g. {have or 'none'}")
+        skip = set(skip)
         for f, t in inputs[s]:
+            if f in skip:
+                continue
             fname = strip_stand_in(Path(f).name, STAND_IN_SUFFIXES) or Path(f).name     # never keep a stand-in suffix
             stem = fname[:-4] if fname.endswith(".tif") else Path(fname).stem
             recs.append({"scene_id": f"{product}_{stem}", "pair_id": f"{product}_{stem}", "product": product,
@@ -350,6 +367,9 @@ def main(argv=None):
             ss = p.get("split_stratum", cfg.get("split_stratum"))
             if ss:                                  # event / stratum key for per-group thresholds
                 recs[-1]["split_stratum"] = str(ss)
+        if not recs:
+            raise SystemExit(f"ERROR {name}: none of the {len(inputs[s])} selected {s} scenes has a head output in "
+                             f"{hdir} or an original input to export one from; scenes.yaml would be empty.")
         pdir = root / name
         sf = _write(pdir / "scenes.yaml", {"matchups": recs})
         scene_hash[name] = hashlib.sha1("\n".join(r["scene_id"] for r in recs).encode()).hexdigest()[:10]
@@ -372,21 +392,19 @@ def main(argv=None):
     (state / "tokens").mkdir(parents=True, exist_ok=True)
     for e in exports.values():
         hdir = root / "heads" / e["name"]
+        skip = set(skipped.get(e["name"], []))
         todo = [f for f, _ in inputs[e["sensor"]]
-                if a.reexport or not head_path(hdir, f).exists()]
+                if f not in skip and (a.reexport or not head_path(hdir, f).exists())]
         toks = [str(state / "tokens" / f"heads_{p}") for p in e["pipes"]]
         gone = [f for f in todo if f in STAND_IN and not Path(f).exists()]
-        if gone:
-            have = sorted(x.name for x in hdir.glob("*.head_outputs.tif"))[:3] if hdir.is_dir() else []
-            raise SystemExit(
-                f"ERROR heads/{e['name']}: looked for e.g. {head_path(hdir, gone[0]).name} "
-                f"(stand-in {Path(STAND_IN[gone[0]]).name}); existing head outputs there: {have or 'none'}\n" +
-                f"  {len(gone)} scene(s) selected from stand-ins have no head outputs in {hdir} "
-                f"and their original inputs are not on disk, so they cannot be exported, e.g. {gone[:3]}.\n"
-                f"  Restore those inputs (or set sensors.{e['sensor']}.original_dir), or narrow start / end / bbox.")
+        if gone:                             # --reexport: stand-in-only scenes cannot be re-exported; keep their heads
+            print(f"WARNING heads/{e['name']}: {len(gone)} stand-in scene(s) have no original input to re-export "
+                  f"from; using their existing head outputs")
+            todo = [f for f in todo if f not in set(gone)]
         if not todo:
             tok_ready += toks
-            print(f"  heads/{e['name']}: all {len(inputs[e['sensor']])} head outputs exist")
+            print(f"  heads/{e['name']}: all {len(inputs[e['sensor']]) - len(skip)} head outputs exist"
+                  + (f" ({len(skip)} scene(s) without heads skipped)" if skip else ""))
             continue
         h = hashlib.sha1("\n".join(todo).encode()).hexdigest()[:8]
         shards = [todo[i::n_ex_shards] for i in range(min(n_ex_shards, len(todo)))]
