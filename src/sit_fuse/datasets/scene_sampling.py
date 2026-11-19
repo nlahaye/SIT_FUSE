@@ -149,8 +149,9 @@ def extract_windows(scene, rows, cols, p):
         return scene[rows, cols, :]
     s = 2 * p + 1
     v = view_as_windows(scene, (s, s, scene.shape[2]))
-    return v[rows, cols, 0].reshape(len(rows), -1)
-
+    if len(rows) > 0:
+        return v[rows, cols, 0].reshape(len(rows), -1)
+    return None
 
 def crop_labels(lab, p, out_shape):
     lab = np.asarray(lab)
