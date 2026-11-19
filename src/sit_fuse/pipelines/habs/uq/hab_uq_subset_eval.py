@@ -46,7 +46,7 @@ import yaml
 
 from sit_fuse.pipelines.habs.uq.hab_insitu import (
     SOURCE_PRESETS, insitu_mask, load_insitu, species_frame)
-from sit_fuse.pipelines.habs.uq.hab_uq_common import species_spec
+from sit_fuse.pipelines.habs.uq.hab_uq_common import insitu_date_kwargs, species_spec
 from sit_fuse.pipelines.habs.uq.hab_uq_evaluate import grouped_bootstrap, predict_samples, score_block
 
 LOG = logging.getLogger(__name__)
@@ -66,7 +66,7 @@ def attach_provenance(frame: pd.DataFrame, yml: dict, use_key: str,
     path = insitu_path or uq.get("evaluation", {}).get("subset_insitu_file") or \
         uq.get("insitu_file", yml.get("insitu_file"))
     ins = load_insitu(path, max_depth_m=uq.get("max_depth_m", 1.0),
-                      start_date=uq.get("start_date"), end_date=uq.get("end_date"))
+                      **insitu_date_kwargs(uq))
     info = {"insitu_file": path, "has_source": bool(ins.attrs.get("has_source")),
             "has_method": bool(ins.attrs.get("has_method"))}
     out = frame.drop(columns=[c for c in PROV if c in frame.columns])

@@ -40,7 +40,7 @@ import joblib
 import numpy as np
 import pandas as pd
 
-from sit_fuse.pipelines.habs.uq.hab_uq_common import instrument_dirs, species_spec
+from sit_fuse.pipelines.habs.uq.hab_uq_common import date_windows, instrument_dirs, species_spec, window_days
 from sit_fuse.compute_resources import apply_compute_limits, add_num_threads_arg, apply_num_threads_arg
 
 LOG = logging.getLogger("hab-uq-pipeline")
@@ -113,17 +113,20 @@ def run_hab_uq_pipeline(yml, stages=("train", "evaluate", "infer", "fuse")):
             summary[use_key] = {k: rep.get(k) for k in ("overall", "fused")}
         if "ablation" in stages:
             summary.setdefault(use_key, {})["ablation"] = run_ablation(yml, use_key, out_root)
-        dates = pd.date_range(uq.get("start_date", yml.get("start_date")),
-                              uq.get("end_date", yml.get("end_date")), freq="D")
+        # uq.date_windows (else uq.start_date / end_date): inference on the union of days,
+        # fusion per window so the temporal filter does not bridge the gaps between windows
+        windows = date_windows(uq, yml)
+        dates = window_days(windows)
         if "infer" in stages:
             dirs = {s: uq.get("product_dirs", {}).get(s) or instrument_dirs(yml, s) for s in bundle["sensors"]}
             run_inference(bundle["path"], dates, bundle["sensors"], dirs, str(out_root / "products"))
         if "fuse" in stages:
             fcfg = uq.get("fusion", {})
-            run_fusion(str(out_root / "products"), str(out_root / "fused"), dates, bundle,
-                       method=fcfg.get("pool", "log"), temporal_filter=fcfg.get("temporal_filter", True),
-                       ref_local_hour=fcfg.get("ref_local_hour", 10.0), tau_hours=fcfg.get("tau_hours", 4.0),
-                       stay=fcfg.get("transition_stay", 0.7), quality=fcfg.get("quality", "selective"))
+            for w in windows:
+                run_fusion(str(out_root / "products"), str(out_root / "fused"), window_days([w]), bundle,
+                           method=fcfg.get("pool", "log"), temporal_filter=fcfg.get("temporal_filter", True),
+                           ref_local_hour=fcfg.get("ref_local_hour", 10.0), tau_hours=fcfg.get("tau_hours", 4.0),
+                           stay=fcfg.get("transition_stay", 0.7), quality=fcfg.get("quality", "selective"))
         if "animate" in stages:
             summary.setdefault(use_key, {})["animations"] = _animate(yml, use_key, out_root)
     return summary

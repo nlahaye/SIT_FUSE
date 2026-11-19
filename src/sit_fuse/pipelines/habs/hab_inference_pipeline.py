@@ -33,6 +33,7 @@ YAML (top level, all optional):
     stages: [clusters, heads]
     input_lists: [files_test, files_train]
     start_date / end_date      restrict scenes by YYYYMMDD in the file name
+    date_windows               [[start, end], ...]; replaces start_date / end_date
     overwrite: false
     model_configs: {modis: {no_trop: /path/train_model_modis.yaml}}
     data_overrides:            deep-merged into each model YAML's data: block for
@@ -163,11 +164,17 @@ def scene_entries(sf_yaml, inf_cfg) -> list:
         lists = ["files_test"] + (["files_train"] if sf_yaml["output"].get("generate_train_output", True) else [])
     start = str(inf_cfg["start_date"]).replace("-", "") if inf_cfg.get("start_date") else None
     end = str(inf_cfg["end_date"]).replace("-", "") if inf_cfg.get("end_date") else None
+    # inference.date_windows: [[start, end], ...] (inclusive) replaces start_date / end_date
+    wins = [tuple(str(x).replace("-", "")[:8] for x in ((w.get("start"), w.get("end")) if isinstance(w, dict) else w))
+            for w in (inf_cfg.get("date_windows") or [])]
     out, seen = [], set()
     for k in lists:
         for e in sf_yaml["data"].get(k) or []:
             d = _entry_date(e)
-            if (start and d and d < start) or (end and d and d > end):
+            if wins:
+                if d and not any(a <= d <= b for a, b in wins):
+                    continue
+            elif (start and d and d < start) or (end and d and d > end):
                 continue
             if str(e) not in seen:
                 seen.add(str(e))

@@ -25,7 +25,7 @@ import numpy as np
 import pandas as pd
 
 from sit_fuse.pipelines.habs.uq.hab_uq_common import (
-    EPS, SpeciesSpec, concentration_to_class, measurement_soft_labels)
+    EPS, SpeciesSpec, concentration_to_class, in_windows, measurement_soft_labels)
 
 
 # CalHABMAP / SCCOOS-CeNCOOS pier network: the original combined_full table and
@@ -83,13 +83,17 @@ def insitu_mask(df: pd.DataFrame, flt: dict[str, Any] | None) -> np.ndarray:
 
 
 def load_insitu(path: str, max_depth_m: float | None = 1.0,
-                start_date=None, end_date=None, filters: dict[str, Any] | None = None) -> pd.DataFrame:
+                start_date=None, end_date=None, filters: dict[str, Any] | None = None,
+                date_windows=None) -> pd.DataFrame:
     """
     Read the combined_full.csv format (or xlsx) exactly as
     insitu_hab_to_multi_hist does (Datetime = pd.to_datetime(time),
     latitude/longitude -> Latitude/Longitude) and add UQ bookkeeping columns.
     `filters` (uq.insitu_filter) is applied after sample_uid is assigned, so
-    uids match an unfiltered load of the same table.
+    uids match an unfiltered load of the same table. `date_windows`
+    ([(start, end), ...], uq.date_windows via insitu_date_kwargs) keeps only
+    samples on days inside a window; it is applied before sample_uid, so
+    every stage must pass the same windows (insitu_date_kwargs does).
     """
     df = pd.read_excel(path) if str(path).endswith((".xlsx", ".xls")) else pd.read_csv(path)
     df = df.copy()
@@ -110,6 +114,8 @@ def load_insitu(path: str, max_depth_m: float | None = 1.0,
         df = df[df["Datetime"] >= pd.Timestamp(start_date)]
     if end_date is not None:
         df = df[df["Datetime"] <= pd.Timestamp(end_date)]
+    if date_windows:
+        df = df[in_windows(df["Datetime"], date_windows)]
     if "Location_Code" not in df.columns:
         df["Location_Code"] = "UNK"
     has_src, has_mth = "source" in df.columns, "method" in df.columns

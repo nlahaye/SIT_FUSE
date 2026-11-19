@@ -295,6 +295,77 @@ def find_product(search_dirs, kind: str, sensor: str, date, token: str = "",
     return None
 
 
+
+# ---------------------------------------------------------------------------
+# Date windows: uq.date_windows (list of [start, end], inclusive) replaces the
+# single uq.start_date / end_date range when set. Every UQ stage (in-situ load,
+# pilot day roles, inference, fusion, animation) uses the same days.
+# ---------------------------------------------------------------------------
+
+def date_windows(uq: dict[str, Any] | None, yml: dict[str, Any] | None = None):
+    """
+    [(start, end), ...] as normalized Timestamps, sorted and merged where they
+    overlap or touch. Falls back to uq.start_date/end_date (then the top-level
+    keys); returns [] when no range is configured.
+    """
+    uq, yml = uq or {}, yml or {}
+    raw = uq.get("date_windows")
+    if not raw:
+        s = uq.get("start_date", yml.get("start_date"))
+        e = uq.get("end_date", yml.get("end_date"))
+        if s is None and e is None:
+            return []
+        raw = [[s, e]]
+    win = []
+    for w in raw:
+        s, e = (w.get("start"), w.get("end")) if isinstance(w, dict) else (w[0], w[1])
+        s, e = pd.Timestamp(s).normalize(), pd.Timestamp(e).normalize()
+        if e < s:
+            raise ValueError(f"uq.date_windows: end {e.date()} before start {s.date()}")
+        win.append((s, e))
+    win.sort()
+    out = [win[0]]
+    for s, e in win[1:]:
+        if s <= out[-1][1] + pd.Timedelta(days=1):
+            out[-1] = (out[-1][0], max(out[-1][1], e))
+        else:
+            out.append((s, e))
+    return out
+
+
+def window_bounds(windows):
+    """(first start, last end), or (None, None) for no windows."""
+    return (windows[0][0], windows[-1][1]) if windows else (None, None)
+
+
+def window_days(windows, freq: str = "D") -> pd.DatetimeIndex:
+    """All days inside the windows (union, sorted)."""
+    if not windows:
+        return pd.DatetimeIndex([])
+    return pd.DatetimeIndex(np.concatenate([pd.date_range(s, e, freq=freq).values for s, e in windows]))
+
+
+def in_windows(ts, windows) -> np.ndarray:
+    """Boolean mask: timestamp falls on a day inside any window (inclusive)."""
+    d = pd.DatetimeIndex(pd.to_datetime(ts))
+    if d.tz is not None:
+        d = d.tz_localize(None)
+    d = d.normalize()
+    m = np.zeros(len(d), bool)
+    for s, e in windows or []:
+        m |= np.asarray((d >= s) & (d <= e))
+    return m
+
+
+def insitu_date_kwargs(uq: dict[str, Any], yml: dict[str, Any] | None = None) -> dict[str, Any]:
+    """load_insitu date arguments shared by every stage (identical sample_uids)."""
+    if uq.get("date_windows"):
+        win = date_windows(uq, yml)
+        s, e = window_bounds(win)
+        return {"start_date": s, "end_date": e + pd.Timedelta(days=1) - pd.Timedelta(microseconds=1),
+                "date_windows": win}
+    return {"start_date": uq.get("start_date"), "end_date": uq.get("end_date")}
+
 def instrument_dirs(hab_yml: dict[str, Any], sensor: str) -> list[str]:
     """out_dir entries for one instrument of the HAB post-inference YAML.
 
