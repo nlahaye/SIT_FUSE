@@ -1,0 +1,26 @@
+# Launcher plan for the PILOT smoke fusion fit only (creates FUSION/UQ_SMOKE_RECAL/fusion_models.pkl).
+# Run once before production_2026_smoke_qt.yaml; skip if fusion_models.pkl already exists.
+#   cd SIT_FUSE/src/sit_fuse/train
+#   python list_fusion_splits.py configs/fusion_config.smoke.yaml      # fill CAL_DATE_1/2 in the pilot config
+#   python plan_uq_jobs.py uq_parallel.smoke_fusion_pilot.yaml --run -- --dry-run   # check the 4 commands
+#   python plan_uq_jobs.py uq_parallel.smoke_fusion_pilot.yaml --run
+# Only the fusion stage is planned: features/train/infer/evaluate/geo of the evaluation runs are assumed done
+# (their HGB geo exports are the fusion inputs). fit -> apply (holdout, 2 shards) -> merge.
+
+plan_file: /data/nlahaye/output/Learnergy/FUSION/launch_smoke_pilot/uq_plan.yaml
+python: python
+launcher:
+  state_dir: /data/nlahaye/output/Learnergy/FUSION/launch_smoke_pilot
+  cpus: 24
+  gpus: 0
+  retries: 1
+stages: [fusion]
+resources: {fusion_fit: 16, fusion_apply: 4, fusion_merge: 2}
+shards: {fusion: 2}
+
+pipelines:                                  # only used for the fusion dependencies; HGB is the only fused model
+  tempo_smoke: {uq_config: uq_config.example.yaml, models: [hist_gradient_boosting]}
+  goes_smoke: {uq_config: goes18/g18_uq_config_smoke_recal.yaml, models: [hist_gradient_boosting]}
+
+fusion:
+  smoke: {config: configs/fusion_config.smoke.pilot.yaml, after: [tempo_smoke, goes_smoke]}
