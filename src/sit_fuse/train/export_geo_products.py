@@ -38,6 +38,7 @@ Usage:
   python export_geo_products.py uq_config.yaml [--models random_forest ...]
          [--inference-dir DIR] [--output-dir DIR] [-n THREADS] [--workers W]
          [--every-minutes 60 [--offset-minutes 0]]   # hourly subset of 5-min GOES scenes
+         [--overwrite]                                # rewrite everything (default: reuse existing outputs)
   # as launcher jobs (sit_fuse.train.plan_uq_jobs): one job per model, each merging its entry into the
   # shared geo_products_manifest.json under a file lock
   python export_geo_products.py uq_config.yaml --models M --update-manifest
@@ -84,6 +85,14 @@ Config (all optional):
     every_minutes: null        # e.g. 60: export only the first scene of each UTC hour (GOES 5-min -> hourly);
     offset_minutes: 0          #   same binning as build_production_run.py sensors.<s>.every_minutes.
                                #   --every-minutes / --offset-minutes override; 0 / null = every scene
+    skip_existing: true        # reuse existing outputs instead of rewriting them (--overwrite turns this off):
+                               #   model: skipped when its geo_products_manifest.json entry lists files that all
+                               #          exist, newer than its inference_manifest.json and covering this run's
+                               #          scenes (a finer existing export, e.g. every 5 min, covers an hourly one)
+                               #   scene: an existing raster on the expected grid, with every requested band and
+                               #          newer than its inference layers, is read back instead of warped and
+                               #          rewritten; its polygons / footprint are rebuilt from it (vectors are
+                               #          per-model files, so they are always rewritten when a model runs)
 """
 
 from __future__ import annotations
@@ -235,6 +244,9 @@ def write_scene_raster(path: Path, arrays: dict, tg: dict, tags: dict, cog: bool
     import rasterio.shutil
 
     path.parent.mkdir(parents=True, exist_ok=True)
+    # write under temporary names and rename at the end, so an interrupted job never leaves a partial raster
+    # at `path` that a later skip_existing run would take as finished
+    final, path = path, path.with_suffix(".part.tif")
     tmp = path.with_suffix(".tmp.tif") if cog else path
     prof = {"driver": "GTiff", "height": tg["height"], "width": tg["width"], "count": len(arrays),
             "dtype": "float32", "nodata": OUT_NODATA, "crs": tg["crs"], "transform": tg["transform"],
@@ -249,6 +261,42 @@ def write_scene_raster(path: Path, arrays: dict, tg: dict, tags: dict, cog: bool
     if cog:
         rasterio.shutil.copy(tmp, path, driver="COG", compress="DEFLATE")
         os.remove(tmp)
+    os.replace(path, final)
+
+
+def read_existing_raster(path: Path, names: list, tg: dict, deps: list) -> dict | None:
+    """
+    Arrays of an existing scene raster when it can stand in for a fresh export: on the target grid, with a band
+    for every requested layer and at least as new as every inference layer it was built from. Values are
+    returned exactly as the fresh path produces them (warped grids keep OUT_NODATA, native grids use NaN).
+    None -> export the scene again.
+    """
+    import rasterio
+    from rasterio.errors import RasterioError
+
+    try:
+        t = path.stat().st_mtime
+    except OSError:
+        return None
+    if any(Path(d).exists() and Path(d).stat().st_mtime > t for d in deps if d):
+        return None
+    try:
+        with rasterio.open(path) as src:
+            if (src.height, src.width) != (tg["height"], tg["width"]) or src.crs != tg["crs"] or \
+                    not np.allclose(tuple(src.transform)[:6], tuple(tg["transform"])[:6]):
+                return None
+            band = {d: i for i, d in enumerate(src.descriptions, start=1) if d}
+            if any(n not in band for n in names):
+                return None
+            out = {}
+            for n in names:
+                a = src.read(band[n]).astype(np.float32)
+                if not tg["warp"]:
+                    a[a == OUT_NODATA] = np.nan
+                out[n] = a
+    except (RasterioError, OSError, ValueError):
+        return None
+    return out
 
 
 def region_polygons(mask: np.ndarray, layers: dict, summary: list, tg: dict, area: np.ndarray | None,
@@ -409,6 +457,7 @@ def export_model(cfg: dict, model: str, layer_dir: Path, out_dir: Path, records:
     scenes = [sc for sc in manifest["scenes"] if not sc.get("skipped")]
     every = gx.get("every_minutes")
     scenes = thin_scenes(scenes, records, every, gx.get("offset_minutes", 0))
+    skip, n_reused = bool(gx.get("skip_existing", True)), 0
     for scene in scenes:
         pid = scene["pair_id"]
         lpaths = scene.get("layers", {})
@@ -425,14 +474,24 @@ def export_model(cfg: dict, model: str, layer_dir: Path, out_dir: Path, records:
             continue
         tg = target_grid(g, rcfg.get("dst_crs"), rcfg.get("resolution"))
         rs = rcfg.get("resampling", "nearest")
-        arrays = {n: warp(read_layer(lpaths[n]), g, tg, n in CATEGORICAL, rs) for n in names + extra}
+        rpath = out_dir / "rasters" / f"{model}_{pid}.tif"
+        arrays = None
+        if skip and rcfg.get("enabled", True):
+            arrays = read_existing_raster(rpath, names, tg, [lpaths[n] for n in names])
+        reused = arrays is not None
+        if reused:          # summary / mask layers outside geo_export.layers are not in the raster
+            arrays.update({n: warp(read_layer(lpaths[n]), g, tg, n in CATEGORICAL, rs) for n in extra})
+            n_reused += 1
+        else:
+            arrays = {n: warp(read_layer(lpaths[n]), g, tg, n in CATEGORICAL, rs) for n in names + extra}
         t = scene_time(scene, rec)
         meta = {"pair_id": pid, "model": model, "scene_time": t, "date": scene.get("date"),
                 "classifier_split": scene.get("classifier_split"), "split_stratum": scene.get("split_stratum"),
                 "product": scene.get("product")}
 
-        rpath = out_dir / "rasters" / f"{model}_{pid}.tif"
-        if rcfg.get("enabled", True):
+        if rcfg.get("enabled", True) and reused:
+            written.append(str(rpath))
+        elif rcfg.get("enabled", True):
             tags = {**{k: v for k, v in meta.items() if v is not None}, "georef_source": src,
                     "threshold": scene.get("threshold", manifest.get("threshold")),
                     "threshold_group": scene.get("threshold_group"),
@@ -476,7 +535,7 @@ def export_model(cfg: dict, model: str, layer_dir: Path, out_dir: Path, records:
             pix.append(g2.to_crs(vec_crs))
 
     outs = {"rasters": written, "skipped": skipped, "every_minutes": every or None,
-            "n_scenes": len(scenes)}
+            "n_scenes": len(scenes), "pair_ids": [sc["pair_id"] for sc in scenes]}
     cat = lambda L: pd.concat(L, ignore_index=True) if L else None
     # Layer name follows the product (smoke | fire); geo_export.vectors.polygon_name overrides it.
     prods = {str(s.get("product") or "").lower() for s in manifest["scenes"]} - {""}
@@ -485,9 +544,42 @@ def export_model(cfg: dict, model: str, layer_dir: Path, out_dir: Path, records:
     outs["scene_footprints"] = _write_vectors(cat(foots), out_dir / f"{model}_scene_footprints", formats)
     if pix:
         outs["pixels"] = _write_vectors(cat(pix), out_dir / f"{model}_pixels", ["parquet"])
-    LOG.info("%s: %d rasters, %d polygons, %d footprints, %d skipped", model, len(written),
+    LOG.info("%s: %d rasters (%d reused), %d polygons, %d footprints, %d skipped", model, len(written), n_reused,
              sum(len(p) for p in polys), len(foots), len(skipped))
     return outs
+
+
+def _entry_files(entry: dict) -> list:
+    fs = list(entry.get("rasters") or [])
+    for k in ("polygons", "scene_footprints", "pixels"):
+        fs += list(entry.get(k) or [])
+    return fs
+
+
+def existing_entry(entry, layer_dir: Path, cfg: dict, records: dict):
+    """
+    The model's existing geo_products_manifest.json entry when it can be kept as is: every file it lists exists
+    and is at least as new as inference_manifest.json, and it covers the scenes this run would export. Entries
+    written before pair_ids were recorded are checked through their raster names. None -> export the model.
+    """
+    if not isinstance(entry, dict) or not entry.get("rasters"):
+        return None
+    man = layer_dir / "inference_manifest.json"
+    t0 = man.stat().st_mtime
+    for f in _entry_files(entry):
+        try:
+            if Path(f).stat().st_mtime < t0:
+                return None
+        except OSError:
+            return None
+    gx = cfg.get("geo_export", {}) or {}
+    scenes = [sc for sc in load_json(man)["scenes"] if not sc.get("skipped")]
+    want = {sc["pair_id"] for sc in thin_scenes(scenes, records, gx.get("every_minutes"), gx.get("offset_minutes", 0))}
+    have = set(entry.get("pair_ids") or []) | {sk.get("pair_id") for sk in entry.get("skipped") or []}
+    if not entry.get("pair_ids"):
+        stems = {Path(r).stem for r in entry["rasters"]}
+        have |= {p for p in want if any(st.endswith(f"_{p}") for st in stems)}
+    return entry if want <= have else None
 
 
 def _export_one(cfg, m, layer_dir, out_dir, records):
@@ -495,8 +587,11 @@ def _export_one(cfg, m, layer_dir, out_dir, records):
 
 
 def run(cfg: dict, models=None, inference_dir=None, output_dir=None, update_manifest=False,
-        n_workers=1, threads=1, every_minutes=None, offset_minutes=None) -> dict:
+        n_workers=1, threads=1, every_minutes=None, offset_minutes=None, overwrite=False) -> dict:
     gx = cfg.get("geo_export", {}) or {}
+    if overwrite:
+        gx = {**gx, "skip_existing": False}
+        cfg = {**cfg, "geo_export": gx}
     if every_minutes is not None or offset_minutes is not None:   # CLI overrides geo_export.every_minutes
         gx = dict(gx)
         if every_minutes is not None:
@@ -524,21 +619,31 @@ def run(cfg: dict, models=None, inference_dir=None, output_dir=None, update_mani
                 records[r["head_outputs"]] = r
 
     from sit_fuse.parallel_utils import cpu_map, update_json
-    todo = []
+    gman = out_dir / "geo_products_manifest.json"
+    try:
+        old = json.loads(gman.read_text()) if gman.exists() else {}
+    except (OSError, ValueError):
+        old = {}
+    todo, kept = [], {}
     for m in models:
         layer_dir = Path(tmpl.format(model=m))
         if not (layer_dir / "inference_manifest.json").exists():
             LOG.warning("%s: no inference_manifest.json in %s; skipped", m, layer_dir)
             continue
+        e = existing_entry(old.get(m), layer_dir, cfg, records) if gx.get("skip_existing", True) else None
+        if e is not None:
+            LOG.info("%s: geo products already exist (%d rasters); skipped (--overwrite to redo)", m,
+                     len(e["rasters"]))
+            kept[m] = e
+            continue
         todo.append(m)
     res = cpu_map(_export_one, [(cfg, m, str(tmpl.format(model=m)), str(out_dir / m), records) for m in todo],
-                  n_workers, threads)
-    summary = dict(zip(todo, res))
+                  n_workers, threads) if todo else []
+    summary = {**kept, **dict(zip(todo, res))}
     if update_manifest:
         # several per-model jobs share one manifest: locked read-merge-write keeps every model's entry
-        return update_json(out_dir / "geo_products_manifest.json",
-                           lambda old: {**(old or {}), **json.loads(json.dumps(summary, default=str))})
-    save_json(out_dir / "geo_products_manifest.json", summary)
+        return update_json(gman, lambda old: {**(old or {}), **json.loads(json.dumps(summary, default=str))})
+    save_json(gman, summary)
     return summary
 
 
@@ -555,13 +660,16 @@ def main():
                     help="export only the first scene of each N-minute UTC bin (60: hourly); 0 = every scene; "
                          "default geo_export.every_minutes")
     ap.add_argument("--offset-minutes", type=float, default=None, help="shift the bins (default 0)")
+    ap.add_argument("--overwrite", action="store_true",
+                    help="rewrite every model and raster (default: geo_export.skip_existing, true, reuses "
+                         "complete existing outputs)")
     from sit_fuse.parallel_utils import add_parallel_args, setup_compute
     add_parallel_args(ap, shard=False, merge=False)
     a = ap.parse_args()
     cfg = load_yaml(a.yaml_config)
     n_workers, threads = setup_compute(cfg, a.num_threads, a.workers)
     run(cfg, a.models, a.inference_dir, a.output_dir, a.update_manifest, n_workers, threads,
-        a.every_minutes, a.offset_minutes)
+        a.every_minutes, a.offset_minutes, a.overwrite)
 
 
 if __name__ == "__main__":
