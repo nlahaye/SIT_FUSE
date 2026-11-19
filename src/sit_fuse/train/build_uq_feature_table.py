@@ -150,7 +150,10 @@ def select_matchups(cfg: dict) -> list:
     data_cfg = cfg["data"]
     product = str(data_cfg.get("product", "")).lower()
     splits = data_cfg.get("include_splits")  # e.g. [dev, calibration, holdout]
-    matchups = [m for m in load_matchups(data_cfg["matchup_file"], require_truth=True, splits=splits)
+    # data.every_minutes (e.g. 60): quick first pass on the first scene of each UTC hour (see load_matchups)
+    matchups = [m for m in load_matchups(data_cfg["matchup_file"], require_truth=True, splits=splits,
+                                         every_minutes=data_cfg.get("every_minutes"),
+                                         offset_minutes=data_cfg.get("offset_minutes", 0))
                 if not product or m["product"] == product]
     if not matchups:
         raise ValueError(f"No matchups for product='{product}'.")

@@ -143,12 +143,17 @@ def load_context(cfg, model_name=None):
     chunk = int(inf.get("chunk_size", 200000))
     features_cfg = cfg.get("features", {})
     scene_file = inf.get("scene_file", cfg["data"]["matchup_file"])
-    records = load_matchups(scene_file, require_truth=False, splits=inf.get("splits"))
+    # inference.every_minutes (default data.every_minutes; 0 = every scene): first scene of each UTC bin
+    every = inf.get("every_minutes", cfg["data"].get("every_minutes"))
+    off = inf.get("offset_minutes", cfg["data"].get("offset_minutes", 0))
+    records = load_matchups(scene_file, require_truth=False, splits=inf.get("splits"),
+                            every_minutes=every, offset_minutes=off)
     invalid = InvalidClusters.from_config(cfg)
     provenance_common = {
         "model": name, "classes": meta["classes"], "threshold": thr,
         "calibrator": cal.describe(), "selective_rule": sel or {},
         "training_summary": str(summary_path), "scene_file": str(scene_file),
+        "every_minutes": every or None,
         "feature_signature_sha": _sha(meta["feature_signature"]),
         "head_settings": meta["head_settings"],
         "invalid_clusters": invalid.signature() if invalid else {},
