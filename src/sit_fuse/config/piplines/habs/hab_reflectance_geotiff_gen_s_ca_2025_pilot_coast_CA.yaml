@@ -36,6 +36,11 @@
 #      hab_inference_pipeline --stages heads   (inference.date_windows)
 #   3) hab_uq_pipeline --stages train,evaluate   [then infer,fuse,animate: fusion and
 #      animations run per window]
+#   Parallel (local launcher): steps 1-3 plus infer,fuse,animate as one plan, sharded per instrument x
+#   window (heads), species (train,evaluate) and species x window (infer,fuse):
+#      python -m sit_fuse.local_launcher run hab_uq_pilot_coast_windows_launch.yaml [--cpus 24]
+#   (CLI equivalents: hab_inference_pipeline --instruments pace --window 2024-05-01:2024-06-30;
+#    hab_uq_pipeline --species pDA [--window START:END for infer / fuse only])
 
 reuse_context: False #True
 

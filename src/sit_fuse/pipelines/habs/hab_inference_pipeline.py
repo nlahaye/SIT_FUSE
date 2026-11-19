@@ -534,7 +534,29 @@ def run_instrument(yml_conf, instrument, key, stages, model=None, load_dataset=N
     return summary
 
 
-def run_hab_inference_pipeline(yml_conf, stages=None, **inject) -> dict[str, Any]:
+def _select(yml_conf, instruments):
+    """[(instrument, key)] from yml_conf["instruments"]; instruments filters by "inst" or "inst:key"."""
+    pairs = [(i, k) for i, keys in yml_conf["instruments"].items() for k in keys]
+    if not instruments:
+        return pairs
+    want = [str(x).strip() for x in instruments if str(x).strip()]
+    sel = [(i, k) for i, k in pairs if i in want or f"{i}:{k}" in want]
+    unknown = [w for w in want if not any(w in (i, f"{i}:{k}") for i, k in pairs)]
+    if unknown:
+        raise ValueError(f"--instruments: not in the YAML instruments block: {unknown}")
+    return sel
+
+
+def override_windows(conf, windows, section):
+    """Replace conf[section].date_windows with windows ("START:END" strings or pairs); no-op when empty."""
+    if windows:
+        conf.setdefault(section, {})["date_windows"] = [
+            list(w.split(":", 1)) if isinstance(w, str) else list(w) for w in windows]
+    return conf
+
+
+def run_hab_inference_pipeline(yml_conf, stages=None, instruments=None, **inject) -> dict[str, Any]:
+    """instruments: optional subset ("pace", "olci:no_trop", ...) so a launcher can run one job per sensor."""
     inf = yml_conf.get("inference", {}) or {}
     if stages is None:
         stages = list(inf.get("stages", ["clusters"]))
@@ -546,10 +568,9 @@ def run_hab_inference_pipeline(yml_conf, stages=None, **inject) -> dict[str, Any
     from sit_fuse.compute_resources import apply_compute_limits
     apply_compute_limits(yml_conf)
     out = {}
-    for instrument, keys in yml_conf["instruments"].items():
-        for key in keys:
-            LOG.info("Inference %s/%s stages=%s", instrument, key, stages)
-            out[f"{instrument}_{key}"] = run_instrument(yml_conf, instrument, key, stages, **inject)
+    for instrument, key in _select(yml_conf, instruments):
+        LOG.info("Inference %s/%s stages=%s", instrument, key, stages)
+        out[f"{instrument}_{key}"] = run_instrument(yml_conf, instrument, key, stages, **inject)
     yml_conf["inference_summary"] = out
     return out
 
@@ -564,9 +585,14 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("-y", "--yaml", required=True, help="HAB pipeline YAML")
     ap.add_argument("--stages", default=None, help="comma list of clusters,heads,ood_stats")
+    ap.add_argument("--instruments", default=None,
+                    help="comma list of instruments (or instrument:key) to run; default: all in the YAML")
+    ap.add_argument("--window", action="append", default=None, metavar="START:END",
+                    help="replace inference.date_windows (repeatable), e.g. 2024-05-01:2024-06-30")
     from sit_fuse.compute_resources import add_num_threads_arg, apply_num_threads_arg
     add_num_threads_arg(ap)
     a = ap.parse_args()
     apply_num_threads_arg(a)
-    conf = _read_yaml(a.yaml)
-    run_hab_inference_pipeline(conf, None if a.stages is None else a.stages.split(","))
+    conf = override_windows(_read_yaml(a.yaml), a.window, "inference")
+    run_hab_inference_pipeline(conf, None if a.stages is None else a.stages.split(","),
+                               instruments=None if a.instruments is None else a.instruments.split(","))

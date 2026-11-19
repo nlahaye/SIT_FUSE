@@ -1,0 +1,74 @@
+# Local-launcher plan for the WINDOWS pilot (uq_pilot_coast_windows_piers), full California domain.
+# Same steps as the header of hab_reflectance_geotiff_gen_s_ca_2025_pilot_coast_CA.yaml, run in parallel:
+#
+#   roles ─┐
+#          ├─► train_eval x species ─► infer_fuse x species x window ─► animate
+#   heads x instrument x window ─┘
+#
+#   python -m sit_fuse.local_launcher list   hab_uq_pilot_coast_windows_launch.yaml
+#   python -m sit_fuse.local_launcher run    hab_uq_pilot_coast_windows_launch.yaml [--dry-run] [--cpus 24]
+#   python -m sit_fuse.local_launcher status hab_uq_pilot_coast_windows_launch.yaml
+#
+# Resume: rerun the same command; finished jobs (markers/<job>.done) and existing head_outputs.tif are skipped.
+# Failed jobs need --rerun-failed; --only 'heads.*' (or 'train_eval.*', ...) runs one stage.
+# Every command passes -n <cpus> so compute.num_threads: medium in the HAB YAML does not override the
+# launcher's per-job core allocation.
+
+launcher:
+  state_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/launch/uq_pilot_coast_windows_piers
+  gpus: auto              # head export only; set e.g. [0, 1] to leave GPUs free
+  cpus: 32                # cores the launcher hands out (override with --cpus)
+  max_parallel: null
+  retries: 0
+  nice: 10
+
+vars:
+  py: python
+  yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/postprocess/hab_reflectance_geotiff_gen_s_ca_2025_pilot_coast_CA.yaml
+  root: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526
+  roles: "{root}/uq_pilot_windows/pilot_date_roles.csv"     # = uq.date_roles_file in the HAB YAML
+
+jobs:
+  # 1) Day roles for the three windows (seed search spreads alert events over calibration / test).
+  - name: roles
+    cmd: "{py} -m sit_fuse.pipelines.habs.uq.hab_uq_pilot_plan -y {yaml} --mode resplit --seed-search 50 --out {roles}"
+    cpus: 2
+    gpu: 0
+    provides: ["{roles}"]
+
+  # 2) Head outputs, one job per instrument x window (existing *.head_outputs.tif are skipped).
+  #    Windows must match uq.date_windows / inference.date_windows in the HAB YAML.
+  - name: heads
+    cmd: "{py} -m sit_fuse.pipelines.habs.hab_inference_pipeline -y {yaml} --stages heads --instruments {inst} --window {win} -n 6"
+    grid:
+      inst: [pace, olci, viirs, modis]
+      win: ["2024-05-01:2024-06-30", "2024-12-01:2025-06-15", "2025-07-15:2025-08-31"]
+    cpus: 6               # compute.num_loader_workers (10) adds loader processes on top of this
+    gpu: 0.5              # two head jobs share one GPU; use 1 if a model does not fit twice
+    priority: 1           # longest stage: start these first
+
+  # 3) Train + evaluate, one job per species, after the roles file and ALL head jobs.
+  - name: train_eval
+    cmd: "{py} -m sit_fuse.pipelines.habs.uq.hab_uq_pipeline -y {yaml} --stages train,evaluate --species {sp} -n 8"
+    grid:
+      sp: [Pseudo_nitzschia_seriata_group, Pseudo_nitzschia_delicatissima_group, pDA]
+    cpus: 8               # RandomForest n_jobs=-1 is capped at this (LOKY_MAX_CPU_COUNT)
+    gpu: 0
+    after: [{name: roles, on: []}, {name: heads, on: []}]
+
+  # 4) Per-sensor *.uq.tif and per-window fusion, one job per species x window (after that species' model).
+  - name: infer_fuse
+    cmd: "{py} -m sit_fuse.pipelines.habs.uq.hab_uq_pipeline -y {yaml} --stages infer,fuse --species {sp} --window {win} -n 4"
+    grid:
+      sp: [Pseudo_nitzschia_seriata_group, Pseudo_nitzschia_delicatissima_group, pDA]
+      win: ["2024-05-01:2024-06-30", "2024-12-01:2025-06-15", "2025-07-15:2025-08-31"]
+    cpus: 4
+    gpu: 0
+    after: [{name: train_eval, on: [sp]}]
+
+  # 5) Animations for all species and windows in one job (they share animations/manifest.json).
+  - name: animate
+    cmd: "{py} -m sit_fuse.pipelines.habs.uq.hab_uq_pipeline -y {yaml} --stages animate -n 4"
+    cpus: 4
+    gpu: 0
+    after: [{name: infer_fuse, on: []}]
