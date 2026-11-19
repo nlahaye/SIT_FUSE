@@ -1,16 +1,24 @@
 # Local-launcher plan for the FULL run 2023-01-01..2026-09-30 (uq_full_2023_2026_ifcb), full California domain.
 # HAB YAML: hab_reflectance_geotiff_gen_s_ca_2023_2026_full_CA.yaml (copy to {yaml} below).
 #
-#   insitu ─► roles ─┐
-#                    ├─► train_eval x species ─┬─► subset_eval x species
-#   heads x instrument x year ─────────────────┘ └─► infer_fuse x species x year ─► animate
+#   insitu ─► roles ─────────────────────────────┐
+#                                                ├─► train_eval x species ─┬─► subset_eval x species
+#   rrs_sync x instrument ─► heads x inst x year ┘                         └─► infer_fuse x species x year ─► animate
+#
+# Data pulls: insitu (ERDDAP, CalCOFI, CCE-LTER, IFCB bins missing from the cache) and rrs_sync (OB.DAAC daily
+# L3m Rrs missing from the REFLECTANCES dirs, via earthaccess; needs ~/.netrc with Earthdata credentials).
+# rrs_sync only adds missing days and upgrades NRT files to standard (NRT moved to {reflectances}/nrt_archive).
+# Check the PACE_OCI and AQUA_MODIS directories below against train_model_PACE_OCI / _AQUA_MODIS.yaml
+# and preview what would be downloaded (the launcher --dry-run only prints commands):
+#   python -m sit_fuse.preprocessing.data_pull.sync_l3m_rrs --start 2023-01-01 --end 2026-09-30 \
+#     --dir S3A_OLCI=/mnt/data1/REFLECTANCES/S3A_OLCI --dry-run
 #
 #   python -m sit_fuse.local_launcher list   hab_uq_full_2023_2026_launch.yaml
 #   python -m sit_fuse.local_launcher run    hab_uq_full_2023_2026_launch.yaml --dry-run
 #   python -m sit_fuse.local_launcher run    hab_uq_full_2023_2026_launch.yaml   (inside the MemoryMax scope below)
 #   python -m sit_fuse.local_launcher status hab_uq_full_2023_2026_launch.yaml
 #
-# Heads do not depend on in-situ data and start immediately (priority 1); existing *.head_outputs.tif in the
+# Heads do not depend on in-situ data and start once their instrument's rrs_sync is done; existing *.head_outputs.tif in the
 # pilot_coast_products/ dirs (pilot window days) are skipped. 2023 days come from inference.extend_input_lists:
 # check the "extend_input_lists: N listed scenes in window, M added from disk" line in each heads log.
 # PACE starts 2024-03 (pace x 2023 finds no scenes and finishes quickly).
@@ -39,6 +47,7 @@ vars:
   root: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526
   insitu_dir: /mnt/data1/habs/insitu_augmented_ifcb_2023_2026     # = uq.insitu_file directory in the HAB YAML
   roles: "{root}/uq_full_2023_2026/date_roles.csv"                 # = uq.splits.date_roles_file
+  reflectances: /mnt/data1/REFLECTANCES                            # model YAML input dirs (flat layout)
 
 jobs:
   # 0) In-situ table: piers re-pulled from SCCOOS ERDDAP, CalCOFI, and IFCB with the PN chain correction
@@ -49,6 +58,24 @@ jobs:
     cpus: 1
     gpu: 0
     provides: ["{insitu_dir}/combined_augmented.csv"]
+
+  # 0b) Satellite inputs: daily L3m Rrs for 2023-01..2026-09 per instrument (the collection the model
+  #     YAML lists use: OLCI = S3A, VIIRS = SNPP). I/O bound: 1 core, 4 download threads each.
+  - name: rrs_sync
+    cmd: >-
+      {py} -m sit_fuse.preprocessing.data_pull.sync_l3m_rrs --start 2023-01-01 --end 2026-09-30
+      --dir {key}={reflectances}/{subdir} --res 4km --layout flat --threads 4
+      --nrt-archive-dir {reflectances}/nrt_archive/{subdir}
+      --report {root}/launch/uq_full_2023_2026/rrs_sync_{inst}.csv
+    cases:
+      - {inst: olci,  key: S3A_OLCI,   subdir: S3A_OLCI}
+      - {inst: viirs, key: NPP_VIIRS,  subdir: SNPP_VIIRS}
+      - {inst: pace,  key: PACE_OCI,   subdir: PACE_OCI}      # check dir
+      - {inst: modis, key: AQUA_MODIS, subdir: AQUA_MODIS}    # check dir
+    id_keys: [inst]
+    cpus: 1
+    gpu: 0
+    priority: 2
 
   # 1) Day roles for 2023-01..2026-09 (seed search spreads alert events over calibration / test).
   - name: roles
@@ -68,6 +95,7 @@ jobs:
     cpus: 4               # was 6; two heads jobs share GPU 0 (gpu 0.5) on 8 of the 9 cores
     gpu: 0.5
     priority: 1
+    after: [{name: rrs_sync, on: [inst]}]   # that instrument's inputs first
 
   # 3) Train (model x class weighting x prior strength search, decision rule, interval calibration)
   #    and evaluate, one job per species, after the roles file and ALL head jobs.
