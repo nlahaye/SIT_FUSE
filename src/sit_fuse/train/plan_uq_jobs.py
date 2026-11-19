@@ -24,8 +24,8 @@ without the launcher (or with a deleted state_dir) continues where it stopped. F
 at least as new as upstream outputs: features (build_manifest.json + pixel_features.parquet), train
 (training_summary.json), infer per model (inference_manifest.json, written after all scenes), evaluate per model
 (eval_summary.json with bootstrap_groups), compare (model_comparison.csv), geo per model (entry in
-geo_products_manifest.json). A model whose inference was interrupted is re-planned; its finished scenes are reused
-from the per-scene checkpoints (scene_results/) when those exist. Fusion and visuals rely on the launcher markers.
+geo_products_manifest.json whose listed files all still exist). A model whose inference was interrupted is
+re-planned; its finished scenes are reused from the per-scene checkpoints (scene_results/) when those exist. Fusion and visuals rely on the launcher markers.
 --no-resume plans everything (the scripts still reuse matching scene checkpoints; add --overwrite to the inference
 commands to recompute them).
 
@@ -95,9 +95,16 @@ def finished(uq, models):
     edir = Path(ev.get("output_dir", out / "evaluation"))
     gman = Path(gx.get("output_dir", out / "geo")) / "geo_products_manifest.json"
     try:
-        geo_models = set(json.loads(gman.read_text())) if gman.exists() else set()
+        gent = json.loads(gman.read_text()) if gman.exists() else {}
     except Exception:  # noqa: BLE001
-        geo_models = set()
+        gent = {}
+
+    def _geo_files_exist(e):              # a deleted raster / vector file re-plans the model's geo job
+        if not isinstance(e, dict) or not e.get("rasters"):
+            return False
+        fs = list(e["rasters"]) + [f for k in ("polygons", "scene_footprints", "pixels") for f in e.get(k) or []]
+        return all(Path(f).exists() for f in fs)
+    geo_models = {m for m, e in gent.items() if _geo_files_exist(e)}
     d["infer"], d["evaluate"], d["geo"], evs = {}, {}, {}, []
     for m in models:
         man = Path(inf["output_dir"]) / "inference_manifest.json" if inf.get("output_dir") else \
