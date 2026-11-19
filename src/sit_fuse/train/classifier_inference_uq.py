@@ -57,7 +57,7 @@ from sit_fuse.train.classifier_utils import (
     write_raster_stack,
 )
 
-from sf_uq_utils import (
+from sit_fuse.train.sf_uq_utils import (
     ABSTAIN,
     InvalidClusters,
     excluded_cluster_mask,
@@ -82,7 +82,7 @@ from sf_uq_utils import (
     scene_threshold,
     uq_feature_signature,
 )
-from simple_classifiers_uq import BASELINES, baseline_proba
+from sit_fuse.train.simple_classifiers_uq import BASELINES, baseline_proba
 
 LOG = logging.getLogger("classifier-inference-uq")
 
