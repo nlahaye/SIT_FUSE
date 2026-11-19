@@ -56,6 +56,9 @@ DEFAULTS = {
     "chunk_size": 1000000,         # rows per scaler.transform / k-means predict call
     "mmap": False,                 # memory-map train_data.npy in read_data_preprocessed
     "legacy": False,               # use the original (pre-optimisation) code path
+    "edge_fill": None,             # prediction only: {enabled: true, min_valid: 4} keeps window centres
+                                   # whose own pixel is valid but whose window touches fill (coast,
+                                   # cloud edge); fill neighbours get the window's per-channel valid mean
 }
 
 
@@ -141,6 +144,52 @@ def valid_center_mask(bad, p):
     np.cumsum(np.cumsum(bad, axis=0, dtype=dt), axis=1, out=ii[1:, 1:])
     win = ii[s:, s:] - ii[:-s, s:] - ii[s:, :-s] + ii[:-s, :-s]
     return win == 0
+
+
+def edge_fill_conf(cfg):
+    """(enabled, min_valid) from data.sampling.edge_fill (bool or dict)."""
+    ef = (cfg or {}).get("edge_fill")
+    if not ef:
+        return False, 0
+    if ef is True:
+        ef = {}
+    if not ef.get("enabled", True):
+        return False, 0
+    return True, int(ef.get("min_valid", 4))
+
+
+def partial_center_mask(bad, p, min_valid):
+    """Window centres (same grid as valid_center_mask) whose centre pixel is good and
+    whose (2p+1)^2 window holds at least min_valid good pixels (centre included)."""
+    H, W = bad.shape
+    s = 2 * p + 1
+    if H < s or W < s:
+        return np.zeros((max(H - 2 * p, 0), max(W - 2 * p, 0)), dtype=bool)
+    if p == 0:
+        return ~bad
+    dt = np.int32 if H * W < 2 ** 31 - 1 else np.int64
+    ii = np.zeros((H + 1, W + 1), dtype=dt)
+    np.cumsum(np.cumsum(bad, axis=0, dtype=dt), axis=1, out=ii[1:, 1:])
+    n_bad = ii[s:, s:] - ii[:-s, s:] - ii[s:, :-s] + ii[:-s, :-s]
+    centre_ok = ~bad[p:H - p, p:W - p]
+    return centre_ok & ((s * s - n_bad) >= int(min_valid))
+
+
+def fill_windows(win, bad, rows, cols, p, n_chan):
+    """In place: replace fill pixels of flattened (wy, wx, C) windows with the
+    per-channel mean of the window's good pixels. Returns the edge-row mask."""
+    if p == 0 or len(rows) == 0:
+        return np.zeros(len(rows), dtype=bool)
+    s = 2 * p + 1
+    bw = view_as_windows(bad, (s, s))[rows, cols].reshape(len(rows), s * s)
+    edge = bw.any(1)
+    if edge.any():
+        W3 = win[edge].reshape(-1, s * s, n_chan).astype(np.float64)
+        good = ~bw[edge]
+        mean = (W3 * good[:, :, None]).sum(1) / np.maximum(good.sum(1), 1)[:, None]
+        W3 = np.where(good[:, :, None], W3, mean[:, None, :])
+        win[edge] = W3.reshape(len(W3), -1).astype(win.dtype)
+    return edge
 
 
 def extract_windows(scene, rows, cols, p):

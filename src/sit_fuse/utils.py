@@ -738,15 +738,48 @@ def _oc_window(filename, kwrg, kwargs, need_latlon):
     return r0, r1, c0, c1, lat, lon
 
 
+_LAND_MASK_CACHE = {}
+
+
+def _land_polygon_mask(source, lat, lon):
+    """True on land for Natural Earth land polygons (land_10 | land_50 | land_110).
+
+    Cached per grid: the L3m grid (and box) is the same for every scene of a sensor."""
+    lat = np.asarray(lat)
+    lon = np.asarray(lon)
+    key = (source, lat.shape, float(lat.flat[0]), float(lat.flat[-1]), float(lon.flat[0]), float(lon.flat[-1]))
+    hit = _LAND_MASK_CACHE.get(key)
+    if hit is None:
+        regions = getattr(regionmask.defined_regions.natural_earth_v5_1_2, source)
+        hit = np.isfinite(np.asarray(regions.mask(lon, lat))).astype(np.bool_)
+        if len(_LAND_MASK_CACHE) > 16:
+            _LAND_MASK_CACHE.clear()
+        _LAND_MASK_CACHE[key] = hit
+    return hit
+
+
 def _oc_ocean_mask(lat, lon, kwargs):
-    """mask_oceans handling shared by the OC readers (unchanged logic)."""
+    """mask_oceans handling shared by the OC readers.
+
+    ocean_mask_source (optional, default ocean_basins_50 = previous behaviour):
+      ocean_basins_50          pixel kept only inside Natural Earth 1:50m ocean basins
+      land_10 | land_50 | land_110  pixel removed only inside Natural Earth land polygons
+                               (1:10m follows bays/harbours; inland lakes stay masked)
+      none                     no polygon mask; the L3m product's own land fill is used
+    """
     tmp1 = None
     tmp2 = None
     if "mask_oceans" in kwargs:
-        land_temp = ocean_basins_50.mask(lon, lat)
-        land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
-        tmp1 = land_temp.isnull().to_numpy().astype(np.bool_)
-        if kwargs["mask_oceans"] is False:
+        source = kwargs.get("ocean_mask_source", "ocean_basins_50") or "none"
+        if source == "ocean_basins_50":
+            land_temp = ocean_basins_50.mask(lon, lat)
+            land_temp = land_temp.rename({'lon': 'x','lat': 'y'})
+            tmp1 = land_temp.isnull().to_numpy().astype(np.bool_)
+        elif source in ("land_10", "land_50", "land_110"):
+            tmp1 = _land_polygon_mask(source, lat, lon).copy()
+        elif source != "none":
+            raise ValueError("ocean_mask_source must be ocean_basins_50, land_10, land_50, land_110 or none")
+        if tmp1 is not None and kwargs["mask_oceans"] is False:
             tmp1 = np.logical_not(tmp1)
 
     final_mask = None

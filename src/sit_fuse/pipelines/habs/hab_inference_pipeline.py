@@ -35,6 +35,12 @@ YAML (top level, all optional):
     start_date / end_date      restrict scenes by YYYYMMDD in the file name
     overwrite: false
     model_configs: {modis: {no_trop: /path/train_model_modis.yaml}}
+    data_overrides:            deep-merged into each model YAML's data: block for
+                               inference only, e.g. relaxed coastal masking:
+      reader_kwargs: {ocean_mask_source: land_10}      (utils._oc_ocean_mask)
+      sampling: {edge_fill: {enabled: true, min_valid: 4}}   (scene_sampling.edge_fill)
+  instruments.<inst>.<key>.model_dir   weights / scaler directory when out_dir is a
+                               separate product directory (default: out_dir)
   head_export:
     top_k_parent: 5
     top_k_child: 3
@@ -114,6 +120,32 @@ def model_config_path(yml_conf, instrument, key) -> str:
 
 def instrument_out_dir(yml_conf, instrument, key, sf_yaml) -> str:
     return yml_conf["instruments"][instrument][key].get("out_dir") or sf_yaml["output"]["out_dir"]
+
+
+def instrument_model_dir(yml_conf, instrument, key, out_dir) -> str:
+    """Where the trained model and encoder_scaler.pkl live (default: the product out_dir)."""
+    return yml_conf["instruments"][instrument][key].get("model_dir") or out_dir
+
+
+def _deep_merge(base, over):
+    for k, v in (over or {}).items():
+        if isinstance(v, dict) and isinstance(base.get(k), dict):
+            _deep_merge(base[k], v)
+        else:
+            base[k] = copy.deepcopy(v)
+    return base
+
+
+def apply_data_overrides(sf_yaml, inf_cfg):
+    """inference.data_overrides -> sf_yaml["data"] (in place); returns the overrides."""
+    over = (inf_cfg or {}).get("data_overrides") or {}
+    if over:
+        sf_yaml.setdefault("data", {})
+        for k in ("reader_kwargs", "sampling"):
+            if k in over and sf_yaml["data"].get(k) is None:
+                sf_yaml["data"][k] = {}
+        _deep_merge(sf_yaml["data"], over)
+    return over
 
 
 def _entry_base(entry) -> str:
@@ -263,6 +295,7 @@ def write_head_tif(out_tif, arr, prof, names, tags, cf_nodata=CF_NODATA):
 
 
 def embedding_stats_path(yml_conf, instrument, key, out_dir) -> str:
+    """out_dir here is the model directory (stats belong to the model, not the products)."""
     ood = yml_conf.get("head_export", {}).get("ood", {}) or {}
     p = ood.get("stats_path")
     if isinstance(p, dict):
@@ -375,9 +408,10 @@ def validate_head_outputs(yml_conf, min_agreement=0.99) -> list[dict[str, Any]]:
 # Driver
 # ---------------------------------------------------------------------------
 
-def _tags(sf_cfg_path, entry, model, ex, names, geo, mode, stats_path):
+def _tags(sf_cfg_path, entry, model, ex, names, geo, mode, stats_path, data_overrides=None):
     from sit_fuse.train.sf_uq_utils import FORMAT_VERSION
     return {
+        "data_overrides": json.dumps(data_overrides or {}, sort_keys=True, default=str),
         "format_version": FORMAT_VERSION,
         "num_child_classes": int(model.num_classes),
         "num_parent_classes": int(ex.get("_num_parent_classes", -1)),
@@ -408,8 +442,12 @@ def run_instrument(yml_conf, instrument, key, stages, model=None, load_dataset=N
     if sf_yaml.get("compute", {}).get("inference_batch_size") and not ex.get("batch_size"):
         ex["batch_size"] = sf_yaml["compute"]["inference_batch_size"]
     out_dir = instrument_out_dir(yml_conf, instrument, key, sf_yaml)
-    sf_yaml["output"]["out_dir"] = out_dir
+    model_dir = instrument_model_dir(yml_conf, instrument, key, out_dir)
+    sf_yaml["output"]["out_dir"] = model_dir      # model weights + encoder_scaler.pkl
     os.makedirs(out_dir, exist_ok=True)
+    data_over = apply_data_overrides(sf_yaml, inf)
+    if data_over:
+        LOG.info("%s/%s: data overrides %s", instrument, key, data_over)
     no_heir = bool(yml_conf.get("no_heir", sf_yaml["output"].get("generate_intermediate_output", True)))
     overwrite = bool(inf.get("overwrite", False))
     tiled = bool(sf_yaml["data"].get("tile", False))
@@ -436,7 +474,7 @@ def run_instrument(yml_conf, instrument, key, stages, model=None, load_dataset=N
             import torch
             torch.manual_seed(int(mc.get("seed", 0)))
         if (ex.get("ood", {}) or {}).get("enabled", False):
-            stats_path = embedding_stats_path(yml_conf, instrument, key, out_dir)
+            stats_path = embedding_stats_path(yml_conf, instrument, key, model_dir)
             if os.path.exists(stats_path) and not (ex["ood"].get("refit", False)):
                 stats = EmbeddingStats.load(stats_path)
             else:
@@ -446,7 +484,7 @@ def run_instrument(yml_conf, instrument, key, stages, model=None, load_dataset=N
                 LOG.info("%s/%s: embedding stats -> %s", instrument, key, stats_path)
     if "ood_stats" in stages and not do_heads:
         ood = ex.get("ood", {}) or {}
-        stats_path = embedding_stats_path(yml_conf, instrument, key, out_dir)
+        stats_path = embedding_stats_path(yml_conf, instrument, key, model_dir)
         fit_embedding_stats(model, sf_yaml, ood, load_dataset, seed=int(ood.get("seed", 0))).save(stats_path)
         summary["embedding_stats"] = stats_path
 
@@ -481,7 +519,7 @@ def run_instrument(yml_conf, instrument, key, stages, model=None, load_dataset=N
                         "crs": None}
                 mode = "none"
             write_head_tif(head_tif, arr, prof, names,
-                           _tags(cfg_path, entry, model, ex, names, geo, mode, stats_path))
+                           _tags(cfg_path, entry, model, ex, names, geo, mode, stats_path, data_over))
             summary["heads"].append(head_tif)
         if need_clusters:
             run_cluster_inference_scene(model, data, sf_yaml, out_dir, base, no_heir)
