@@ -6,6 +6,9 @@
 #     ocean basins, and edge-filled 3x3 windows for coastal / cloud-edge pixels;
 #   - uq.out_dir uq_pilot_coast, calibration prior_correction_strength 0.
 # Run: hab_inference_pipeline --stages heads, then hab_uq_pipeline --stages train,evaluate
+# Pier-only scores without retraining: hab_uq_subset_eval -y <this yaml> (uq.evaluation.subsets)
+# If the pilot evaluation holds up: hab_uq_pipeline --stages infer,fuse,animate
+#   (per-sensor *.uq.tif -> fused/ -> animations/; uq.animation below)
 
 reuse_context: False #True
 
@@ -16,8 +19,8 @@ no_heir: True
 config_dir: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/"
 geo_zarr: "/mnt/data1/cal_coast_geo.zarr"
  
-insitu_file: "/mnt/data1/habs/insitu_augmented/combined_augmented_strict.csv" #/mnt/data1/la_hab_data/combined_full_071426.csv" #HAB_S_CA_Combined.csv" #combined_full.csv"
-#/mnt/data1/habs/insitu_augmented_v2/combined_augmented_strict.csv 
+insitu_file: "/mnt/data1/habs/insitu_augmented/combined_augmented.csv" #/mnt/data1/la_hab_data/combined_full_071426.csv" #HAB_S_CA_Combined.csv" #combined_full.csv"
+#/mnt/data1/habs/insitu_augmented_v2/combined_augmented.csv 
 insitu_matchup_circle_max_radius: [0.09]
 start_date: "2024-03-01" #"2024-07-01" #"2018-10-01"
 end_date: "2025-12-01" #"2025-12-31" #"2025-07-01" #"2025-12-31"
@@ -94,11 +97,14 @@ uq:
   input_mode: head_outputs 
   out_dir: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/uq_pilot_coast/"   # separate from the first pilot
   # augmented in-situ table written by sit_fuse.pipelines.habs.insitu.pull_insitu_hab
-  insitu_file: "/mnt/data1/habs/insitu_augmented/combined_augmented_strict.csv" #"/mnt/data1/la_hab_data/combined_full_augmented.csv"
+  insitu_file: "/mnt/data1/habs/insitu_augmented/combined_augmented.csv" #"/mnt/data1/la_hab_data/combined_full_augmented.csv"
   start_date: &pilot_start "2025-01-15"   # PILOT window: same as the first pilot (must match the roles file)
   end_date: &pilot_end "2025-06-15"
   species_run: [Pseudo_nitzschia_seriata_group, Pseudo_nitzschia_delicatissima_group, pDA]
   max_depth_m: 1.0
+  # Train AND evaluate on one provenance only (rerun from --stages train; needs the
+  # non-strict insitu_file). e.g. oos_piers, or {sources: [...], methods: [...], location_codes: [...]}
+  # insitu_filter: oos_piers
   num_child: 100             # model YAML cluster.heir.num_classes (joint = child + num_child*parent)
   #input_mode: auto           # auto | head_outputs | label_only
   label_level: heir          # heir | no_heir (label_only mode)
@@ -167,7 +173,16 @@ uq:
     pDA: {alert_thresholds: [0.5, 1.0], measurement_sigma_dex: 0.15}
     Pseudo_nitzschia_seriata_group: {alert_thresholds: [10000, 100000]}
 
-  evaluation: {n_bootstrap: 200}   # was 500 (pilot)
+  evaluation:
+    n_bootstrap: 200                # was 500 (pilot)
+    # Evaluation-only provenance subsets of the test samples (models unchanged).
+    # Also run standalone on finished runs: python -m sit_fuse.pipelines.habs.uq.hab_uq_subset_eval -y <this yaml>
+    # Source filters need the non-strict table (the strict CSV has no source/method columns).
+    subset_insitu_file: "/mnt/data1/habs/insitu_augmented/combined_augmented.csv"
+    subsets:
+      oos_piers: {sources: oos_piers}              # combined_full + calhabmap_erddap (CalHABMAP piers, as in the 2026 paper)
+      non_pier: {exclude_sources: oos_piers}       # IFCB, SeaBASS, cruise, other tables
+    subset_recalibrate_fusion: false               # true: fusion weights from subset calibration rows only
 
   fusion:
     pool: log                # linear | log | poe
@@ -176,6 +191,18 @@ uq:
     quality: selective       # none | selective | entropy
     temporal_filter: true
     transition_stay: 0.7
+
+  animation:                 # hab_uq_animate: one MP4 per species x stream from uq.out_dir/fused
+    out_dir: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/uq_pilot_coast/animations/"
+    streams: [filtered, fused]   # filtered = gap-filled daily; fused = observed days only
+    format: mp4              # mp4 (H.264, plays in PowerPoint) | gif
+    fps: 4
+    dpi: 110
+    insitu_overlay: true     # samples within +/- overlay_days, coloured by bin; rings = test days
+    overlay_days: 1
+    land_mask: land_10       # Natural Earth land drawn grey; none to skip
+    extent: null             # [lon_min, lon_max, lat_min, lat_max]; null = product grid
+    threshold_index: 0       # first alert threshold (P. seriata 10k cells/L, pDA 0.5 ng/mL)
 
 
 compute:

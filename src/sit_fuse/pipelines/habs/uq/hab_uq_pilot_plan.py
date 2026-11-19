@@ -30,7 +30,7 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from sit_fuse.pipelines.habs.uq.hab_insitu import load_insitu, species_frame
+from sit_fuse.pipelines.habs.uq.hab_insitu import insitu_filter_config, load_insitu, species_frame
 from sit_fuse.pipelines.habs.uq.hab_uq_common import species_spec
 
 ROLES = ("train", "calibration", "test")
@@ -40,7 +40,8 @@ def species_events(yml, species, start=None, end=None):
     """One row per (sample, species): date, station, value, event (>= first alert threshold)."""
     uq = yml["uq"]
     ins = load_insitu(uq.get("insitu_file", yml.get("insitu_file")), max_depth_m=uq.get("max_depth_m", 1.0),
-                      start_date=start or uq.get("start_date"), end_date=end or uq.get("end_date"))
+                      start_date=start or uq.get("start_date"), end_date=end or uq.get("end_date"),
+                      filters=insitu_filter_config(yml))
     out = []
     for k in species:
         spec = species_spec(k, uq.get("species", {}).get(k))

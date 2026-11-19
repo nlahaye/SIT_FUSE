@@ -41,7 +41,7 @@ from sit_fuse.train.sf_uq_utils import (
     expand_soft_targets, forest_member_probabilities, full_proba,
     predictive_entropy_norm, select_feature_columns, select_selective_threshold)
 from sit_fuse.pipelines.habs.uq.hab_context_encoder import default_encoder_cfg, fit_encoder
-from sit_fuse.pipelines.habs.uq.hab_insitu import assign_splits, load_insitu, species_frame
+from sit_fuse.pipelines.habs.uq.hab_insitu import assign_splits, insitu_filter_config, load_insitu, species_frame
 from sit_fuse.pipelines.habs.uq.hab_uq_common import (
     SENSORS, ranked_probability_score, species_spec, instrument_dirs, utcnow_iso)
 from sit_fuse.pipelines.habs.hab_sensor_groups import expand_sensors
@@ -377,7 +377,8 @@ def train_species(hab_yml: dict[str, Any], use_key: str, out_dir: str | Path,
     if samples is None:
         ins = load_insitu(uq.get("insitu_file", hab_yml.get("insitu_file")),
                           max_depth_m=uq.get("max_depth_m", 1.0),
-                          start_date=uq.get("start_date"), end_date=uq.get("end_date"))
+                          start_date=uq.get("start_date"), end_date=uq.get("end_date"),
+                          filters=insitu_filter_config(hab_yml))
         samples = assign_splits(species_frame(ins, spec), split_config(hab_yml))
     n_ex = int((samples["split"] == "excluded").sum())
     if n_ex:

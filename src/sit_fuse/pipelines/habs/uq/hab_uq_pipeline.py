@@ -12,6 +12,9 @@ Stages (per species in HAB_USE_KEYS[roi] or uq.species_run):
   evaluate  held-out test metrics per sensor / station / season + fused
   infer     per-sensor, per-day *.uq.tif band stacks
   fuse      multi-sensor daily fused + temporally filtered products
+  animate   (optional) MP4/GIF per species x fused stream from the fuse
+            outputs (hab_uq_animate; uq.animation), with poster frames and
+            animations/manifest.json; needs no trained bundle
   ablation  (optional) retrain + test-score per input variant
             (uq.evaluation.ablation, default label_only / head_outputs /
             head_outputs_mc_ood), same samples and splits
@@ -75,6 +78,8 @@ def run_hab_uq_pipeline(yml, stages=("train", "evaluate", "infer", "fuse")):
             bundle = joblib.load(bpath)
             bundle["path"] = str(bpath)
         if bundle is None:
+            if "animate" in stages:
+                summary.setdefault(use_key, {})["animations"] = _animate(yml, use_key, out_root)
             continue
         frame = bundle.pop("_frame", None)
         mpq = out_root / "models" / f"matchups_{spec.fname_token}.parquet"
@@ -96,6 +101,15 @@ def run_hab_uq_pipeline(yml, stages=("train", "evaluate", "infer", "fuse")):
                 joblib.dump({k: v for k, v in bundle.items() if k != "path"}, bundle["path"])
             with open(out_root / "evaluation" / f"hab_uq_evaluation_{spec.fname_token}.json", "w") as f:
                 json.dump(rep, f, indent=2, default=str)
+            if uq.get("evaluation", {}).get("subsets"):
+                # evaluation-only provenance subsets (e.g. OOS piers); models unchanged
+                from sit_fuse.pipelines.habs.uq.hab_uq_subset_eval import evaluate_subsets
+                try:
+                    sub = evaluate_subsets(bundle, frame, yml, out_root / "evaluation" / "subsets",
+                                           n_boot=int(uq.get("evaluation", {}).get("n_bootstrap", 500)))
+                    summary.setdefault(use_key, {})["subsets"] = sub.get("summary_rows")
+                except ValueError as e:
+                    LOG.warning("%s: subset evaluation skipped: %s", use_key, e)
             summary[use_key] = {k: rep.get(k) for k in ("overall", "fused")}
         if "ablation" in stages:
             summary.setdefault(use_key, {})["ablation"] = run_ablation(yml, use_key, out_root)
@@ -110,7 +124,14 @@ def run_hab_uq_pipeline(yml, stages=("train", "evaluate", "infer", "fuse")):
                        method=fcfg.get("pool", "log"), temporal_filter=fcfg.get("temporal_filter", True),
                        ref_local_hour=fcfg.get("ref_local_hour", 10.0), tau_hours=fcfg.get("tau_hours", 4.0),
                        stay=fcfg.get("transition_stay", 0.7), quality=fcfg.get("quality", "selective"))
+        if "animate" in stages:
+            summary.setdefault(use_key, {})["animations"] = _animate(yml, use_key, out_root)
     return summary
+
+
+def _animate(yml, use_key, out_root):
+    from sit_fuse.pipelines.habs.uq.hab_uq_animate import animate_species
+    return [{k: v for k, v in r.items() if k != "daily"} for r in animate_species(yml, use_key, out_root)]
 
 
 BASE_FEATURE_GROUPS = ["cluster_structure", "representation", "head_topk_probs", "agreement",
