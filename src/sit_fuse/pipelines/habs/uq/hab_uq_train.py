@@ -379,12 +379,19 @@ def train_species(hab_yml: dict[str, Any], use_key: str, out_dir: str | Path,
                           max_depth_m=uq.get("max_depth_m", 1.0),
                           start_date=uq.get("start_date"), end_date=uq.get("end_date"),
                           filters=insitu_filter_config(hab_yml))
+        if (uq.get("sample_weighting") or {}).get("enabled") and ins.attrs.get("has_method") is False:
+            raise ValueError("uq.sample_weighting needs the non-strict in-situ table (method column); "
+                             f"{uq.get('insitu_file', hab_yml.get('insitu_file'))} has none")
         samples = assign_splits(species_frame(ins, spec), split_config(hab_yml))
     n_ex = int((samples["split"] == "excluded").sum())
     if n_ex:
         # buffer / unlisted days are never used; skip them before raster matching
         LOG.info("%s: %d excluded samples skipped before matching", use_key, n_ex)
         samples = samples[samples["split"] != "excluded"].reset_index(drop=True)
+
+    sw, sw_info = source_sample_weights(samples, uq.get("sample_weighting"))
+    if sw is not None:
+        LOG.info("%s sample_weighting: %s", use_key, sw_info)
 
     rows_all, counts_all = [], {}
     enc_by_sensor = {}
@@ -397,6 +404,8 @@ def train_species(hab_yml: dict[str, Any], use_key: str, out_dir: str | Path,
         if rows.empty or counts.empty or (counts["split"] == "train").sum() == 0:
             LOG.warning("%s/%s: no usable matchups", use_key, s)
             continue
+        if sw is not None:
+            rows, counts = apply_sample_weights(rows, counts, sw)
         enc_rows, enc = cross_fit_encode(rows, counts, C, num_child, enc_cfg, features_cfg, seed)
         enc_by_sensor[s] = enc
         counts_all[s] = counts
@@ -411,7 +420,8 @@ def train_species(hab_yml: dict[str, Any], use_key: str, out_dir: str | Path,
             df[c] = 0.0
 
     train_s = df[df["split"] == "train"].drop_duplicates("sample_uid")
-    pi_true = np.bincount(train_s["ref_label"].astype(int), minlength=C).astype(float) + 1.0
+    w_s = None if sw is None else train_s["sample_uid"].map(sw).fillna(1.0).to_numpy(dtype=float)
+    pi_true = np.bincount(train_s["ref_label"].astype(int), weights=w_s, minlength=C).astype(float) + 1.0
     pi_true /= pi_true.sum()           # climatology (skill reference, fusion prior)
 
     model_name = clf_cfg.get("model", "auto")
@@ -439,6 +449,7 @@ def train_species(hab_yml: dict[str, Any], use_key: str, out_dir: str | Path,
         "skill": skill, "pi_true": pi_true, "uq_cfg": uq,
         "model_name": sel_key, "model_selection_calibration_rps": model_selection,
         "split_summary": samples.groupby("split")["sample_uid"].nunique().to_dict(),
+        "sample_weighting": sw_info,
     }
     out = Path(out_dir) / f"hab_uq_{spec.fname_token}.joblib"
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -503,6 +514,72 @@ def _calibrate(df, fits, used, scope, feat_cols, C, cal_cfg, uq, pi_true):
         scores.append(skill[s]["rps"] * len(y)); wts.append(len(y))
     score = float(np.sum(scores) / max(np.sum(wts), 1)) if wts else np.inf
     return calibrators, selective, skill, score
+
+
+def source_sample_weights(samples: pd.DataFrame, cfg: dict[str, Any] | None):
+    """
+    uq.sample_weighting: down-weight high-cadence reference methods (IFCB) per
+    site-day so they do not swamp weekly pier microscopy.
+
+      {enabled: true, methods: [ifcb], period: W, block_weight: 1.0,
+       splits: [train, calibration]}
+
+    For each listed method, every (method, Location_Code, period) block carries
+    total weight block_weight, shared equally over its site-days and then over
+    samples within a site-day: w = block_weight / (n_site_days * n_same_day).
+    period W with block_weight 1 makes a near-daily IFCB site-week count like
+    one weekly pier sample; period D only splits same-day replicates. Other
+    methods and splits (test) keep weight 1, so evaluation is unchanged.
+    Returns ({sample_uid: weight} or None, summary dict or None).
+    """
+    cfg = cfg or {}
+    if not cfg.get("enabled", False):
+        return None, None
+    if "method" not in samples.columns or samples.attrs.get("has_method") is False:
+        raise ValueError("uq.sample_weighting needs a 'method' column: use the non-strict "
+                         "combined_augmented.csv as uq.insitu_file")
+    methods = cfg.get("methods", ["ifcb"])
+    methods = None if methods in ("all", ["all"]) else {str(m) for m in methods}
+    splits = set(cfg.get("splits", ["train", "calibration"]))
+    period = str(cfg.get("period", "W"))
+    block_w = float(cfg.get("block_weight", 1.0))
+    d = samples[["sample_uid", "split", "method", "Location_Code", "date"]].copy()
+    d["date"] = pd.to_datetime(d["date"]).dt.normalize()
+    sel = d["split"].isin(splits) & (True if methods is None else d["method"].astype(str).isin(methods))
+    w = pd.Series(1.0, index=d.index)
+    if not sel.any():
+        LOG.warning("sample_weighting: no %s samples with method in %s", sorted(splits), methods)
+    else:
+        x = d[sel].copy()
+        x["_blk"] = x["date"].dt.to_period(period).astype(str)
+        site_day = x.groupby(["method", "Location_Code", "date"])["sample_uid"].transform("size")
+        days = x.groupby(["method", "Location_Code", "_blk"])["date"].transform("nunique")
+        w[sel] = block_w / (days.to_numpy() * site_day.to_numpy())
+    sw = pd.Series(w.to_numpy(), index=d["sample_uid"].astype(str).to_numpy())
+    sw = sw[~sw.index.duplicated()]
+    info = {"methods": sorted(methods) if methods else "all", "period": period, "block_weight": block_w,
+            "splits": sorted(splits), "n_weighted": int(sel.sum())}
+    for sp in sorted(splits):
+        m = d["split"] == sp
+        if m.any():
+            is_m = sel[m].to_numpy()
+            info[f"{sp}_share_before"] = float(is_m.mean())
+            info[f"{sp}_share_after"] = float(w[m][is_m].sum() / max(w[m].sum(), EPS))
+    return sw, info
+
+
+def apply_sample_weights(rows: pd.DataFrame, counts: pd.DataFrame, sw: pd.Series):
+    """Scale matched-pixel weights (classifier, calibration, fusion) and encoder counts."""
+    rows = rows.copy()
+    rows["pix_weight"] = rows["pix_weight"].to_numpy(dtype=np.float64) * \
+        rows["sample_uid"].astype(str).map(sw).fillna(1.0).to_numpy()
+    if "sample_uid" in counts.columns:
+        counts = counts.copy()
+        counts["count"] = counts["count"].to_numpy(dtype=np.float64) * \
+            counts["sample_uid"].astype(str).map(sw).fillna(1.0).to_numpy()
+    else:
+        LOG.warning("sample_weighting: counts have no sample_uid (cached matchups); encoder unweighted")
+    return rows, counts
 
 
 def _sample_normalized_weights(rows: pd.DataFrame) -> np.ndarray:
