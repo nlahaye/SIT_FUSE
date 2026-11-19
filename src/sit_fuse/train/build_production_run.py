@@ -63,6 +63,44 @@ from uq_viz.overlay import file_bounds_4326, time_from_name, utc
 
 TRAIN_DIR = Path(__file__).resolve().parent
 STAND_IN: dict[str, str] = {}            # original input path -> stand-in file (sensors.<s>.stand_in_suffix)
+def stand_in_suffixes(sc):
+    """sensors.<s>.stand_in_suffix as a list of canonical endings: "RGB", ".RGB", "RGB.tif", ".RGB.tif" -> ".RGB.tif"."""
+    v = sc.get("stand_in_suffix")
+    if not v:
+        return []
+    out = []
+    for x in (v if isinstance(v, list) else [v]):
+        x = str(x).strip()
+        if not x.lower().endswith(".tif"):
+            x += ".tif"
+        if x[0] not in "._-":
+            x = "." + x
+        out.append(x)
+    return sorted(set(out), key=len, reverse=True)          # longest first (.UV_RGB.tif before .RGB.tif)
+
+
+def strip_stand_in(name, sufs):
+    """Original input filename for a stand-in filename (suffix removed, .tif restored); None if no suffix matches."""
+    for x in sufs:
+        if name.lower().endswith(x.lower()):
+            return name[:-len(x)] + ".tif"
+    return None
+
+
+def head_path(hdir, f):
+    """Head-output path of input f: <hdir>/<input name>.head_outputs.tif (export_head_outputs.py naming), with any
+    stand-in suffix removed from the name first. Falls back to <stem>.head_outputs.tif if only that exists."""
+    name = Path(f).name
+    name = strip_stand_in(name, STAND_IN_SUFFIXES) or name
+    p = Path(hdir) / f"{name}.head_outputs.tif"
+    if not p.exists():
+        alt = Path(hdir) / f"{name[:-4] if name.endswith('.tif') else name}.head_outputs.tif"
+        if alt.exists():
+            return alt
+    return p
+
+
+STAND_IN_SUFFIXES: list[str] = []        # union of all sensors' canonical stand-in suffixes
 DEFAULT_EXCLUDE = [".RGB.tif", ".UV_RGB.tif", ".head_outputs.tif", ".clust.", "full_geo", ".proba"]
 
 
@@ -98,14 +136,22 @@ def list_inputs(sc, t0, t1, bbox, base, name="sensor"):
     e.g. GOES GeoTIFFs whose lat/lon come from the netCDF geo reader) are kept, since they cannot be tested.
     Returns (inputs, counts); counts explains where candidates were dropped."""
     dirs = sc["inputs"] if isinstance(sc["inputs"], list) else [sc["inputs"]]
-    suf = sc.get("stand_in_suffix")
+    sufs = stand_in_suffixes(sc)
+    STAND_IN_SUFFIXES[:] = sorted(set(STAND_IN_SUFFIXES) | set(sufs), key=len, reverse=True)
     pat = sc.get("pattern", "*.tif")
-    if suf and not pat.endswith(suf):
-        pat = (pat[:-4] if pat.endswith(".tif") else pat.rstrip("*") + "*") + suf
+    pats = [pat]
+    if sufs:
+        core = pat
+        for x in sorted(set(sufs) | {".UV_RGB.tif", ".RGB.tif"}, key=len, reverse=True):   # pattern may carry one
+            if core.lower().endswith(x.lower()):
+                core = core[:-len(x)] + ".tif"
+                break
+        core = core[:-4] if core.lower().endswith(".tif") else core.rstrip("*") + "*"
+        pats = [core + x for x in sufs]
     rec = bool(sc.get("recursive", False))
     excl = sc.get("exclude", DEFAULT_EXCLUDE)
-    if suf:
-        excl = [e for e in excl if e != suf and not suf.endswith(e)]
+    if sufs:
+        excl = [e for e in excl if not any(e.lower() == x.lower() or x.lower().endswith(e.lower()) for x in sufs)]
     odir = Path(_abs(base, sc["original_dir"])) if sc.get("original_dir") else None
     n = {"dirs_missing": [], "matched": 0, "excluded": 0, "no_time": 0, "outside_time": 0,
          "no_georef_kept": 0, "outside_bbox": 0, "subsampled": 0, "first_times": [], "stand_in": 0,
@@ -116,10 +162,11 @@ def list_inputs(sc, t0, t1, bbox, base, name="sensor"):
         if not dd.is_dir():
             n["dirs_missing"].append(str(dd))
             continue
-        for p in sorted(glob.glob(str(dd / ("**" if rec else "") / pat), recursive=rec)):
+        hits = sorted({h for pt in pats for h in glob.glob(str(dd / ("**" if rec else "") / pt), recursive=rec)})
+        for p in hits:
             n["matched"] += 1
             fn = Path(p).name
-            if any(e in fn for e in excl) or (suf and not fn.endswith(suf)):
+            if any(e in fn for e in excl) or (sufs and strip_stand_in(fn, sufs) is None):
                 n["excluded"] += 1
                 continue
             t = time_from_name(fn)
@@ -132,12 +179,14 @@ def list_inputs(sc, t0, t1, bbox, base, name="sensor"):
                 n["outside_time"] += 1
                 continue
             cand.append((p, t))
-    if suf:                                  # stand-in -> original input path (selection still uses the stand-in)
-        mapped = []
-        for p, t in cand:
+    if sufs:                                 # stand-in -> original input path (selection still uses the stand-in)
+        mapped, seen = [], set()
+        for p, t in cand:                    # several stand-ins of one scene (.RGB.tif, .UV_RGB.tif) -> one scene
             q = Path(p)
-            orig = (odir or q.parent) / (q.name[:-len(suf)] + ".tif")
-            mapped.append((str(orig), t, p))
+            orig = str((odir or q.parent) / strip_stand_in(q.name, sufs))
+            if orig not in seen:
+                seen.add(orig)
+                mapped.append((orig, t, p))
         cand = mapped
     else:
         cand = [(p, t, p) for p, t in cand]
@@ -174,8 +223,8 @@ def list_inputs(sc, t0, t1, bbox, base, name="sensor"):
     if n["no_georef_kept"]:
         print(f"NOTE {name}: {n['no_georef_kept']} input(s) have no CRS/GCPs; kept without the bbox test "
               f"(set sensors.{name}.bbox_filter: false to skip the test)")
-    if suf:
-        print(f"NOTE {name}: {n['stand_in']} scene(s) selected from {suf} stand-ins; "
+    if sufs:
+        print(f"NOTE {name}: {n['stand_in']} scene(s) selected from {'/'.join(sufs)} stand-ins; "
               f"{n['original_missing']} original input(s) not on disk (head outputs must exist for those)")
     return out, n
 
@@ -289,11 +338,12 @@ def main(argv=None):
         product = str(p.get("product") or uq["data"].get("product") or "").lower()
         recs = []
         for f, t in inputs[s]:
-            stem = Path(f).name[:-4] if f.endswith(".tif") else Path(f).stem
+            fname = strip_stand_in(Path(f).name, STAND_IN_SUFFIXES) or Path(f).name     # never keep a stand-in suffix
+            stem = fname[:-4] if fname.endswith(".tif") else Path(fname).stem
             recs.append({"scene_id": f"{product}_{stem}", "pair_id": f"{product}_{stem}", "product": product,
                          "sit_fuse_input": f,
                          "sit_fuse_context_free": f if (f not in STAND_IN or Path(f).exists()) else STAND_IN[f],
-                         "head_outputs": str(hdir / f"{Path(f).name}.head_outputs.tif"),
+                         "head_outputs": str(head_path(hdir, f)),
                          "sit_fuse_timestamp": t.strftime("%Y-%m-%dT%H:%M:%SZ"), "date": t.strftime("%Y-%m-%d"),
                          "split_date": t.strftime("%Y-%m-%d"), "split_group": t.strftime("%Y-%m-%d"),
                          "classifier_split": "production", "encoder_split": "production"})
@@ -323,12 +373,15 @@ def main(argv=None):
     for e in exports.values():
         hdir = root / "heads" / e["name"]
         todo = [f for f, _ in inputs[e["sensor"]]
-                if a.reexport or not (hdir / f"{Path(f).name}.head_outputs.tif").exists()]
+                if a.reexport or not head_path(hdir, f).exists()]
         toks = [str(state / "tokens" / f"heads_{p}") for p in e["pipes"]]
         gone = [f for f in todo if f in STAND_IN and not Path(f).exists()]
         if gone:
+            have = sorted(x.name for x in hdir.glob("*.head_outputs.tif"))[:3] if hdir.is_dir() else []
             raise SystemExit(
-                f"ERROR heads/{e['name']}: {len(gone)} scene(s) selected from stand-ins have no head outputs in {hdir} "
+                f"ERROR heads/{e['name']}: looked for e.g. {head_path(hdir, gone[0]).name} "
+                f"(stand-in {Path(STAND_IN[gone[0]]).name}); existing head outputs there: {have or 'none'}\n" +
+                f"  {len(gone)} scene(s) selected from stand-ins have no head outputs in {hdir} "
                 f"and their original inputs are not on disk, so they cannot be exported, e.g. {gone[:3]}.\n"
                 f"  Restore those inputs (or set sensors.{e['sensor']}.original_dir), or narrow start / end / bbox.")
         if not todo:
