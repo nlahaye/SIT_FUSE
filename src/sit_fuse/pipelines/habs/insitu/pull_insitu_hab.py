@@ -22,6 +22,13 @@ Restart with previously merged non-IFCB output and cache-only IFCB:
   --existing CSV ...     add previously produced tables (keeps their source/method columns)
   --out-dir DIR          override out_dir
   --no-coverage          skip the coverage report
+
+Cleaning (YAML `cleaning:`; defaults shown) runs on the merged table, including --existing rows:
+  collapse_repeated_samples: true   one row per source/station/date/method/sample id
+  negatives_to_nan: true            negative taxa / DA / extra_* values -> NaN
+  max_depth_m: 1.0                  drop deeper samples (null = keep all)
+  keep_missing_depth: true          rows without depth (fixed piers, IFCB) are kept
+Units: ERDDAP units rows and CalCOFI per-row units are checked on pull (convert or raise).
 """
 
 from __future__ import annotations
@@ -33,7 +40,8 @@ import pandas as pd
 import yaml
 
 from sit_fuse.pipelines.habs.insitu.calhabmap_format import (
-    CALHABMAP_COLUMNS, merge_sources, validate_calhabmap, write_calhabmap)
+    CALHABMAP_COLUMNS, collapse_repeated_samples, filter_depth, merge_sources, negatives_to_nan,
+    validate_calhabmap, write_calhabmap)
 
 TARGETS = ["Total_Phytoplankton", "Pseudo_nitzschia_seriata_group",
            "Pseudo_nitzschia_delicatissima_group", "pDA"]
@@ -105,6 +113,14 @@ def main(cfg: dict) -> pd.DataFrame:
         if len(df):
             frames.append(df)
     merged = merge_sources(frames, priority=cfg.get("priority"))
+    # cleaning (also applied to --existing tables): repeated rows of one sample, negative
+    # concentrations, samples deeper than max_depth_m (missing depth = surface pier/IFCB, kept)
+    cl = cfg.get("cleaning") or {}
+    if cl.get("collapse_repeated_samples", True):
+        merged = collapse_repeated_samples(merged)
+    if cl.get("negatives_to_nan", True):
+        merged = negatives_to_nan(merged)
+    merged = filter_depth(merged, cl.get("max_depth_m", 1.0), cl.get("keep_missing_depth", True))
     bbox = cfg.get("bbox")          # [lon_min, lat_min, lon_max, lat_max]
     if bbox is not None and len(merged):
         lo, la = pd.to_numeric(merged["longitude"]), pd.to_numeric(merged["latitude"])

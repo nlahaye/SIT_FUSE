@@ -9,6 +9,21 @@
 # Pier-only scores without retraining: hab_uq_subset_eval -y <this yaml> (uq.evaluation.subsets)
 # If the pilot evaluation holds up: hab_uq_pipeline --stages infer,fuse,animate
 #   (per-sensor *.uq.tif -> fused/ -> animations/; uq.animation below)
+# IFCB run (uq_pilot_coast_ifcbw_clean): all sources, IFCB Pseudo-nitzschia chain ROIs converted to
+#   cells (insitu_sources pn_chain_correction) and IFCB down-weighted per site-day
+#   (uq.sample_weighting). Table insitu_augmented_clean/: ingestion cleaning (insitu_sources
+#   `cleaning:`) merges repeated combined_full rows of one sample, sets negative concentrations
+#   to NaN and drops samples deeper than 1 m; ERDDAP/CalCOFI units are checked on pull.
+#   Re-ingest (ERDDAP + CalCOFI re-pulled, IFCB from cache):
+#   python -m sit_fuse.pipelines.habs.insitu.pull_insitu_hab -y insitu_sources.example.yaml \
+#     --ifcb-cache-only --no-coverage --out-dir /mnt/data1/habs/insitu_augmented_clean
+#   If ERDDAP is unreachable, rebuild from the previous table instead (cleaning still applied,
+#   no unit re-check of the cached pier/CalCOFI rows):
+#   python -m sit_fuse.pipelines.habs.insitu.pull_insitu_hab -y insitu_sources.example.yaml \
+#     --only ifcb_dashboard --ifcb-cache-only --no-coverage \
+#     --existing /mnt/data1/habs/insitu_augmented/combined_augmented.csv \
+#     --out-dir /mnt/data1/habs/insitu_augmented_clean
+#   then hab_uq_pipeline --stages train,evaluate
 
 reuse_context: False #True
 
@@ -19,8 +34,8 @@ no_heir: True
 config_dir: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/"
 geo_zarr: "/mnt/data1/cal_coast_geo.zarr"
  
-insitu_file: "/mnt/data1/habs/insitu_augmented/combined_augmented.csv" #/mnt/data1/la_hab_data/combined_full_071426.csv" #HAB_S_CA_Combined.csv" #combined_full.csv"
-#/mnt/data1/habs/insitu_augmented_v2/combined_augmented.csv 
+insitu_file: "/mnt/data1/habs/insitu_augmented_clean/combined_augmented_strict.csv" # was insitu_augmented_chain/, insitu_augmented/ #/mnt/data1/la_hab_data/combined_full_071426.csv" #HAB_S_CA_Combined.csv" #combined_full.csv"
+#/mnt/data1/habs/insitu_augmented_v2/combined_augmented_strict.csv 
 insitu_matchup_circle_max_radius: [0.09]
 start_date: "2024-03-01" #"2024-07-01" #"2018-10-01"
 end_date: "2025-12-01" #"2025-12-31" #"2025-07-01" #"2025-12-31"
@@ -95,16 +110,26 @@ validation_only: False
 
 uq:
   input_mode: head_outputs 
-  out_dir: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/uq_pilot_coast/"   # separate from the first pilot
+  out_dir: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/uq_pilot_coast_ifcbw_clean/"   # was uq_pilot_coast_ifcbw/, uq_pilot_coast/
   # augmented in-situ table written by sit_fuse.pipelines.habs.insitu.pull_insitu_hab
-  insitu_file: "/mnt/data1/habs/insitu_augmented/combined_augmented.csv" #"/mnt/data1/la_hab_data/combined_full_augmented.csv"
+  # non-strict (source/method columns): required by sample_weighting and insitu_filter
+  insitu_file: "/mnt/data1/habs/insitu_augmented_clean/combined_augmented.csv" # was insitu_augmented_chain/
   start_date: &pilot_start "2025-01-15"   # PILOT window: same as the first pilot (must match the roles file)
   end_date: &pilot_end "2025-06-15"
   species_run: [Pseudo_nitzschia_seriata_group, Pseudo_nitzschia_delicatissima_group, pDA]
-  max_depth_m: 1.0
+  max_depth_m: 1.0           # also enforced at ingestion (insitu_sources cleaning.max_depth_m)
   # Train AND evaluate on one provenance only (rerun from --stages train; needs the
   # non-strict insitu_file). e.g. oos_piers, or {sources: [...], methods: [...], location_codes: [...]}
   # insitu_filter: oos_piers
+  # Down-weight high-cadence IFCB per site-day: each IFCB (station, week) carries total weight
+  # block_weight, split over its site-days (and same-day replicates), so a near-daily IFCB week
+  # counts like one weekly pier sample. Train + calibration only; test scoring unchanged.
+  sample_weighting:
+    enabled: true
+    methods: [ifcb]
+    period: W                # W = site-week budget; D = only split same-day replicates
+    block_weight: 1.0        # raise (e.g. 2-3) to give IFCB more total weight than the piers
+    splits: [train, calibration]
   num_child: 100             # model YAML cluster.heir.num_classes (joint = child + num_child*parent)
   #input_mode: auto           # auto | head_outputs | label_only
   label_level: heir          # heir | no_heir (label_only mode)
@@ -178,7 +203,7 @@ uq:
     # Evaluation-only provenance subsets of the test samples (models unchanged).
     # Also run standalone on finished runs: python -m sit_fuse.pipelines.habs.uq.hab_uq_subset_eval -y <this yaml>
     # Source filters need the non-strict table (the strict CSV has no source/method columns).
-    subset_insitu_file: "/mnt/data1/habs/insitu_augmented/combined_augmented.csv"
+    subset_insitu_file: "/mnt/data1/habs/insitu_augmented_clean/combined_augmented.csv"   # was insitu_augmented_chain/
     subsets:
       oos_piers: {sources: oos_piers}              # combined_full + calhabmap_erddap (CalHABMAP piers, as in the 2026 paper)
       non_pier: {exclude_sources: oos_piers}       # IFCB, SeaBASS, cruise, other tables
@@ -193,7 +218,7 @@ uq:
     transition_stay: 0.7
 
   animation:                 # hab_uq_animate: one MP4 per species x stream from uq.out_dir/fused
-    out_dir: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/uq_pilot_coast/animations/"
+    out_dir: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/uq_pilot_coast_ifcbw_clean/animations/"
     streams: [filtered, fused]   # filtered = gap-filled daily; fused = observed days only
     format: mp4              # mp4 (H.264, plays in PowerPoint) | gif
     fps: 4
