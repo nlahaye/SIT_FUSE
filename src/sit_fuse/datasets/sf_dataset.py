@@ -503,7 +503,8 @@ class SFDataset(torch.utils.data.Dataset):
 
 		if scale and not pre_scaled:
 			ss.transform_in_chunks(self.scaler, data, n_chan, chunk)
-
+		if data is None:
+			return 
 		if data.dtype != np.float32:
 			data = data.astype(np.float32)
 		self.data_full = data
