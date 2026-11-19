@@ -1,0 +1,74 @@
+# Production run: GOES-18 + TEMPO smoke (individual and fused), last week of July 2026 (Pacific Northwest fires).
+#   cd SIT_FUSE/src/sit_fuse/train
+#   python build_production_run.py production_2026.yaml            # writes configs + launcher plan, prints scene counts
+#   python build_production_run.py production_2026.yaml --run      # head export -> infer -> geo -> fusion (animation off)
+#   later: python build_production_run.py production_2026.yaml --animation --run   # adds only the animation jobs
+#   python -m sit_fuse.local_launcher status /data/nlahaye/output/Learnergy/PRODUCTION_2026_07/launch/production_plan.yaml
+# Relative paths resolve against this file's directory (src/sit_fuse/train).
+# CHECK = path assumed from the evaluation setup; confirm it exists before running.
+
+output_root: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07
+start: 2026-07-25T00:00:00Z            # [start, end) UTC
+end: 2026-08-01T06:00:00Z              # includes the evening of 31 July Pacific time (TEMPO / GOES daylight to ~03 UTC)
+bbox: [-125.0, -110.0, 40.0, 49.0]     # [W, E, S, N]: Oregon, Washington, Idaho; inside the GOES/fusion grid (-125.45..-101.98, 31.31..49.01)
+# split_stratum: not set -> pooled cutoffs (no 2026 event group was calibrated)
+python: python
+resume: true
+launcher:
+  cpus: 48
+  gpus: [0, 1, 2, 3]
+  state_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07/launch
+resources: {infer: 6, infer_merge: 2, geo: 4}
+shards: {inference: 16}
+export: {shards: 4, cpus: 6, gpu: 1}   # head export jobs per encoder (one GPU each)
+
+sensors:
+  tempo:
+    inputs: /data/nlahaye/remoteSensing/RAD_L1_V04                      # CHECK: July 2026 TEMPO V04 radiance GeoTIFFs
+    pattern: "TEMPO_RAD_L1_V04_*.tif"                                   # .RGB.tif / .UV_RGB.tif / head outputs are excluded
+  goes:
+    inputs: /data/nlahaye/remoteSensing/GOES_TEMPO/new_data_2026_07     # CHECK: July 2026 GOES-18 16-band GeoTIFFs (fuse_goes_tempo_3.yaml output)
+    pattern: "OR_ABI-L1b-RadC-M6C01_G18_s*.tif"
+    every_minutes: 60                   # hourly GOES products: first scene of each UTC hour; remove for every 5-min scene
+    # offset_minutes: 0                 # shift the hourly bins (e.g. 30 -> first scene at/after HH:30)
+
+pipelines:                              # evaluated configs; trained models, calibrators and cutoffs are reused
+  tempo_smoke:
+    sensor: tempo
+    uq_config: uq_config.example.yaml                    # TEMPO smoke (output_dir SF_TEMPO_V04/UQ)
+    export_config: export_config.example.yaml
+    models: [hist_gradient_boosting]
+  goes_smoke:
+    sensor: goes
+    uq_config: goes18/g18_uq_config_smoke_recal.yaml     # recalibrated GOES run (output_dir GOES_TEMPO_UPDATED/UQ_SMOKE_RECAL)
+    export_config: goes18/g18_export_smoke.yaml
+    models: [hist_gradient_boosting]
+
+fusion:                                 # frozen evaluation-period fusion (weights, recalibration, cutoffs)
+  smoke:
+    config: configs/fusion_config.smoke.yaml             # CHECK: the fitted evaluation fusion config
+    models_from: /data/nlahaye/output/Learnergy/FUSION/UQ_SMOKE   # must contain fusion_models.pkl
+    pipelines: {tempo: tempo_smoke, goes: goes_smoke}
+    shards: 6
+    cpus: 2
+
+animation:
+  enabled: false                        # true (or --animation) and rebuild to add the animation jobs later
+  model: hist_gradient_boosting
+  include: [tempo_smoke, goes_smoke, fused_smoke]
+  fusion_grid: fine
+  shards: 7                             # days are split across shards
+  cpus: 6
+  bbox: [-124.0, -116.0, 41.8, 46.5]    # Oregon: Rowe Creek / Hay Creek, Bench, Grasshopper, Big Grass, Coleman Creek, Fox
+  resolution: 0.01
+  split_by: day
+  frames: {base: goes, goes_every_minutes: 60, goes_window_minutes: 10, tempo_max_age_minutes: 60}
+  # 5-min GOES: frames: {base: tempo, goes_window_minutes: 10, tempo_max_age_minutes: 60}
+  fps: 3
+  formats: [mp4, gif]
+  basemap: {enabled: true}
+  observations:
+    tempo_rgb: {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .RGB.tif}         # CHECK
+    tempo_uv_rgb: {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .UV_RGB.tif}   # CHECK
+    goes:
+      kappa0_from: /data/nlahaye/remoteSensing/GOES_TEMPO/new_data_2026_07   # L1b NetCDFs (reflectance scaling); drop for display-only scaling

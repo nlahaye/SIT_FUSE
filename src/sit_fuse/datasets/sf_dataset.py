@@ -345,8 +345,19 @@ class SFDataset(torch.utils.data.Dataset):
 				good = ~bad
 				if good.any():
 					scene[good] = self.scaler.transform(scene[good])
-			rows, cols = np.nonzero(valid)
-			out["parts"] = [(None, None, ss.extract_windows(scene, rows, cols, p), rows, cols)]
+			ef_on, ef_min = ss.edge_fill_conf(cfg)
+			if ef_on and p > 0 and not self._fit_scaler:
+				# prediction only: also keep coastal / cloud-edge centres (window filled from its valid pixels)
+				valid = ss.partial_center_mask(bad, p, ef_min)
+				rows, cols = np.nonzero(valid)
+				win = ss.extract_windows(scene, rows, cols, p)
+				edge = ss.fill_windows(win, bad, rows, cols, p, scene.shape[2])
+				out["n_edge_filled"] = int(edge.sum())
+				print("EDGE FILL", int(edge.sum()), "of", len(rows), "window centres")
+			else:
+				rows, cols = np.nonzero(valid)
+				win = ss.extract_windows(scene, rows, cols, p)
+			out["parts"] = [(None, None, win, rows, cols)]
 			out["n_valid"] = len(rows)
 			return out
 

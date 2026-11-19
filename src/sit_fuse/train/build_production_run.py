@@ -48,6 +48,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pandas as pd
 import yaml
 
 from uq_viz.overlay import file_bounds_4326, time_from_name, utc
@@ -81,7 +82,7 @@ def list_inputs(sc, t0, t1, bbox, base):
     pat = sc.get("pattern", "*.tif")
     rec = bool(sc.get("recursive", False))
     excl = sc.get("exclude", DEFAULT_EXCLUDE)
-    out = []
+    cand = []
     for d in dirs:
         for p in sorted(glob.glob(str(Path(_abs(base, d)) / ("**" if rec else "") / pat), recursive=rec)):
             n = Path(p).name
@@ -90,11 +91,26 @@ def list_inputs(sc, t0, t1, bbox, base):
             t = time_from_name(n)
             if t is None or not (t0 <= t < t1):
                 continue
+            cand.append((p, t))
+    cand.sort(key=lambda x: (x[1], x[0]))
+    every = sc.get("every_minutes")         # optional subsampling: first input per <every_minutes> UTC bin
+    if every:
+        off = pd.Timedelta(minutes=float(sc.get("offset_minutes", 0)))
+        bins = {}
+        for p, t in cand:
+            bins.setdefault((t - off).floor(f"{int(every)}min"), []).append((p, t))
+        groups = list(bins.values())
+    else:
+        groups = [[c] for c in cand]
+    out = []
+    for g in groups:
+        for p, t in g:                       # first input of the bin that intersects the bbox
             if bbox is not None:
                 b = file_bounds_4326(p)
                 if b is None or not (b[0] < bbox[1] and b[2] > bbox[0] and b[1] < bbox[3] and b[3] > bbox[2]):
                     continue
             out.append((p, t))
+            break
     return out
 
 
@@ -152,6 +168,11 @@ def main(argv=None):
     ap.add_argument("yaml_config", type=Path)
     ap.add_argument("--run", action="store_true", help="run the plan with sit_fuse.local_launcher")
     ap.add_argument("--reexport", action="store_true", help="export head outputs even when they exist")
+    g = ap.add_mutually_exclusive_group()
+    g.add_argument("--animation", dest="animation", action="store_true", default=None,
+                   help="add the animation jobs (overrides animation.enabled)")
+    g.add_argument("--no-animation", dest="animation", action="store_false",
+                   help="write the animation config but add no animation jobs")
     argv = list(sys.argv[1:] if argv is None else argv)
     extra = argv[argv.index("--") + 1:] if "--" in argv else []
     a = ap.parse_args(argv[:len(argv) - len(extra) - (1 if "--" in argv else 0)])
@@ -170,7 +191,8 @@ def main(argv=None):
     for s, sc in sensors.items():
         inputs[s] = list_inputs(sc, t0, t1, bbox, base)
         print(f"{s}: {len(inputs[s])} inputs in [{t0:%Y-%m-%d %H:%M}, {t1:%Y-%m-%d %H:%M}) UTC"
-              + (f" in bbox {bbox}" if bbox else ""))
+              + (f" in bbox {bbox}" if bbox else "")
+              + (f", first per {sc['every_minutes']} min" if sc.get("every_minutes") else ""))
 
     exports = {}                    # key -> {name, settings, sensor, pipes}
     planner_pipes, summary, scene_hash = {}, [], {}
@@ -313,6 +335,7 @@ def main(argv=None):
     # overlay animations
     an_jobs = []
     an = cfg.get("animation")
+    an_on = bool(an) and (a.animation if a.animation is not None else bool(an.get("enabled", True)))
     if an:
         model = an.get("model", "hist_gradient_boosting")
         prods = {}
@@ -341,10 +364,21 @@ def main(argv=None):
                                   for k, v in prods.items() if not an.get("include") or k in an["include"]}})
         if not acfg["bbox"]:
             raise ValueError("animation needs a bbox (animation.bbox or bbox)")
+        acfg.pop("enabled", None)
+        fb = (acfg.get("frames") or {}).get("base", "tempo")
+        ev = (sensors.get("goes") or {}).get("every_minutes")
+        if ev and fb == "tempo" and float((acfg.get("frames") or {}).get("goes_window_minutes", 10)) < float(ev) / 2:
+            print(f"WARNING animation: GOES inputs are subsampled to {ev} min but frames.base is tempo with a "
+                  f"goes_window_minutes below {float(ev) / 2:g}; GOES / fused overlays will be missing on most "
+                  f"frames (use frames: {{base: goes, goes_every_minutes: {ev}}})")
         apath = _write(cdir / "overlay_animation.yaml", acfg)
         n_an = int(an.get("shards", 1))
         needs = [v["_tok"] for k, v in prods.items() if not an.get("include") or k in an["include"]]
         acpus = int(an.get("cpus", 4))
+        if not an_on:
+            print(f"  animation: disabled; config written to {apath} (enable with animation.enabled: true or "
+                  f"--animation and rebuild; finished jobs are skipped)")
+    if an and an_on:
         an_jobs.append({"name": "animate", "cmd": f"cd {td} && {py} make_overlay_animations.py -c {shlex.quote(str(apath))}"
                         f" --shard {{shard}}/{n_an} -n {acpus} --workers {acpus}"
                         f" # scenes {hashlib.sha1(' '.join(sorted(scene_hash.values())).encode()).hexdigest()[:10]}"
