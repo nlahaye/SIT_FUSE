@@ -114,11 +114,14 @@ class Grid:
 
 
 def file_bounds_4326(path: str):
-    """(W, S, E, N) in EPSG:4326, or None when the file has no usable georeferencing."""
+    """(W, S, E, N) in EPSG:4326, or None when the file has no usable georeferencing. Works for south-up grids
+    (positive row step), whose rasterio bounds have bottom > top."""
     try:
         with rasterio.open(path) as s:
             if s.crs is not None and not s.transform.is_identity:
-                return tuple(transform_bounds(s.crs, EPSG4326, *s.bounds, densify_pts=21))
+                l, b, r, t = s.bounds
+                return tuple(transform_bounds(s.crs, EPSG4326, min(l, r), min(b, t), max(l, r), max(b, t),
+                                              densify_pts=21))
             gcps, gcrs = s.gcps
             if gcps:
                 xs, ys = [g.x for g in gcps], [g.y for g in gcps]
@@ -139,6 +142,7 @@ def _root_error(e: BaseException) -> str:
     return str(e).splitlines()[0] if str(e) else type(e).__name__
 
 
+FILL_ABS = 1e20                          # |value| above this is fill (TEMPO RGBs are written without a nodata tag)
 UNREADABLE: dict[str, str] = {}          # path -> error (corrupt / truncated files, drawn as no data)
 
 
@@ -172,10 +176,14 @@ def _read_to_grid(path, bands, grid, resampling, valid_min, valid_max):
             try:                                    # read only the part of the file around the display box
                 b = transform_bounds(EPSG4326, s.crs, grid.west, grid.south, grid.east, grid.north, densify_pts=21)
                 pad = 4 * max(abs(s.transform.a), abs(s.transform.e))
-                win = from_bounds(b[0] - pad, b[1] - pad, b[2] + pad, b[3] + pad, s.transform)
-                c0, r0 = max(int(np.floor(win.col_off)), 0), max(int(np.floor(win.row_off)), 0)
-                c1 = min(int(np.ceil(win.col_off + win.width)), s.width)
-                r1 = min(int(np.ceil(win.row_off + win.height)), s.height)
+                # pixel rows/cols of the padded box corners; min/max works for north-up and south-up (positive
+                # row step, e.g. latitude-ascending colocated TEMPO grids) and flipped-x transforms alike
+                inv = ~s.transform
+                cr = [inv * (x, y) for x in (b[0] - pad, b[2] + pad) for y in (b[1] - pad, b[3] + pad)]
+                c0 = max(int(np.floor(min(c for c, _ in cr))), 0)
+                r0 = max(int(np.floor(min(r for _, r in cr))), 0)
+                c1 = min(int(np.ceil(max(c for c, _ in cr))), s.width)
+                r1 = min(int(np.ceil(max(r for _, r in cr))), s.height)
                 if c1 <= c0 or r1 <= r0:
                     return out
                 win = Window(c0, r0, c1 - c0, r1 - r0)
@@ -189,7 +197,7 @@ def _read_to_grid(path, bands, grid, resampling, valid_min, valid_max):
             return out
         src = s.read(list(bands), window=win).astype(np.float32)
         am = s.read(alpha, window=win) if alpha else None
-    bad = ~np.isfinite(src)
+    bad = ~np.isfinite(src) | (np.abs(src) > FILL_ABS)       # fill values (-1e30, 9.97e36) when nodata is unset
     if nd is not None and np.isfinite(nd):
         bad |= src == nd
     if am is not None:
