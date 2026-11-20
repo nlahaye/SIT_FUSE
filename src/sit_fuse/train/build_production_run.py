@@ -276,11 +276,12 @@ def production_uq_config(uq, uq_path, out_dir, scene_file):
     c["output_dir"] = str(out_dir)
     inf.pop("output_dir", None)                    # one directory per model under <output_dir>/inference
     inf.update({"training_summary_path": _abs(base, tsum), "scene_file": str(scene_file), "splits": None,
-                "reference_mask_areas": False})
+                "reference_mask_areas": False,
+                "every_minutes": 0})        # cadence is set by sensors.<s>.every_minutes, not data.every_minutes
     tmpl = str(Path(out_dir) / "inference" / "{model}")
     ev.update({"inference_dir_template": tmpl, "output_dir": str(Path(out_dir) / "evaluation")})
     gx.update({"inference_dir_template": tmpl, "output_dir": str(Path(out_dir) / "geo"),
-               "scene_file": str(scene_file), "evaluation_dir": _abs(base, old_eval)})
+               "scene_file": str(scene_file), "evaluation_dir": _abs(base, old_eval), "every_minutes": None})
     return c, Path(_abs(base, tsum)), Path(_abs(base, old_eval))
 
 
