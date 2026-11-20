@@ -132,10 +132,32 @@ def intersects(b, grid: Grid) -> bool:
     return b is not None and b[0] < grid.east and b[2] > grid.west and b[1] < grid.north and b[3] > grid.south
 
 
+def _root_error(e: BaseException) -> str:
+    """Innermost cause of a (rasterio) exception chain, e.g. 'ZIPDecode:Decoding error at scanline 0'."""
+    while e.__cause__ is not None:
+        e = e.__cause__
+    return str(e).splitlines()[0] if str(e) else type(e).__name__
+
+
+UNREADABLE: dict[str, str] = {}          # path -> error (corrupt / truncated files, drawn as no data)
+
+
 @lru_cache(maxsize=96)
 def read_to_grid(path: str, bands: tuple, grid: Grid, resampling: str = "bilinear",
                  valid_min: float | None = None, valid_max: float | None = None) -> np.ndarray:
-    """Bands (1-based) of `path` warped onto `grid`; float32 (n, H, W), NaN where no data."""
+    """Bands (1-based) of `path` warped onto `grid`; float32 (n, H, W), NaN where no data. A file that cannot be
+    decoded (corrupt or truncated GeoTIFF) is logged once and returned as no data instead of stopping the run."""
+    from rasterio.errors import RasterioError
+    try:
+        return _read_to_grid(path, bands, grid, resampling, valid_min, valid_max)
+    except (RasterioError, OSError) as e:
+        if path not in UNREADABLE:
+            UNREADABLE[path] = _root_error(e)[:200]
+            LOG.warning("unreadable raster drawn as no data (%s): %s", UNREADABLE[path], path)
+        return np.full((len(bands), grid.height, grid.width), np.nan, np.float32)
+
+
+def _read_to_grid(path, bands, grid, resampling, valid_min, valid_max):
     rs = getattr(Resampling, resampling)
     out = np.full((len(bands), grid.height, grid.width), np.nan, np.float32)
     with rasterio.open(path) as s:

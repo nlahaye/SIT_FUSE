@@ -141,15 +141,34 @@ def assign_frames(scenes: pd.DataFrame, mode: str = "scan", minutes: int = 60) -
     return s
 
 
+def _root_error(e: BaseException) -> str:
+    """Innermost cause of a (rasterio) exception chain, e.g. 'ZIPDecode:Decoding error at scanline 0'."""
+    while e.__cause__ is not None:
+        e = e.__cause__
+    return str(e).splitlines()[0] if str(e) else type(e).__name__
+
+
+UNREADABLE: dict[str, str] = {}          # path -> error, for rasters that could not be decoded (corrupt/truncated)
+
+
 @lru_cache(maxsize=1024)
 def _read_band(path: str, band_name: str) -> np.ndarray | None:
-    with rasterio.open(path) as s:
-        desc = list(s.descriptions)
-        if band_name not in desc:
-            return None
-        a = s.read(desc.index(band_name) + 1).astype(np.float32)
-        if s.nodata is not None:
-            a[a == s.nodata] = np.nan
+    """One named band (NaN = nodata); None when the band is absent or the file cannot be read (corrupt or
+    truncated GeoTIFF: logged once, listed in UNREADABLE; run check_geo_rasters.py to find and regenerate them)."""
+    from rasterio.errors import RasterioError
+    try:
+        with rasterio.open(path) as s:
+            desc = list(s.descriptions)
+            if band_name not in desc:
+                return None
+            a = s.read(desc.index(band_name) + 1).astype(np.float32)
+            if s.nodata is not None:
+                a[a == s.nodata] = np.nan
+    except (RasterioError, OSError) as e:
+        if path not in UNREADABLE:
+            UNREADABLE[path] = _root_error(e)[:200]
+            LOG.warning("unreadable raster skipped (%s): %s", UNREADABLE[path], path)
+        return None
     return a
 
 
