@@ -1,4 +1,10 @@
-# Re-generate the evaluation-period geo products (export_geo_products.py) for TEMPO and GOES-18 smoke.
+# Re-generate the evaluation-period geo products (export_geo_products.py) for TEMPO and GOES-18 smoke,
+# 2024 Park Fire and 2025 Los Angeles cases (the scenes in each pipeline's inference_manifest.json).
+# Existing products are not redone:
+#   - planner: a model is left out when its geo_products_manifest.json entry exists and every file it lists exists
+#   - export job: a model whose complete entry covers this run's scenes is skipped; otherwise existing scene rasters
+#     (right grid, all bands, newer than the inference layers) are read back instead of re-warped / rewritten.
+#     An older every-5-min GOES export counts as covering the hourly one. Add --overwrite to force a full redo.
 #   cd SIT_FUSE/src/sit_fuse/train
 #   python plan_uq_jobs.py uq_parallel.smoke_geo.yaml                     # prints geo=run per model
 #   python plan_uq_jobs.py uq_parallel.smoke_geo.yaml --run -- --dry-run  # check the commands
@@ -8,15 +14,15 @@
 # GOES geo products are hourly (geo_every_minutes: 60); TEMPO keeps every granule (several per hourly scan).
 # CPU only (no GPU); 2 pipelines x up to 6 models = up to 12 jobs x 4 threads = 48 CPUs.
 
-plan_file: /data/nlahaye/output/Learnergy/launch_smoke_geo_regen/uq_plan.yaml
+plan_file: /data/nlahaye/output/Learnergy/launch_smoke_geo_regen2/uq_plan.yaml
 python: python
 launcher:
-  state_dir: /data/nlahaye/output/Learnergy/launch_smoke_geo_regen   # NEW dir: old markers would skip the deleted geo jobs
+  state_dir: /data/nlahaye/output/Learnergy/launch_smoke_geo_regen2  # fresh markers: existing outputs, not old markers, decide what is skipped
   cpus: 48
   gpus: 0
   retries: 1
 stages: [geo]
-resume: true                     # models whose geo manifest entry still exists are skipped
+resume: true                     # models whose geo manifest entry and listed files all exist are skipped
 resources: {geo: 4}
 
 pipelines:

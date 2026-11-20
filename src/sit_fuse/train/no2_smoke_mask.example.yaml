@@ -1,0 +1,58 @@
+# Smoke-aware cloud screening of TEMPO L3 NO2 with the SIT-FUSE GOES/TEMPO fused smoke product
+#   python no2_smoke_cloud_mask.py -c no2_smoke_mask.example.yaml --stage pull
+#   python no2_smoke_cloud_mask.py -c no2_smoke_mask.example.yaml --stage mask -n 24
+#   python no2_smoke_cloud_mask.py -c no2_smoke_mask.example.yaml --stage compare
+# Scans whose raster + rows already exist are skipped (--overwrite redoes them). Paths marked CHECK.
+output_dir: /data/nlahaye/output/Learnergy/FUSION/NO2_SMOKE_MASK
+workers: 24
+
+no2:
+  dir: /data/nlahaye/remoteSensing/NO2_L3            # CHECK: pull target (full files and/or *_subset.nc)
+  glob: "TEMPO_NO2_L3_*.nc"
+  versions: [V04, V03]                               # preference order when both exist for a scan
+  qa_max: 0                                          # product/main_data_quality_flag: 0 good, 1 suspect, 2 bad
+  cloud_threshold: auto                              # support_data/eff_cloud_fraction; auto: V04 0.1, V03 0.2
+  cloud_threshold_sweep: [0.1, 0.2, 0.3]             # coverage table also reports these (+ the auto value)
+  sza_max: null                                      # optional extra geometry screen, both masks
+  # scans: [6, 7, 8, 9, 10, 11, 12, 13, 14]          # optional scan-number filter
+
+fused:
+  dir: /data/nlahaye/output/Learnergy/FUSION/UQ_SMOKE   # fusion output_dir (fusion_config.smoke.yaml) - CHECK
+  grid: fine                                         # fine (GOES ~2 km, averaged to 0.02 deg) | coarse
+  glob: "fused_smoke_*.tif"
+  splits: null                                       # e.g. [holdout] to keep only holdout fused frames
+  window_minutes: 45                                 # fused frames within [scan start - w, scan end + w]
+  scan_time_tolerance_minutes: 5
+  max_dt_minutes: 45                                 # cell has no smoke information beyond this |dt|
+
+smoke_variants:                                      # first = primary (rasters, maps)
+  - {name: fused_p,   band: p_1,             threshold: tag}   # tag = fused decision threshold
+  - {name: fused_q05, band: ensemble_p1_q05, threshold: tag}   # conservative: lower 90% bound above threshold
+  # - {name: tempo_only, band: tempo_p1, threshold: 0.5}       # single-sensor comparisons (set thresholds)
+  # - {name: goes_only,  band: goes_p1,  threshold: 0.41}
+
+recovery:
+  max_cloud_fraction: [null, 0.5]                    # cloud-screened smoke cells with ECF >= cap stay screened
+  min_cloud_pressure_hpa: null                       # optional: recover only if amf_cloud_pressure >= this
+
+cases:                                               # CHECK boxes / dates; boxes must lie inside the fused grid
+  park_fire_2024:
+    bbox: [-125.0, -114.0, 36.0, 43.0]               # [W, E, S, N]
+    start: "2024-07-24"
+    end: "2024-08-06"
+  la_fires_2025:
+    bbox: [-121.0, -115.5, 32.0, 36.0]
+    start: "2025-01-07"
+    end: "2025-01-16"
+
+pull:
+  enabled: true                                      # --stage all runs the pull first when true
+  threads: 8
+  access: https
+  subset: true                                       # write <stem>_subset.nc per case bbox
+  delete_full: false                                 # true: drop the full-FOR file after subsetting
+  dry_run: false
+
+figures:
+  enabled: true
+  maps_per_case: 3

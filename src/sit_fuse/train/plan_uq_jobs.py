@@ -24,8 +24,11 @@ without the launcher (or with a deleted state_dir) continues where it stopped. F
 at least as new as upstream outputs: features (build_manifest.json + pixel_features.parquet), train
 (training_summary.json), infer per model (inference_manifest.json, written after all scenes), evaluate per model
 (eval_summary.json with bootstrap_groups), compare (model_comparison.csv), geo per model (entry in
-geo_products_manifest.json). A model whose inference was interrupted is re-planned; its finished scenes are reused
-from the per-scene checkpoints (scene_results/) when those exist. Fusion and visuals rely on the launcher markers.
+geo_products_manifest.json whose listed files all still exist). A model whose inference was interrupted is
+re-planned; its finished scenes are reused from the per-scene checkpoints (scene_results/) when those exist. Fusion and visuals rely on the launcher markers.
+Resume also re-plans features / inference / geo made at another scene cadence than the config asks for
+(data.every_minutes, inference.every_minutes, geo_every_minutes), and training whose model files are missing.
+A per-pipeline `rerun_from: features|train|infer|evaluate|geo` re-plans that stage and everything after it.
 --no-resume plans everything (the scripts still reuse matching scene checkpoints; add --overwrite to the inference
 commands to recompute them).
 
@@ -77,44 +80,137 @@ def _newer(p, *deps):
     return t is not None and all(_mtime(d) is None or t >= _mtime(d) for d in deps)
 
 
-def finished(uq, models):
+def _cad(v):
+    """Cadence value as compared by resume: None / 0 / '' = every scene."""
+    try:
+        return float(v) if v not in (None, "", False) and float(v) > 0 else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _jload(p):
+    import json
+    try:
+        return json.loads(Path(p).read_text())
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _training_files(summary):
+    """Artifacts a training_summary.json points at (models may live in a --recalibrate source dir)."""
+    fs = list((summary.get("model_paths") or {}).values())
+    fs += [summary.get(k) for k in ("context_encoder_path", "calibrators_path") if summary.get(k)]
+    for v in (summary.get("bootstrap_manifest") or {}).values():
+        fs += list(v or [])
+    return [str(f) for f in fs if f]
+
+
+RERUN_ORDER = ("features", "train", "infer", "evaluate", "geo")
+
+
+def finished(uq, models, geo_every=None, rerun_from=None):
     """
     Stages of one UQ config whose outputs already exist (resume after a run without the launcher, or after the
     launcher state was deleted). A stage counts as finished only when its upstream stage is finished and its
     outputs are at least as new as the upstream outputs, so a rerun upstream invalidates everything below it.
+    Also re-planned:
+      - features / infer / geo made at another scene cadence than the config now asks for (data.every_minutes,
+        inference.every_minutes, geo every_minutes; a full-cadence geo export covers an hourly request);
+      - train when a model, encoder, calibrator or bootstrap file named in training_summary.json is missing;
+      - rerun_from: <stage> and everything after it.
     Returns {"features": bool, "train": bool, "infer": {m: bool}, "evaluate": {m: bool}, "compare": bool,
-    "geo": {m: bool}}.
+    "geo": {m: bool}, "notes": [str]}.
     """
-    import json
     out = Path(uq["output_dir"])
+    data = uq.get("data") or {}
     inf, ev, gx = uq.get("inference") or {}, uq.get("evaluation") or {}, uq.get("geo_export") or {}
-    bm, feat = out / "build_manifest.json", out / "pixel_features.parquet"
+    notes = []
+    if rerun_from and rerun_from not in RERUN_ORDER:
+        raise ValueError(f"rerun_from {rerun_from!r}: choose from {RERUN_ORDER}")
+    forced = set(RERUN_ORDER[RERUN_ORDER.index(rerun_from):]) if rerun_from else set()
+
+    bm = out / "build_manifest.json"
+    bman = _jload(bm) if bm.exists() else None
+    feat = Path((bman or {}).get("pixel_features") or out / "pixel_features.parquet")
+    d = {"features": bman is not None and feat.exists()}
+    if d["features"] and "every_minutes" in bman and _cad(bman["every_minutes"]) != _cad(data.get("every_minutes")):
+        notes.append(f"features built with every_minutes={bman['every_minutes']}, config wants "
+                     f"{data.get('every_minutes') or 'every scene'}")
+        d["features"] = False
+    if bman is not None:
+        notes.append(f"feature table: {bman.get('n_scenes', '?')} scenes, {bman.get('n_rows', '?')} rows"
+                     + (f", {len(bman['skipped_scenes'])} skipped" if bman.get("skipped_scenes") else ""))
+    d["features"] = d["features"] and "features" not in forced
+
     tsum = Path(inf.get("training_summary_path", out / "training" / "training_summary.json"))
-    d = {"features": bm.exists() and feat.exists()}
-    d["train"] = d["features"] and _newer(tsum, bm, feat)
+    d["train"] = d["features"] and _newer(tsum, bm, feat) and "train" not in forced
+    if tsum.exists():
+        summ = _jload(tsum) or {}
+        miss = [f for f in _training_files(summ) if not Path(f).exists()]
+        src = summ.get("recalibrated_from")
+        notes.append(f"training: {tsum}" + (f" (recalibrated; models in {src})" if src else ""))
+        if miss:
+            notes.append(f"training files missing ({len(miss)}), e.g. {miss[0]}")
+            d["train"] = False
+    else:
+        notes.append(f"training: none yet ({tsum})")
+
     edir = Path(ev.get("output_dir", out / "evaluation"))
     gman = Path(gx.get("output_dir", out / "geo")) / "geo_products_manifest.json"
-    try:
-        geo_models = set(json.loads(gman.read_text())) if gman.exists() else set()
-    except Exception:  # noqa: BLE001
-        geo_models = set()
+    gent = (_jload(gman) or {}) if gman.exists() else {}
+    want_inf = _cad(inf.get("every_minutes", data.get("every_minutes")))
+    want_geo = _cad(geo_every if geo_every is not None else gx.get("every_minutes"))
+
+    def _geo_ok(e):                       # a deleted raster / vector file re-plans the model's geo job
+        if not isinstance(e, dict) or not e.get("rasters"):
+            return False
+        fs = list(e["rasters"]) + [f for k in ("polygons", "scene_footprints", "pixels") for f in e.get(k) or []]
+        have = _cad(e.get("every_minutes"))
+        return all(Path(f).exists() for f in fs) and (have is None or have == want_geo)
+    geo_models = {m for m, e in gent.items() if _geo_ok(e)}
     d["infer"], d["evaluate"], d["geo"], evs = {}, {}, {}, []
     for m in models:
         man = Path(inf["output_dir"]) / "inference_manifest.json" if inf.get("output_dir") else \
             out / "inference" / m / "inference_manifest.json"
-        d["infer"][m] = d["train"] and _newer(man, tsum)          # written only after every scene finished
-        es = edir / m / "eval_summary.json"
-        ok = d["infer"][m] and _newer(es, man)
-        if ok:                                                    # older evaluations lack the pairing groups
-            try:
-                ok = "bootstrap_groups" in json.loads(es.read_text())
-            except Exception:  # noqa: BLE001
+        ok = d["train"] and _newer(man, tsum) and "infer" not in forced   # written only after every scene
+        if ok:
+            im = _jload(man) or {}
+            have = _cad(im.get("every_minutes"))
+            if have != want_inf:
+                notes.append(f"{m}: inference at every_minutes={im.get('every_minutes')}, config wants "
+                             f"{want_inf or 'every scene'}")
                 ok = False
+        d["infer"][m] = ok
+        es = edir / m / "eval_summary.json"
+        ok = ok and _newer(es, man) and "evaluate" not in forced
+        if ok:                                                    # older evaluations lack the pairing groups
+            ok = "bootstrap_groups" in (_jload(es) or {})
         d["evaluate"][m] = ok
         evs.append(es)
-        d["geo"][m] = ok and m in geo_models and _newer(gman, es)
-    d["compare"] = all(d["evaluate"].values()) and _newer(edir / "model_comparison.csv", *evs)
+        d["geo"][m] = ok and m in geo_models and _newer(gman, es) and "geo" not in forced
+    d["compare"] = all(d["evaluate"].values()) and _newer(edir / "model_comparison.csv", *evs) \
+        and "evaluate" not in forced
+    d["notes"] = notes
     return d
+
+
+def _check_fusion_sources(fname, fcfg_path, after_uq):
+    """Warn when a fusion source (tempo / goes) reads a geo dir other than its pipeline's geo_export.output_dir."""
+    msgs = []
+    try:
+        fcfg = _read(fcfg_path)
+    except OSError as e:
+        return [f"  fusion {fname}: cannot read {fcfg_path}: {e}"]
+    for key, src in (fcfg.get("sources") or {}).items():
+        pipe = next((p for p in after_uq if p.startswith(str(key))), None)
+        if not pipe or not src.get("geo_dir"):
+            continue
+        uq = _read(after_uq[pipe])
+        want = Path((uq.get("geo_export") or {}).get("output_dir", Path(uq["output_dir"]) / "geo"))
+        if Path(src["geo_dir"]).resolve() != want.resolve():
+            msgs.append(f"  WARNING fusion {fname}: sources.{key}.geo_dir = {src['geo_dir']} but pipeline {pipe} "
+                        f"writes its geo products to {want}")
+    return msgs
 
 
 def build_plan(cfg, base_dir, resume=None):
@@ -156,16 +252,17 @@ def build_plan(cfg, base_dir, resume=None):
         uq_cfg = _read(uq)
         models = _models(sp, uq_cfg)
         if resume:
-            f = finished(uq_cfg, models)
+            f = finished(uq_cfg, models, geo_every=ge, rerun_from=sp.get("rerun_from"))
             done.update({("features", name): f["features"], ("train", name): f["train"],
                          ("compare", name): f["compare"]})
             for st in ("infer", "evaluate", "geo"):
                 done.update({(st, name, m): v for m, v in f[st].items()})
-            report.append(f"  {name}: features={'done' if f['features'] else 'run'} "
+            report.append(f"  {name} ({uq_cfg['output_dir']}): features={'done' if f['features'] else 'run'} "
                           f"train={'done' if f['train'] else 'run'} " + " ".join(
                               f"{m}[infer={'done' if f['infer'][m] else 'run'},"
                               f"eval={'done' if f['evaluate'][m] else 'run'},"
                               f"geo={'done' if f['geo'][m] else 'run'}]" for m in models))
+            report += [f"      {n}" for n in f["notes"]]
         for m in models:
             model_cases.append(dict(c, model=m))
             inf_cases += [dict(c, model=m, shard=i) for i in range(int(sp.get("inference_shards",
@@ -224,6 +321,7 @@ def build_plan(cfg, base_dir, resume=None):
         if unknown:
             raise ValueError(f"fusion {name}: after {unknown} are not pipelines")
         geo_planned = {c["pipe"] for j in J if j["name"] == "geo" for c in j["cases"]}
+        report += _check_fusion_sources(name, ab(sp["config"]), {p: ab(pipes[p]["uq_config"]) for p in after})
         fc.append({"fusion": name, "fcfg": ab(sp["config"]), "nfs": int(sp.get("shards", shards["fusion"])),
                    "_needs": [tok("geo", p) for p in after if p in geo_planned]})   # finished geo: no wait
     # needs are per job spec, so one fit spec per fusion (each waits only on its own pipelines' geo jobs)

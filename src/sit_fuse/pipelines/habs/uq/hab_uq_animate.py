@@ -13,8 +13,12 @@ panels per frame:
   P(concentration >= first alert threshold)
   normalized predictive entropy
   sensors contributing (fused) | days since observation (filtered)
-optional in-situ samples within +/-overlay_days, coloured by the same bins
-(test-role days marked when a day-roles file is configured).
+In-situ overlays (where the panel has an in-situ counterpart):
+  all panels      every station that reported this target in the window, small hollow markers
+                  (pDA / cDA stations only for those targets), so gaps in sampling are visible
+  concentration   samples within +/-overlay_days, coloured by the same bins (rings: test days)
+  exceedance      the same samples, filled when the observation exceeds the mapped threshold,
+                  white when below
 
 Frames are rendered one at a time (no frame buffer), so memory is one scene.
 A poster PNG (day with the largest alert-probability area) and a manifest.json
@@ -29,6 +33,8 @@ or the 'animate' stage of hab_uq_pipeline. Config (all optional), uq.animation:
   dpi: 110
   insitu_overlay: true
   overlay_days: 1
+  insitu_sites: true     # persistent station markers on every panel
+  exceed_samples: true   # observed exceed / not-exceed markers on the exceedance panel
   land_mask: land_10     # Natural Earth land drawn grey (regionmask); none to skip
   extent: null           # [lon_min, lon_max, lat_min, lat_max]; default product extent
   threshold_index: 0     # which alert threshold to map
@@ -56,11 +62,12 @@ STREAMS = {"fused": "Fused, observed days", "filtered": "Fused, temporally filte
 SPECIES_LABEL = {"Pseudo_nitzschia_seriata_group": "P. seriata group",
                  "Pseudo_nitzschia_delicatissima_group": "P. delicatissima group",
                  "pDA": "Particulate domoic acid", "Total_Phytoplankton": "Total phytoplankton",
-                 "Alexandrium_spp": "Alexandrium spp."}
+                 "Alexandrium_spp": "Alexandrium spp.", "Pseudo_nitzschia_total": "Pseudo-nitzschia (total)",
+                 "cDA": "Cellular domoic acid (experimental)"}
 DATE_RE = re.compile(r"SITFUSE_MULTI\.(\d{8})\.L3m\.DAY\.")
 DEFAULTS = {"streams": ["filtered", "fused"], "format": "mp4", "fps": 4, "dpi": 110,
             "insitu_overlay": True, "overlay_days": 1, "land_mask": "land_10", "extent": None,
-            "threshold_index": 0}
+            "threshold_index": 0, "insitu_sites": True, "exceed_samples": True}
 
 
 def _thr_name(t: float) -> str:
@@ -154,10 +161,17 @@ def insitu_points(yml: dict[str, Any], spec: SpeciesSpec, start, end) -> pd.Data
     return df[["date", "Latitude", "Longitude", "value", "ref_class", "role", "Location_Code"]]
 
 
+def insitu_sites(insitu: pd.DataFrame | None) -> pd.DataFrame | None:
+    """One row per station (median position) that reported the target."""
+    if insitu is None or insitu.empty:
+        return None
+    return (insitu.groupby("Location_Code")[["Latitude", "Longitude"]].median().reset_index())
+
+
 class _Figure:
     """Four-panel figure; artists updated in place for each frame."""
 
-    def __init__(self, spec, stream, lay, prof, land, extent, dpi, max_support):
+    def __init__(self, spec, stream, lay, prof, land, extent, dpi, max_support, sites=None, threshold=None):
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
@@ -219,6 +233,15 @@ class _Figure:
             elif key == "support":
                 cb.set_ticks(sup_ticks)
             self.ims[key] = im
+        if sites is not None and len(sites):
+            for ax in self.axs:
+                ax.scatter(sites["Longitude"], sites["Latitude"], s=16, facecolors="none", edgecolors="#333333",
+                           linewidths=0.6, alpha=0.8, zorder=4)
+        self.threshold = threshold
+        ix = list(self.ims).index("exceed") if "exceed" in self.ims else None
+        self.exc_scat = None if ix is None else self.axs[ix].scatter(
+            [], [], s=40, c=[], cmap=ListedColormap(["#ffffff", "#d7301f"]), vmin=0, vmax=1,
+            edgecolors="k", linewidths=0.9, zorder=5)
         self.scat = self.axs[0].scatter([], [], s=46, c=[], cmap=conc_cmap, norm=self.conc_norm,
                                         edgecolors="k", linewidths=0.9, zorder=5)
         self.test_ring = self.axs[0].scatter([], [], s=150, facecolors="none", edgecolors="#00a6ff",
@@ -233,14 +256,21 @@ class _Figure:
             a = arrays.get(k)
             im.set_data(a if a is not None else np.full(im.get_array().shape, np.nan, np.float32))
         if pts is not None and len(pts):
+            pts = pts.sort_values("value")      # highest observations drawn on top
             self.scat.set_offsets(np.c_[pts["Longitude"], pts["Latitude"]])
             self.scat.set_array(np.log10(np.maximum(pts["value"].to_numpy(float), 1e-12)))
             tp = pts[pts["role"] == "test"]
             self.test_ring.set_offsets(np.c_[tp["Longitude"], tp["Latitude"]] if len(tp) else np.empty((0, 2)))
+            if self.exc_scat is not None and self.threshold is not None:
+                self.exc_scat.set_offsets(np.c_[pts["Longitude"], pts["Latitude"]])
+                self.exc_scat.set_array((pts["value"].to_numpy(float) >= self.threshold).astype(float))
         else:
             self.scat.set_offsets(np.empty((0, 2)))
             self.scat.set_array(np.empty(0))
             self.test_ring.set_offsets(np.empty((0, 2)))
+            if self.exc_scat is not None:
+                self.exc_scat.set_offsets(np.empty((0, 2)))
+                self.exc_scat.set_array(np.empty(0))
         self.suptitle.set_text(f"{self.label}  |  {self.stream_label}  |  {pd.Timestamp(date):%Y-%m-%d}")
         self.footer.set_text(footer)
 
@@ -286,8 +316,11 @@ def animate_stream(files: list[tuple[pd.Timestamp, str]], spec: SpeciesSpec, str
         LOG.warning("%s/%s: no %s layers in %d files", spec.use_key, stream, lay["conc"], len(files))
         return None
     land = land_grid(first, cfg.get("land_mask", "land_10"))
+    ti = int(cfg.get("threshold_index", 0))
+    thr = spec.alert_thresholds[min(ti, len(spec.alert_thresholds) - 1)] if spec.alert_thresholds else None
+    sites = insitu_sites(insitu) if cfg.get("insitu_sites", True) else None
     fig = _Figure(spec, stream, lay, first, land, cfg.get("extent"), int(cfg.get("dpi", 110)),
-                  max(len(sensors or []), 1))
+                  max(len(sensors or []), 1), sites, thr if cfg.get("exceed_samples", True) else None)
     writer, ext = _writer(cfg.get("format", "mp4"), int(cfg.get("fps", 4)))
     out = f"{out_base}.{ext}"
     Path(out).parent.mkdir(parents=True, exist_ok=True)
@@ -317,7 +350,8 @@ def animate_stream(files: list[tuple[pd.Timestamp, str]], spec: SpeciesSpec, str
                 fig.update(d, arrays, pts,
                            f"SIT-FUSE HAB UQ  |  valid {cov:.0%}  |  in-situ +/-{od.days} d: {n_pts}"
                            + ("  (rings: held-out test days)" if pts is not None and (pts["role"] == "test").any()
-                              else ""))
+                              else "")
+                           + ("  |  hollow: stations; red: observed >= threshold" if sites is not None else ""))
                 writer.grab_frame(facecolor="white")
                 n += 1
         poster = None
@@ -356,7 +390,8 @@ def animate_species(yml: dict[str, Any], use_key: str, out_root, streams=None) -
             LOG.warning("%s: no fused products in %s for %s..%s (run the fuse stage first)",
                         use_key, fused_dir, start, end)
             continue
-        insitu = insitu_points(yml, spec, files[0][0], files[-1][0]) if cfg.get("insitu_overlay", True) else None
+        insitu = (insitu_points(yml, spec, files[0][0], files[-1][0])
+                  if cfg.get("insitu_overlay", True) or cfg.get("insitu_sites", True) else None)
         tag = f"_{start:%Y%m%d}_{end:%Y%m%d}" if len(windows) > 1 else ""
         for st in streams or cfg["streams"]:
             r = animate_stream(files, spec, st, str(out_dir / f"SITFUSE_MULTI.{spec.fname_token}.{st}{tag}"), cfg,

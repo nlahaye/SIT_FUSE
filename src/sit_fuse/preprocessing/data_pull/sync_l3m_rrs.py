@@ -34,6 +34,9 @@ Examples
   python sync_l3m_rrs.py --start 2025-06-01 --end 2025-06-30 --config dirs.json \
       --replace-all-nrt --nrt-archive-dir /data/nrt_archive
 
+  # daily chlorophyll (chlor_a; PACE: BGC suite) for HAB consistency diagnostics
+  python sync_l3m_rrs.py --suite CHL --start 2023-01-01 --end 2026-09-30 --dir NPP_VIIRS=/data/chl/snpp
+
 Requires: pip install earthaccess
 """
 
@@ -68,6 +71,7 @@ class Instrument:
     # Regex applied to the product token (e.g. "Rrs_443"). None = keep all files
     # in the suite (PACE ships every Rrs band in one AOP file).
     product_regex: str | None = r"^Rrs_\d+$"
+    suite: str = "RRS"   # RRS (reflectance; PACE AOP) | CHL (chlor_a; PACE BGC)
 
 
 INSTRUMENTS: dict[str, Instrument] = {
@@ -79,6 +83,21 @@ INSTRUMENTS: dict[str, Instrument] = {
     "JPSS2_VIIRS": Instrument("JPSS2_VIIRS", "VIIRSJ2_L3m_RRS", "VIIRSJ2_L3m_RRS_NRT", "JPSS2_VIIRS"),
     "AQUA_MODIS": Instrument("AQUA_MODIS", "MODISA_L3m_RRS", "MODISA_L3m_RRS_NRT", "AQUA_MODIS"),
 }
+# --suite CHL: same platforms, chlorophyll collections (PACE chlor_a is in the BGC file)
+CHL_COLLECTIONS = {"PACE_OCI": ("PACE_OCI_L3M_BGC", "PACE_OCI_L3M_BGC_NRT")}
+
+
+def for_suite(inst: Instrument, suite: str) -> Instrument:
+    if suite == "RRS":
+        return inst
+    if suite != "CHL":
+        raise ValueError(f"unknown suite {suite!r}")
+    std, nrt = CHL_COLLECTIONS.get(inst.key, (inst.std_collection.replace("_RRS", "_CHL"),
+                                               inst.nrt_collection.replace("_RRS", "_CHL")))
+    return Instrument(inst.key, std, nrt, inst.file_prefix,
+                      None if inst.key == "PACE_OCI" else r"^chlor_a$", "CHL")
+
+
 ALIASES = {"SNPP_VIIRS": "NPP_VIIRS", "VIIRSN": "NPP_VIIRS", "NOAA20_VIIRS": "JPSS1_VIIRS",
            "NOAA21_VIIRS": "JPSS2_VIIRS", "MODISA": "AQUA_MODIS", "PACE": "PACE_OCI"}
 
@@ -128,8 +147,8 @@ def wanted(name: L3mName, inst: Instrument, res: str, include_aux: bool) -> bool
     if name.prefix != inst.file_prefix or name.res != res:
         return False
     if inst.key == "PACE_OCI":
-        return name.suite == "AOP"
-    if name.suite != "RRS":
+        return name.suite == ("AOP" if inst.suite == "RRS" else "BGC")
+    if name.suite != inst.suite:
         return False
     if include_aux or inst.product_regex is None:
         return True
@@ -194,7 +213,7 @@ def inventory(root: Path, inst: Instrument, res: str, include_aux: bool,
         if name is None or name.prefix != inst.file_prefix or name.res != res:
             continue
         # Older PACE RRS.V3_x files are tracked for reporting only.
-        if inst.key == "PACE_OCI" and name.suite == "RRS":
+        if inst.key == "PACE_OCI" and inst.suite == "RRS" and name.suite == "RRS":
             inv.slots.setdefault(("PACE_OLD", name.date, name.res), []).append(p)
             continue
         if not wanted(name, inst, res, include_aux):
@@ -419,6 +438,8 @@ def parse_args(argv=None):
                    help="Restrict to this subset of the instruments that have directories")
     p.add_argument("--res", default="4km", choices=["4km", "9km", "0p1deg"],
                    help="Spatial resolution (0p1deg is PACE-only). Default 4km")
+    p.add_argument("--suite", default="RRS", choices=["RRS", "CHL"],
+                   help="RRS (default; PACE AOP) or CHL (chlor_a; PACE BGC)")
     p.add_argument("--include-aux", action="store_true",
                    help="Also fetch non-Rrs files of the RRS suite (aot_*, angstrom) for multi-file sensors")
     p.add_argument("--no-nrt", action="store_true", help="Never download NRT files as a fallback")
@@ -481,7 +502,7 @@ def main(argv=None) -> int:
     events: list[Event] = []
     for key, root in args.dirs.items():
         try:
-            events += sync_instrument(INSTRUMENTS[key], root, args)
+            events += sync_instrument(for_suite(INSTRUMENTS[key], args.suite), root, args)
         except Exception as exc:
             log.exception("%s failed: %s", key, exc)
             events.append(Event(key, "failed", "", str(root), f"instrument error: {exc}"))

@@ -38,6 +38,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from rasterio.errors import RasterioError
 
 from sit_fuse.train.classifier_utils import (
     cap_total_samples_stratified,
@@ -150,7 +151,11 @@ def select_matchups(cfg: dict) -> list:
     data_cfg = cfg["data"]
     product = str(data_cfg.get("product", "")).lower()
     splits = data_cfg.get("include_splits")  # e.g. [dev, calibration, holdout]
-    matchups = [m for m in load_matchups(data_cfg["matchup_file"], require_truth=True, splits=splits)
+    # data.every_minutes (e.g. 60): quick first pass on the first scene of each UTC hour (see load_matchups)
+    matchups = [m for m in load_matchups(data_cfg["matchup_file"], require_truth=True, splits=splits,
+                                         every_minutes=data_cfg.get("every_minutes"),
+                                         offset_minutes=data_cfg.get("offset_minutes", 0),
+                                         missing_heads=data_cfg.get("missing_heads", "skip"))
                 if not product or m["product"] == product]
     if not matchups:
         raise ValueError(f"No matchups for product='{product}'.")
@@ -165,7 +170,13 @@ def process_scene(cfg: dict, i: int, m: dict) -> dict:
     x = _context(cfg)
     C, invalid, levels = x["C"], x["invalid"], x["levels"]
     LOG.info("[%d] %s (%s)", i, m["pair_id"], m["date"])
-    bands, profile, tags = read_head_outputs(m["head_outputs"])
+    try:
+        bands, profile, tags = read_head_outputs(m["head_outputs"])
+    except (OSError, RasterioError) as e:    # missing (removed after listing) or unreadable / corrupt head output
+        LOG.warning("%s: head_outputs unreadable (%s); scene skipped.", m["pair_id"], e)
+        return {"i": i, "pair_id": m["pair_id"], "date": m["date"], "head_settings": None,
+                "head_outputs": str(m["head_outputs"]), "frame": None, "counts": None, "population": None,
+                "level_missing": [], "excluded": None, "stages": None, "skipped": f"head_outputs unreadable: {e}"}
     res = {"i": i, "pair_id": m["pair_id"], "date": m["date"], "head_settings": head_settings_from_tags(tags),
            "head_outputs": str(m["head_outputs"]), "frame": None, "counts": None, "population": None,
            "level_missing": [], "excluded": None}
@@ -250,7 +261,12 @@ def finalize(cfg: dict, matchups: list, results: list) -> None:
     frames, counts, prevalence, population = [], [], {}, {}
     stages, excluded, level_missing = {}, {}, {}
     head_settings = None
+    skipped = {r["pair_id"]: r["skipped"] for r in results if r.get("skipped")}
+    if skipped:
+        LOG.warning("%d scenes skipped (unreadable head outputs); listed in build_manifest.json", len(skipped))
     for r in results:
+        if r.get("skipped"):
+            continue
         hs = r["head_settings"]
         if head_settings is None:
             head_settings = hs
@@ -333,7 +349,11 @@ def finalize(cfg: dict, matchups: list, results: list) -> None:
         "pixel_features": str(p1),
         "cluster_counts": str(p2),
         "n_rows": int(len(table)),
+        "skipped_scenes": skipped,              # pair_id -> reason (unreadable head outputs)
         "n_scenes": len(matchups),
+        # scene cadence used (None = every scene); plan_uq_jobs.py re-plans the stage when the config changes it
+        "every_minutes": cfg["data"].get("every_minutes") or None,
+        "offset_minutes": cfg["data"].get("offset_minutes", 0) if cfg["data"].get("every_minutes") else None,
         "dates": sorted(prevalence),
         "classifier_splits": {s: int(n) for s, n in
                               pd.Series([m["classifier_split"] or "unassigned" for m in matchups]).value_counts().items()},

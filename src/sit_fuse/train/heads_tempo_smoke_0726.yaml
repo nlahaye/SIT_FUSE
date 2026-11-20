@@ -1,0 +1,28 @@
+# Head outputs only: TEMPO smoke encoder, 26 July 2026 (Pacific day = 07:00 UTC 26 Jul .. 07:00 UTC 27 Jul).
+# Uses the same pipeline / export settings as production_2026_smoke_qt.yaml, so the export key (and folder name
+# heads/tempo_0) matches the production run. Separate output_root, so the production scenes.yaml / plan are untouched;
+# move the heads into PRODUCTION_2026_07/heads/tempo_0 afterwards (see the commands in the thread).
+# Needs the full TEMPO radiance GeoTIFFs for the day (not the RGBs): heads are computed from the encoder input.
+output_root: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_HEADS_0726
+start: 2026-07-26T07:00:00Z
+end: 2026-07-27T07:00:00Z
+bbox: [-125.0, -110.0, 40.0, 49.0]
+python: python
+resume: true
+launcher:
+  cpus: 48
+  gpus: [0, 1, 2, 3, 4, 5, 6, 7]
+  state_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_HEADS_0726/launch
+export: {shards: 8, cpus: 6, gpu: 1}    # 8 head-export jobs, one A100 + 6 cores each
+
+sensors:
+  tempo:
+    inputs: /data/nlahaye/remoteSensing/RAD_L1_V04_0726        # EDIT: folder with the full TEMPO_RAD_L1_V04_*.tif for 26 July
+    pattern: "TEMPO_RAD_L1_V04_*.tif"                          # .RGB.tif / .UV_RGB.tif / head outputs are excluded
+
+pipelines:
+  tempo_smoke:
+    sensor: tempo
+    uq_config: uq_config.example.yaml
+    export_config: export_config.example.yaml
+    models: [hist_gradient_boosting]

@@ -47,6 +47,7 @@ from pathlib import Path
 import joblib
 import numpy as np
 import pandas as pd
+from rasterio.errors import RasterioError
 
 from sit_fuse.train.classifier_utils import (
     write_single_band_raster,
@@ -143,12 +144,18 @@ def load_context(cfg, model_name=None):
     chunk = int(inf.get("chunk_size", 200000))
     features_cfg = cfg.get("features", {})
     scene_file = inf.get("scene_file", cfg["data"]["matchup_file"])
-    records = load_matchups(scene_file, require_truth=False, splits=inf.get("splits"))
+    # inference.every_minutes (default data.every_minutes; 0 = every scene): first scene of each UTC bin
+    every = inf.get("every_minutes", cfg["data"].get("every_minutes"))
+    off = inf.get("offset_minutes", cfg["data"].get("offset_minutes", 0))
+    records = load_matchups(scene_file, require_truth=False, splits=inf.get("splits"),
+                            every_minutes=every, offset_minutes=off,
+                            missing_heads=inf.get("missing_heads", cfg["data"].get("missing_heads", "skip")))
     invalid = InvalidClusters.from_config(cfg)
     provenance_common = {
         "model": name, "classes": meta["classes"], "threshold": thr,
         "calibrator": cal.describe(), "selective_rule": sel or {},
         "training_summary": str(summary_path), "scene_file": str(scene_file),
+        "every_minutes": every or None,
         "feature_signature_sha": _sha(meta["feature_signature"]),
         "head_settings": meta["head_settings"],
         "invalid_clusters": invalid.signature() if invalid else {},
@@ -233,7 +240,7 @@ def infer_scene(cfg, model_name, k, threads=None):
             LOG.info("%s: reusing finished scene (scene_results checkpoint)", rec["pair_id"])
             return done
     result = _infer_scene(x, rec)
-    if resume:
+    if resume and not result[0].get("head_unreadable"):     # unreadable heads are retried on the next run
         _save_checkpoint(x, rec, result)
     return result
 
@@ -246,7 +253,14 @@ def _infer_scene(x, rec):
                        "features_cfg", "invalid", "provenance_common", "meta", "inf"))
     cfg = x["cfg"]
     area_rows = []
-    bands, profile, tags = read_head_outputs(rec["head_outputs"])
+    try:
+        bands, profile, tags = read_head_outputs(rec["head_outputs"])
+    except (OSError, RasterioError) as e:    # removed after listing, or unreadable / corrupt: skip, keep going
+        LOG.warning("%s: head_outputs unreadable (%s); no products written.", rec["pair_id"], e)
+        return ({"pair_id": rec["pair_id"], "date": rec["date"], "n_valid": 0, "head_unreadable": True,
+                 "skipped": f"head_outputs unreadable: {e}",
+                 "classifier_split": rec["classifier_split"], "head_outputs": rec["head_outputs"],
+                 "truth": rec["truth"]}, [], [])
     if head_settings_from_tags(tags) != meta["head_settings"]:
         raise ValueError(f"{rec['head_outputs']}: head export settings differ from training.")
     base, _ = scene_feature_frame(bands, profile, features_cfg, rec["pair_id"], invalid=invalid)

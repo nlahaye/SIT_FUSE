@@ -62,6 +62,50 @@ import yaml
 from uq_viz.overlay import file_bounds_4326, time_from_name, utc
 
 TRAIN_DIR = Path(__file__).resolve().parent
+STAND_IN: dict[str, str] = {}            # original input path -> stand-in file (sensors.<s>.stand_in_suffix)
+def stand_in_suffixes(sc):
+    """sensors.<s>.stand_in_suffix as a list of canonical endings: "RGB", ".RGB", "RGB.tif", ".RGB.tif" -> ".RGB.tif"."""
+    v = sc.get("stand_in_suffix")
+    if not v:
+        return []
+    out = []
+    for x in (v if isinstance(v, list) else [v]):
+        x = str(x).strip()
+        if not x.lower().endswith(".tif"):
+            x += ".tif"
+        if x[0] not in "._-":
+            x = "." + x
+        out.append(x)
+    return sorted(set(out), key=len, reverse=True)          # longest first (.UV_RGB.tif before .RGB.tif)
+
+
+def strip_stand_in(name, sufs):
+    """Original input filename for a stand-in filename (suffix removed, .tif restored); None if no suffix matches."""
+    for x in sufs:
+        if name.lower().endswith(x.lower()):
+            return name[:-len(x)] + ".tif"
+    return None
+
+
+def head_path(hdir, f):
+    """Head-output path of input f: <hdir>/<input name>.head_outputs.tif (export_head_outputs.py naming), with any
+    stand-in suffix removed from the name first. Falls back to <stem>.head_outputs.tif if only that exists."""
+    name = Path(f).name
+    name = strip_stand_in(name, STAND_IN_SUFFIXES) or name
+    p = Path(hdir) / f"{name}.head_outputs.tif"
+    if not p.exists():
+        alt = Path(hdir) / f"{name[:-4] if name.endswith('.tif') else name}.head_outputs.tif"
+        if alt.exists():
+            return alt
+    return p
+
+
+def unusable(hdir, items):
+    """Stand-in scenes that cannot be used: no head output in hdir and no original input to export one from."""
+    return [f for f, _ in items if f in STAND_IN and not Path(f).exists() and not head_path(hdir, f).exists()]
+
+
+STAND_IN_SUFFIXES: list[str] = []        # union of all sensors' canonical stand-in suffixes
 DEFAULT_EXCLUDE = [".RGB.tif", ".UV_RGB.tif", ".head_outputs.tif", ".clust.", "full_geo", ".proba"]
 
 
@@ -87,25 +131,48 @@ def _abs(base, p):
 def list_inputs(sc, t0, t1, bbox, base, name="sensor"):
     """Inputs of one sensor in [t0, t1) (and intersecting bbox [W, E, S, N]).
 
+    sensors.<s>.stand_in_suffix (e.g. ".RGB.tif"): select scenes from stand-in files <stem><suffix> (same grid as
+    the input, e.g. the TEMPO RGB / UV_RGB GeoTIFFs) when the full inputs were moved. Each stand-in maps back to
+    <stem>.tif in the same directory (or sensors.<s>.original_dir), so scene ids and head-output names stay those
+    of the original inputs; the stand-in is used for the time / bbox selection and as the georeference
+    (sit_fuse_context_free) while the original is missing. Scenes with neither a head output nor an original input
+    are skipped with a warning (the run continues with the scenes that are available).
+
     sensors.<s>.bbox_filter: true (default) | false. Files without readable georeferencing (no CRS / GCPs,
     e.g. GOES GeoTIFFs whose lat/lon come from the netCDF geo reader) are kept, since they cannot be tested.
     Returns (inputs, counts); counts explains where candidates were dropped."""
     dirs = sc["inputs"] if isinstance(sc["inputs"], list) else [sc["inputs"]]
+    sufs = stand_in_suffixes(sc)
+    STAND_IN_SUFFIXES[:] = sorted(set(STAND_IN_SUFFIXES) | set(sufs), key=len, reverse=True)
     pat = sc.get("pattern", "*.tif")
+    pats = [pat]
+    if sufs:
+        core = pat
+        for x in sorted(set(sufs) | {".UV_RGB.tif", ".RGB.tif"}, key=len, reverse=True):   # pattern may carry one
+            if core.lower().endswith(x.lower()):
+                core = core[:-len(x)] + ".tif"
+                break
+        core = core[:-4] if core.lower().endswith(".tif") else core.rstrip("*") + "*"
+        pats = [core + x for x in sufs]
     rec = bool(sc.get("recursive", False))
     excl = sc.get("exclude", DEFAULT_EXCLUDE)
+    if sufs:
+        excl = [e for e in excl if not any(e.lower() == x.lower() or x.lower().endswith(e.lower()) for x in sufs)]
+    odir = Path(_abs(base, sc["original_dir"])) if sc.get("original_dir") else None
     n = {"dirs_missing": [], "matched": 0, "excluded": 0, "no_time": 0, "outside_time": 0,
-         "no_georef_kept": 0, "outside_bbox": 0, "subsampled": 0, "first_times": []}
+         "no_georef_kept": 0, "outside_bbox": 0, "subsampled": 0, "first_times": [], "stand_in": 0,
+         "original_missing": 0}
     cand = []
     for d in dirs:
         dd = Path(_abs(base, d))
         if not dd.is_dir():
             n["dirs_missing"].append(str(dd))
             continue
-        for p in sorted(glob.glob(str(dd / ("**" if rec else "") / pat), recursive=rec)):
+        hits = sorted({h for pt in pats for h in glob.glob(str(dd / ("**" if rec else "") / pt), recursive=rec)})
+        for p in hits:
             n["matched"] += 1
             fn = Path(p).name
-            if any(e in fn for e in excl):
+            if any(e in fn for e in excl) or (sufs and strip_stand_in(fn, sufs) is None):
                 n["excluded"] += 1
                 continue
             t = time_from_name(fn)
@@ -118,33 +185,53 @@ def list_inputs(sc, t0, t1, bbox, base, name="sensor"):
                 n["outside_time"] += 1
                 continue
             cand.append((p, t))
+    if sufs:                                 # stand-in -> original input path (selection still uses the stand-in)
+        mapped, seen = [], set()
+        for p, t in cand:                    # several stand-ins of one scene (.RGB.tif, .UV_RGB.tif) -> one scene
+            q = Path(p)
+            orig = str((odir or q.parent) / strip_stand_in(q.name, sufs))
+            if orig not in seen:
+                seen.add(orig)
+                mapped.append((orig, t, p))
+        cand = mapped
+    else:
+        cand = [(p, t, p) for p, t in cand]
     cand.sort(key=lambda x: (x[1], x[0]))
     every = sc.get("every_minutes")         # optional subsampling: first input per <every_minutes> UTC bin
     if every:
         off = pd.Timedelta(minutes=float(sc.get("offset_minutes", 0)))
         bins = {}
-        for p, t in cand:
-            bins.setdefault((t - off).floor(f"{int(every)}min"), []).append((p, t))
+        for c in cand:
+            bins.setdefault((c[1] - off).floor(f"{int(every)}min"), []).append(c)
         groups = list(bins.values())
     else:
         groups = [[c] for c in cand]
     use_bbox = bbox is not None and bool(sc.get("bbox_filter", True))
     out = []
     for g in groups:
-        for p, t in g:                       # first input of the bin that intersects the bbox
+        for p, t, ref in g:                  # first input of the bin that intersects the bbox
             if use_bbox:
-                b = file_bounds_4326(p)
+                b = file_bounds_4326(ref)
                 if b is None:
                     n["no_georef_kept"] += 1
                 elif not (b[0] < bbox[1] and b[2] > bbox[0] and b[1] < bbox[3] and b[3] > bbox[2]):
                     n["outside_bbox"] += 1
                     continue
+            if ref != p:
+                n["stand_in"] += 1
+                if not Path(p).exists():
+                    n["original_missing"] += 1
             out.append((p, t))
+            if ref != p:
+                STAND_IN[p] = ref
             break
     n["subsampled"] = len(cand) - len(out) - n["outside_bbox"]
     if n["no_georef_kept"]:
         print(f"NOTE {name}: {n['no_georef_kept']} input(s) have no CRS/GCPs; kept without the bbox test "
               f"(set sensors.{name}.bbox_filter: false to skip the test)")
+    if sufs:
+        print(f"NOTE {name}: {n['stand_in']} scene(s) selected from {'/'.join(sufs)} stand-ins; "
+              f"{n['original_missing']} original input(s) not on disk (used only where head outputs exist)")
     return out, n
 
 
@@ -189,11 +276,12 @@ def production_uq_config(uq, uq_path, out_dir, scene_file):
     c["output_dir"] = str(out_dir)
     inf.pop("output_dir", None)                    # one directory per model under <output_dir>/inference
     inf.update({"training_summary_path": _abs(base, tsum), "scene_file": str(scene_file), "splits": None,
-                "reference_mask_areas": False})
+                "reference_mask_areas": False,
+                "every_minutes": 0})        # cadence is set by sensors.<s>.every_minutes, not data.every_minutes
     tmpl = str(Path(out_dir) / "inference" / "{model}")
     ev.update({"inference_dir_template": tmpl, "output_dir": str(Path(out_dir) / "evaluation")})
     gx.update({"inference_dir_template": tmpl, "output_dir": str(Path(out_dir) / "geo"),
-               "scene_file": str(scene_file), "evaluation_dir": _abs(base, old_eval)})
+               "scene_file": str(scene_file), "evaluation_dir": _abs(base, old_eval), "every_minutes": None})
     return c, Path(_abs(base, tsum)), Path(_abs(base, old_eval))
 
 
@@ -237,9 +325,13 @@ def main(argv=None):
                 f"  missing dirs {cnt['dirs_missing']}; files matching pattern {cnt['matched']}; "
                 f"excluded by name {cnt['excluded']}; no time in name {cnt['no_time']}; "
                 f"outside [start, end) {cnt['outside_time']} (first parsed times {cnt['first_times']}); "
-                f"outside bbox {cnt['outside_bbox']}")
+                f"outside bbox {cnt['outside_bbox']}"
+                + ("" if sc.get("stand_in_suffix") else
+                   "\n  if the full inputs were moved but their RGB GeoTIFFs remain, set "
+                   f"sensors.{s}.stand_in_suffix: .RGB.tif"))
 
     exports = {}                    # key -> {name, settings, sensor, pipes}
+    skipped = {}                    # export name -> stand-in scenes without heads (dropped from scenes.yaml)
     planner_pipes, summary, scene_hash = {}, [], {}
     for name, p in pipes.items():
         p = dict(p, _name=name, _uq_path=_abs(base, p["uq_config"]))
@@ -253,17 +345,32 @@ def main(argv=None):
         hdir = root / "heads" / e["name"]
         product = str(p.get("product") or uq["data"].get("product") or "").lower()
         recs = []
+        skip = unusable(hdir, inputs[s])
+        if skip and e["name"] not in skipped:
+            skipped[e["name"]] = skip
+            have = sorted(x.name for x in hdir.glob("*.head_outputs.tif"))[:2] if hdir.is_dir() else []
+            print(f"WARNING heads/{e['name']}: skipping {len(skip)} of {len(inputs[s])} scene(s) with no head output "
+                  f"and no original input on disk (stand-in only), e.g. {[Path(x).name for x in skip[:3]]}; "
+                  f"expected e.g. {head_path(hdir, skip[0]).name}, existing e.g. {have or 'none'}")
+        skip = set(skip)
         for f, t in inputs[s]:
-            stem = Path(f).name[:-4] if f.endswith(".tif") else Path(f).stem
+            if f in skip:
+                continue
+            fname = strip_stand_in(Path(f).name, STAND_IN_SUFFIXES) or Path(f).name     # never keep a stand-in suffix
+            stem = fname[:-4] if fname.endswith(".tif") else Path(fname).stem
             recs.append({"scene_id": f"{product}_{stem}", "pair_id": f"{product}_{stem}", "product": product,
-                         "sit_fuse_input": f, "sit_fuse_context_free": f,
-                         "head_outputs": str(hdir / f"{Path(f).name}.head_outputs.tif"),
+                         "sit_fuse_input": f,
+                         "sit_fuse_context_free": f if (f not in STAND_IN or Path(f).exists()) else STAND_IN[f],
+                         "head_outputs": str(head_path(hdir, f)),
                          "sit_fuse_timestamp": t.strftime("%Y-%m-%dT%H:%M:%SZ"), "date": t.strftime("%Y-%m-%d"),
                          "split_date": t.strftime("%Y-%m-%d"), "split_group": t.strftime("%Y-%m-%d"),
                          "classifier_split": "production", "encoder_split": "production"})
             ss = p.get("split_stratum", cfg.get("split_stratum"))
             if ss:                                  # event / stratum key for per-group thresholds
                 recs[-1]["split_stratum"] = str(ss)
+        if not recs:
+            raise SystemExit(f"ERROR {name}: none of the {len(inputs[s])} selected {s} scenes has a head output in "
+                             f"{hdir} or an original input to export one from; scenes.yaml would be empty.")
         pdir = root / name
         sf = _write(pdir / "scenes.yaml", {"matchups": recs})
         scene_hash[name] = hashlib.sha1("\n".join(r["scene_id"] for r in recs).encode()).hexdigest()[:10]
@@ -286,12 +393,19 @@ def main(argv=None):
     (state / "tokens").mkdir(parents=True, exist_ok=True)
     for e in exports.values():
         hdir = root / "heads" / e["name"]
+        skip = set(skipped.get(e["name"], []))
         todo = [f for f, _ in inputs[e["sensor"]]
-                if a.reexport or not (hdir / f"{Path(f).name}.head_outputs.tif").exists()]
+                if f not in skip and (a.reexport or not head_path(hdir, f).exists())]
         toks = [str(state / "tokens" / f"heads_{p}") for p in e["pipes"]]
+        gone = [f for f in todo if f in STAND_IN and not Path(f).exists()]
+        if gone:                             # --reexport: stand-in-only scenes cannot be re-exported; keep their heads
+            print(f"WARNING heads/{e['name']}: {len(gone)} stand-in scene(s) have no original input to re-export "
+                  f"from; using their existing head outputs")
+            todo = [f for f in todo if f not in set(gone)]
         if not todo:
             tok_ready += toks
-            print(f"  heads/{e['name']}: all {len(inputs[e['sensor']])} head outputs exist")
+            print(f"  heads/{e['name']}: all {len(inputs[e['sensor']]) - len(skip)} head outputs exist"
+                  + (f" ({len(skip)} scene(s) without heads skipped)" if skip else ""))
             continue
         h = hashlib.sha1("\n".join(todo).encode()).hexdigest()[:8]
         shards = [todo[i::n_ex_shards] for i in range(min(n_ex_shards, len(todo)))]

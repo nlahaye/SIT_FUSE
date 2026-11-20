@@ -21,6 +21,12 @@ sensors:
   tempo:
     inputs: /data/nlahaye/remoteSensing/RAD_L1_V04                   # TEMPO radiance GeoTIFFs used by the encoder
     pattern: "TEMPO_RAD_L1_V04_*.tif"                                # .RGB.tif / .UV_RGB.tif / head outputs excluded
+    # If the full radiance GeoTIFFs were moved but the RGB GeoTIFFs (same grid) and heads/<export> outputs remain,
+    # select scenes from the RGBs instead; scene ids / head-output names stay those of the original <stem>.tif:
+    # stand_in_suffix: .RGB.tif                                      # or .UV_RGB.tif, a list, or RGB / .RGB / RGB.tif
+    #   (the suffix is removed from every stand-in name before the head-output lookup: X.RGB.tif -> X.tif.head_outputs.tif)
+    # original_dir: /path/to/moved/RAD_L1_V04                        # optional: only needed to (re)export heads
+    #   stand-in scenes with no head output (and no original input) are skipped with a warning
   goes:
     inputs: /data/nlahaye/remoteSensing/GOES18_ABI_16band            # EDIT: 16-band ABI GeoTIFFs
     pattern: "OR_ABI-L1b-RadC-M6C01_G18_s*.tif"

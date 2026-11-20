@@ -25,7 +25,7 @@ import numpy as np
 import pandas as pd
 
 from sit_fuse.pipelines.habs.uq.hab_uq_common import (
-    EPS, SpeciesSpec, concentration_to_class, in_windows, measurement_soft_labels)
+    EPS, SpeciesSpec, _log_edges, concentration_to_class, in_windows, measurement_soft_labels)
 
 
 # CalHABMAP / SCCOOS-CeNCOOS pier network: the original combined_full table and
@@ -140,13 +140,95 @@ def insitu_filter_config(yml: dict[str, Any]) -> dict[str, Any] | None:
     return {"sources": [f]} if isinstance(f, str) else (f or None)
 
 
+def _num(df: pd.DataFrame, col: str) -> pd.Series:
+    return pd.to_numeric(df[col], errors="coerce") if col in df.columns else pd.Series(np.nan, index=df.index)
+
+
+def _sum_min1(df: pd.DataFrame, cols) -> pd.Series:
+    """Row sum, NaN only when every column is NaN (a missing group counts as absent)."""
+    return pd.concat([_num(df, c) for c in cols], axis=1).sum(axis=1, min_count=1)
+
+
+def _component_sigma(df: pd.DataFrame, cols, default: float) -> pd.Series:
+    sig = [_num(df, f"{c}_sigma_dex") for c in cols]
+    return pd.concat(sig, axis=1).max(axis=1).fillna(default)
+
+
+def add_derived_target(df: pd.DataFrame, spec: SpeciesSpec) -> pd.DataFrame:
+    """
+    Add spec.use_key (and {use_key}_sigma_dex, {use_key}_upper) for derived targets.
+
+      sum          value = sum of spec.derived["columns"] (total Pseudo-nitzschia; IFCB and
+                   microscopy groups add to the genus total)
+      cellular_da  value = pDA [ng/mL = ug/L] * 1e6 / PN_total [cells/L]  (pg DA per cell),
+                   only where PN_total >= min_pn_cells. A pDA non-detect (0) gives an upper
+                   bound pda_lod * 1e6 / PN_total, kept (as {use_key}_upper, value NaN) when
+                   the bound is below max_censored_upper, otherwise the sample is ambiguous
+                   and dropped. Sigma adds the pDA and PN errors in quadrature.
+    A column already present in the table (e.g. written by the ingestion package) is kept.
+    """
+    d = spec.derived or {}
+    if not d or spec.use_key in df.columns:
+        return df
+    df = df.copy()
+    kind = d.get("kind")
+    if kind == "sum":
+        cols = d.get("columns") or []
+        df[spec.use_key] = _sum_min1(df, cols)
+        df[f"{spec.use_key}_sigma_dex"] = _component_sigma(df, cols, spec.measurement_sigma_dex)
+    elif kind == "cellular_da":
+        pn = _sum_min1(df, d.get("pn") or [])
+        pda = _num(df, d.get("pda", "pDA"))
+        ok = np.isfinite(pn) & (pn >= float(d.get("min_pn_cells", 1000.0))) & np.isfinite(pda) & (pda >= 0)
+        scale = float(d.get("scale", 1e6))
+        det = ok & (pda > 0)
+        nd = ok & (pda <= 0)
+        val = pd.Series(np.nan, index=df.index)
+        val[det] = pda[det] * scale / pn[det]
+        upper = pd.Series(np.nan, index=df.index)
+        ub = float(d.get("pda_lod", 0.02)) * scale / pn
+        keep_nd = nd & (ub < float(d.get("max_censored_upper", 10.0)))
+        if d.get("censored", "soft") == "soft":
+            upper[keep_nd] = ub[keep_nd]
+        df[spec.use_key] = val
+        df[f"{spec.use_key}_upper"] = upper
+        s_pn = _component_sigma(df, d.get("pn") or [], 0.2)
+        s_da = _num(df, f"{d.get('pda', 'pDA')}_sigma_dex").fillna(0.15)
+        df[f"{spec.use_key}_sigma_dex"] = np.sqrt(s_pn ** 2 + s_da ** 2)
+    else:
+        raise ValueError(f"{spec.use_key}: unknown derived kind {kind!r}")
+    return df
+
+
+def censored_soft_labels(upper, edges, floor) -> np.ndarray:
+    """Soft labels for X <= upper: log-uniform mass between the detection floor and the bound."""
+    le = np.asarray(_log_edges(edges, floor))
+    lo = np.log10(floor)
+    hi = np.log10(np.maximum(np.asarray(upper, float), floor * 1.0001))
+    a = np.clip(le[None, :-1], lo, hi[:, None])
+    b = np.clip(le[None, 1:], lo, hi[:, None])
+    T = np.clip(b - a, 0, None)
+    T[:, 0] += (hi <= lo)            # bound at / below the floor: all mass in bin 0
+    return T / np.maximum(T.sum(1, keepdims=True), EPS)
+
+
 def species_frame(df: pd.DataFrame, spec: SpeciesSpec, sigma_col: str | None = None) -> pd.DataFrame:
-    """Rows with a finite value for spec.use_key, with class index and soft labels."""
+    """
+    Rows with a finite value for spec.use_key, with class index and soft labels.
+    Derived targets (spec.derived) are computed first. Rows with only an upper bound
+    ({use_key}_upper, e.g. cDA from a pDA non-detect) are kept with censored=True: value is
+    the geometric midpoint of [floor, bound] and the soft labels are log-uniform below the bound.
+    """
+    df = add_derived_target(df, spec)
     if spec.use_key not in df.columns:
         return df.iloc[0:0].assign(value=[], ref_class=[])
     v = pd.to_numeric(df[spec.use_key], errors="coerce")
+    up = _num(df, f"{spec.use_key}_upper")
+    cens = ~(np.isfinite(v) & (v >= 0)) & np.isfinite(up) & (up > 0)
+    v = v.where(~cens, np.sqrt(np.maximum(up, spec.detection_floor) * spec.detection_floor))
     out = df[np.isfinite(v) & (v >= 0)].copy()
     out["value"] = v[out.index].astype(np.float64)
+    out["censored"] = cens[out.index].to_numpy()
     out["ref_class"] = concentration_to_class(out["value"].to_numpy(), spec.edges)
     out["log10_value"] = np.log10(np.maximum(out["value"].to_numpy(), spec.detection_floor))
     # per-row reference error (written by the ingestion package as {use_key}_sigma_dex,
@@ -158,6 +240,9 @@ def species_frame(df: pd.DataFrame, spec: SpeciesSpec, sigma_col: str | None = N
     else:
         sig = spec.measurement_sigma_dex
     T = measurement_soft_labels(out["value"].to_numpy(), spec.edges, sig, spec.detection_floor)
+    c = out["censored"].to_numpy()
+    if c.any():
+        T[c] = censored_soft_labels(up[out.index].to_numpy()[c], spec.edges, spec.detection_floor)
     for c in range(spec.n_classes):
         out[f"ref_soft_{c}"] = T[:, c]
     return out.reset_index(drop=True)
