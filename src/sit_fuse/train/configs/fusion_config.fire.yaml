@@ -1,0 +1,70 @@
+# GOES-18 + TEMPO fire fusion, fit on the evaluation periods (every scene).
+# Location: src/sit_fuse/train/configs/fusion_config.fire.yaml (used by uq_parallel.full_2026.yaml)
+#   python fuse_multiscale_products.py -c configs/fusion_config.fire.yaml --stage all -n 8
+# Fit only after both fire geo exports exist (the launcher plan waits for them).
+# Inputs are the geo products written by export_geo_products.py for each sensor; each source
+# keeps its own calibration. Paths marked CHECK are placeholders for your reference rasters.
+product: fire
+output_dir: /data/nlahaye/output/Learnergy/FUSION/UQ_FIRE
+
+sources:
+  tempo:
+    geo_dir: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ_FIRE/geo
+    manifest: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ_FIRE/geo/geo_products_manifest.json
+    model: hist_gradient_boosting
+    frames: {mode: scan}                 # one E-W TEMPO scan per frame
+    default_logit_sd: 1.0                # used where ensemble q05/q95 bands are missing
+    min_logit_sd: 0.05
+  goes:
+    geo_dir: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/UQ_FIRE_OR2026/geo   # geo_export.output_dir of goes18/g18_uq_config_fire.yaml
+    manifest: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/UQ_FIRE_OR2026/geo/geo_products_manifest.json
+    model: hist_gradient_boosting
+    frames: {mode: time, minutes: 10}    # ABI CONUS scenes binned to 10 min
+    default_logit_sd: 1.0
+
+grids:
+  fine:   {from: goes}                   # ABI grid (about 2 km)
+  coarse: {from: tempo}                  # TEMPO product grid (about 70 km2 cells)
+  # or explicit: {bounds: [-125, 32, -114, 46], resolution: 0.02, crs: EPSG:4326}
+
+change_of_support:
+  fire_aggregate: noisy_or               # fine -> coarse: P(>=1 fire sub-pixel); or max
+  dependence_exponent: 0.5               # n_eff = n ** exponent (1 independent, 0 max-like)
+  fire_disaggregation: assign            # coarse -> fine: assign | split
+  disaggregation_logit_var: 0.25         # unresolved sub-pixel heterogeneity
+  min_coverage: 0.5
+
+temporal:
+  output_times: goes                     # goes | tempo | union
+  match_window_minutes: 5
+  goes_pool: mean_logit
+  causal: true                           # TEMPO carried forward only from earlier scans
+  tempo_lookahead_minutes: 5
+  carry_forward_max_minutes: 90
+  carry_forward_sd_per_hour: 0.5
+
+references:
+  fdcc:                                  # ABI-derived: not independent of the GOES source
+    glob: /data/nlahaye/remoteSensing/data_pull/goes_fdcc_fire/rasters/goes18/**/fdcc_fire_mask_*.tif
+    tolerance_minutes: 5
+    nodata_values: [255]
+  firms_viirs:                           # independent; observed negatives (land/water clear) - CHECK path
+    glob: /data/nlahaye/remoteSensing/data_pull/firms_fire_fronts/rasters_observed/viirs_fire_*.tif
+    tolerance_minutes: 60
+    nodata_values: [255]
+
+fusion:
+  fit_reference: fdcc                    # use firms_viirs to fit against an independent reference
+  fit_split: calibration
+  eval_split: holdout
+  grids: [fine, coarse]
+  l2: 1.0e-3
+  recalibration: none                    # none | temperature | platt | isotonic
+  threshold_metric: f1
+  threshold_grid: {scale: log, min: 1.0e-4, max: 0.95, n: 200}
+  max_negatives_per_frame: 20000
+  max_positives_per_frame: 20000
+  seed: 0
+
+output:
+  splits: [calibration, holdout, dev]    # fused rasters to write (mixed frames are skipped)
