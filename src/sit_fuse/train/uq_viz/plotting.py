@@ -53,7 +53,11 @@ def setup_map(ax, extent, basemap=None, ticks=True):
     if basemap:
         for name, g in basemap.items():
             lw = {"coastline": 0.6, "borders": 0.6, "states": 0.35}.get(name, 0.4)
-            g.plot(ax=ax, color=LAND_EDGE, linewidth=lw, zorder=4)
+            if g is None:
+                continue
+            g = g[g.geometry.notna() & ~g.geometry.is_empty]   # null / empty rows give NaN bounds
+            if len(g):                                          # aspect=None: keep the aspect set above (geopandas
+                g.plot(ax=ax, color=LAND_EDGE, linewidth=lw, zorder=4, aspect=None)   # would recompute it, NaN-prone)
         ax.set_xlim(extent[0], extent[1])
         ax.set_ylim(extent[2], extent[3])
     if ticks:
@@ -120,7 +124,9 @@ def diff_cmap():
 def outline(ax, gdf, color, lw=0.9, ls="-", zorder=6, label=None):
     if gdf is None or len(gdf) == 0:
         return
-    gdf.boundary.plot(ax=ax, color=color, linewidth=lw, linestyle=ls, zorder=zorder)
+    gdf = gdf[gdf.geometry.notna() & ~gdf.geometry.is_empty]
+    if len(gdf):
+        gdf.boundary.plot(ax=ax, color=color, linewidth=lw, linestyle=ls, zorder=zorder, aspect=None)
 
 
 def panel_label(ax, s):
