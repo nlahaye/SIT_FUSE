@@ -16,7 +16,9 @@ frames:
   tempo_day_shift_hours: -6      # TEMPO observing day (scan ids S001.. reset each day)
 
 observations:                    # omit any of them
-  tempo_rgb:    {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .RGB.tif}       # stretch: auto | [lo, hi]
+  tempo_rgb:    {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .RGB.tif}       # stretch: auto | percentile | [lo, hi]
+  # stretch auto = 1-99 percentile per band for float RGBs, 0..255 for uint8; percentile forces it for uint8 too
+  # enhance: {method: hist, strength: 0.5, sharpen: 0.5}  # per-observation override of rgb_enhance
   tempo_uv_rgb: {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .UV_RGB.tif}
   goes:
     dir: /data/nlahaye/remoteSensing/GOES18_ABI_16band
@@ -45,6 +47,17 @@ products:                        # export_geo_products.py outputs (geo_dir = geo
 #   - {title: TEMPO UV RGB + smoke, obs: tempo_uv_rgb, overlays: [tempo_smoke]}
 #   - {title: GOES true colour + smoke + fire, obs: goes, overlays: [goes_smoke, goes_fire]}
 #   - {title: GOES true colour + fused smoke, obs: goes, overlays: [fused_smoke]}
+#   - null                       # empty cell (layout)
+rgb_panels: true                 # default panels only: a top row of the plain observations (no overlays), each
+                                 # above its overlay panel; false = overlay row only; or a list, e.g. [goes, tempo_rgb]
+# ncols: 4                       # default with rgb_panels: length of the overlay row
+rgb_enhance:                     # contrast after the stretch, on luminance only (hue preserved)
+  method: hist                   # hist: one equalisation CDF per observation for the whole animation (no flicker)
+                                 # clahe: local, per frame (scikit-image; can flicker) | linear: stretch only
+  strength: 0.5                  # blend of equalised and stretched luminance (default TEMPO 0.5, GOES 0.3)
+  sharpen: 0.5                   # unsharp-mask amount (0 = off); sharpen_sigma: 1.0 display pixels
+  sample_frames: 12              # frames sampled for the CDF (GOES: daytime only); cached in cache_dir
+rgb_interpolation: antialiased   # imshow resampling of observations (antialiased | bilinear | nearest | lanczos)
 style:                           # overrides of the defaults (see uq_viz/overlay.py DEFAULT_STYLE)
   smoke: {cmap: cool, alpha_max: 0.65, p_min: 0.15, p_max: 0.9, contour: true}
   fire:  {cmap: autumn_r, alpha_max: 0.9, p_min: 0.05, p_max: 0.7, points: true}

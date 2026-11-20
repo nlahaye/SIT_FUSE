@@ -17,7 +17,15 @@ Inputs (YAML; see overlay_animation.example.yaml)
             fused products (sensor: fused, model: fused, geo_dir: <fusion output_dir>/<grid>) are matched in time
             like GOES (nearest scene within frames.goes_window_minutes)
   panels: [{title, obs, overlays: [...]}]   default: one panel per observation, overlaid with that sensor's
-          products (smoke, then fire when configured), plus one panel of fused products over GOES true colour
+          products (smoke, then fire when configured), plus one panel of fused products over GOES true colour;
+          a null / {blank: true} entry leaves an empty cell
+  rgb_panels: true (default) | false | [observation names]   with default panels, a top row of the plain
+          observations (no overlays), each above its overlay panel; ncols defaults to the overlay-row length
+  rgb_enhance: {method: hist | clahe | linear, strength, sharpen, sharpen_sigma, sample_frames, clip_limit}
+          contrast enhancement after the fixed stretch (observations.<name>.enhance overrides per observation;
+          rgb_enhance: linear and sharpen: 0 restores the stretch-only rendering). Defaults: TEMPO hist 0.5 +
+          sharpen 0.5, GOES hist 0.3 + sharpen 0.4. hist uses one CDF per observation for the whole animation
+  rgb_interpolation: antialiased (default) | bilinear | nearest | lanczos   imshow resampling of observations
 Frames (frames.base)
   tempo  one frame per TEMPO scan (granules in the box mosaicked); GOES scene nearest the scan time
          (within frames.goes_window_minutes)
@@ -32,6 +40,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -60,7 +69,9 @@ def obs_sensor(name, oc):
     return oc.get("sensor") or ("goes" if "goes" in name.lower() or "abi" in name.lower() else "tempo")
 
 
-def default_panels(obs_cfg, products):
+def default_panels(obs_cfg, products, rgb_panels=True):
+    """Overlay row (one panel per observation + fused) and, with rgb_panels, a row of the plain observations above
+    it, column-aligned with their overlay panels (blank cell above the fused panel). Returns (panels, ncols)."""
     panels = []
     for name, oc in obs_cfg.items():
         s = obs_sensor(name, oc)
@@ -74,10 +85,24 @@ def default_panels(obs_cfg, products):
         what = " + ".join(dict.fromkeys(products[k].product for k in fused))
         panels.append({"title": (f"{OBS_TITLES.get(under, under)} + " if under else "") + f"fused {what}",
                        "obs": under, "overlays": fused})
-    return panels
+    if rgb_panels is False or rgb_panels is None or not obs_cfg:
+        return panels, None
+    names = [n for n in (rgb_panels if isinstance(rgb_panels, (list, tuple)) else obs_cfg) if n in obs_cfg]
+    plain = {n: {"title": OBS_TITLES.get(n, n), "obs": n, "overlays": []} for n in names}
+    top = [plain.pop(pn["obs"]) if pn.get("obs") in plain else {"blank": True} for pn in panels]
+    for pn in list(plain.values()):                     # not above an overlay panel: first blank cell, else append
+        k = next((i for i, t in enumerate(top) if t.get("blank")), None)
+        if k is None:
+            top.append(pn)
+        else:
+            top[k] = pn
+    top += [{"blank": True}] * (len(panels) - len(top))
+    if len(top) > len(panels):
+        panels = panels + [{"blank": True}] * (len(top) - len(panels))
+    return top + panels, len(top)
 
 
-def build(cfg: dict, base: Path):
+def build(cfg: dict, base: Path, sample_enhance: bool = False, cache_dir=None):
     t0, t1 = (O.utc(t) for t in cfg["time_range"])
     W, E, S, N = (float(v) for v in cfg["bbox"])
     grid = O.Grid(W, E, S, N, float(cfg.get("resolution", 0.01)))
@@ -93,13 +118,25 @@ def build(cfg: dict, base: Path):
     obs = {}
     for k, v in obs_cfg.items():
         obs[k] = O.GoesRGB(k, v, grid, t0, t1) if obs_sensor(k, v) == "goes" else O.TempoRGB(k, v, grid, t0, t1, shift)
+        obs[k].enhance = O.enhance_config(obs_sensor(k, v), cfg.get("rgb_enhance"), v.get("enhance"))
+    if sample_enhance:
+        for k, o in obs.items():
+            if o.enhance["method"] == "hist" and not o.enhance.get("lut"):
+                o.enhance["lut"] = enhance_lut(k, o, grid, cache_dir)
     prods = {}
     for k, v in (cfg.get("products") or {}).items():
         if v and v.get("geo_dir") and v.get("enabled", True):
             v = dict(v, geo_dir=_resolve(base, v["geo_dir"]), manifest=_resolve(base, v.get("manifest")))
             prods[k] = O.ProductSource(k, v, t0, t1, grid, shift)
-    panels = cfg.get("panels") or default_panels(obs_cfg, prods)
+    ncols = cfg.get("ncols")
+    if cfg.get("panels"):
+        panels = [p if p else {"blank": True} for p in cfg["panels"]]
+    else:
+        panels, nc = default_panels(obs_cfg, prods, cfg.get("rgb_panels", True))
+        ncols = ncols or nc
     for pn in panels:
+        if pn.get("blank"):
+            continue
         bad = [o for o in pn.get("overlays", []) if o not in prods]
         if bad:
             LOG.warning("panel %r: overlays %s not configured; dropped", pn.get("title"), bad)
@@ -143,6 +180,9 @@ def build(cfg: dict, base: Path):
         fr = {"frame_id": fid, "time": t, "panels": []}
         goes_obs = {k: o.nearest(t, gw) for k, o in obs.items() if isinstance(o, O.GoesRGB)}
         for pn in panels:
+            if pn.get("blank"):
+                fr["panels"].append({"blank": True})
+                continue
             oname = pn.get("obs")
             o = obs.get(oname)
             ospec = None
@@ -167,10 +207,57 @@ def build(cfg: dict, base: Path):
                 (ovs.append(s) if s else missing.append(k))
             fr["panels"].append({"title": pn.get("title", oname or "products"), "obs": ospec, "obs_name": oname,
                                  "overlays": ovs, "missing": missing})
-        if any(pn["obs"] or pn["overlays"] for pn in fr["panels"]):
+        if any(pn.get("obs") or pn.get("overlays") for pn in fr["panels"]):
             plan.append(fr)
     styles = {k: dict(v, **((cfg.get("style") or {}).get(k) or {})) for k, v in O.DEFAULT_STYLE.items()}
-    return grid, plan, styles
+    return grid, plan, styles, ncols
+
+
+def enhance_lut(name, o, grid, cache_dir=None, n_sample=None):
+    """Histogram-equalisation CDF for one observation: display luminance (stretch only) pooled over frames sampled
+    evenly across the animation (GOES: daytime scenes only). Cached in <cache_dir>/rgb_enhance_<name>_<hash>.json."""
+    import hashlib
+
+    import numpy as np
+    n = int(n_sample or o.enhance.get("sample_frames", 12))
+    if isinstance(o, O.GoesRGB):
+        d = o.df.sort_values("time")
+        if len(d):
+            lon, lat = (0.5 * (grid.west + grid.east),), (0.5 * (grid.south + grid.north),)
+            mu = np.array([float(O.cos_solar_zenith(np.array(lon), np.array(lat), t)[0]) for t in d.time])
+            d = d[mu > 0.25] if (mu > 0.25).any() else d
+        rows = [d.iloc[i] for i in np.unique(np.linspace(0, len(d) - 1, min(n, len(d))).round().astype(int))] \
+            if len(d) else []
+        specs = [o.spec_for(r) for r in rows]
+    else:
+        fr = sorted(o.df.frame.unique())
+        specs = [o.spec(fr[i]) for i in np.unique(np.linspace(0, len(fr) - 1, min(n, len(fr))).round().astype(int))] \
+            if fr else []
+    specs = [s for s in specs if s]
+    if not specs:
+        return None
+    params = {k: v for k, v in specs[0].items() if k not in ("paths", "time", "name", "enhance")}
+    key = hashlib.sha1(json.dumps([grid.extent, grid.res, [sp["paths"] for sp in specs], params],
+                                  default=str).encode()).hexdigest()[:12]
+    cp = Path(cache_dir) / f"rgb_enhance_{name}_{key}.json" if cache_dir else None
+    if cp and cp.exists():
+        try:
+            return json.loads(cp.read_text())
+        except ValueError:
+            pass
+    lums = []
+    for s in specs:
+        a = O.obs_rgb(s, grid, enhance=None)
+        if a is not None:
+            lums.append(np.where(a[..., 3] > 0, O.luminance(a[..., :3]), np.nan))
+    lut = O.hist_lut(lums)
+    LOG.info("%s: histogram-equalisation CDF from %d sampled frames", name, len(lums))
+    if cp and lut:
+        cp.parent.mkdir(parents=True, exist_ok=True)
+        tmp = cp.with_suffix(f".{os.getpid()}.tmp")
+        tmp.write_text(json.dumps(lut))
+        os.replace(tmp, cp)                             # atomic: shards may compute the same CDF concurrently
+    return lut
 
 
 def segments(plan, split_by):
@@ -225,7 +312,8 @@ def main(argv=None):
     n_workers, threads = setup_compute(cfg, a.num_threads, a.workers)
     out = Path(_resolve(base, cfg.get("output_dir", "overlay_animations")))
     out.mkdir(parents=True, exist_ok=True)
-    grid, plan, styles = build(cfg, base)
+    grid, plan, styles, ncols = build(cfg, base, sample_enhance=not a.dry_run,
+                                      cache_dir=_resolve(base, cfg.get("cache_dir", out / "_cache")))
     segs = segments(plan, cfg.get("split_by", "day"))
     keys = sorted(segs)
     keys = [keys[i] for i in shard_indices(len(keys), parse_shard(a.shard))]
@@ -238,7 +326,8 @@ def main(argv=None):
                  for k, v in (bm.get("local") or {}).items()}
         basemap = load_basemap(Path(_resolve(base, cfg.get("cache_dir", out / "_cache"))), grid.extent, local=local)
     static = {"grid": grid, "styles": styles, "basemap": basemap, "title": cfg.get("title"),
-              "ncols": cfg.get("ncols"), "panel_width": cfg.get("panel_width", 3.6), "dpi": cfg.get("dpi", 130),
+              "ncols": ncols,
+              "rgb_interpolation": cfg.get("rgb_interpolation", "antialiased"), "panel_width": cfg.get("panel_width", 3.6), "dpi": cfg.get("dpi", 130),
               "ticks": cfg.get("ticks", True), "background": cfg.get("background", "#202020")}
     name = cfg.get("name", "overlay")
     made = []
