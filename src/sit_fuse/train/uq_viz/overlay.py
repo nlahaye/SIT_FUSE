@@ -296,25 +296,35 @@ class TempoRGB:
         self.bands = tuple(cfg.get("bands", [1, 2, 3]))
         self.gamma = float(cfg.get("gamma", 1.0))
         self.limits = None
+        self.valid = (None, None)
         if len(self.df):
             with rasterio.open(self.df.path.iloc[0]) as s:
                 self.dtype = s.dtypes[0]
+            # float radiance RGBs carry no nodata tag: values <= 0 (fill outside a granule's swath on the colocated
+            # grid) and |x| > 1e20 are no data, so the scan mosaic is not covered by one granule's fill and the
+            # stretch is not pulled to 0. valid_min / valid_max: null disables.
+            dflt = (None, None) if self.dtype == "uint8" else (1e-30, FILL_ABS)
+            vmin, vmax = cfg.get("valid_min", dflt[0]), cfg.get("valid_max", dflt[1])
+            self.valid = (None if vmin is None else float(vmin), None if vmax is None else float(vmax))
             st = cfg.get("stretch", "auto")
             if isinstance(st, (list, tuple)):
                 self.limits = [tuple(st)] * len(self.bands) if np.ndim(st) == 1 else [tuple(x) for x in st]
             elif st == "percentile" or (st == "auto" and self.dtype != "uint8"):   # uint8 auto: 0..255
                 self.limits = stretch_limits(list(self.df.sort_values("time").path), self.bands, grid,
-                                             tuple(cfg.get("percentiles", [1.0, 99.0])))
+                                             tuple(cfg.get("percentiles", [1.0, 99.0])),
+                                             valid_min=self.valid[0], valid_max=self.valid[1])
             elif self.dtype == "uint8":
                 self.limits = [(0.0, 255.0)] * len(self.bands)
-        LOG.info("%s: %d granules in range and box", name, len(self.df))
+        LOG.info("%s: %d granules in range and box; dtype %s, valid range %s, stretch limits %s", name, len(self.df),
+                 getattr(self, "dtype", None), self.valid,
+                 [tuple(float(f"{v:.4g}") for v in lh) for lh in self.limits] if self.limits else None)
 
     def spec(self, frame_id):
         d = self.df[self.df.frame == frame_id].sort_values("time")
         if d.empty:
             return None
         return {"kind": "tempo_rgb", "name": self.name, "paths": list(d.path), "time": d.time.median(),
-                "bands": self.bands, "limits": self.limits, "gamma": self.gamma,
+                "bands": self.bands, "limits": self.limits, "gamma": self.gamma, "valid": self.valid,
                 "enhance": getattr(self, "enhance", None)}
 
 
@@ -591,7 +601,8 @@ def obs_rgb(spec: dict, grid: Grid, enhance: dict | None = "spec") -> np.ndarray
         return None
     en = spec.get("enhance") if isinstance(enhance, str) else enhance
     if spec["kind"] == "tempo_rgb":
-        a = mosaic(spec["paths"], spec["bands"], grid)
+        vmin, vmax = spec.get("valid") or (None, None)
+        a = mosaic(spec["paths"], spec["bands"], grid, valid_min=vmin, valid_max=vmax)
         if a is None:
             return None
         lims = spec["limits"] or [(np.nanmin(x), np.nanmax(x)) for x in a]
@@ -692,8 +703,10 @@ def render_frame(fr: dict, static: dict, out_png: str) -> str:
             ax.imshow(obs, extent=ext, origin="upper", interpolation=static.get("rgb_interpolation", "antialiased"),
                       zorder=2)
         notes = []
-        if pn.get("obs"):
-            notes.append(f"obs {pn['obs']['time']:%H:%M}")
+        if pn.get("obs"):                               # age of a held observation (e.g. TEMPO under GOES frames)
+            age = (fr["time"] - pn["obs"]["time"]).total_seconds() / 60
+            notes.append(f"obs {pn['obs']['time']:%H:%M}" + (f" (held {age:.0f} min)" if age >= 1 else
+                                                             f" ({-age:+.0f} min)" if age <= -1 else ""))
         elif pn.get("obs_name"):
             notes.append("no observation")
         for o in pn["overlays"]:

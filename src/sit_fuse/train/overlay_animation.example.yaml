@@ -13,11 +13,16 @@ frames:
   tempo_max_age_minutes: 60      # base goes: latest TEMPO scan at most this old (tempo_causal: true)
   # goes_every_minutes: 20       # base goes: thin GOES frames
   # utc_hours: [14, 26]          # keep frames in this UTC hour range
+  # tempo_hold: product           # base goes: hold the latest TEMPO scan with a product (any = any scan) for all
+  #                                TEMPO panels, up to tempo_max_age_minutes (tempo_causal: true = no look-ahead)
+  # require: [tempo, goes]       # keep only frames where both instruments have a product (sensor or product
+  #                                names; true = every sensor with a configured product)
   tempo_day_shift_hours: -6      # TEMPO observing day (scan ids S001.. reset each day)
 
 observations:                    # omit any of them
   tempo_rgb:    {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .RGB.tif}       # stretch: auto | percentile | [lo, hi]
   # stretch auto = 1-99 percentile per band for float RGBs, 0..255 for uint8; percentile forces it for uint8 too
+  # valid_min / valid_max: float RGBs default 1e-30 / 1e20 (<= 0 and fill are no data); null disables
   # enhance: {method: hist, strength: 0.5, sharpen: 0.5}  # per-observation override of rgb_enhance
   tempo_uv_rgb: {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .UV_RGB.tif}
   goes:
