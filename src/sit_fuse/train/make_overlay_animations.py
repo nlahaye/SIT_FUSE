@@ -26,11 +26,15 @@ Inputs (YAML; see overlay_animation.example.yaml)
           rgb_enhance: linear and sharpen: 0 restores the stretch-only rendering). Defaults: TEMPO hist 0.5 +
           sharpen 0.5, GOES hist 0.3 + sharpen 0.4. hist uses one CDF per observation for the whole animation
   rgb_interpolation: antialiased (default) | bilinear | nearest | lanczos   imshow resampling of observations
+Frames (frames.require: [tempo, goes] keeps only frames where each listed sensor, or product name, has a matched
+product; true = every sensor with a configured product; default: all frames)
 Frames (frames.base)
   tempo  one frame per TEMPO scan (granules in the box mosaicked); GOES scene nearest the scan time
          (within frames.goes_window_minutes)
   goes   one frame per GOES scene (optionally every frames.goes_every_minutes); TEMPO scan nearest in time
-         (frames.tempo_causal: latest scan at or before the frame, up to frames.tempo_max_age_minutes)
+         (frames.tempo_causal: latest scan at or before the frame, up to frames.tempo_max_age_minutes). The scan is
+         held while stepping through GOES scenes and shared by all TEMPO panels (RGB, UV RGB, products); with
+         frames.tempo_hold: product (default) it is the latest scan that has a TEMPO product, any = any scan
 Output: <output_dir>/anim_<name>_<segment>.mp4|.gif (one segment per day with split_by: day), frames_<segment>.csv
 (the files and times shown in every panel), optional PNG frames (keep_frames).
 """
@@ -175,10 +179,47 @@ def build(cfg: dict, base: Path, sample_enhance: bool = False, cache_dir=None):
         h = pd.DatetimeIndex(times.values).hour
         times = times[(h >= uh[0]) & (h <= uh[1])]
 
+    req = fc.get("require")
+    if req is True:                     # every sensor with a configured product (tempo, goes, fused)
+        req = sorted({p.sensor for p in prods.values()})
+    req = {str(x) for x in ([req] if isinstance(req, str) else (req or []))}
+    bad = sorted(x for x in req if x not in prods and x not in {p.sensor for p in prods.values()})
+    if bad:
+        raise ValueError(f"frames.require {bad}: not a configured product {sorted(prods)} or sensor "
+                         f"{sorted({p.sensor for p in prods.values()})}")
+    n_req = 0
     plan = []
+    # GOES-based frames: one held TEMPO scan per frame, shared by every TEMPO panel (RGB, UV RGB and product
+    # overlays): the latest scan at or before the frame (frames.tempo_causal; else the nearest) within
+    # frames.tempo_max_age_minutes, preferring scans that have a TEMPO product (frames.tempo_hold: product | any)
+    hold_pref = str(fc.get("tempo_hold", "product")).lower()
+    scan_t = {}
+    for src in [p for p in prods.values() if p.sensor == "tempo"] + \
+               ([o for o in obs.values() if isinstance(o, O.TempoRGB)]
+                if hold_pref == "any" or not any(p.sensor == "tempo" for p in prods.values()) else []):
+        for f, ft in src.df.groupby("frame").time.median().items():
+            scan_t[f] = min(ft, scan_t.get(f, ft))
+    scan_t = pd.Series(scan_t, dtype="datetime64[ns, UTC]") if scan_t else pd.Series(dtype="datetime64[ns, UTC]")
+
+    def held_scan(t):
+        if scan_t.empty:
+            return None
+        dt = (t - scan_t) if causal else (scan_t - t).abs()
+        dt = dt[(dt >= pd.Timedelta(0)) & (dt <= pd.Timedelta(minutes=tmax))]
+        return dt.idxmin() if len(dt) else None
+
+    def tempo_obs_spec(o, t, held):
+        if held is not None and (o.df.frame == held).any():
+            return o.spec(held)
+        ft = o.df.groupby("frame").time.median()            # this observation lacks the held scan: its own latest
+        dt = (t - ft) if causal else (ft - t).abs()
+        dt = dt[(dt >= pd.Timedelta(0)) & (dt <= pd.Timedelta(minutes=tmax))]
+        return o.spec(dt.idxmin()) if len(dt) else None
+
     for fid, t in times.items():
         fr = {"frame_id": fid, "time": t, "panels": []}
         goes_obs = {k: o.nearest(t, gw) for k, o in obs.items() if isinstance(o, O.GoesRGB)}
+        held = held_scan(t) if base_kind != "tempo" else fid
         for pn in panels:
             if pn.get("blank"):
                 fr["panels"].append({"blank": True})
@@ -187,12 +228,7 @@ def build(cfg: dict, base: Path, sample_enhance: bool = False, cache_dir=None):
             o = obs.get(oname)
             ospec = None
             if isinstance(o, O.TempoRGB):
-                ospec = o.spec(fid) if base_kind == "tempo" else None
-                if base_kind != "tempo" and len(o.df):
-                    ft = o.df.groupby("frame").time.median()
-                    dt = (t - ft) if causal else (ft - t).abs()
-                    dt = dt[(dt >= pd.Timedelta(0)) & (dt <= pd.Timedelta(minutes=tmax))]
-                    ospec = o.spec(dt.idxmin()) if len(dt) else None
+                ospec = o.spec(fid) if base_kind == "tempo" else (tempo_obs_spec(o, t, held) if len(o.df) else None)
             elif isinstance(o, O.GoesRGB):
                 ospec = o.spec_for(goes_obs[oname])
             ref_t = ospec["time"] if ospec else t
@@ -201,14 +237,24 @@ def build(cfg: dict, base: Path, sample_enhance: bool = False, cache_dir=None):
                 p = prods[k]
                 if p.sensor == "tempo":
                     s = p.for_tempo_frame(fid) if base_kind == "tempo" else \
-                        p.nearest(t, tmax, causal=causal, max_age_minutes=tmax)
+                        ((p.for_tempo_frame(held) if held is not None else None)
+                         or p.nearest(t, tmax, causal=causal, max_age_minutes=tmax))
                 else:
                     s = p.nearest(ref_t, gw)
                 (ovs.append(s) if s else missing.append(k))
             fr["panels"].append({"title": pn.get("title", oname or "products"), "obs": ospec, "obs_name": oname,
                                  "overlays": ovs, "missing": missing})
-        if any(pn.get("obs") or pn.get("overlays") for pn in fr["panels"]):
-            plan.append(fr)
+        if not any(pn.get("obs") or pn.get("overlays") for pn in fr["panels"]):
+            continue
+        if req:                         # frames.require: every listed sensor / product has a matched product
+            got = {o["name"] for pn in fr["panels"] for o in (pn.get("overlays") or []) if o}
+            got |= {prods[k].sensor for k in got if k in prods}
+            if not req <= got:
+                n_req += 1
+                continue
+        plan.append(fr)
+    if req:
+        LOG.info("frames.require %s: kept %d frames, dropped %d without all of them", sorted(req), len(plan), n_req)
     styles = {k: dict(v, **((cfg.get("style") or {}).get(k) or {})) for k, v in O.DEFAULT_STYLE.items()}
     return grid, plan, styles, ncols
 
