@@ -1,0 +1,68 @@
+# GOES-18 fire production run for 26 July 2026: every GOES scene (no hourly thinning), hist_gradient_boosting,
+# geo products and full-cadence animations. Uses the trained models / calibration / cutoffs of the all-scene fire
+# evaluation run (goes18/g18_uq_config_fire.yaml) -- run that first, without data.every_minutes.
+#   cd SIT_FUSE/src/sit_fuse/train
+#   python build_production_run.py production_2026_fire_0726.yaml                 # writes configs + plan, prints scene counts
+#   python build_production_run.py production_2026_fire_0726.yaml --run -- --dry-run
+#   python build_production_run.py production_2026_fire_0726.yaml --run           # heads -> infer -> geo -> animation
+#   python -m sit_fuse.local_launcher status /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_FIRE/launch/production_plan.yaml
+# Scenes whose head export finds no valid samples get no head file; inference skips them and continues.
+# CHECK = path assumed from the evaluation / smoke production setup; confirm it exists before running.
+
+output_root: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_FIRE   # separate from the smoke quick test
+start: 2026-07-26T12:00:00Z            # [start, end) UTC: Pacific daylight of 26 July (as the smoke 0726 sets)
+end: 2026-07-27T06:00:00Z              # 2026-07-26T07:00Z .. 2026-07-27T07:00Z for the full Pacific day incl. night
+bbox: [-125.0, -110.0, 40.0, 49.0]     # [W, E, S, N]: Oregon, Washington, Idaho
+python: python
+resume: true
+launcher:
+  cpus: 48
+  gpus: [0, 1, 2, 3, 4, 5, 6, 7]
+  state_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_FIRE/launch
+resources: {infer: 6, infer_merge: 2, geo: 4}
+shards: {inference: 16}
+export: {shards: 8, cpus: 6, gpu: 1}   # ~216 five-minute CONUS scenes in 18 h; one GPU per export shard
+
+sensors:
+  goes:
+    inputs: /data/nlahaye/remoteSensing/GOES_TEMPO/new_data_2026_07     # CHECK: July 2026 GOES-18 16-band GeoTIFFs
+    pattern: "OR_ABI-L1b-RadC-M6C01_G18_s*.tif"
+    # every_minutes: 60                 # not set: every scene
+    bbox_filter: false                  # CONUS scenes always cover the bbox
+
+pipelines:
+  goes_fire:
+    sensor: goes
+    uq_config: goes18/g18_uq_config_fire.yaml            # all-scene fire evaluation run (output_dir .../UQ_FIRE)
+    export_config: goes18/g18_export_fire.yaml           # fire encoder (heads differ from the smoke heads)
+    models: [hist_gradient_boosting]
+  # tempo_fire:                                          # optional; TEMPO fire is best over large, intense fires
+  #   sensor: tempo                                      # (add sensors.tempo as in production_2026_smoke_qt.yaml)
+  #   uq_config: uq_config.example.fire.yaml
+  #   export_config: export_config.example.fire.yaml     # CHECK name
+  #   models: [hist_gradient_boosting]
+
+animation:
+  enabled: true
+  model: hist_gradient_boosting
+  include: [goes_fire]
+  shards: 4                             # 216 frames per set: split frame rendering across jobs
+  cpus: 8
+  resolution: 0.01
+  frames: {base: goes, goes_window_minutes: 3, tempo_causal: true, tempo_max_age_minutes: 60,
+           require: [goes]}             # every GOES scene; TEMPO RGB held from the latest scan
+  fps: 8
+  formats: [mp4, gif]
+  basemap: {enabled: true}
+  observations:
+    tempo_rgb: {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .RGB.tif}         # CHECK (context only)
+    goes:
+      kappa0_from: /data/nlahaye/remoteSensing/GOES_TEMPO/new_data_2026_07
+  sets:
+    oregon_fire_0726:                   # all six Oregon fires (bboxes as in production_2026_smoke_qt.yaml)
+      bbox: [-122.0, -115.9, 41.65, 45.8]
+      split_by: none
+    big_grass_fire_0726:
+      bbox: [-117.65, -116.1, 41.85, 43.1]
+      resolution: 0.005
+      split_by: none

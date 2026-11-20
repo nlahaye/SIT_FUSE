@@ -129,7 +129,7 @@ SPLIT_META = ("split_group", "classifier_split", "encoder_split", "split_stratum
 
 
 def load_matchups(path, require_truth: bool = True, splits=None, every_minutes=None,
-                  offset_minutes=0) -> list[dict[str, Any]]:
+                  offset_minutes=0, missing_heads: str = "skip") -> list[dict[str, Any]]:
     """
     Matchup records from the HMS / ADP / FDCC matchup generators.
 
@@ -153,6 +153,12 @@ def load_matchups(path, require_truth: bool = True, splits=None, every_minutes=N
       sit_fuse_timestamp, else a YYYYMMDDTHHMMSS or ABI _sYYYYJJJHHMMSS stamp
       in scene_id / head_outputs / sit_fuse_context_free; scenes without a
       time are kept. GOES only: TEMPO scans span the hour in several granules.
+    missing_heads: records whose head_outputs file does not exist (e.g. inputs
+      export_head_outputs.py skipped with "no valid samples", or exports that
+      never ran): "skip" (default; logged, the run continues with the rest),
+      "error", or "keep" (no check). check_head_outputs.py lists them and
+      writes an export config for only those inputs. Applied before
+      every_minutes, so an hourly bin falls back to its next available scene.
     """
     doc = load_yaml(path)
     raw = doc.get("matchups", doc.get("rasters", []))
@@ -197,6 +203,18 @@ def load_matchups(path, require_truth: bool = True, splits=None, every_minutes=N
                 r["_t"] = rec.get("sit_fuse_timestamp") or next(
                     (str(rec.get(k)) for k in ("scene_id", "head_outputs", "sit_fuse_context_free") if rec.get(k)), "")
             out.append(r)
+
+    if str(missing_heads).lower() != "keep" and out:
+        miss = [r for r in out if not Path(str(r["head_outputs"])).exists()]
+        if miss:
+            msg = (f"load_matchups: {len(miss)} of {len(out)} scenes have no head_outputs file ({path}), e.g. "
+                   + ", ".join(str(r["head_outputs"]) for r in miss[:3]))
+            if str(missing_heads).lower() == "error":
+                raise FileNotFoundError(msg + ". Export them (check_head_outputs.py --write-export) or set "
+                                              "missing_heads: skip.")
+            LOG.warning("%s -> skipped (check_head_outputs.py lists them)", msg)
+            gone = {id(r) for r in miss}
+            out = [r for r in out if id(r) not in gone]
 
     if every_minutes:
         import re
