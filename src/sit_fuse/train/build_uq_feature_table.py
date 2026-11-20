@@ -351,6 +351,9 @@ def finalize(cfg: dict, matchups: list, results: list) -> None:
         "n_rows": int(len(table)),
         "skipped_scenes": skipped,              # pair_id -> reason (unreadable head outputs)
         "n_scenes": len(matchups),
+        # scene cadence used (None = every scene); plan_uq_jobs.py re-plans the stage when the config changes it
+        "every_minutes": cfg["data"].get("every_minutes") or None,
+        "offset_minutes": cfg["data"].get("offset_minutes", 0) if cfg["data"].get("every_minutes") else None,
         "dates": sorted(prevalence),
         "classifier_splits": {s: int(n) for s, n in
                               pd.Series([m["classifier_split"] or "unassigned" for m in matchups]).value_counts().items()},
