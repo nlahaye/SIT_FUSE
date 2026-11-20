@@ -1,0 +1,59 @@
+# Full evaluation run, every scene: features -> train -> infer -> evaluate -> geo -> fusion for
+# TEMPO smoke, TEMPO fire, GOES-18 smoke (recalibrated) and GOES-18 fire (Park 2024, LA 2025, Oregon 2026 cases),
+# then the smoke and fire GOES+TEMPO fusions. Animations / visuals are left out (run them after this finishes).
+#   cd SIT_FUSE/src/sit_fuse/train
+#   python plan_uq_jobs.py uq_parallel.full_2026.yaml                     # report: done / run per stage and model
+#   python plan_uq_jobs.py uq_parallel.full_2026.yaml --run -- --dry-run  # check the commands
+#   (set -m; nohup python plan_uq_jobs.py uq_parallel.full_2026.yaml --run > full_2026.log 2>&1 &)
+#   python -m sit_fuse.local_launcher status /data/nlahaye/output/Learnergy/launch_full_2026/uq_plan.yaml
+# Before running: remove data.every_minutes / inference.every_minutes / geo_export.every_minutes from all four UQ
+# configs (every scene). Resume keeps only outputs at that cadence; hourly features, inference or geo exports and
+# trainings with missing model files are re-planned automatically. To force a stage and everything after it for one
+# pipeline, add e.g. `rerun_from: train` under that pipeline.
+# CPU only (48 cores, no GPUs). Head outputs must exist (missing ones are skipped; check_head_outputs.py lists them).
+
+plan_file: /data/nlahaye/output/Learnergy/launch_full_2026/uq_plan.yaml
+python: python
+launcher:
+  state_dir: /data/nlahaye/output/Learnergy/launch_full_2026   # new: old markers (quick / hourly runs) are not reused
+  cpus: 48
+  gpus: 0
+  retries: 1
+stages: [features, train, infer, evaluate, geo, fusion]
+resume: true
+
+resources:
+  features: 2
+  train: 16
+  train_workers: 8
+  infer: 2
+  evaluate: 4
+  compare: 2
+  geo: 4
+  fusion_fit: 8
+  fusion_apply: 4
+  fusion_merge: 2
+
+shards:
+  features: 8
+  inference: 8
+  fusion: 6
+
+pipelines:
+  tempo_smoke:
+    uq_config: uq_config.example.yaml                    # SF_TEMPO_V04/UQ
+  tempo_fire:
+    uq_config: uq_config.example.fire.yaml               # SF_TEMPO_V04/UQ_FIRE
+  goes_smoke:
+    uq_config: goes18/g18_uq_config_smoke_recal.yaml     # GOES_TEMPO_UPDATED/UQ_SMOKE_RECAL
+    inference_shards: 24
+    features_shards: 12
+  goes_fire:
+    uq_config: goes18/g18_uq_config_fire.yaml            # GOES_TEMPO_UPDATED/UQ_FIRE_OR2026 (output_dir in the config)
+    inference_shards: 24
+    features_shards: 12
+    # rerun_from: features                               # uncomment to rebuild the fire feature table from scratch
+
+fusion:                                                  # each fit waits for the geo jobs of its two pipelines
+  smoke: {config: configs/fusion_config.smoke.yaml, after: [tempo_smoke, goes_smoke]}
+  fire:  {config: configs/fusion_config.fire.yaml,  after: [tempo_fire, goes_fire]}
