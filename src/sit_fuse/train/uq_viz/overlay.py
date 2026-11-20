@@ -8,6 +8,10 @@ Observations
   GoesRGB     GOES ABI multi-band GeoTIFFs (colocate_and_resample.py output, bands C01..C16 as L1b radiance):
               CIMSS natural true colour (R = C02, G = 0.45 C02 + 0.1 C03 + 0.45 C01, B = C01) from reflectance
               factors (radiance x kappa0), optional solar-zenith normalisation, gamma 2.2; inverted C13 at night.
+Contrast      enhance_rgb: after the fixed stretch, the luminance is histogram-equalised with one CDF pooled over frames
+              sampled across the whole animation (stable, no flicker), blended with the stretched luminance
+              (strength), optionally unsharp-masked, and RGB rescaled by the luminance ratio (hue preserved).
+              method clahe (local, per frame, scikit-image) and linear (stretch only) are alternatives.
 Products      export_geo_products.py rasters (uq_viz.data.GeoProductIndex), probability band drawn with an alpha
               ramp (transparent at low probability) and the decision mask as a contour (and points for fire).
 Everything is warped onto one display grid (EPSG:4326, bbox, resolution). The frame plan holds only paths and
@@ -268,7 +272,7 @@ class TempoRGB:
             st = cfg.get("stretch", "auto")
             if isinstance(st, (list, tuple)):
                 self.limits = [tuple(st)] * len(self.bands) if np.ndim(st) == 1 else [tuple(x) for x in st]
-            elif st == "auto" and self.dtype != "uint8":
+            elif st == "percentile" or (st == "auto" and self.dtype != "uint8"):   # uint8 auto: 0..255
                 self.limits = stretch_limits(list(self.df.sort_values("time").path), self.bands, grid,
                                              tuple(cfg.get("percentiles", [1.0, 99.0])))
             elif self.dtype == "uint8":
@@ -280,7 +284,8 @@ class TempoRGB:
         if d.empty:
             return None
         return {"kind": "tempo_rgb", "name": self.name, "paths": list(d.path), "time": d.time.median(),
-                "bands": self.bands, "limits": self.limits, "gamma": self.gamma}
+                "bands": self.bands, "limits": self.limits, "gamma": self.gamma,
+                "enhance": getattr(self, "enhance", None)}
 
 
 class GoesRGB:
@@ -352,7 +357,8 @@ class GoesRGB:
                 "kappa": [self.kappa[int(b)] for b in self.bands], "valid": self.valid,
                 "sza_correction": bool(self.cfg.get("sza_correction", self.kappa_source != "image")),
                 "gamma": float(self.cfg.get("gamma", 2.2)), "night": self.night, "ir_band": self.ir_band,
-                "ir_limits": self.ir_limits, "min_cos_sza": float(self.cfg.get("min_cos_sza", 0.1))}
+                "ir_limits": self.ir_limits, "min_cos_sza": float(self.cfg.get("min_cos_sza", 0.1)),
+                "enhance": getattr(self, "enhance", None)}
 
 
 def _kappa_from_netcdf(nc_dir, tif_path, bands, recursive=False):
@@ -458,17 +464,109 @@ DEFAULT_STYLE = {
 }
 
 
-def obs_rgb(spec: dict, grid: Grid) -> np.ndarray | None:
-    """(H, W, 4) RGBA in 0..1 for an observation spec; alpha 0 where no data."""
+# ---------------------------------------------------------------------------------------------------------------
+# RGB contrast enhancement (luminance only, hue preserved; fixed per animation so frames do not flicker)
+# ---------------------------------------------------------------------------------------------------------------
+ENHANCE_DEFAULT = {
+    "tempo": {"method": "hist", "strength": 0.5, "sharpen": 0.5, "sharpen_sigma": 1.0},
+    "goes": {"method": "hist", "strength": 0.3, "sharpen": 0.4, "sharpen_sigma": 1.0},
+}
+_CLAHE_WARNED = []
+
+
+def enhance_config(sensor: str, global_cfg=None, obs_cfg=None) -> dict:
+    """Default for the sensor, updated by animation-level `rgb_enhance` and observation-level `enhance`.
+    method: linear (stretch only) | hist (global histogram equalisation, CDF from frames sampled across the whole
+    animation) | clahe (local, per frame; needs scikit-image). strength blends equalised and stretched luminance."""
+    e = dict(ENHANCE_DEFAULT.get(sensor, ENHANCE_DEFAULT["tempo"]))
+    for c in (global_cfg, obs_cfg):
+        if isinstance(c, str):
+            c = {"method": c}
+        if c is False:
+            c = {"method": "linear", "sharpen": 0.0}
+        e.update(c or {})
+    e["method"] = str(e.get("method", "linear")).lower()
+    return e
+
+
+def luminance(rgb: np.ndarray) -> np.ndarray:
+    return 0.2126 * rgb[..., 0] + 0.7152 * rgb[..., 1] + 0.0722 * rgb[..., 2]
+
+
+def hist_lut(lums, n_quantiles: int = 257, max_per_frame: int = 200_000, seed: int = 0) -> list | None:
+    """Quantiles of display luminance pooled over sampled frames (the equalisation CDF)."""
+    rng = np.random.default_rng(seed)
+    v = []
+    for y in lums:
+        y = y[np.isfinite(y)]
+        if y.size > max_per_frame:
+            y = rng.choice(y, max_per_frame, replace=False)
+        v.append(y)
+    v = np.concatenate(v) if v else np.empty(0)
+    if v.size < 100:
+        return None
+    return [float(x) for x in np.quantile(v, np.linspace(0, 1, n_quantiles))]
+
+
+def enhance_rgb(rgb: np.ndarray, en: dict | None) -> np.ndarray:
+    """Equalise / sharpen the luminance of an (H, W, 3) 0..1 image (NaN = no data) and rescale RGB by the luminance
+    ratio, capped so no channel saturates (hue preserved)."""
+    if not en:
+        return rgb
+    m, s = en.get("method", "linear"), float(en.get("strength", 0.5))
+    sharp = float(en.get("sharpen", 0.0) or 0.0)
+    if m in ("linear", "none") and sharp <= 0:
+        return rgb
+    valid = np.all(np.isfinite(rgb), -1)
+    if not valid.any():
+        return rgb
+    x = np.clip(np.nan_to_num(rgb), 0, 1)
+    y = luminance(x)
+    ye = y
+    if m == "hist" and en.get("lut"):
+        q = np.asarray(en["lut"], float)
+        q = np.maximum.accumulate(q) + np.arange(q.size) * 1e-9       # strictly increasing for interp
+        ye = np.interp(y, q, np.linspace(0, 1, q.size))
+    elif m == "clahe":
+        try:
+            from skimage.exposure import equalize_adapthist
+            k = max(8, int(min(y.shape) * float(en.get("kernel_frac", 0.125))))
+            ye = equalize_adapthist(np.where(valid, y, 0.0), kernel_size=k,
+                                    clip_limit=float(en.get("clip_limit", 0.01)))
+        except ImportError:
+            if not _CLAHE_WARNED:
+                _CLAHE_WARNED.append(1)
+                import logging
+                logging.getLogger(__name__).warning("rgb enhance: clahe needs scikit-image; using linear stretch")
+    yn = (1 - s) * y + s * ye if m in ("hist", "clahe") else y
+    if sharp > 0:                                                       # unsharp mask, NaN-aware
+        from scipy.ndimage import gaussian_filter
+        sig = float(en.get("sharpen_sigma", 1.0))
+        w = valid.astype(float)
+        blur = gaussian_filter(yn * w, sig) / np.maximum(gaussian_filter(w, sig), 1e-6)
+        yn = yn + sharp * (yn - blur)
+    yn = np.clip(yn, 0, 1)
+    scale = yn / np.maximum(y, 1e-4)
+    scale = np.minimum(scale, 1.0 / np.maximum(x.max(-1), 1e-4))        # do not clip channels (keeps hue)
+    out = np.where((y > 1e-4)[..., None], x * scale[..., None], yn[..., None])
+    out = np.clip(out, 0, 1)
+    out[~valid] = np.nan
+    return out
+
+
+def obs_rgb(spec: dict, grid: Grid, enhance: dict | None = "spec") -> np.ndarray | None:
+    """(H, W, 4) RGBA in 0..1 for an observation spec; alpha 0 where no data. enhance: dict, None (stretch only)
+    or "spec" (use spec['enhance'])."""
     if spec is None:
         return None
+    en = spec.get("enhance") if isinstance(enhance, str) else enhance
     if spec["kind"] == "tempo_rgb":
         a = mosaic(spec["paths"], spec["bands"], grid)
         if a is None:
             return None
         lims = spec["limits"] or [(np.nanmin(x), np.nanmax(x)) for x in a]
         rgb = np.stack([(x - lo) / (hi - lo) for x, (lo, hi) in zip(a, lims)], -1)
-        rgb = np.clip(rgb, 0, 1) ** (1.0 / spec["gamma"])
+        rgb = enhance_rgb(np.clip(rgb, 0, 1) ** (1.0 / spec["gamma"]), en)
     else:
         a = read_to_grid(spec["paths"][0], tuple(spec["bands"]), grid, "bilinear", *spec["valid"])
         refl = [x * k for x, k in zip(a, spec["kappa"])]               # blue, red, veggie reflectance factors
@@ -478,7 +576,7 @@ def obs_rgb(spec: dict, grid: Grid) -> np.ndarray | None:
             refl = [x / np.maximum(mu, spec["min_cos_sza"]) for x in refl]
         b, r, n = (np.clip(x, 0, 1) for x in refl)
         g = np.clip(0.45 * r + 0.1 * n + 0.45 * b, 0, 1)
-        rgb = np.stack([r, g, b], -1) ** (1.0 / spec["gamma"])
+        rgb = enhance_rgb(np.stack([r, g, b], -1) ** (1.0 / spec["gamma"]), en)   # daytime part, before IR blend
         if spec["night"] == "ir" and spec["ir_band"] and spec["ir_limits"]:
             ir = read_to_grid(spec["paths"][0], (spec["ir_band"],), grid, "bilinear")[0]
             lo, hi = spec["ir_limits"]
@@ -535,17 +633,19 @@ def render_frame(fr: dict, static: dict, out_png: str) -> str:
     ext = grid.extent
     aspect = (ext[3] - ext[2]) / np.cos(np.deg2rad(0.5 * (ext[2] + ext[3]))) / (ext[1] - ext[0])
     pw = float(static.get("panel_width", 3.6))
-    kinds = sorted({o["product"] for pn in panels for o in pn["overlays"] if o}, key=lambda k: (k != "smoke", k != "fire", k))
+    kinds = sorted({o["product"] for pn in panels for o in (pn or {}).get("overlays", []) if o}, key=lambda k: (k != "smoke", k != "fire", k))
     cb_h = 0.55 if kinds else 0.0
     aw = 0.86 * pw                                       # drawn map width (panel width less margins and spacing)
     row_h = aw * aspect + 0.45
-    fig = plt.figure(figsize=(pw * ncol + 0.4, nrow * row_h + cb_h + 0.45))
-    top = 1 - 0.42 / fig.get_figheight()
+    fig = plt.figure(figsize=(pw * ncol + 0.4, nrow * row_h + cb_h + 0.6))
+    top = 1 - 0.6 / fig.get_figheight()
     gs = fig.add_gridspec(nrow + (1 if kinds else 0), ncol,
                           height_ratios=[row_h] * nrow + ([cb_h] if kinds else []),
                           hspace=0.14, wspace=0.24, left=0.06, right=0.99, top=top, bottom=0.04)
     lon, lat = None, None
     for j, pn in enumerate(panels):
+        if not pn or pn.get("blank"):                   # layout placeholder (keeps the RGB row aligned)
+            continue
         ax = fig.add_subplot(gs[j // ncol, j % ncol])
         P.setup_map(ax, ext, static.get("basemap"), ticks=static.get("ticks", True))
         if static.get("ticks", True):                    # decimals that resolve the box (setup_map shows whole degrees)
@@ -559,7 +659,8 @@ def render_frame(fr: dict, static: dict, out_png: str) -> str:
         ax.set_facecolor(static.get("background", "#202020"))
         obs = obs_rgb(pn["obs"], grid) if pn.get("obs") else None
         if obs is not None:
-            ax.imshow(obs, extent=ext, origin="upper", interpolation="bilinear", zorder=2)
+            ax.imshow(obs, extent=ext, origin="upper", interpolation=static.get("rgb_interpolation", "antialiased"),
+                      zorder=2)
         notes = []
         if pn.get("obs"):
             notes.append(f"obs {pn['obs']['time']:%H:%M}")
@@ -615,6 +716,8 @@ def frames_table(plan: list[dict]) -> pd.DataFrame:
     rows = []
     for k, fr in enumerate(plan):
         for pn in fr["panels"]:
+            if not pn or pn.get("blank"):
+                continue
             r = {"frame": k, "time": fr["time"], "panel": pn["title"],
                  "obs_time": pn["obs"]["time"] if pn.get("obs") else None,
                  "obs_files": ";".join(pn["obs"]["paths"]) if pn.get("obs") else ""}
