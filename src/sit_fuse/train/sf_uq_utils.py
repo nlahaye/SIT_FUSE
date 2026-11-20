@@ -40,6 +40,17 @@ import pandas as pd
 from scipy.ndimage import uniform_filter
 from scipy.optimize import minimize, minimize_scalar
 
+# Pickle compatibility: scikit-learn <= 1.8 recorded its compiled loss classes (HistGradientBoosting* `_loss.closs`)
+# under the top-level module name "_loss"; newer releases no longer resolve that name, so models / calibrators saved
+# with 1.8 fail to load with "ModuleNotFoundError: No module named '_loss'". Alias it to the real module before any
+# joblib.load (every UQ script imports this module first).
+import sys as _sys
+try:
+    import sklearn._loss._loss as _sk_loss
+    _sys.modules.setdefault("_loss", _sk_loss)
+except ImportError:                                   # pragma: no cover
+    pass
+
 # Pre-existing SIT-FUSE helpers (reused rather than re-implemented)
 from sit_fuse.train.classifier_utils import (
     DEFAULT_NODATA,
@@ -117,8 +128,7 @@ def read_table(path) -> pd.DataFrame:
 SPLIT_META = ("split_group", "classifier_split", "encoder_split", "split_stratum")
 
 
-def load_matchups(path, require_truth: bool = True, splits=None, every_minutes=None,
-                  offset_minutes=0) -> list[dict[str, Any]]:
+def load_matchups(path, require_truth: bool = True, splits=None) -> list[dict[str, Any]]:
     """
     Matchup records from the HMS / ADP / FDCC matchup generators.
 
@@ -135,13 +145,6 @@ def load_matchups(path, require_truth: bool = True, splits=None, every_minutes=N
       split_group / classifier_split / encoder_split / split_stratum
                <- carried through; defaults: date / "" / "unknown" / ""
     splits: optional iterable of classifier_split values to keep.
-    every_minutes: optional time thinning for quick first-pass runs (e.g. 60:
-      hourly from 5-min GOES): keeps the first scene (by observation time) of
-      each <every_minutes> UTC bin, shifted by offset_minutes, separately per
-      product and event (split_stratum before '|'). Time from
-      sit_fuse_timestamp, else a YYYYMMDDTHHMMSS or ABI _sYYYYJJJHHMMSS stamp
-      in scene_id / head_outputs / sit_fuse_context_free; scenes without a
-      time are kept. GOES only: TEMPO scans span the hour in several granules.
     """
     doc = load_yaml(path)
     raw = doc.get("matchups", doc.get("rasters", []))
@@ -182,37 +185,7 @@ def load_matchups(path, require_truth: bool = True, splits=None, every_minutes=N
             "additional_references": dict(rec.get("additional_references") or {}),
         }
         if splits is None or r["classifier_split"] in set(splits):
-            if every_minutes:
-                r["_t"] = rec.get("sit_fuse_timestamp") or next(
-                    (str(rec.get(k)) for k in ("scene_id", "head_outputs", "sit_fuse_context_free") if rec.get(k)), "")
             out.append(r)
-
-    if every_minutes:
-        import re
-        n0, keep, seen = len(out), [], set()
-        for r in out:
-            v, t = r.pop("_t"), None
-            m = re.search(r"_s(\d{13})\d?_e", v) or re.search(r"(\d{8}T\d{6})", v)
-            try:
-                t = (pd.Timestamp(v) if re.match(r"\d{4}-\d{2}-\d{2}T", v) else
-                     pd.to_datetime(m.group(1), format="%Y%j%H%M%S" if "_s" in m.group(0) else "%Y%m%dT%H%M%S")
-                     if m else None)
-            except (ValueError, TypeError):
-                t = None
-            if t is not None:
-                t = t.tz_localize(None) if t.tzinfo else t
-            r["_ts"] = t
-        out.sort(key=lambda r: (r["_ts"] is None, r["_ts"] or pd.Timestamp(0), r["pair_id"]))
-        off = pd.Timedelta(minutes=float(offset_minutes or 0))
-        for r in out:
-            t = r.pop("_ts")
-            k = None if t is None else (r["product"], r["split_stratum"].split("|")[0],
-                                        (t - off).floor(f"{int(every_minutes)}min"))
-            if k is None or k not in seen:
-                seen.add(k)
-                keep.append(r)
-        print(f"load_matchups: every_minutes={every_minutes}: kept {len(keep)} of {n0} scenes ({path})")
-        out = keep
 
     dup = [k for k, v in pd.Series([r["pair_id"] for r in out]).value_counts().items() if v > 1]
     if dup:
