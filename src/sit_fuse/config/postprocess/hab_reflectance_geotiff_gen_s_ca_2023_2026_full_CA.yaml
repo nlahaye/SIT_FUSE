@@ -222,7 +222,13 @@ uq:
   calibration: {method: temperature, prior_correction: true,
                 prior_correction_strength: fit,              # was 0.0; number or fit
                 prior_strength_grid: [0.25, 0.5, 0.75, 1.0], # searched jointly with class_weighting_grid
-                min_samples: 30}     # strength 1 = full undo of class weighting, 0 = none
+                min_samples: 30,     # strength 1 = full undo of class weighting, 0 = none
+                # Post-hoc logistic map of P(bin >= k) at the alert thresholds that sit on bin edges
+                # (PN 1e4 / 1e5 cells/L, pDA 1 ng/mL, cDA 10 pg/cell; pDA 0.5 lies inside a bin and is
+                # interpolated, so it moves only through the 1 ng/mL map), fitted on calibration samples after model and
+                # strength selection. auto: kept only if day-grouped 5-fold out-of-fold Brier improves.
+                exceedance_recalibration: {enabled: auto, method: platt, thresholds: alert,
+                                           min_events: 10, n_folds: 5, ridge: 1.0}}
   # Hard label for pred_label and the hard metrics. Full prior correction removes the class-weighting
   # shift from the probabilities, so minority-bin recall comes from the rule rather than argmax.
   decision: {rule: auto, metric: qwk, candidates: [argmax, median, expected]}   # argmax | median | expected | auto
@@ -233,7 +239,12 @@ uq:
   selective: {target_coverage: 0.8, bin_tolerance: 0}
 
   species:                   # optional overrides of hab_uq_common.DEFAULT_SPECIES
-    pDA: {alert_thresholds: [0.5, 1.0], measurement_sigma_dex: 0.15}
+    pDA:
+      alert_thresholds: [0.5, 1.0]
+      measurement_sigma_dex: 0.15
+      # Hard label: highest k with P(bin >= k) >= tau_k, tau tuned on calibration samples (QWK), flagged
+      # share capped at 2x the observed share. median / expected need P(bin >= 1) >= 0.5 and stay in bin 0.
+      decision: {rule: threshold, metric: qwk, max_flag_ratio: 2.0, min_events: 5}
     Pseudo_nitzschia_seriata_group: {alert_thresholds: [10000, 100000]}
     # Derived targets (hab_insitu.add_derived_target). Total PN = seriata + delicatissima cells/L
     # (rows need >= 1 group measured). cDA = pDA / total PN (pg/cell) on rows with PN >= min_pn_cells;
@@ -295,6 +306,7 @@ uq:
     n_bootstrap: 500         # paired site-week block bootstrap
     copula_samples: 256      # Sobol pairs per pixel for the size-class combination check
     coastal_km: 30.0
+    coast_exclude_km: 6.0    # coastal-edge check: charm_p_offcoast drops C-HARM cells < 6 km from land / domain edge
     # L3m chlorophyll (sync_l3m_rrs --suite CHL); keys = uq.sensors. Used by the consistency stage.
     chl_dirs:
       s3a:   /mnt/data1/CHL/S3A_OLCI

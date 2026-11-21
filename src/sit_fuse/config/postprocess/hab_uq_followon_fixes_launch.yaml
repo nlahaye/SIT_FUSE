@@ -1,0 +1,247 @@
+# Local-launcher plan for the four follow-on fixes on the full 2023-01-01..2026-09-30 run (uq_full_2023_2026_ifcb):
+#   (1) 2023 OLCI + MODIS rerun (inputs, heads, per-sensor products, fusion, C-HARM maps, consistency)
+#   (2) exceedance recalibration (uq.calibration.exceedance_recalibration: auto; per-trial g components logged)
+#   (3) pDA threshold decision rule (uq.species.pDA.decision: threshold, QWK, max_flag_ratio 2)
+#   (4) C-HARM scored at tuned cutoffs / equal area + coastal-edge variants (uq.charm.coast_exclude_km: 6)
+# then the updated animations and follow-on figures.
+# HAB YAML: hab_reflectance_geotiff_gen_s_ca_2023_2026_full_CA.yaml (updated for 2-4).
+#
+#   snapshot ──────────────────────────────────────────────────────────────────────────────┐
+#   rrs_sync x platform (2023) ─► audit_pre ─► heads x {olci, modis} (2023) ─► audit_heads ─┴─► train_eval x sp ─┬─► subset_eval x sp
+#                                                                                                                ├─► combine
+#                                                                                                                └─► infer_fuse x sp x year ─► audit_post
+#   charm_fetch x lead ─┬─ (train_eval, combine, infer_fuse) ─► points x target ─► maps x target x year ─► charm_animate x target
+#   chl_sync x platform ┴─ (infer_fuse) ─► consistency x year ─────────────────────────────────────────┘
+#   infer_fuse ─► animate (all species, in-situ sites)
+#   points, maps, consistency, subset_eval ─► summary ─► figures  (figures also after animate, audit_post)
+#
+# Why everything downstream of heads reruns: training rebuilds the matchups from head outputs, so the new 2023
+# OLCI / MODIS heads enter calibration and test; the recalibration and decision rule change every product; infer
+# and fuse overwrite. Existing heads (2024-2026, and any 2023 days already done) are skipped by the heads stage.
+#
+# Data pulls (need ~/.netrc for OB.DAAC / earthaccess; ERDDAP needs no credentials):
+#   rrs_sync    daily L3m Rrs 2023 for S3A, S3B, AQUA MODIS (+ VIIRS, PACE for completeness); adds missing days only
+#   charm_fetch C-HARM by valid date, latest version available per date (v3.1 from 2022-11-01, v2 before);
+#               cached, only missing chunks requested
+#   chl_sync    L3m CHL for the consistency stage; adds missing days only
+#
+#   python -m sit_fuse.local_launcher list   hab_uq_followon_fixes_launch.yaml
+#   python -m sit_fuse.local_launcher run    hab_uq_followon_fixes_launch.yaml --dry-run
+#   systemd-run --user --scope -p MemoryMax=108G -p MemoryHigh=100G -p MemorySwapMax=0 \
+#     python -m sit_fuse.local_launcher run hab_uq_followon_fixes_launch.yaml
+#   python -m sit_fuse.local_launcher status hab_uq_followon_fixes_launch.yaml
+# Resume: rerun the same command. Failed jobs: --rerun-failed. One stage: --only 'heads.*'.
+# Gate: audit_heads exits 1 (and blocks training) if S3A or MODIS still has zero 2023 head days; read
+#   {state}/audit_2023_pre.csv for the diagnosis (no_rrs_on_disk / naming_mismatch / heads_missing).
+#   S3B is reported, not required (enable it in --require once the audit shows the olci model lists S3B files).
+#
+# Resource budget (16 cores, 2 GPUs, 181 GB): 1 GPU, 9 cores (60 %), ~108 GB (60 %, enforced by the scope above).
+# Only heads use the GPU (two jobs share GPU 0 at 0.5 each, 4 + 4 cores).
+launcher:
+  state_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/launch/uq_followon_fixes
+  gpus: [0]
+  cpus: 9
+  pin_cpus: true
+  max_parallel: null
+  retries: 1              # transient download / ERDDAP errors; all pulls are resumable
+  nice: 10
+
+vars:
+  py: python
+  yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/postprocess/hab_reflectance_geotiff_gen_s_ca_2023_2026_full_CA.yaml
+  root: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526
+  uq: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/uq_full_2023_2026_ifcb       # = uq.out_dir
+  state: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/launch/uq_followon_fixes
+  reflectances: /mnt/data1/REFLECTANCES
+  chl: /mnt/data1/CHL
+  mod: sit_fuse.pipelines.habs.uq
+  habs: sit_fuse.pipelines.habs
+  y2023: "2023-01-01:2023-12-31"
+
+jobs:
+  # 0) Keep the current evaluation + C-HARM summaries for before / after figures (cp -n: never overwritten).
+  - name: snapshot
+    cmd: >-
+      mkdir -p {uq}/before_followon &&
+      cp -rn {uq}/evaluation {uq}/before_followon/ &&
+      (cp -n {uq}/charm_compare/summary_*.csv {uq}/before_followon/ 2>/dev/null || true)
+    cpus: 1
+    gpu: 0
+    priority: 3
+    provides: ["{uq}/before_followon/evaluation"]
+
+  # 1a) 2023 Rrs inputs. S3B and the NOAA VIIRS were not in the previous sync.
+  - name: rrs_sync
+    cmd: >-
+      {py} -m sit_fuse.preprocessing.data_pull.sync_l3m_rrs --start 2023-01-01 --end 2023-12-31
+      --dir {key}={reflectances}/{subdir} --res 4km --layout flat --threads 4
+      --nrt-archive-dir {reflectances}/nrt_archive/{subdir}
+      --report {state}/rrs_sync_2023_{subdir}.csv
+    cases:
+      - {key: S3A_OLCI,    subdir: S3A_OLCI}
+      - {key: S3B_OLCI,    subdir: S3B_OLCI}
+      - {key: AQUA_MODIS,  subdir: AQUA_MODIS}
+      - {key: NPP_VIIRS,   subdir: SNPP_VIIRS}
+      - {key: JPSS1_VIIRS, subdir: JPSS1_VIIRS}
+      - {key: JPSS2_VIIRS, subdir: JPSS2_VIIRS}
+    id_keys: [subdir]
+    cpus: 1
+    gpu: 0
+    priority: 2
+
+  # 1b) Where 2023 drops out (disk -> scene list -> heads -> products). Diagnostic, never fails.
+  - name: audit_pre
+    cmd: >-
+      {py} -m {habs}.hab_input_audit -y {yaml} --window {y2023} --out {state}/audit_2023_pre.csv
+    cpus: 1
+    gpu: 0
+    after: [{name: rrs_sync, on: []}]
+
+  # 1c) 2023 heads for OLCI and MODIS (existing head outputs are skipped).
+  - name: heads
+    cmd: "{py} -m {habs}.hab_inference_pipeline -y {yaml} --stages heads --instruments {inst} --window {y2023} -n 4"
+    grid:
+      inst: [olci, modis]
+    cpus: 4
+    gpu: 0.5
+    priority: 1
+    after: [{name: audit_pre, on: []}]
+
+  # 1d) Gate: S3A and MODIS must now have 2023 head outputs.
+  - name: audit_heads
+    cmd: >-
+      {py} -m {habs}.hab_input_audit -y {yaml} --window {y2023} --out {state}/audit_2023_heads.csv
+      --require s3a,modis --require-stage heads
+    cpus: 1
+    gpu: 0
+    after: [{name: heads, on: []}]
+
+  # 2-3) Retrain + evaluate all five targets: new matchups (2023 OLCI / MODIS), exceedance recalibration (auto),
+  #      pDA threshold rule. run_config logs trial_components (calibration RPS / exceedance Brier per g).
+  - name: train_eval
+    cmd: "{py} -m {mod}.hab_uq_pipeline -y {yaml} --stages train,evaluate --species {sp} -n 4"
+    grid:
+      sp: [Pseudo_nitzschia_seriata_group, Pseudo_nitzschia_delicatissima_group, Pseudo_nitzschia_total, pDA, cDA]
+    cpus: 4
+    gpu: 0
+    priority: 1
+    after: [{name: audit_heads, on: []}, {name: snapshot, on: []}]
+
+  - name: subset_eval
+    cmd: "{py} -m {mod}.hab_uq_subset_eval -y {yaml} --species {sp}"
+    grid:
+      sp: [Pseudo_nitzschia_seriata_group, Pseudo_nitzschia_delicatissima_group, Pseudo_nitzschia_total, pDA, cDA]
+    cpus: 2
+    gpu: 0
+    after: [{name: train_eval, on: [sp]}]
+
+  - name: infer_fuse
+    cmd: "{py} -m {mod}.hab_uq_pipeline -y {yaml} --stages infer,fuse --species {sp} --window {win} -n 3"
+    grid:
+      sp: [Pseudo_nitzschia_seriata_group, Pseudo_nitzschia_delicatissima_group, Pseudo_nitzschia_total, pDA, cDA]
+      win: ["2023-01-01:2023-12-31", "2024-01-01:2024-12-31", "2025-01-01:2025-12-31", "2026-01-01:2026-09-30"]
+    cpus: 3
+    gpu: 0
+    after: [{name: train_eval, on: [sp]}]
+
+  # 1e) Post-check: per-sensor products and fused days per year for every species.
+  - name: audit_post
+    cmd: >-
+      {py} -m {habs}.hab_input_audit -y {yaml} --window 2023-01-01:2026-09-30 --out {state}/audit_post.csv
+      --require s3a,modis --require-stage uq
+    cpus: 1
+    gpu: 0
+    after: [{name: infer_fuse, on: []}]
+
+  # 4) C-HARM inputs (cached; only missing days requested) and CHL for consistency.
+  - name: charm_fetch
+    cmd: "{py} -m {mod}.hab_charm fetch -y {yaml} --start 2023-01-01 --end 2026-09-30 --lead {lead}"
+    grid:
+      lead: [0, 1, 2, 3]
+    cpus: 1
+    gpu: 0
+    priority: 2
+
+  - name: chl_sync
+    cmd: >-
+      {py} -m sit_fuse.preprocessing.data_pull.sync_l3m_rrs --suite CHL --start 2023-01-01 --end 2026-09-30
+      --dir {key}={chl}/{subdir} --res 4km --layout flat --threads 4
+      --nrt-archive-dir {chl}/nrt_archive/{subdir}
+      --report {state}/chl_sync_{subdir}.csv
+    cases:
+      - {key: S3A_OLCI,    subdir: S3A_OLCI}
+      - {key: S3B_OLCI,    subdir: S3B_OLCI}
+      - {key: NPP_VIIRS,   subdir: SNPP_VIIRS}
+      - {key: JPSS1_VIIRS, subdir: JPSS1_VIIRS}
+      - {key: JPSS2_VIIRS, subdir: JPSS2_VIIRS}
+      - {key: AQUA_MODIS,  subdir: AQUA_MODIS}
+      - {key: PACE_OCI,    subdir: PACE_OCI}
+    id_keys: [subdir]
+    cpus: 1
+    gpu: 0
+    priority: 2
+
+  - name: combine
+    cmd: "{py} -m {mod}.hab_charm_compare combine -y {yaml}"
+    cpus: 2
+    gpu: 0
+    after: [{name: train_eval, on: []}]
+
+  # Points: AUC / Brier at 0.5 and tuned cutoffs, C-HARM variants (mean, nearest, offcoast), coast_bin strata,
+  # paired bootstrap vs charm and vs charm_offcoast. Writes the tuned cutoffs used by maps.
+  - name: points
+    cmd: "{py} -m {mod}.hab_charm_compare points -y {yaml} --target {target}"
+    grid:
+      target: [pn, pda, cda]
+    cpus: 2
+    gpu: 0
+    after: [{name: charm_fetch, on: []}, {name: combine, on: []}, {name: infer_fuse, on: []}]
+
+  # Maps: kappa / IoU at 0.5, at the tuned cutoffs and at equal alert area.
+  - name: maps
+    cmd: "{py} -m {mod}.hab_charm_compare maps -y {yaml} --target {target} --year {year}"
+    grid:
+      target: [pn, pda, cda]
+      year: [2023, 2024, 2025, 2026]
+    cpus: 1
+    gpu: 0
+    after: [{name: points, on: [target]}]
+
+  - name: consistency
+    cmd: "{py} -m {mod}.hab_charm_compare consistency -y {yaml} --year {year}"
+    grid:
+      year: [2023, 2024, 2025, 2026]
+    cpus: 1
+    gpu: 0
+    after: [{name: chl_sync, on: []}, {name: infer_fuse, on: []}, {name: charm_fetch, on: []}]
+
+  - name: charm_animate
+    cmd: "{py} -m {mod}.hab_charm_animate -y {yaml} --target {target} --lead 0 --layout compare,types"
+    grid:
+      target: [pn, pda, cda]
+    cpus: 1
+    gpu: 0
+    after: [{name: maps, on: [target]}, {name: consistency, on: []}]
+
+  - name: animate
+    cmd: "{py} -m {mod}.hab_uq_pipeline -y {yaml} --stages animate -n 2"
+    cpus: 2
+    gpu: 0
+    after: [{name: infer_fuse, on: []}]
+
+  - name: summary
+    cmd: "{py} -m {mod}.hab_charm_compare summary -y {yaml}"
+    cpus: 1
+    gpu: 0
+    after: [{name: points, on: []}, {name: maps, on: []}, {name: consistency, on: []},
+            {name: subset_eval, on: []}]
+
+  # Follow-on figures -> {uq}/figures/followon (coverage, reliability before/after, decision confusion,
+  # F1 by sensor / season, delta AUC vs C-HARM, coastal edge, map agreement time series, map panels).
+  - name: figures
+    cmd: >-
+      {py} -m {mod}.hab_followon_figures -y {yaml} --before-eval {uq}/before_followon/evaluation
+      --dates 2023-01-01,2023-06-15,2024-04-15,2025-05-01
+    cpus: 2
+    gpu: 0
+    after: [{name: summary, on: []}, {name: animate, on: []}, {name: audit_post, on: []}]

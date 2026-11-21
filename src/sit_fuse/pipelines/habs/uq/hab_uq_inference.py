@@ -48,7 +48,7 @@ from sit_fuse.pipelines.habs.uq.hab_uq_common import (
     log10_concentration_quantile, overpass_hours_utc, ordinal_moments, species_spec,
     pixel_centers, utcnow_iso)
 from sit_fuse.pipelines.habs.uq.hab_uq_matchups import load_scene
-from sit_fuse.pipelines.habs.uq.hab_uq_selection import decide, interval_bounds
+from sit_fuse.pipelines.habs.uq.hab_uq_selection import decide, decision_spec, interval_bounds
 from sit_fuse.pipelines.habs.uq.hab_uq_train import add_sensor_columns, member_probabilities
 
 LOG = logging.getLogger("hab-uq-inference")
@@ -82,7 +82,7 @@ def _thr_name(t: float) -> str:
 
 
 def summarize_probabilities(Q: np.ndarray, members: np.ndarray | None, spec, selective_thr: float | None,
-                            quantiles=(0.05, 0.5, 0.95), decision: str = "argmax",
+                            quantiles=(0.05, 0.5, 0.95), decision="argmax",
                             interval_cal: dict | None = None) -> dict[str, np.ndarray]:
     out = {}
     C = Q.shape[1]
@@ -124,7 +124,7 @@ HEAD_ONLY_PREFIXES = ("mc_", "ood_")
 
 def bundle_summary_options(bundle: dict[str, Any]) -> dict[str, Any]:
     """Decision rule and interval calibration stored at training (defaults for older bundles)."""
-    return {"decision": (bundle.get("decision") or {}).get("rule", "argmax"),
+    return {"decision": decision_spec(bundle),
             "interval_cal": bundle.get("interval_calibration")}
 
 
