@@ -46,7 +46,8 @@ from sit_fuse.train.sf_uq_utils import (
     predictive_entropy_norm, select_feature_columns, select_selective_threshold)
 from sit_fuse.pipelines.habs.uq.hab_context_encoder import default_encoder_cfg, fit_encoder
 from sit_fuse.pipelines.habs.uq.hab_uq_selection import (
-    decide, fit_interval_calibration, selection_components, selection_loss, select_decision_rule)
+    decide, decision_spec, fit_exceedance_recalibration, fit_interval_calibration, selection_components,
+    selection_loss, select_decision_rule, wrap_calibrators)
 from sit_fuse.pipelines.habs.uq.hab_insitu import assign_splits, insitu_filter_config, load_insitu, species_frame
 from sit_fuse.pipelines.habs.uq.hab_uq_common import (
     SENSORS, insitu_date_kwargs, ranked_probability_score, species_spec, instrument_dirs, utcnow_iso)
@@ -481,12 +482,25 @@ def train_species(hab_yml: dict[str, Any], use_key: str, out_dir: str | Path,
     if lean and cfg_sel["model"] != "encoder_only":
         fits = _fit_scopes(df, used, scope, enc_by_sensor, feat_cols, tgt_cfg, cfg_sel, C, seed)
         res = _calibrate(df, fits, used, scope, feat_cols, C, cal_sel, uq, pi_true, spec, sel_cfg)
-    decision = select_decision_rule(res["Q"], res["y"], res["w"], uq.get("decision")) \
+    # per-species overrides (uq.species.<key>.decision / .exceedance_recalibration)
+    sp_cfg = (uq.get("species") or {}).get(use_key) or {}
+    ex_cfg = sp_cfg.get("exceedance_recalibration", cal_cfg.get("exceedance_recalibration"))
+    exrecal = fit_exceedance_recalibration(res["Q"], res["y"], res["w"], spec, ex_cfg, groups=res.get("g"),
+                                           seed=seed) if res["Q"] is not None else None
+    ex_maps = (exrecal or {}).get("maps") or None
+    if exrecal is not None:
+        LOG.info("%s exceedance recalibration: enabled=%s maps=%s brier before %s / oof %s", use_key,
+                 exrecal.get("enabled"), exrecal.get("maps"), exrecal.get("brier_before"), exrecal.get("brier_after_oof"))
+    if ex_maps:
+        res = _calibrate(df, fits, used, scope, feat_cols, C, cal_sel, uq, pi_true, spec, sel_cfg,
+                         exceed_maps=ex_maps)
+    dec_cfg = sp_cfg.get("decision", uq.get("decision"))
+    decision = select_decision_rule(res["Q"], res["y"], res["w"], dec_cfg) \
         if res["Q"] is not None else {"rule": "argmax", "selected_by": "no calibration samples"}
     if decision["rule"] != "argmax":
         # selective thresholds use the decision rule's errors
         res = _calibrate(df, fits, used, scope, feat_cols, C, cal_sel, uq, pi_true, spec, sel_cfg,
-                         decision_rule=decision["rule"])
+                         decision_rule=decision_spec(decision), exceed_maps=ex_maps)
     calibrators, selective, skill = res["calibrators"], res["selective"], res["skill"]
     interval_cal = fit_interval_calibration(res["Q"], res["lv"], res["w"], spec, uq.get("intervals"))
     model_selection = {k: float(v["score"]) for k, v in trials.items()}
@@ -512,6 +526,9 @@ def train_species(hab_yml: dict[str, Any], use_key: str, out_dir: str | Path,
         "class_weighting": cfg_sel.get("class_weighting"),
         "prior_correction_strength": cal_sel.get("prior_correction_strength"),
         "decision": decision, "interval_calibration": interval_cal,
+        "exceedance_recalibration": exrecal,
+        # calibration-split components of the final probabilities (after exceedance recalibration)
+        "calibration_components_final": res.get("components"),
         "split_summary": samples.groupby("split")["sample_uid"].nunique().to_dict(),
         "sample_weighting": sw_info,
     }
@@ -590,12 +607,13 @@ def trial_name(model: str, cw: dict | None, g: float, no_prior: bool = False) ->
 
 
 def _calibrate(df, fits, used, scope, feat_cols, C, cal_cfg, uq, pi_true, spec=None, sel_cfg=None,
-               decision_rule="argmax"):
+               decision_rule="argmax", exceed_maps=None):
     """
     Per-sensor calibrators (pooled fallback), selective thresholds, skill, and the selection
     score (classifier.selection; default: sample-count-weighted mean calibration RPS, as before).
-    Also returns the pooled calibrated calibration-sample probabilities (Q, y, w, lv) used for
-    the decision rule and interval calibration.
+    Also returns the pooled calibrated calibration-sample probabilities (Q, y, w, lv, g = sample
+    day) used for the decision rule, exceedance recalibration and interval calibration.
+    exceed_maps: fitted exceedance maps; every calibrator is wrapped (ExceedanceRecalibrator).
     """
     calibrators, selective, skill = {}, {}, {}
     min_cal = int(cal_cfg.get("min_samples", 30))
@@ -616,11 +634,13 @@ def _calibrate(df, fits, used, scope, feat_cols, C, cal_cfg, uq, pi_true, spec=N
         yp = np.concatenate([v[1]["ref_label"].to_numpy().astype(int) for v in raw.values()])
         wp = np.concatenate([v[1]["weight"].to_numpy() for v in raw.values()])
         calibrators["_pooled"] = make(next(iter(raw.values()))[2]).fit(Pp, np.eye(C)[yp], wp)
-    scores, wts, Qs, ys, ws, lvs = [], [], [], [], [], []
+        calibrators = wrap_calibrators(calibrators, exceed_maps)
+    scores, wts, Qs, ys, ws, lvs, gs = [], [], [], [], [], [], []
     for s, (Ps, meta, key) in raw.items():
         y = meta["ref_label"].to_numpy().astype(int)
         w = meta["weight"].to_numpy()
-        c = make(key).fit(Ps, np.eye(C)[y], w) if len(y) >= min_cal else calibrators.get("_pooled")
+        c = (wrap_calibrators({s: make(key).fit(Ps, np.eye(C)[y], w)}, exceed_maps)[s]
+             if len(y) >= min_cal else calibrators.get("_pooled"))
         calibrators[s] = c
         Q = c.transform(Ps) if c is not None else Ps
         u = predictive_entropy_norm(Q)
@@ -633,10 +653,13 @@ def _calibrate(df, fits, used, scope, feat_cols, C, cal_cfg, uq, pi_true, spec=N
         skill[s]["calibrator_source"] = "sensor" if len(y) >= min_cal else "pooled"
         scores.append(skill[s]["rps"] * len(y)); wts.append(len(y))
         Qs.append(Q); ys.append(y); ws.append(w)
+        gs.append((pd.to_datetime(meta["date"]).dt.strftime("%Y%m%d") if "date" in meta
+                   else meta["sample_uid"].astype(str)).to_numpy())
         lvs.append(meta["log10_value"].to_numpy(float) if "log10_value" in meta else np.full(len(y), np.nan))
     out = {"calibrators": calibrators, "selective": selective, "skill": skill,
            "Q": np.vstack(Qs) if Qs else None, "y": np.concatenate(ys) if ys else None,
-           "w": np.concatenate(ws) if ws else None, "lv": np.concatenate(lvs) if lvs else None}
+           "w": np.concatenate(ws) if ws else None, "lv": np.concatenate(lvs) if lvs else None,
+           "g": np.concatenate(gs) if gs else None}
     metric = str((sel_cfg or {}).get("metric", "rps")).lower()
     if not Qs:
         out.update(score=np.inf, components={"rps": np.inf})

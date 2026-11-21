@@ -87,6 +87,7 @@ def charm_cfg(yml: dict[str, Any]) -> dict[str, Any]:
     c.setdefault("pause_sec", 2.0)
     c.setdefault("radius_km", 10.0)
     c.setdefault("fallback_km", 30.0)
+    c.setdefault("coast_exclude_km", 6.0)     # coastal-edge diagnostic (2 C-HARM pixels)
     return c
 
 
@@ -368,6 +369,63 @@ def point_values(field: np.ndarray, lat, lon, plat, plon, radius_km=10.0, fallba
             dd = np.where(ok, dist, np.inf)
             out[k], mode[k] = float(sub.flat[int(np.argmin(dd))]), 2
     return out, mode
+
+
+def coast_distance_km(field: np.ndarray, lat, lon) -> np.ndarray:
+    """Distance (km) of every valid pixel to the nearest invalid one (land / outside the C-HARM domain)."""
+    from scipy.ndimage import distance_transform_edt
+    ok = np.isfinite(field)
+    dy = 111.0 * abs(float(np.median(np.diff(lat))))
+    dx = 111.0 * abs(float(np.median(np.diff(lon)))) * np.cos(np.deg2rad(float(np.nanmean(lat))))
+    d = distance_transform_edt(ok, sampling=(dy, dx))
+    return np.where(ok, d, np.nan)
+
+
+def point_values_ext(field: np.ndarray, lat, lon, plat, plon, radius_km=10.0, fallback_km=30.0,
+                     coast_exclude_km=6.0, coast_km: np.ndarray | None = None) -> dict[str, np.ndarray]:
+    """
+    point_values plus coastal-edge diagnostics:
+      mean / mode     as point_values (radius mean, nearest fallback)
+      nearest         nearest valid pixel within fallback_km
+      offcoast        radius mean over pixels >= coast_exclude_km from land / the domain edge
+                      (nearest such pixel within fallback_km otherwise)
+      coast_km        coast distance of the nearest valid pixel
+      edge_share      share of the radius pixels closer than coast_exclude_km to the coast
+    """
+    n = len(plat)
+    out = {k: np.full(n, np.nan) for k in ("mean", "nearest", "offcoast", "coast_km", "edge_share")}
+    out["mode"] = np.zeros(n, np.int8)
+    if field is None:
+        return out
+    cd = coast_distance_km(field, lat, lon) if coast_km is None else coast_km
+    m, mode = point_values(field, lat, lon, plat, plon, radius_km, fallback_km)
+    out["mean"], out["mode"] = m, mode
+    dlat = float(np.median(np.diff(lat)))
+    win = int(np.ceil(max(radius_km, fallback_km) / (111.0 * abs(dlat)))) + 1
+    for k, (a, b) in enumerate(zip(plat, plon)):
+        i = int(np.argmin(np.abs(lat - a)))
+        j = int(np.argmin(np.abs(lon - b)))
+        i0, i1, j0, j1 = max(i - win, 0), min(i + win + 1, len(lat)), max(j - win, 0), min(j + win + 1, len(lon))
+        sub, csub = field[i0:i1, j0:j1], cd[i0:i1, j0:j1]
+        if sub.size == 0:
+            continue
+        LA, LO = np.meshgrid(lat[i0:i1], lon[j0:j1], indexing="ij")
+        dist = haversine_km(a, b, LA, LO)
+        ok = np.isfinite(sub)
+        if not (ok & (dist <= fallback_km)).any():
+            continue
+        dd = np.where(ok, dist, np.inf)
+        q = int(np.argmin(dd))
+        out["nearest"][k], out["coast_km"][k] = float(sub.flat[q]), float(csub.flat[q])
+        inr = ok & (dist <= radius_km)
+        if inr.any():
+            out["edge_share"][k] = float((csub[inr] < coast_exclude_km).mean())
+        off = ok & (csub >= coast_exclude_km)
+        if (off & (dist <= radius_km)).any():
+            out["offcoast"][k] = float(sub[off & (dist <= radius_km)].mean())
+        elif (off & (dist <= fallback_km)).any():
+            out["offcoast"][k] = float(sub.flat[int(np.argmin(np.where(off, dist, np.inf)))])
+    return out
 
 
 def version_offsets(cfg: dict[str, Any], lead: int = 0, variables=("pseudo_nitzschia", "particulate_domoic",

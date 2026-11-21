@@ -45,7 +45,7 @@ import pandas as pd
 
 from sit_fuse.train.sf_uq_utils import (
     EPS, full_proba, predictive_entropy_norm, reliability_table, risk_coverage)
-from sit_fuse.pipelines.habs.uq.hab_uq_selection import decide, interval_bounds, interval_report
+from sit_fuse.pipelines.habs.uq.hab_uq_selection import decide, decision_spec, interval_bounds, interval_report
 from sit_fuse.pipelines.habs.uq.hab_uq_common import (
     exceedance_probability, log10_concentration_quantile, ranked_probability_score, species_spec)
 from sit_fuse.pipelines.habs.uq.hab_uq_matchups import sample_level
@@ -140,7 +140,7 @@ def prob_scores(P, y, w, spec, pi_clim, log10_obs=None, interval_cal=None) -> di
 
 def eval_options(bundle) -> dict[str, Any]:
     """Decision rule and interval calibration stored in a bundle (argmax / none for older bundles)."""
-    return {"decision": (bundle.get("decision") or {}).get("rule", "argmax"),
+    return {"decision": decision_spec(bundle),
             "interval_cal": bundle.get("interval_calibration")}
 
 
@@ -150,7 +150,9 @@ def score_block(P, meta, spec, pi_clim, baseline=None, selective_thr=None, decis
     y = meta["ref_label"].to_numpy().astype(int)
     w = meta["weight"].to_numpy(dtype=float)
     pred = decide(P, decision)
-    res = {"n_samples": int(len(y)), "decision_rule": decision,
+    res = {"n_samples": int(len(y)),
+           "decision_rule": decision.get("rule") if isinstance(decision, dict) else decision,
+           **({"decision_thresholds": decision.get("thresholds")} if isinstance(decision, dict) else {}),
            "uq": {**hard_scores(pred, y, w, C),
                   **prob_scores(P, y, w, spec, pi_clim, meta["log10_value"].to_numpy(), interval_cal)}}
     if decision != "argmax":
@@ -275,6 +277,12 @@ def evaluate_bundle(bundle, frame: pd.DataFrame, out_dir, n_boot: int = 500,
         "selected_class_weighting": bundle.get("class_weighting"),
         "selected_prior_correction_strength": bundle.get("prior_correction_strength"),
         "decision": bundle.get("decision"),
+        "exceedance_recalibration": bundle.get("exceedance_recalibration"),
+        "calibration_components_final": bundle.get("calibration_components_final"),
+        # calibration-split selection components of every trial (e.g. prior strength 1 vs selected)
+        "trial_components": {k: {c: v["components"].get(c) for c in ("rps", "rpss", "exceedance_brier",
+                                                                       "exceedance_brier_by_threshold")}
+                             for k, v in ((bundle.get("model_selection") or {}).get("trials") or {}).items()},
         "interval_calibration": {k: v for k, v in (bundle.get("interval_calibration") or {}).items() if k != "grid"}
         or None,
         "holdout_locations": ((uq.get("splits") or {}).get("holdout_locations")),

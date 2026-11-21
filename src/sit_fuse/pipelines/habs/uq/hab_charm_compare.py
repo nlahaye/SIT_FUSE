@@ -7,14 +7,20 @@ consistency and a merged summary. Stages (each a CLI action, parallel by target 
                model -> charm_compare/pn_combination.json (selected method)
   points       in-situ evaluation on the test split, one target (pn | pda | cda), all leads:
                C-HARM read at the sample (mean of valid 3 km pixels within radius_km, nearest
-               valid pixel within fallback_km otherwise), SIT-FUSE streams = fused, per
+               valid pixel within fallback_km otherwise; plus the coastal-edge variants
+               charm_p_nearest and charm_p_offcoast = radius mean without pixels closer than
+               coast_exclude_km to land / the domain edge, and stratum coast_bin by the
+               coast distance of the nearest pixel), SIT-FUSE streams = fused, per
                instrument type (viirs, olci, modis, oci), per sensor, and for pn the direct
                total model plus the size-class combinations. Brier, BSS (vs. training base rate),
                log loss, ROC / PR AUC, ECE, reliability, POD / FAR / CSI at 0.5 and at the
                calibration-tuned cutoff; paired site-week block bootstrap of the differences;
                strata: year, season, C-HARM version, source, chlorophyll bin, match mode.
   maps         one target x year: SIT-FUSE streams averaged onto the C-HARM grid (block mean of
-               probabilities), daily rank correlation, bias, MAE, kappa / IoU at 0.5, coverage,
+               probabilities), daily rank correlation, bias, MAE, kappa / IoU at 0.5, at the
+               calibration-tuned point cutoffs of each stream (points must run first; skipped
+               otherwise) and equal-area (ours thresholded at the quantile that flags the same
+               area as C-HARM at its tuned cutoff, scale-free), coverage,
                alongshore (Hovmoller) means in a coastal strip; daily stacks for animation.
   consistency  one year, native product grid: chlorophyll biomass ceiling (PN cells <= chl /
                q_chl_min), total-vs-size-class bounds, P(pDA >= 0.5) <= P(PN >= 0.5e6 / cDA_max);
@@ -28,7 +34,7 @@ consistency and a merged summary. Stages (each a CLI action, parallel by target 
   python -m sit_fuse.pipelines.habs.uq.hab_charm_compare summary -y <yaml>
 
 Config: uq.charm (see hab_charm) plus
-  leads: [0, 1, 2, 3]          map_leads: [0]
+  leads: [0, 1, 2, 3]          map_leads: [0]       coast_exclude_km: 6
   n_bootstrap: 500             copula_samples: 256
   coastal_km: 30               hovmoller_dlat: 0.1
   chl_dirs: {snpp: /path, ...}  (L3m CHL / PACE BGC; sync_l3m_rrs --suite CHL)
@@ -63,6 +69,9 @@ TARGETS = {
 FAMILIES = ("viirs", "olci", "modis", "oci")
 CHL_BINS = [0, 1, 3, 10, np.inf]
 CHL_LABELS = ["<1", "1-3", "3-10", ">=10"]
+COAST_BINS = [0, 6, 12, 24, np.inf]
+COAST_LABELS = ["<6km", "6-12km", "12-24km", ">=24km"]
+CHARM_VARIANTS = ("charm_p", "charm_p_nearest", "charm_p_offcoast")
 
 
 def _thr_name(t: float) -> str:
@@ -377,18 +386,21 @@ def _combination(yml):
 def charm_at_samples(c, samples: pd.DataFrame, var: str, lead: int) -> pd.DataFrame:
     arc = hc.CharmArchive(c, lead)
     rows = []
+    cols = ["sample_uid", "charm_p", "charm_mode", "charm_chla", "charm_version", "charm_p_nearest",
+            "charm_p_offcoast", "charm_coast_km", "charm_edge_share"]
     for d, g in samples.groupby(samples["date"].dt.normalize()):
         f = arc.read(d, [var, "chla_filled"])
         if f is None:
             continue
-        p, mode = hc.point_values(f[var], f["lat"], f["lon"], g["Latitude"].to_numpy(), g["Longitude"].to_numpy(),
-                                  c["radius_km"], c["fallback_km"])
-        ch, _ = hc.point_values(f["chla_filled"], f["lat"], f["lon"], g["Latitude"].to_numpy(),
-                                g["Longitude"].to_numpy(), c["radius_km"], c["fallback_km"])
-        rows.append(pd.DataFrame({"sample_uid": g["sample_uid"].astype(str).to_numpy(), "charm_p": p,
-                                  "charm_mode": mode, "charm_chla": ch, "charm_version": f["version"]}))
-    return pd.concat(rows, ignore_index=True) if rows else pd.DataFrame(
-        columns=["sample_uid", "charm_p", "charm_mode", "charm_chla", "charm_version"])
+        la, lo = g["Latitude"].to_numpy(), g["Longitude"].to_numpy()
+        e = hc.point_values_ext(f[var], f["lat"], f["lon"], la, lo, c["radius_km"], c["fallback_km"],
+                                float(c.get("coast_exclude_km", 6.0)))
+        ch, _ = hc.point_values(f["chla_filled"], f["lat"], f["lon"], la, lo, c["radius_km"], c["fallback_km"])
+        rows.append(pd.DataFrame({"sample_uid": g["sample_uid"].astype(str).to_numpy(), "charm_p": e["mean"],
+                                  "charm_mode": e["mode"], "charm_chla": ch, "charm_version": f["version"],
+                                  "charm_p_nearest": e["nearest"], "charm_p_offcoast": e["offcoast"],
+                                  "charm_coast_km": e["coast_km"], "charm_edge_share": e["edge_share"]}))
+    return pd.concat(rows, ignore_index=True) if rows else pd.DataFrame(columns=cols)
 
 
 def _season(d):
@@ -443,13 +455,14 @@ def run_points(yml, target: str) -> dict[str, Any]:
         T["year"] = T["date"].dt.year.astype(str)
         T["season"] = _season(T["date"])
         T["lead"] = lead
+        T["coast_bin"] = pd.cut(T["charm_coast_km"], COAST_BINS, labels=COAST_LABELS, right=False).astype(str)
         tables.append(T.reset_index(drop=True))
-        streams_here = ["charm_p"] + list(preds["test"])
+        streams_here = [v for v in CHARM_VARIANTS if v in T] + list(preds["test"])
         cut = {s: tune_cutoff(Ccal[s], Ccal["y"]) if s in Ccal else None for s in streams_here}
         for s in streams_here:
             if s not in T:
                 continue
-            for stratum in ("all", "year", "season", "charm_version", "source", "chl_bin", "charm_mode"):
+            for stratum in ("all", "year", "season", "charm_version", "source", "chl_bin", "charm_mode", "coast_bin"):
                 groups = [("all", T)] if stratum == "all" else list(T.groupby(stratum))
                 for lvl, g in groups:
                     ok = g[s].notna() & g["charm_p"].notna()      # common sample set with C-HARM
@@ -462,9 +475,14 @@ def run_points(yml, target: str) -> dict[str, Any]:
             if ok.sum():
                 r = reliability(T.loc[ok, s], T.loc[ok, "y"])
                 rel.append(r.assign(target=target, lead=lead, stream=s))
-                if s != "charm_p":
+                if s not in CHARM_VARIANTS:
                     pb = paired_bootstrap(T[ok].reset_index(drop=True), s, "charm_p", int(c["n_bootstrap"]))
                     paired.append({"target": target, "lead": lead, "stream": s, "vs": "charm", **pb})
+                    ok2 = ok & T["charm_p_offcoast"].notna() if "charm_p_offcoast" in T else None
+                    if ok2 is not None and ok2.sum():
+                        pb = paired_bootstrap(T[ok2].reset_index(drop=True), s, "charm_p_offcoast",
+                                              int(c["n_bootstrap"]))
+                        paired.append({"target": target, "lead": lead, "stream": s, "vs": "charm_offcoast", **pb})
     pd.concat(tables, ignore_index=True).to_csv(out / f"points_{target}.csv.gz", index=False)
     pd.DataFrame(scores).to_csv(out / f"scores_{target}.csv", index=False)
     pd.DataFrame(paired).to_csv(out / f"paired_{target}.csv", index=False)
@@ -475,7 +493,7 @@ def run_points(yml, target: str) -> dict[str, Any]:
         extra["ceiling_empirical"] = ceiling_empirical(sf, c["consistency"])
     (out / f"points_{target}.json").write_text(json.dumps(
         {"target": target, "threshold": thr, "base_rate_train": base_rate, "n_test": int((sf["split"] == "test").sum()),
-         "streams": ["charm_p"] + list(preds["test"]), **extra}, indent=2, default=str))
+         "streams": list(CHARM_VARIANTS) + list(preds["test"]), **extra}, indent=2, default=str))
     LOG.info("points %s -> %s", target, out)
     return {"out": str(out)}
 
@@ -540,7 +558,20 @@ def coastal_strip(land_nan: np.ndarray, km: float, dlat: float) -> np.ndarray:
     return (~land_nan) & (d <= km)
 
 
-def map_metrics(a, b) -> dict[str, float]:
+def _agree(ax, by, tag) -> dict[str, float]:
+    po = float((ax == by).mean())
+    pe = float(ax.mean() * by.mean() + (1 - ax.mean()) * (1 - by.mean()))
+    inter, union = int((ax & by).sum()), int((ax | by).sum())
+    return {f"kappa_{tag}": float((po - pe) / (1 - pe)) if pe < 1 else np.nan,
+            f"iou_{tag}": inter / union if union else np.nan}
+
+
+def map_metrics(a, b, cut_a: float | None = None, cut_b: float | None = None) -> dict[str, float]:
+    """
+    a = ours, b = C-HARM on the same grid. kappa / IoU at 0.5; at the calibration-tuned point cutoffs
+    (cut_a, cut_b) when given; and equal-area: b at cut_b (0.5 without it), a at the quantile that
+    flags the same share of the overlap (rank agreement of the alert areas, no calibration needed).
+    """
     from scipy.stats import spearmanr
     ok = np.isfinite(a) & np.isfinite(b)
     n = int(ok.sum())
@@ -549,14 +580,43 @@ def map_metrics(a, b) -> dict[str, float]:
         return r
     x, y = a[ok], b[ok]
     ax, by = x >= 0.5, y >= 0.5
-    po = float((ax == by).mean())
-    pe = float(ax.mean() * by.mean() + (1 - ax.mean()) * (1 - by.mean()))
-    inter, union = int((ax & by).sum()), int((ax | by).sum())
     r.update(spearman=float(spearmanr(x, y).statistic), bias=float((x - y).mean()), mae=float(np.abs(x - y).mean()),
-             kappa_0p5=float((po - pe) / (1 - pe)) if pe < 1 else np.nan,
-             iou_0p5=inter / union if union else np.nan, ours_alert_frac=float(ax.mean()),
-             charm_alert_frac=float(by.mean()))
+             **_agree(ax, by, "0p5"), ours_alert_frac=float(ax.mean()), charm_alert_frac=float(by.mean()))
+    if cut_a is not None and cut_b is not None:
+        at, bt = x >= cut_a, y >= cut_b
+        r.update(**_agree(at, bt, "tuned"), ours_alert_frac_tuned=float(at.mean()),
+                 charm_alert_frac_tuned=float(bt.mean()), cut_ours=float(cut_a), cut_charm=float(cut_b))
+    cb = 0.5 if cut_b is None else float(cut_b)
+    be = y >= cb
+    fb = float(be.mean())
+    if 0 < fb < 1:
+        qa = float(np.quantile(x, 1 - fb))
+        r.update(**_agree(x >= qa, be, "eqarea"), eqarea_frac=fb, eqarea_cut_ours=qa)
     return r
+
+
+def points_stream_name(target: str, map_stream: str, selected_method: str | None = None) -> str:
+    """Map-layer name -> points stream name (scores_<target>.csv)."""
+    if map_stream == "charm":
+        return "charm_p"
+    if target == "pn":
+        if map_stream == "combined":
+            return f"combined_{selected_method or 'copula'}_fused"
+        return "direct_" + map_stream
+    return map_stream
+
+
+def tuned_cutoffs(yml, target: str, lead: int = 0) -> dict[str, float]:
+    """{points stream: calibration-tuned cutoff} from points/<target>/scores_<target>.csv (stratum all)."""
+    p = cmp_dir(yml) / "points" / target / f"scores_{target}.csv"
+    if not p.exists() or os.path.getsize(p) < 2:
+        LOG.warning("no point scores for %s (run points first): tuned map cutoffs skipped", target)
+        return {}
+    s = pd.read_csv(p)
+    if "cutoff_tuned" not in s:
+        return {}
+    s = s[(s["stratum"] == "all") & (s["lead"] == lead) & s["cutoff_tuned"].notna()]
+    return dict(zip(s["stream"], s["cutoff_tuned"].astype(float)))
 
 
 def run_maps(yml, target: str, year: int) -> dict[str, Any]:
@@ -574,7 +634,9 @@ def run_maps(yml, target: str, year: int) -> dict[str, Any]:
     comb = _combination(yml) if target == "pn" else None
     gspec = spec_of(yml, PN_GROUPS[0]) if target == "pn" else None
     rows, hov = [], []
+    sel_m = comb.get("selected_method", "copula") if comb else None
     for lead in c["map_leads"]:
+        cuts = tuned_cutoffs(yml, target, lead)
         arc = hc.CharmArchive(c, lead)
         if not len(arc.dates()):
             LOG.warning("no C-HARM cache for lead %d", lead)
@@ -635,7 +697,7 @@ def run_maps(yml, target: str, year: int) -> dict[str, Any]:
                                    "target": target, "threshold": thr}, nodata=NODATA)
             cov_ref = np.isfinite(ch) & strip
             for k in layers:
-                m = map_metrics(stack[k], ch)
+                m = map_metrics(stack[k], ch, cuts.get(points_stream_name(target, k, sel_m)), cuts.get("charm_p"))
                 m["coverage_fraction"] = float((np.isfinite(stack[k]) & cov_ref).sum() / max(cov_ref.sum(), 1))
                 rows.append({"target": target, "date": d, "lead": lead, "charm_version": f["version"],
                              "stream": k, **m})
@@ -791,6 +853,11 @@ def run_summary(yml) -> dict[str, Any]:
         s = pd.concat(sc, ignore_index=True)
         s.to_csv(base / "summary_point_scores.csv", index=False)
         res["point_rows"] = len(s)
+        ce = s[s["stream"].isin(CHARM_VARIANTS) & s["stratum"].isin(["all", "coast_bin"])]
+        if len(ce):
+            keep = [k for k in ("target", "lead", "stream", "stratum", "level", "n", "n_events", "event_rate",
+                                "mean_p", "brier", "bss", "roc_auc", "cutoff_tuned") if k in ce]
+            ce[keep].to_csv(base / "summary_coastal_edge.csv", index=False)
     pr = [pd.read_csv(p) for p in glob.glob(str(base / "points" / "*" / "paired_*.csv")) if os.path.getsize(p) > 1]
     if pr:
         pd.concat(pr, ignore_index=True).to_csv(base / "summary_paired.csv", index=False)
@@ -802,7 +869,9 @@ def run_summary(yml) -> dict[str, Any]:
         g = m.groupby(["target", "stream", "lead", "charm_version", "year"]).agg(
             days=("date", "nunique"), spearman=("spearman", "median"), bias=("bias", "median"),
             kappa_0p5=("kappa_0p5", "median"), iou_0p5=("iou_0p5", "median"),
-            coverage=("coverage_fraction", "median")).reset_index()
+            coverage=("coverage_fraction", "median"),
+            **{c: (c, "median") for c in ("kappa_tuned", "iou_tuned", "kappa_eqarea", "iou_eqarea",
+                                          "eqarea_frac", "cut_ours", "cut_charm") if c in m}).reset_index()
         g.to_csv(base / "summary_map_agreement.csv", index=False)
     cs = [pd.read_csv(p) for p in glob.glob(str(base / "consistency" / "*" / "consistency_*.csv")) if os.path.getsize(p) > 1]
     if cs:
