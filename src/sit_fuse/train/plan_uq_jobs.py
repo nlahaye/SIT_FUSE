@@ -18,6 +18,12 @@ Per pipeline (one UQ config, e.g. tempo_smoke / goes_fire):
 Per fusion (smoke / fire): fusion_fit (after the geo jobs of its pipelines) -> fusion_apply (shard) -> fusion_merge
   [-> fusion_visuals with fusion.<name>.visuals: <make_fusion_visuals.py config>]
 joint_visuals: after every visuals and fusion_merge job.
+extra_jobs: raw sit_fuse.local_launcher job specs added to the same plan (e.g. matchup preparation before a pipeline,
+  production runs or animations after it), with three extra keys resolved here:
+    before: [pipe, ...]     the pipeline's first planned stage (features / train / infer ...) waits for this job
+    after_geo: [pipe, ...]  waits for the pipeline's geo jobs (no wait when that geo export is already finished)
+    after_fusion: [name]    waits for that fusion's merge job (no wait when it is not in the plan)
+  `after` (other extra jobs or planner job names), cases / grid, cpus, gpu, creates, provides, needs pass through.
 
 Resume (resume: true, the default): stages whose outputs already exist are left out of the plan, so a run started
 without the launcher (or with a deleted state_dir) continues where it stopped. Finished = upstream finished and outputs
@@ -213,6 +219,52 @@ def _check_fusion_sources(fname, fcfg_path, after_uq):
     return msgs
 
 
+def extra_jobs(specs, J, pipes, tok, ab, train_dir, py, stages):
+    """
+    extra_jobs entries -> launcher job specs. `before: [pipe]` adds an `after: {name, on: [pipe]}` join to every
+    planned stage job of those pipelines (cases of the extra job get pipe=<pipe>, so other pipelines do not wait);
+    after_geo / after_fusion become `needs` on the planner's geo / fusion tokens, kept only for planned jobs.
+    {train} and {py} in cmd expand to train_dir and python.
+    """
+    planned = {}
+    for j in J:
+        for c in j["cases"]:
+            planned.setdefault(j["name"], set()).add(c.get("pipe") or c.get("fusion"))
+    out, names = [], {j["name"] for j in J}
+    for sp in specs:
+        sp = dict(sp)
+        name = sp["name"]
+        if name in names:
+            raise ValueError(f"extra_jobs: {name!r} clashes with a planner job name")
+        names.add(name)
+        if sp.pop("enabled", True) is False:
+            continue
+        before = list(sp.pop("before", None) or [])
+        bad = [p for p in before + list(sp.get("after_geo") or []) if p not in pipes]
+        if bad:
+            raise ValueError(f"extra_jobs {name}: {bad} are not pipelines")
+        if before:
+            if len(before) > 1 and (sp.get("cases") or sp.get("grid")):
+                raise ValueError(f"extra_jobs {name}: before several pipelines needs no cases / grid")
+            base = sp.get("cases") or [{}]
+            sp["cases"] = [dict(c, pipe=p) for p in before for c in base]
+            sp.setdefault("id_keys", sorted({k for c in sp["cases"] for k in c if k != "pipe"}) or ["pipe"])
+            for j in J:                               # every stage job of those pipelines (transitive anyway)
+                if j["name"] in ("features", "features_merge", "train", "infer", "infer_merge", "evaluate",
+                                 "compare", "geo") and any(c.get("pipe") in before for c in j["cases"]):
+                    j["after"] = list(j.get("after") or []) + [{"name": name, "on": ["pipe"]}]
+        needs = list(sp.get("needs") or [])
+        needs += [tok("geo", p) for p in sp.pop("after_geo", None) or [] if p in planned.get("geo", ())]
+        needs += [tok("fusion", f) for f in sp.pop("after_fusion", None) or []
+                  if f"fusion_merge_{f}" in planned]
+        if needs:
+            sp["needs"] = needs
+        sp["cmd"] = str(sp["cmd"]).replace("{train}", shlex.quote(train_dir)).replace("{py}", shlex.quote(py))
+        sp.setdefault("cpus", 1)
+        out.append(sp)
+    return out
+
+
 def build_plan(cfg, base_dir, resume=None):
     def ab(p):
         return str(p if os.path.isabs(str(p)) else (base_dir / p).resolve())
@@ -338,7 +390,7 @@ def build_plan(cfg, base_dir, resume=None):
             job(f"fusion_merge_{c['fusion']}", "fusion", [c],
                 cmd("fuse_multiscale_products.py", "-c {fcfg}", "--stage merge --n-shards {nfs}", "-n {cpus}"),
                 after=[f"fusion_apply_{c['fusion']}"], cpus=res["fusion_merge"], id_keys=("fusion",),
-                provides=[tok("fusion", "all")])
+                provides=[tok("fusion", "all"), tok("fusion", c["fusion"])])
             if sp_vis.get(c["fusion"]):              # fusion.<name>.visuals: make_fusion_visuals.py config
                 job(f"fusion_visuals_{c['fusion']}", "fusion", [dict(c, fvis=ab(sp_vis[c["fusion"]]))],
                     cmd("make_fusion_visuals.py", "-c {fvis}"), after=[f"fusion_merge_{c['fusion']}"],
@@ -351,9 +403,10 @@ def build_plan(cfg, base_dir, resume=None):
         job("joint_visuals", "joint_visuals", [{"jcfg": ab(jv["config"])}], cmd("make_joint_visuals.py", "-c {jcfg}"),
             id_keys=(), needs=needs)
 
+    J += extra_jobs(cfg.get("extra_jobs") or [], J, pipes, tok, ab, train_dir, py, stages)
     names = {j["name"] for j in J}
     for j in J:                          # drop dependencies on omitted stages (assumed done)
-        j["after"] = [a for a in j["after"] if a in names]
+        j["after"] = [a for a in j.get("after") or [] if (a if isinstance(a, str) else a["name"]) in names]
         if not j["after"]:
             del j["after"]
     env = dict(launcher.pop("env", None) or {})
@@ -381,7 +434,11 @@ def main(argv=None):
     out = out if out.is_absolute() else base / out
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(yaml.safe_dump(plan, sort_keys=False, width=200))
-    n = sum(len(j["cases"]) for j in plan["jobs"])
+    try:                                                   # cases / grid expanded as the launcher does
+        from sit_fuse.local_launcher import _expand_params
+        n = sum(len(list(_expand_params(j))) for j in plan["jobs"])
+    except Exception:  # noqa: BLE001
+        n = sum(len(j.get("cases") or [0]) for j in plan["jobs"])
     run = [sys.executable, "-m", "sit_fuse.local_launcher", "run", str(out)] + extra
     print(f"wrote {out}: {len(plan['jobs'])} job specs, {n} jobs\n  " + " ".join(map(shlex.quote, run)))
     if a.run:

@@ -1,0 +1,71 @@
+# GOES-18 (recalibrated) + TEMPO smoke fusion at the 5-min GOES cadence: one fused frame per GOES CONUS scene.
+# Same as configs/fusion_config.smoke.yaml except three lines (marked 5-MIN): output_dir FUSION/UQ_SMOKE_RECAL_5MIN,
+# sources.goes.frames.minutes 5 (was 10: two 5-min scenes pooled per frame) and temporal.match_window_minutes 2
+# (was 5: a 5-min frame would also pool its neighbours). Fit on the same evaluation geo products (full all-scene run).
+#   python fuse_multiscale_products.py -c configs/fusion_config.smoke_5min.yaml --stage all -n 8
+# Fitted by uq_parallel.goes_fire_ts_2026.yaml (fusion smoke_5min); production_2026_goes_smoke_0726.yaml applies its
+# weights (models_from FUSION/UQ_SMOKE_RECAL_5MIN). If your fusion_config.smoke.yaml has changed since, apply the three
+# 5-MIN edits to a copy of it instead.
+product: smoke
+output_dir: /data/nlahaye/output/Learnergy/FUSION/UQ_SMOKE_RECAL_5MIN   # 5-MIN: new dir (10-min fit kept in UQ_SMOKE_RECAL)
+
+sources:
+  tempo:
+    geo_dir: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ/geo   # CHECK: TEMPO geo_export.output_dir
+    manifest: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ/geo/geo_products_manifest.json
+    model: hist_gradient_boosting
+    frames: {mode: scan}                 # one E-W TEMPO scan per frame
+    default_logit_sd: 1.0                # used where ensemble q05/q95 bands are missing
+    min_logit_sd: 0.05
+  goes:
+    geo_dir: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/UQ_SMOKE_RECAL/geo   # geo_export.output_dir of g18_uq_config_smoke_recal.yaml
+    manifest: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/UQ_SMOKE_RECAL/geo/geo_products_manifest.json
+    model: hist_gradient_boosting
+    frames: {mode: time, minutes: 5}     # 5-MIN: one frame per 5-min ABI CONUS scene
+    default_logit_sd: 1.0
+
+grids:
+  fine:   {from: goes}                   # ABI grid (about 2 km)
+  coarse: {from: tempo}                  # TEMPO product grid (about 70 km2 cells)
+  # or explicit: {bounds: [-125, 32, -114, 46], resolution: 0.02, crs: EPSG:4326}
+
+change_of_support:
+  smoke_aggregate: mean                  # fine -> coarse: area-weighted mean probability
+  disaggregation_logit_var: 0.25
+  min_coverage: 0.5
+
+temporal:
+  output_times: goes                     # goes | tempo | union
+  match_window_minutes: 2                # 5-MIN: each output uses only its own GOES scene
+  goes_pool: mean_logit
+  causal: true                           # TEMPO carried forward only from earlier scans
+  tempo_lookahead_minutes: 5
+  carry_forward_max_minutes: 90
+  carry_forward_sd_per_hour: 0.5
+
+references:
+  adp_smoke:                             # TEMPO-ABI ADP: uses ABI tests, so not independent of GOES - CHECK path
+    glob: /data/nlahaye/remoteSensing/data_pull/tempo_adp/rasters/smoke_*.tif
+    tolerance_minutes: 10
+  viirs_smoke:                           # VIIRS Deep Blue aerosol type, nearest overpass - CHECK path
+    glob: /data/nlahaye/remoteSensing/data_pull/viirs_aerosol_type/rasters/viirs_smoke_*.tif
+    tolerance_minutes: 30
+
+fusion:
+  fit_reference: adp_smoke
+  fit_split: calibration
+  eval_split: holdout
+  grids: [fine, coarse]
+  l2: 1.0e-3
+  recalibration: none                    # none | temperature | platt | isotonic (GOES is already Platt-recalibrated;
+                                         # try platt here if fusion_reliability.csv shows compressed fused probabilities)
+  threshold_metric: f1
+  threshold_grid: {scale: linear, min: 0.02, max: 0.95, n: 94}
+  max_negatives_per_frame: 20000
+  max_positives_per_frame: 20000
+  seed: 0
+  reliability_bins: 10                   # fusion_reliability.csv
+  # models_from: <fitted output_dir>     # apply / merge with weights fitted elsewhere (production)
+
+output:
+  splits: [calibration, holdout, dev]    # fused rasters to write (mixed frames are skipped)
