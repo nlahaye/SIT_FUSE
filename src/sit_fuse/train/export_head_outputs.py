@@ -24,6 +24,16 @@ Notes on the existing SIT-FUSE outputs
 
 Usage:
     python export_head_outputs.py export_config.yaml
+
+Reusing head outputs that already exist (optional config keys)
+---------------------------------------------------------------
+  skip_existing: true   inputs whose <output_dir>/<input>.head_outputs.tif exists with the same encoder and head
+                        settings (tags sit_fuse_yaml, top_k_parent, top_k_child, n_parent_ranks) are not exported.
+  heads_from: [dirs]    inputs missing in output_dir are symlinked from the first dir holding a same-encoder head
+                        output of that input (searched recursively; e.g. the smoke heads for a fire export). Heads
+                        of another encoder are skipped and exported here. Implies skip_existing.
+A file in output_dir with another encoder's tags, or a link to one, is replaced; a new export never writes through
+a link, so linked files of another run are not modified.
 """
 
 from __future__ import annotations
@@ -41,20 +51,12 @@ from sit_fuse.datasets.dataset_utils import get_prediction_dataset
 from sit_fuse.inference.generate_output import prep_model
 from sit_fuse.utils import get_read_func, read_yaml
 
-try:  # package import (pipelines); bare import kept for script use from train/
-    from sit_fuse.train.sf_uq_utils import (
-        FORMAT_VERSION,
-        HEAD_NODATA,
-        head_band_names,
-        write_band_stack,
-    )
-except ImportError:  # pragma: no cover
-    from sf_uq_utils import (
-        FORMAT_VERSION,
-        HEAD_NODATA,
-        head_band_names,
-        write_band_stack,
-    )
+from sf_uq_utils import (
+    FORMAT_VERSION,
+    HEAD_NODATA,
+    head_band_names,
+    write_band_stack,
+)
 
 LOG = logging.getLogger("export-head-outputs")
 
@@ -112,12 +114,9 @@ def _summaries(P: torch.Tensor, k: int):
 
 
 @torch.no_grad()
-def head_distributions(model, x: torch.Tensor, cfg: dict, return_aux: bool = False):
+def head_distributions(model, x: torch.Tensor, cfg: dict) -> np.ndarray | None:
     """
     Returns (N_pixels, n_bands) float32 in head_band_names() order.
-    return_aux=True also returns the full root-head probabilities P (N, n_parent)
-    and encoder embeddings E (N, D) as torch tensors, so callers (e.g. the HAB
-    inference pipeline: MC input noise, embedding OOD) need no second forward.
     """
     Kp = int(cfg.get("top_k_parent", 5))
     Kc = int(cfg.get("top_k_child", 3))
@@ -184,10 +183,7 @@ def head_distributions(model, x: torch.Tensor, cfg: dict, return_aux: bool = Fal
             cols += [child_ids[r, :, j].float(), child_ps[r, :, j]]
         cols += [child_mass[r]]
     cols += [c_max, c_margin, c_ent, joint_prob]
-    rows = torch.stack(cols, dim=1).cpu().numpy().astype(np.float32)
-    if return_aux:
-        return rows, P, E
-    return rows
+    return torch.stack(cols, dim=1).cpu().numpy().astype(np.float32)
 
 
 # ---------------------------------------------------------------------------
@@ -407,15 +403,65 @@ def select_input_files(cfg: dict, sf_yaml: dict) -> list:
     return files
 
 
+def reuse_existing(cfg: dict, files, refs, subsets, out_dir: Path):
+    """skip_existing / heads_from (see module docstring). Returns the (files, refs, subsets) still to export.
+    The encoder check and directory index are build_production_run._same_encoder / _head_index."""
+    if not (cfg.get("skip_existing") or cfg.get("heads_from")):
+        return files, refs, subsets
+    import rasterio
+    from build_production_run import _head_index, _same_encoder
+    settings = {"sit_fuse_yaml": cfg["sit_fuse_yaml"], "head_export": cfg.get("head_export") or {}}
+    srcs = []
+    for d in cfg.get("heads_from") or []:
+        if Path(d).is_dir():
+            srcs.append(str(d))
+        else:
+            LOG.warning("heads_from %s not found", d)
+    ok = {}
+
+    def good(p) -> bool:
+        p = os.path.realpath(p)
+        if p not in ok:
+            try:
+                with rasterio.open(p) as r:
+                    ok[p] = _same_encoder(r.tags(), settings)
+            except Exception:  # noqa: BLE001  (unreadable / truncated: export again)
+                ok[p] = False
+        return ok[p]
+
+    todo, n_have, n_link, n_other = [], 0, {}, 0
+    for f, ref, sub in zip(files, refs, subsets):
+        name = f"{os.path.basename(f[0] if isinstance(f, list) else f)}.head_outputs.tif"
+        dst = out_dir / name
+        if dst.exists() and good(dst):
+            n_have += 1
+            continue
+        hit = None
+        for d in srcs:
+            p = _head_index(d).get(name)
+            if not p or os.path.realpath(p) == os.path.realpath(dst):
+                continue
+            if good(p):
+                hit = d, p
+                break
+            n_other += 1
+        if dst.is_symlink() or dst.exists():
+            dst.unlink()                # other encoder / unreadable / dangling link: never written through
+        if hit:
+            os.symlink(os.path.realpath(hit[1]), dst)
+            n_link[hit[0]] = n_link.get(hit[0], 0) + 1
+            continue
+        todo.append((f, ref, sub))
+    LOG.info("head outputs: %d already in %s, %s linked, %d candidates of another encoder skipped, %d to export",
+             n_have, out_dir, n_link or 0, n_other, len(todo))
+    return [t[0] for t in todo], [t[1] for t in todo], [t[2] for t in todo]
+
+
 def run(cfg: dict) -> None:
     sf_yaml = read_yaml(cfg["sit_fuse_yaml"])
     ex = cfg.get("head_export", {})
     out_dir = Path(cfg["output_dir"])
     out_dir.mkdir(parents=True, exist_ok=True)
-
-    model = prep_model(sf_yaml)
-    model.eval()
-    device = next(model.pretrained_model.parameters()).device
 
     files = select_input_files(cfg, sf_yaml)
     georef_cfg = cfg.get("georef", {}) or {}
@@ -424,6 +470,14 @@ def run(cfg: dict) -> None:
     use_inputs = georef_cfg.get("use_input_files", "auto")
     if not (len(files) == len(refs) == len(subsets)):
         raise ValueError("files, georef.reference_geotiffs and georef.subset_inds must align.")
+    files, refs, subsets = reuse_existing(cfg, files, refs, subsets, out_dir)
+    if not files:
+        LOG.info("nothing to export")
+        return
+
+    model = prep_model(sf_yaml)
+    model.eval()
+    device = next(model.pretrained_model.parameters()).device
 
     tiled = bool(sf_yaml["data"].get("tile", False))
     batch = int(ex.get("batch_size", 5 if tiled else 10000))
