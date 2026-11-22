@@ -253,6 +253,8 @@ SENSORS = {
     "s3a": SensorSpec("s3a", INSTRUMENT_PREFIX["s3a"], "Sentinel-3A", 10.0, "descending", "olci"),
     "s3b": SensorSpec("s3b", INSTRUMENT_PREFIX["s3b"], "Sentinel-3B", 10.0, "descending", "olci"),
     "pace": SensorSpec("pace", INSTRUMENT_PREFIX["pace"], "PACE", 13.0, "ascending", "oci"),
+    # GOES-18 ABI daily composite (followon.goes_ocean): median of ~17-23 UTC scans -> local noon
+    "goes18": SensorSpec("goes18", INSTRUMENT_PREFIX["goes18"], "GOES-18", 12.0, "geostationary", "abi"),
 }
 
 

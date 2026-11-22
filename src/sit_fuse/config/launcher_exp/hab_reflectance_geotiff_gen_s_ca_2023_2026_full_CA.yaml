@@ -1,0 +1,402 @@
+# FULL RUN 2023-01..2026-09 (uq_full_2023_2026_ifcb): one window over the whole period, all in-situ
+# sources (piers + IFCB with the chain correction re-ingested), true held-out piers optional,
+# and the selection / decision / interval changes:
+#   - calibration prior correction on, strength fit on calibration samples (prior_strength_grid)
+#   - stronger / full inverse class weighting searched (classifier.class_weighting_grid)
+#   - selection by a composite of 1 - RPSS and the alert-threshold Brier ratio (classifier.selection)
+#   - hard labels from an ordinal decision rule picked by calibration QWK (uq.decision)
+#   - censored-aware 90 % interval coverage, tails recalibrated on calibration samples (uq.intervals)
+#   - evaluation subsets: oos_piers (Ocean Observing System piers: combined_full + calhabmap_erddap),
+#     non_pier, ifcb; optional held-out piers (uq.splits.holdout_locations + holdout_piers subset)
+# The model YAML file lists stop at the encoder's data period (no 2023 entries):
+#   inference.extend_input_lists adds window days whose files exist on disk.
+# Run all steps with the local launcher: hab_uq_full_2023_2026_launch.yaml
+#   insitu ─► roles ─┐
+#                    ├─► train_eval x species ─► subset_eval
+#   heads x inst x year ┘                     └─► infer_fuse x species x year ─► animate
+# Earlier runs (pilot windows, tier 2) are described in hab_reflectance_geotiff_gen_s_ca_2025_pilot_coast_CA.yaml.
+
+reuse_context: False #True
+
+run_uq: true
+
+prob: True
+no_heir: True
+config_dir: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/"
+geo_zarr: "/mnt/data1/cal_coast_geo.zarr"
+ 
+# All experiments use the non-strict combined_augmented.csv (top-level, uq.insitu_file, subset_insitu_file).
+insitu_file: "/mnt/data1/habs/insitu_augmented_ifcb_2023_2026/combined_augmented.csv"   # was combined_augmented_strict.csv
+insitu_matchup_circle_max_radius: [0.09]
+start_date: "2023-01-01"   # was 2024-03-01
+end_date: "2026-10-01"     # was 2025-12-01
+clusters: 120000
+
+roi: "california"
+
+final_product_dir: "/mnt/data1/HAB_COMBINED_2024_2025_SPLIT/MERGED_TEST_1115_26/"
+
+# Spatio-temporally stratified day split (sit_fuse.datasets.scene_split via
+# pipelines/habs/hab_scene_split.py), shared by all sensors. Context assignment
+# uses train days, validation uses held-out (test) days, uq.splits follows the
+# same days. The manifest is reused once written; keep it shared with the
+# training and _val configs so every stage sees the identical split.
+scene_split:
+  enabled: true
+  manifest: "/mnt/data1/HAB_COMBINED_2024_2025_SPLIT/scene_split/hab_ca_2024_2025_scene_split.csv"
+  regenerate: false
+  dates_from: auto           # inputs (input_oc_dir) when present, else inference out_dir
+  date_range: ["2024-01-01", "2026-10-01"]   # production split, unchanged (manifest reused); the UQ run
+                                             # uses uq.splits.date_roles_file, so 2023 needs no manifest days
+  strata:
+    time_bins: [season_year]
+  split:
+    block_days: 14
+    test_fraction: 0.2
+    val_fraction: 0.0        # > 0 gives UQ calibration days unseen by context assignment
+    buffer_days: 3
+    balance: proportional
+    min_units_for_test: 2
+    seed: 0
+  output:
+    dir: "/mnt/data1/HAB_COMBINED_2024_2025_SPLIT/scene_split/"
+    tag: hab_ca_2024_2025
+  context_splits: [train]
+  validation_splits: [test]
+  uq: true
+  files_test: rest           # training: inference covers files_train + files_test = all days
+  sampling:
+    scene_balance: 0.5
+    spatial_block: 32
+    spatial_balance: 0.5
+    seed: 0
+
+
+ 
+instruments: 
+ pace:
+   no_trop: 
+      "out_dir": "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/pilot_coast_products/PACE_OCI_no_trop/"      # pilot head outputs
+      "model_dir": "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025//PACE_OCI_no_trop/"    # trained model + scaler (unchanged)
+ olci: 
+  no_trop:  
+      "out_dir": "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/pilot_coast_products/OLCI_no_trop/"      # pilot head outputs
+      "model_dir": "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025//OLCI_no_trop/"    # trained model + scaler (unchanged)
+ viirs:
+  no_trop:  
+      "out_dir": "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/pilot_coast_products/VIIRS_no_trop/"      # pilot head outputs
+      "model_dir": "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025//VIIRS_no_trop/"    # trained model + scaler (unchanged)
+ modis:
+  no_trop:  
+      "out_dir": "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/pilot_coast_products/AQUA_MODIS_no_trop/"      # pilot head outputs
+      "model_dir": "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025//AQUA_MODIS_no_trop/"    # trained model + scaler (unchanged)
+ #troposif: No SIF data for 2024-2025 cases
+ #goes18:  
+ # no_trop: 
+ #'     "out_dir": "/data1/nlahaye/output/Learnergy/GOES18_ABI_ONLY_S_CA/"
+
+
+run_resample: True
+
+validation_only: False
+
+uq:
+  input_mode: head_outputs 
+  out_dir: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/uq_full_2023_2026_ifcb/"   # was uq_pilot_coast_windows_piers_tier2/
+  # augmented in-situ table written by sit_fuse.pipelines.habs.insitu.pull_insitu_hab
+  # non-strict (source/method columns): required by sample_weighting and insitu_filter
+  insitu_file: "/mnt/data1/habs/insitu_augmented_ifcb_2023_2026/combined_augmented.csv"   # was insitu_augmented_clean/
+  # Date windows (inclusive); replace start_date/end_date in every UQ stage (in-situ load,
+  # day roles, inference, fusion, animation). Must match the roles file below.
+  date_windows: &full_windows
+    - ["2023-01-01", "2026-09-30"]   # was three pilot windows 2024-05..2025-08
+  start_date: &full_start "2023-01-01"
+  end_date: &full_end "2026-09-30"
+  species_run: [Pseudo_nitzschia_seriata_group, Pseudo_nitzschia_delicatissima_group, pDA,
+                Pseudo_nitzschia_total, cDA, Total_Phytoplankton, Alexandrium_spp]   # added: direct total-PN (C-HARM comparison) and experimental cellular DA
+                # Alexandrium_spp: experimental stream (PSP-producer proxy; no PSP toxin targets available)
+                # Total_Phytoplankton (cells/L): IFCB and light microscopy resolve different size ranges, so totals are
+                # not strictly equivalent; scored per provenance (evaluation.subsets) and by a microscopy-only variant
+  max_depth_m: 1.0           # also enforced at ingestion (insitu_sources cleaning.max_depth_m)
+  # Train AND evaluate on one provenance only (rerun from --stages train; needs the
+  # non-strict insitu_file). e.g. oos_piers, or {sources: [...], methods: [...], location_codes: [...]}
+  # insitu_filter: oos_piers
+  # insitu_filter: {exclude_methods: [ifcb]}   # was set: IFCB now included (chain-corrected, site-day weighted)
+  # Down-weight high-cadence IFCB per site-day: each IFCB (station, week) carries total weight
+  # block_weight, split over its site-days (and same-day replicates), so a near-daily IFCB week
+  # counts like one weekly pier sample. Train + calibration only; test scoring unchanged.
+  sample_weighting:
+    enabled: true            # was false (IFCB excluded)
+    methods: [ifcb]
+    period: W                # W = site-week budget; D = only split same-day replicates
+    block_weight: 1.0        # raise (e.g. 2-3) to give IFCB more total weight than the piers
+    splits: [train, calibration]
+  num_child: 100             # model YAML cluster.heir.num_classes (joint = child + num_child*parent)
+  #input_mode: auto           # auto | head_outputs | label_only
+  label_level: heir          # heir | no_heir (label_only mode)
+  no_heir_value: parent
+  use_proba: true
+  radius_degrees: 0.09       # production SoCal radius
+  radius_km: 10              # great-circle radius; overrides radius_degrees
+  nearest_fallback:          # samples with no valid pixel within radius_km (coastal mask, piers)
+    enabled: true
+    max_km: 20               # search limit for the nearest valid pixels
+    k: 3                     # number of nearest valid pixels used
+    decay_km: 5              # sample weight *= exp(-(d_nearest - radius_km) / decay_km)
+    use_in_encoder: false    # keep fallback rows out of the cluster->class lookup counts
+  max_day_offset: 1          # 0 = production same-day; 1 adds +/-1 d rows with temporal weights
+  encoder_use_offset_days: false
+  temporal_weighting: {tau_days: 1.5, sigma_hours: 6.0}
+  count_mode: unique_per_sample
+  sensors: [pace, s3a, s3b, jpss1, jpss2, modis, snpp] #[pace, olci, viirs, modis]
+  model_scope: pooled        # pooled (sensor one-hot, class-space features) | per_sensor
+  seed: 42
+
+  splits:
+    # resplit mode: day roles written by hab_uq_pilot_plan --mode resplit (overrides scene_split days).
+    # Comment out to keep the scene-split (encoder/context-held-out) test days instead.
+    date_roles_file: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/uq_full_2023_2026/date_roles.csv"   # written by the launcher roles job
+    # True out-of-sample stations: every non-excluded row of these Location_Codes goes to test (never
+    # train / calibration); rows on encoder-training days become excluded. Pair with the holdout_piers
+    # subset below. Rerun roles is not needed (applied after the day roles). Codes: SIO, NP, SMP, SW,
+    # MBB, MBF, HAB_SCW, CPP, BML, MBARI (IFCB), ...
+    # holdout_locations: [SMP, MBF]
+    # holdout_include_encoder_seen: false
+    block: "14D"             # was 30D; more station x block groups in a short window
+    group_by: [station, block]
+    fractions: {train: 0.6, calibration: 0.2, test: 0.2}
+    # test_years: [2025]     # temporal holdout alternative
+    n_folds: 5
+    seed: 13
+
+  features:
+    window_radii: [1, 2, 4]
+    neighborhood: {top_n_labels: 3, label_level: joint,
+                   stats_of: [parent_entropy, child_entropy, parent_maxprob]}
+    groups: [cluster_structure, representation, head_topk_probs, agreement,
+             soft_assignment, assignment_ensemble, neighborhood, neighborhood_context,
+             spatial_tier]          # spatial_tier: sp_tier_c, sp_tier_mass (tier-2 class fractions)
+    use_day_offset: true
+
+  context_encoder:
+    alpha_parent: 5.0
+    alpha_joint: 5.0
+    assignment: {rule: histogram_mode, min_samples: 1, replicate_production_offset: false}
+    assignment_ensemble: {n_members: 30, bootstrap_unit: split_group}   # was 100 (pilot)
+    pool_sensor_group: true         # s3a+s3b, snpp+jpss1+jpss2 share one histogram (production group assignment)
+    spatial_tier:                   # production tier 2 (zonal histogram over merged no_heir map + class_compare)
+      enabled: true
+      mode: composite               # composite: group's merged daily map (incl. the platform) | others: other sources only
+      sources: group                # group | all (all UQ sensors, reprojected nearest; with mode: others)
+      threshold: 0.51               # dbf_percentage_thresh
+      min_pixels: 25
+      prior_pixels: 200
+      max_weight: 0.5               # cap on the spatial share of the A1 / A2 shrinkage targets
+      shrinkage_target: true
+      hard_priority: auto           # composite -> spatial_first (production), others -> parent_first
+      days: train_roles             # all train-role days of uq.date_windows (date_roles_file)
+      max_days: null                # ~800 train days over 2023-2026; set e.g. 300 if train_eval memory is tight
+
+  target:
+    mode: blended_ensemble   # reference | cluster_agreement | assignment_ensemble | blended | blended_ensemble
+    reference: measurement   # measurement (log-normal soft labels) | onehot
+    blend_lambda: 0.1        # was 0.3; less pull toward the majority-bin cluster lookup
+
+  classifier:
+    model: auto              # was random_forest; selection now uses the composite below, not RPS alone
+    candidates: [random_forest, hist_gradient_boosting]
+    class_weighting: {mode: inverse, max_weight: 50}        # was sqrt_inverse, 10; used when no grid
+    # searched with each candidate (and each prior strength); max_weight is the cap on the
+    # weight ratio to the majority bin, 1000 = effectively full inverse frequency
+    class_weighting_grid:
+      - {mode: inverse, max_weight: 25}
+      - {mode: inverse, max_weight: 1000}
+      - {mode: power, power: 0.75, max_weight: 50}
+    # rps (previous) | rpss | exceedance_brier | qwk | composite; scored on calibration samples
+    selection:
+      metric: composite
+      weights: {rpss: 0.5, exceedance_brier: 0.5}   # 1 - RPSS and mean BS/BS_clim at the alert thresholds
+      search_members: false  # bootstrap members are refit for the selected trial only
+    random_forest: {n_estimators: 300, max_depth: 8, min_samples_leaf: 15, min_samples_split: 30,   # was 5 / 10: no leaf from one bloom day
+                    class_weight: null, max_samples: 0.7}   # was balanced_subsample; class_weighting replaces it
+    n_bootstrap_members: 20  # was 0; refits on station x block bootstrap draws (spread reflects event-day dependence)
+  max_members: 30            # was 100 (pilot)
+
+  calibration: {method: temperature, prior_correction: true,
+                prior_correction_strength: fit,              # was 0.0; number or fit
+                prior_strength_grid: [0.25, 0.5, 0.75, 1.0], # searched jointly with class_weighting_grid
+                min_samples: 30,     # strength 1 = full undo of class weighting, 0 = none
+                # Post-hoc logistic map of P(bin >= k) at the alert thresholds that sit on bin edges
+                # (PN 1e4 / 1e5 cells/L, pDA 1 ng/mL, cDA 10 pg/cell; pDA 0.5 lies inside a bin and is
+                # interpolated, so it moves only through the 1 ng/mL map), fitted on calibration samples after model and
+                # strength selection. auto: kept only if day-grouped 5-fold out-of-fold Brier improves.
+                exceedance_recalibration: {enabled: auto, method: platt, thresholds: alert,
+                                           min_events: 10, n_folds: 5, ridge: 1.0},
+                # Calibration reweighting (off in production; set by the next-steps calibration sweep):
+                #   period_balance: year -> each year carries equal total weight in temperature / prior fits
+                #   prevalence: median_year | mean_year | fixed (+ pi_target) -> label-shift class shares
+                # reweight: {period_balance: year, prevalence: median_year, min_year_n: 20, max_factor: 5}
+                }
+  # Hard label for pred_label and the hard metrics. Full prior correction removes the class-weighting
+  # shift from the probabilities, so minority-bin recall comes from the rule rather than argmax.
+  decision: {rule: auto, metric: qwk, candidates: [argmax, median, expected]}   # argmax | median | expected | auto
+  # 90 % interval: coverage counts non-detects (stored at log10 detection floor) as covered when the
+  # lower bound reaches bin 0; recalibrate picks the tail mass reaching `target` on calibration samples
+  # (bands log10_conc_lo90 / hi90; q05/q95 unchanged)
+  intervals: {recalibrate: true, target: 0.9}   # optional group_by: year (group_rule: min | mean, min_group_n)
+  selective: {target_coverage: 0.8, bin_tolerance: 0}
+
+  species:                   # optional overrides of hab_uq_common.DEFAULT_SPECIES
+    pDA:
+      alert_thresholds: [0.5, 1.0]
+      measurement_sigma_dex: 0.15
+      # Hard label: highest k with P(bin >= k) >= tau_k, tau tuned on calibration samples (QWK), flagged
+      # share capped at 2x the observed share. median / expected need P(bin >= 1) >= 0.5 and stay in bin 0.
+      decision: {rule: threshold, metric: qwk, max_flag_ratio: 1.5, min_events: 5}   # was 2.0 (over-flagging)
+      # Per-species overrides (merged over uq.classifier / uq.calibration): revert to the random forest with
+      # power-0.75 class weights and partial prior correction (the setting behind the stronger earlier pDA run)
+      classifier: {model: random_forest, class_weighting_grid: [{mode: power, power: 0.75, max_weight: 50}]}
+      calibration: {prior_correction_strength: 0.25}
+    Pseudo_nitzschia_seriata_group: {alert_thresholds: [10000, 100000]}
+    # Intervals under-covered (0.88): tail chosen so the worst calibration year reaches the 0.9 target
+    Pseudo_nitzschia_delicatissima_group:
+      intervals: {group_by: year, group_rule: min, min_group_n: 30}
+    Total_Phytoplankton: {alert_thresholds: [100000, 1000000]}     # bin edges 1e5 / 1e6 cells/L (as in the pilot run)
+    # Derived targets (hab_insitu.add_derived_target). Total PN = seriata + delicatissima cells/L
+    # (rows need >= 1 group measured). cDA = pDA / total PN (pg/cell) on rows with PN >= min_pn_cells;
+    # pDA non-detects become censored rows (upper bound pda_lod / PN) kept only if bound < max_censored_upper.
+    Pseudo_nitzschia_total: {alert_thresholds: [10000, 100000]}
+    # Alexandrium spp. (cells/L), experimental. PN bins (1e4 / 1e5) leave ~96% of site-days in bin 0, so
+    # Alexandrium uses its own edges: absent | present (>=1) | elevated (>=1e3, CDPH-style alert level) |
+    # bloom (>=5e3). Trained on light-microscopy counts only; 2023-2026 site-days per bin (QC-fixed table):
+    # 1352 / 201 / 136 / 62. threshold_index 0 in uq.animation maps P(>= 1000 cells/L).
+    # IFCB is presence-only: the classifier never resolves bloom magnitude here (0 site-days >= 1e4), so IFCB
+    # rows never train / calibrate; IFCB rows in test split groups score P(>= 1 cell/L) vs detection
+    # (evaluation json "presence", report_tables presence_<tag>.csv). Santa Cruz / MBARI IFCB Alexandrium
+    # values are NaN in the QC-fixed table (51-class classifier, Alexandrium_singlet not mapped).
+    Alexandrium_spp:
+      presence_only: {methods: [ifcb], threshold: 1}
+      edges: [0, 1, 1000, 5000, 100000000]
+      detection_floor: 0.1          # log10 position of non-detects (below the 1 cell/L presence edge)
+      alert_thresholds: [1000, 5000]
+      measurement_sigma_dex: 0.3    # low counts are few-cell (Poisson) estimates
+      decision: {rule: auto, metric: qwk, candidates: [argmax, median, expected, threshold],
+                 max_flag_ratio: 1.5, min_events: 5}
+    cDA:
+      alert_thresholds: [10.0]
+      derived: {kind: cellular_da, pda: pDA, min_pn_cells: 1000, pda_lod: 0.02, max_censored_upper: 10.0}
+
+  evaluation:
+    n_bootstrap: 200                # was 500 (pilot)
+    # Evaluation-only provenance subsets of the test samples (models unchanged).
+    # Also run standalone on finished runs: python -m sit_fuse.pipelines.habs.uq.hab_uq_subset_eval -y <this yaml>
+    # Source filters need the non-strict table (the strict CSV has no source/method columns).
+    subset_insitu_file: "/mnt/data1/habs/insitu_augmented_ifcb_2023_2026/combined_augmented.csv"
+    # oos = Ocean Observing System piers (CalHABMAP), not out-of-sample; held-out stations are
+    # uq.splits.holdout_locations. A subset equal to the whole test set is flagged identical_to_full.
+    subsets:
+      oos_piers: {sources: oos_piers}              # combined_full + calhabmap_erddap (CalHABMAP piers, as in the 2026 paper)
+      non_pier: {exclude_sources: oos_piers}       # IFCB, cruise
+      ifcb: {methods: [ifcb]}
+      microscopy: {methods: [microscopy, lm_settled]}   # light-microscopy counts (Total_Phytoplankton comparability)
+      # holdout_piers: {location_codes: [SMP, MBF]}   # = uq.splits.holdout_locations
+    subset_recalibrate_fusion: false               # true: fusion weights from subset calibration rows only
+
+  fusion:
+    pool: log                # linear | log | poe
+    ref_local_hour: 10.0     # pier sampling ~09-10 local
+    tau_hours: 4.0
+    quality: selective       # none | selective | entropy
+    temporal_filter: true    # restarts at each launcher --window start (1 Jan): one-day reset per year
+    transition_stay: 0.7
+
+  animation:                 # hab_uq_animate: one MP4 per species x stream from uq.out_dir/fused
+    out_dir: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/uq_full_2023_2026_ifcb/animations/"   # one MP4 per launcher window
+    streams: [filtered, fused]   # filtered = gap-filled daily; fused = observed days only
+    format: mp4              # mp4 (H.264, plays in PowerPoint) | gif
+    fps: 8                   # was 4; one ~1370-frame MP4 per species x stream over 2023-01..2026-09
+    dpi: 110
+    insitu_overlay: true     # samples within +/- overlay_days, coloured by bin; rings = test days
+    overlay_days: 1
+    land_mask: land_10       # Natural Earth land drawn grey; none to skip
+    extent: null             # [lon_min, lon_max, lat_min, lat_max]; null = product grid
+    threshold_index: 0       # first alert threshold (P. seriata 10k cells/L, pDA 0.5 ng/mL)
+    insitu_sites: true       # hollow station markers on every panel (stations with samples in the window)
+    exceed_samples: true     # exceedance panel: filled red = observed >= threshold, white = below
+
+  # C-HARM comparison (hab_charm, hab_pn_combine, hab_charm_compare, hab_charm_animate).
+  # Versions: latest available per valid date (v3.1 from 2022-11-01, v2 2021-01..2022-11, v1 before);
+  # older version only fills days the newer one lacks. Cache is reused (fetch --offline = re-index only).
+  charm:
+    cache_dir: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/charm_cache"   # shared by all runs
+    bbox: [-127.5, -117.0, 31.3, 43.0]   # lon_min, lon_max, lat_min, lat_max (full C-HARM grid)
+    chunk_days: 15
+    retries: 5
+    radius_km: 10.0          # point extraction: mean of valid C-HARM cells within 10 km
+    fallback_km: 30.0        # else nearest valid cell within 30 km
+    leads: [0, 1, 2, 3]      # point comparisons: nowcast + 1-3 day forecasts (by valid date)
+    map_leads: [0]           # regridded map stacks / animations
+    n_bootstrap: 500         # paired site-week block bootstrap
+    copula_samples: 256      # Sobol pairs per pixel for the size-class combination check
+    coastal_km: 30.0
+    coast_exclude_km: 6.0    # coastal-edge check: charm_p_offcoast drops C-HARM cells < 6 km from land / domain edge
+    # L3m chlorophyll (sync_l3m_rrs --suite CHL); keys = uq.sensors. Used by the consistency stage.
+    chl_dirs:
+      s3a:   /mnt/data1/CHL/S3A_OLCI
+      s3b:   /mnt/data1/CHL/S3B_OLCI
+      snpp:  /mnt/data1/CHL/SNPP_VIIRS
+      jpss1: /mnt/data1/CHL/JPSS1_VIIRS
+      jpss2: /mnt/data1/CHL/JPSS2_VIIRS
+      modis: /mnt/data1/CHL/AQUA_MODIS
+      pace:  /mnt/data1/CHL/PACE_OCI
+    consistency:             # phase 1: diagnostics only (flags, no product changes)
+      q_chl_min_pg: 2.0      # minimum chl per PN cell; PN_max = Chl * 1e6 / q_chl_min * tolerance
+      tolerance: 1.0
+      cda_max_pg: 100.0      # P(pDA >= 0.5) <= P(PN >= 0.5e6 / cda_max) + eps
+      eps: 0.05
+
+
+compute:
+  num_threads: medium
+  num_loader_workers: 2      # was 10; loader processes run on the job's pinned cores (launcher cpus 4 per heads job)
+  nice: 10
+  use_gpu: True
+
+
+
+run_head_export: true
+
+inference:
+  stages: [heads]
+  input_lists: [files_test, files_train]
+  date_windows: *full_windows     # = uq.date_windows; the launcher passes one year per job (--window)
+  start_date: *full_start
+  end_date: *full_end
+  extend_input_lists: true        # model YAML lists have no 2023 days: add days whose files exist
+  overwrite: false                # existing *.head_outputs.tif are skipped
+  model_configs:                  # required: see note below
+    pace:  {no_trop: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/train_model_PACE_OCI.yaml"}
+    olci:  {no_trop: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/train_model_OLCI.yaml"}
+    viirs: {no_trop: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/train_model_VIIRS.yaml"}
+    modis: {no_trop: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/train_model_AQUA_MODIS.yaml"}
+  data_overrides:                 # inference only; model YAMLs are not modified
+    reader_kwargs: {ocean_mask_source: land_10}   # was ocean_basins_50 (applies where mask_oceans is set)
+    sampling:
+      edge_fill: {enabled: true, min_valid: 4}    # keep centres with >= 4 of 9 valid window pixels
+
+# Same-day composite order inside a group's daily product (first valid pixel wins;
+# later platforms fill gaps). Default: s3a, s3b and snpp, jpss1, jpss2.
+platform_priority:
+  olci: [s3a, s3b]
+  viirs: [jpss2, jpss1, snpp]
+
+
+head_export:
+  top_k_parent: 5                 # parent_top1..5_prob
+  top_k_child: 3                  # child top1..3 under each parent rank
+  n_parent_ranks: 2               # r1_* and r2_* child distributions
+  mc:  {samples: 0}               # optional, see below
+  ood: {enabled: false}           # optional, see below
+  validate: true
+  min_joint_agreement: 0.99
+

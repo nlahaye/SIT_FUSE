@@ -1,0 +1,78 @@
+# HAB variant spec: GOES-18 (4a) and native-resolution PACE (4b) pilots.
+#   python -m sit_fuse.pipelines.habs.followon.variants hab -s pilot_variants.yaml
+# All variants: same splits (date_roles_file), same species, spatial_tier off (its pixel counts / priors are tuned
+# for the 4 km grid; pace_l3m_4km also has it off so the PACE resolution comparison changes only the input grid).
+# features.window_radii are in pixels: x2 at 0.02 deg (GOES), x4 at 0.01 deg (PACE 1 km), i.e. the same ground
+# footprint as [1, 2, 4] at 4 km.
+base_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/postprocess/hab_reflectance_geotiff_gen_s_ca_2023_2026_full_CA.yaml
+out_root: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots
+
+common:
+  species_run: [Pseudo_nitzschia_seriata_group, Pseudo_nitzschia_delicatissima_group, Pseudo_nitzschia_total, pDA]
+  features_drop: [spatial_tier]
+  set:
+    uq.context_encoder.spatial_tier.enabled: false
+
+variants:
+  # GOES-18 ABI daily composite heads (encoder: train_GOES18_ABI.yaml)
+  goes18:
+    sensors: [goes18]
+    set:
+      uq.context_encoder.spatial_tier.enabled: false
+      uq.features.window_radii: [2, 4, 8]
+      geo_zarr: /mnt/data1/goes18_geo.zarr
+    overrides:
+      instruments:
+        goes18:
+          no_trop:
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots/goes18/products/GOES18_ABI_no_trop/
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/GOES18_ABI/GOES18_ABI_no_trop/
+      inference:
+        model_configs:
+          goes18: {no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots/goes18/train_config/model/train_model_GOES18_ABI.yaml}
+      head_export:
+        georef: {final_resolution: 0.02, resample_radius: 3000}
+
+  # PACE baseline: production 4 km L3m heads, PACE-only UQ heads
+  pace_l3m_4km:
+    sensors: [pace]
+
+  # PACE gridded L2 at 1 km, encoder retrained at 1 km (train_PACE_OCI_L2G_1km.yaml)
+  pace_l2g_1km:
+    sensors: [pace]
+    set:
+      uq.context_encoder.spatial_tier.enabled: false
+      uq.features.window_radii: [4, 8, 16]
+      geo_zarr: /mnt/data1/pace_l2g_1km_geo.zarr
+    overrides:
+      instruments:
+        pace:
+          no_trop:
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots/pace_l2g_1km/products/PACE_OCI_no_trop/
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/PACE_OCI_1KM/PACE_OCI_no_trop/
+      inference:
+        model_configs:
+          pace: {no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots/pace_l2g_1km/train_config/model/train_model_PACE_OCI.yaml}
+      head_export:
+        georef: {final_resolution: 0.01, resample_radius: 1500}
+
+  # PACE gridded L2 at 1 km, production 4 km encoder applied unchanged (zero-shot resolution transfer).
+  # Model YAML = the 1 km training YAML (1 km file lists + reader_kwargs) with output.out_dir -> 4 km weights
+  # (written by the launcher job pace_zs_model with variants model).
+  pace_zs_1km:
+    sensors: [pace]
+    set:
+      uq.context_encoder.spatial_tier.enabled: false
+      uq.features.window_radii: [4, 8, 16]
+      geo_zarr: /mnt/data1/pace_l2g_1km_geo.zarr
+    overrides:
+      instruments:
+        pace:
+          no_trop:
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots/pace_zs_1km/products/PACE_OCI_no_trop/
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025//PACE_OCI_no_trop/
+      inference:
+        model_configs:
+          pace: {no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots/pace_zs_1km/model/train_model_PACE_OCI.yaml}
+      head_export:
+        georef: {final_resolution: 0.01, resample_radius: 1500}

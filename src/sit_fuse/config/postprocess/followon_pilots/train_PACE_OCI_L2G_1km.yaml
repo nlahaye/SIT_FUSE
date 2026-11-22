@@ -1,0 +1,35 @@
+# PACE OCI encoder on gridded native-resolution L2 AOP (pilot 4b): pace_l2 grid -> 0.01 deg (~1 km) daily files
+# PACE_OCI.YYYYMMDD.L3m.DAY.AOP.V3_2.1km.nc (read by read_pace_oc with pace_product AOP.V3_2, pace_res 1km).
+#   python -m sit_fuse.pipelines.habs.followon.pace_l2 geo --out /mnt/data1/pace_l2g_1km_geo.zarr
+#   python -m sit_fuse.pipelines.habs.hab_training_pipeline -y train_PACE_OCI_L2G_1km.yaml -n 6
+# Same architecture (DBN_ARCH_MAP PACE_OCI) and window as the production 4 km PACE encoder.
+start_lon: -128.00
+end_lon: -116.00
+start_lat: 30.00
+end_lat: 38.94
+
+geo_zarr:
+ oc_geo_fpattern: "/mnt/data1/pace_l2g_1km_geo.zarr"
+ out_dir: "/mnt/data1/"
+ out_uid: "pace_l2g_1km_geo"
+ reader_kwargs: {pace_product: AOP.V3_2, pace_res: 1km}
+
+sif_dir: "/mnt/data1/TROPOSIF/"
+train_min_date: "20240305"
+train_max_date: "20241023"
+
+roi: "ca"
+output: "/mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/PACE_OCI_1KM/"     # weights: <output>/PACE_OCI_no_trop/
+config_dir: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots/pace_l2g_1km/train_config/"                      # <config_dir>/model/train_model_PACE_OCI.yaml
+
+compute: {num_threads: 6, num_loader_workers: 2, nice: 10, use_gpu: true}
+
+instruments:
+ PACE_OCI:
+  no_trop:
+   input_oc_dir: "/mnt/data1/REFLECTANCES/PACE_OCI_L2G_1KM/"
+   input_oc_re: '(PACE_OCI\.(\d{8})\.L3m\.DAY\.)AOP\.V3_2\.1km\.nc'
+   run_preprocess_and_scale: true
+   model_overrides:
+    data:
+     reader_kwargs: {pace_product: AOP.V3_2, pace_res: 1km}

@@ -1,0 +1,166 @@
+# Local-launcher plan, follow-on stream (3): same-instrument representational value (OLCI S3A / S3B,
+# VIIRS SNPP / JPSS1 / JPSS2). One encoder per platform is trained with everything else equal to the joint
+# (production) encoder; both encoder types embed the same pixels on the same days; the comparison runs in
+# Rep_Taxonomy (reptaxonomy.intercompare.paired_views: CKA, debiased CKA, k-NN Jaccard, Procrustes, ridge
+# cross-predictability, cluster-label agreement, SST / chlorophyll probes, cross-platform probe transfer, and
+# shared-vs-separate contrasts, all with a block bootstrap over 14-day x ~1.3 degree blocks).
+#
+#   rrs_sync x platform ─► train_spec x enc ─► train x enc (GPU, serial) ─┐
+#                                                                         ├─► export x view (GPU 0.5) ─► pair x instrument ─► rep_taxonomy
+#   variants (anc YAML) ─► sst_pull ──────────────────────────────────────┘ (targets)
+#
+# Views (Rep_Taxonomy names): oj_* OLCI joint encoder, oa_* / ob_* S3A-only / S3B-only encoder (each applied to
+# both OLCI platforms: separates platform from encoder effects), vj_* VIIRS joint, vs_snpp / v1_j1 / v2_j2
+# per-platform VIIRS encoders on their own platform. Pixels: every 4th row / column of valid pixels (no cap), so
+# all views of an instrument select the same grid cells; rows are kept only where every view has the pixel.
+# Export window 2024-01-01..2025-12-31 (all five platforms operational, both years complete).
+#
+# Data pulls: rrs_sync (daily L3m Rrs, OB.DAAC, ~/.netrc; only missing days), sst_pull (MUR SST for the probe
+# targets, ERDDAP; shares the cache with the interpretability / ancillary plan). phys_chlor_a targets read the
+# L3m CHL already in /mnt/data1/CHL (fixes run).
+#
+#   python -m sit_fuse.local_launcher list   hab_followon_same_instrument_launch.yaml
+#   python -m sit_fuse.local_launcher run    hab_followon_same_instrument_launch.yaml --dry-run
+#   systemd-run --user --scope -p MemoryMax=108G -p MemoryHigh=100G -p MemorySwapMax=0 \
+#     python -m sit_fuse.local_launcher run hab_followon_same_instrument_launch.yaml
+#   python -m sit_fuse.local_launcher status hab_followon_same_instrument_launch.yaml
+# Resume: rerun the same command (training checkpoints, exported scenes and Rep_Taxonomy tables are skipped when
+# done). Rep_Taxonomy: set rt below to the checkout that contains reptaxonomy/intercompare/paired_views.py.
+#
+# Resource budget (16 cores, 2 GPUs, 181 GB): 1 GPU (id 0), 9 cores (60 %), ~108 GB (60 %, enforced by the scope).
+# Encoder training takes the whole GPU (gpu 1, 6 cores; the five run one after another); exports share it
+# (0.5 each, 4 cores). Do not run this plan concurrently with the GOES / PACE plan (both use GPU 0).
+launcher:
+  state_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/launch/followon_same_instrument
+  gpus: [0]
+  cpus: 9
+  pin_cpus: true
+  max_parallel: null
+  retries: 1
+  nice: 10
+
+vars:
+  py: python
+  yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/postprocess/hab_reflectance_geotiff_gen_s_ca_2023_2026_full_CA.yaml
+  cfg: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/postprocess/followon_pilots
+  prodcfg: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model           # production model YAMLs (scene lists)
+  root: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526
+  si: "{root}/followon/same_instrument"
+  anc: "{root}/followon/ancillary"
+  rt: /home/nlahaye/Rep_Taxonomy                                       # Rep_Taxonomy checkout
+  state: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/launch/followon_same_instrument
+  reflectances: /mnt/data1/REFLECTANCES
+  fo: sit_fuse.pipelines.habs.followon
+  habs: sit_fuse.pipelines.habs
+  start: "2024-01-01"
+  end: "2025-12-31"
+
+jobs:
+  - name: rrs_sync
+    cmd: >-
+      {py} -m sit_fuse.preprocessing.data_pull.sync_l3m_rrs --start 2024-01-01 --end 2025-12-31
+      --dir {key}={reflectances}/{subdir} --res 4km --layout flat --threads 2
+      --nrt-archive-dir {reflectances}/nrt_archive/{subdir}
+      --report {state}/rrs_sync_{subdir}.csv
+    cases:
+      - {key: S3A_OLCI,    subdir: S3A_OLCI}
+      - {key: S3B_OLCI,    subdir: S3B_OLCI}
+      - {key: NPP_VIIRS,   subdir: SNPP_VIIRS}
+      - {key: JPSS1_VIIRS, subdir: JPSS1_VIIRS}
+      - {key: JPSS2_VIIRS, subdir: JPSS2_VIIRS}
+    id_keys: [subdir]
+    cpus: 1
+    gpu: 0
+    priority: 3
+
+  # SST probe targets: MUR SST cache (uq.ancillary of the anc_all variant YAML)
+  - name: variants
+    cmd: "{py} -m {fo}.variants hab -s {cfg}/ancillary_variants.yaml --only anc_all"
+    cpus: 1
+    gpu: 0
+    priority: 3
+  - name: sst_pull
+    cmd: >-
+      {py} -m {fo}.ancillary pull -y {anc}/anc_all/hab_anc_all.yaml --sources sst
+      --start 2023-12-01 --end 2025-12-31 --threads 2
+    cpus: 1
+    gpu: 0
+    priority: 2
+    after: [{name: variants, on: []}]
+
+  # per-platform training YAMLs, then the encoders (DBN pretraining + tuning, whole GPU, one at a time)
+  - name: train_spec
+    cmd: "{py} -m {fo}.variants train -s {cfg}/same_instrument/train_{enc}.yaml"
+    grid:
+      enc: [OLCI_S3A, OLCI_S3B, VIIRS_SNPP, VIIRS_JPSS1, VIIRS_JPSS2]
+    cpus: 1
+    gpu: 0
+    priority: 3
+
+  - name: train
+    cmd: "{py} -m {habs}.hab_training_pipeline -y {si}/{enc}/train_{enc}.yaml -n 6"
+    grid:
+      enc: [OLCI_S3A, OLCI_S3B, VIIRS_SNPP, VIIRS_JPSS1, VIIRS_JPSS2]
+    cpus: 6
+    gpu: 1
+    priority: 2
+    after: [{name: train_spec, on: [enc]}, {name: rrs_sync, on: []}]
+
+  # embeddings at co-located pixels; scene lists from the production model YAML filtered by platform, so every
+  # encoder sees the same scenes. Shared-encoder exports need no training and start first.
+  - name: export
+    cmd: >-
+      {py} -m {fo}.embed_views export -y {yaml} --instrument {inst} --key no_trop
+      --model-config {mcfg} --model-dir {mdir}
+      --entries-from {prodcfg}/train_model_{INST}.yaml --platform-re '{plat}'
+      --name {name} --out {si}/embeds/{name} --start {start} --end {end}
+      --stride 4 --max-per-scene 0 --batch-size 20000
+    cases:
+      - {name: oj_s3a, inst: olci, INST: OLCI, plat: "^S3A", enc: shared, mcfg: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/train_model_OLCI.yaml", mdir: "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/OLCI_no_trop/"}
+      - {name: oj_s3b, inst: olci, INST: OLCI, plat: "^S3B", enc: shared, mcfg: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/train_model_OLCI.yaml", mdir: "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/OLCI_no_trop/"}
+      - {name: oa_s3a, inst: olci, INST: OLCI, plat: "^S3A", enc: OLCI_S3A, mcfg: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/same_instrument/OLCI_S3A/config/model/train_model_OLCI.yaml", mdir: "/mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/OLCI_S3A/OLCI_no_trop/"}
+      - {name: ob_s3b, inst: olci, INST: OLCI, plat: "^S3B", enc: OLCI_S3B, mcfg: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/same_instrument/OLCI_S3B/config/model/train_model_OLCI.yaml", mdir: "/mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/OLCI_S3B/OLCI_no_trop/"}
+      - {name: oa_s3b, inst: olci, INST: OLCI, plat: "^S3B", enc: OLCI_S3A, mcfg: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/same_instrument/OLCI_S3A/config/model/train_model_OLCI.yaml", mdir: "/mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/OLCI_S3A/OLCI_no_trop/"}
+      - {name: ob_s3a, inst: olci, INST: OLCI, plat: "^S3A", enc: OLCI_S3B, mcfg: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/same_instrument/OLCI_S3B/config/model/train_model_OLCI.yaml", mdir: "/mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/OLCI_S3B/OLCI_no_trop/"}
+      - {name: vj_snpp, inst: viirs, INST: VIIRS, plat: "^SNPP", enc: shared, mcfg: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/train_model_VIIRS.yaml", mdir: "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/VIIRS_no_trop/"}
+      - {name: vj_j1, inst: viirs, INST: VIIRS, plat: "^JPSS1", enc: shared, mcfg: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/train_model_VIIRS.yaml", mdir: "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/VIIRS_no_trop/"}
+      - {name: vj_j2, inst: viirs, INST: VIIRS, plat: "^JPSS2", enc: shared, mcfg: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/train_model_VIIRS.yaml", mdir: "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/VIIRS_no_trop/"}
+      - {name: vs_snpp, inst: viirs, INST: VIIRS, plat: "^SNPP", enc: VIIRS_SNPP, mcfg: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/same_instrument/VIIRS_SNPP/config/model/train_model_VIIRS.yaml", mdir: "/mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/VIIRS_SNPP/VIIRS_no_trop/"}
+      - {name: v1_j1, inst: viirs, INST: VIIRS, plat: "^JPSS1", enc: VIIRS_JPSS1, mcfg: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/same_instrument/VIIRS_JPSS1/config/model/train_model_VIIRS.yaml", mdir: "/mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/VIIRS_JPSS1/VIIRS_no_trop/"}
+      - {name: v2_j2, inst: viirs, INST: VIIRS, plat: "^JPSS2", enc: VIIRS_JPSS2, mcfg: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/same_instrument/VIIRS_JPSS2/config/model/train_model_VIIRS.yaml", mdir: "/mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/VIIRS_JPSS2/VIIRS_no_trop/"}
+    id_keys: [name]
+    cpus: 4
+    gpu: 0.5
+    priority: 1
+    after: [{name: train, on: [enc]}, {name: rrs_sync, on: []}]
+
+  # one bundle per instrument (all views of that instrument + SST / chlorophyll targets)
+  - name: pair
+    cmd: >-
+      {py} -m {fo}.embed_views pair {views} -y {anc}/anc_all/hab_anc_all.yaml
+      --targets sst,sst_anom,phys_chlor_a --sensor {tsensor} --block-days 14 --tile-deg 1.334
+      --out {si}/bundles/bundle_{inst}.npz --rep-taxonomy {rt}
+    cases:
+      - inst: olci
+        tsensor: s3a
+        views: >-
+          --view oj_s3a=/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/same_instrument/embeds/oj_s3a --view oj_s3b=/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/same_instrument/embeds/oj_s3b
+          --view oa_s3a=/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/same_instrument/embeds/oa_s3a --view ob_s3b=/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/same_instrument/embeds/ob_s3b
+          --view oa_s3b=/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/same_instrument/embeds/oa_s3b --view ob_s3a=/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/same_instrument/embeds/ob_s3a
+      - inst: viirs
+        tsensor: jpss1
+        views: >-
+          --view vj_snpp=/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/same_instrument/embeds/vj_snpp --view vj_j1=/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/same_instrument/embeds/vj_j1 --view vj_j2=/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/same_instrument/embeds/vj_j2
+          --view vs_snpp=/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/same_instrument/embeds/vs_snpp --view v1_j1=/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/same_instrument/embeds/v1_j1 --view v2_j2=/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/same_instrument/embeds/v2_j2
+    id_keys: [inst]
+    cpus: 2
+    gpu: 0
+    after: [{name: export, on: [inst]}, {name: sst_pull, on: []}]
+
+  - name: rep_taxonomy
+    cmd: >-
+      PYTHONPATH={rt}:$PYTHONPATH {py} -m reptaxonomy.intercompare.paired_views
+      -y {rt}/reptaxonomy/config/sample/paired_views_hab_same_instrument.yaml
+    cpus: 6
+    gpu: 0
+    after: [{name: pair, on: []}]

@@ -31,7 +31,12 @@ Metrics
                 the joint cluster, its parent, the spatial tier or none
                 (assignment_coverage), and all scores per dominant tier (by_assign_tier)
 CIs: grouped bootstrap over split groups (station x time block).
-Stratification: sensor, station, season, and any extra column.
+Stratification: sensor, station, season, year, and any extra column.
+exceedance.<t>.mean_p next to base_rate: calibration-in-the-large per stratum (year effect).
+presence      uq.species.<key>.presence_only (e.g. IFCB for Alexandrium): split 'presence_test' rows
+              score P(>= threshold) against observed presence: Brier, skill vs training
+              climatology, ROC AUC (grouped-bootstrap CI), mean_p vs base rate; overall and by
+              sensor, station and year (hab_uq_evaluation_<token>.json "presence").
 """
 
 from __future__ import annotations
@@ -123,7 +128,7 @@ def prob_scores(P, y, w, spec, pi_clim, log10_obs=None, interval_cal=None) -> di
             pe = exceedance_probability(P, spec.edges, t, spec.detection_floor)
             ye = (obs >= t).astype(float)
             tab, ece = reliability_table(pe, ye, np.asarray(w, float), n_bins=10)
-            d = {"base_rate": float(np.average(ye, weights=w)),
+            d = {"base_rate": float(np.average(ye, weights=w)), "mean_p": float(np.average(pe, weights=w)),
                  "brier": float((wn * (pe - ye) ** 2).sum()), "ece": ece, "reliability": tab}
             if 0 < ye.sum() < len(ye):
                 from sklearn.metrics import roc_auc_score
@@ -200,6 +205,64 @@ def grouped_bootstrap(P, meta, spec, pi_clim, n_boot=500, seed=0, keys=("rps", "
             for k, v in vals.items()}
 
 
+def _auc(y: np.ndarray, p: np.ndarray) -> float:
+    y = np.asarray(y, bool)
+    n1, n0 = int(y.sum()), int((~y).sum())
+    if n1 == 0 or n0 == 0:
+        return float("nan")
+    r = pd.Series(p).rank().to_numpy()
+    return float((r[y].sum() - n1 * (n1 + 1) / 2) / (n1 * n0))
+
+
+def presence_config(bundle) -> dict[str, Any] | None:
+    sp = ((bundle.get("uq_cfg") or {}).get("species") or {}).get(bundle["species"]) or {}
+    return sp.get("presence_only") or None
+
+
+def presence_block(p: np.ndarray, obs: np.ndarray, p_clim: float) -> dict[str, Any]:
+    obs = np.asarray(obs, float)
+    bs = float(np.mean((p - obs) ** 2))
+    bs_c = float(np.mean((p_clim - obs) ** 2))
+    return {"n": int(obs.size), "n_present": int(obs.sum()), "base_rate": float(obs.mean()),
+            "mean_p": float(np.mean(p)), "brier": bs, "brier_climatology": bs_c,
+            "bss": float(1.0 - bs / bs_c) if bs_c > 0 else float("nan"), "auc": _auc(obs > 0.5, p)}
+
+
+def presence_scores(P, meta, spec, pi_clim, cfg, n_boot: int = 200, seed: int = 0,
+                    strata=("sensor", "Location_Code", "year")) -> dict[str, Any]:
+    """P(>= cfg.threshold) vs observed presence on presence-only rows (e.g. IFCB)."""
+    thr = float(cfg.get("threshold", 1.0))
+    k = int(np.searchsorted(np.asarray(spec.edges[1:-1], float), thr, side="left")) + 1
+    k = min(max(k, 1), P.shape[1] - 1)
+    p = P[:, k:].sum(1)
+    obs = (meta["value"].to_numpy(float) >= thr).astype(float)
+    p_clim = float(np.asarray(pi_clim)[k:].sum())
+    out = {"threshold": thr, "class_index": k, "methods": cfg.get("methods", ["ifcb"]),
+           "climatology_p": p_clim, "overall": presence_block(p, obs, p_clim)}
+    groups = meta["split_group"].to_numpy()
+    ug = np.unique(groups)
+    if ug.size > 1 and n_boot:
+        rng = np.random.default_rng(seed)
+        idx_by_g = {g: np.where(groups == g)[0] for g in ug}
+        b = {"auc": [], "bss": []}
+        for _ in range(n_boot):
+            idx = np.concatenate([idx_by_g[g] for g in rng.choice(ug, size=ug.size, replace=True)])
+            r = presence_block(p[idx], obs[idx], p_clim)
+            b["auc"].append(r["auc"]); b["bss"].append(r["bss"])
+        out["overall_ci"] = {key: {"lo95": float(np.nanpercentile(v, 2.5)), "hi95": float(np.nanpercentile(v, 97.5))}
+                             for key, v in b.items()}
+    m = meta.reset_index(drop=True).copy()
+    if "year" not in m and "date" in m:
+        m["year"] = pd.to_datetime(m["date"]).dt.year.astype(str)
+    for col in strata:
+        if col not in m:
+            continue
+        out[f"by_{col}"] = {str(g): presence_block(p[i], obs[i], p_clim)
+                            for g, i in m.groupby(col).indices.items() if len(i) >= 5}
+    out["_p"], out["_obs"] = p, obs
+    return out
+
+
 def predict_samples(bundle, frame: pd.DataFrame, split: str = "test"):
     """Calibrated sample-level probabilities + production baseline for one split."""
     C = bundle["n_classes"]
@@ -249,7 +312,7 @@ def prediction_table(P, meta, base, spec, eo) -> pd.DataFrame:
 
 
 def evaluate_bundle(bundle, frame: pd.DataFrame, out_dir, n_boot: int = 500,
-                    strata=("sensor", "Location_Code", "season")) -> dict[str, Any]:
+                    strata=("sensor", "Location_Code", "season", "year")) -> dict[str, Any]:
     spec = species_spec(bundle["species"], bundle["spec"])
     P, meta, base = predict_samples(bundle, frame, "test")
     if P is None:
@@ -257,6 +320,7 @@ def evaluate_bundle(bundle, frame: pd.DataFrame, out_dir, n_boot: int = 500,
     meta["season"] = pd.to_datetime(meta["date"]).dt.month.map(
         lambda m: {12: "DJF", 1: "DJF", 2: "DJF", 3: "MAM", 4: "MAM", 5: "MAM",
                    6: "JJA", 7: "JJA", 8: "JJA"}.get(m, "SON"))
+    meta["year"] = pd.to_datetime(meta["date"]).dt.year.astype(str)   # year effect: mean_p vs base_rate
     pi = bundle["pi_true"]
     eo = eval_options(bundle)
     report = {"species": bundle["species"], "overall": score_block(P, meta, spec, pi, base, **eo),
@@ -314,6 +378,17 @@ def evaluate_bundle(bundle, frame: pd.DataFrame, out_dir, n_boot: int = 500,
                     meta.iloc[idx], P.shape[1])
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
+    pcfg = presence_config(bundle)
+    if pcfg:
+        Pp, mp, _ = predict_samples(bundle, frame, "presence_test")
+        if Pp is None:
+            report["presence"] = {"error": "no presence_test matchups"}
+        else:
+            pr = presence_scores(Pp, mp, spec, pi, pcfg, n_boot=min(n_boot, 200))
+            keep = [c for c in ("sample_uid", "sensor", "date", "Location_Code", "value", "split_group") if c in mp]
+            mp[keep].assign(p_present=pr.pop("_p"), observed_present=pr.pop("_obs")).to_csv(
+                out / f"hab_uq_presence_predictions_{spec.fname_token}.csv", index=False)
+            report["presence"] = pr
     prediction_table(P, meta, base, spec, eo).to_csv(
         out / f"hab_uq_test_predictions_{spec.fname_token}.csv", index=False)
     with open(out / f"hab_uq_evaluation_{spec.fname_token}.json", "w") as f:

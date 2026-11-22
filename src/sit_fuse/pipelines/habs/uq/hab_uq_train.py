@@ -26,6 +26,17 @@ sensor (or pooled across sensors), reusing sit_fuse.train.sf_uq_utils:
   7. selective     select_selective_threshold on calibration samples
   8. skill         per-sensor proper scores on calibration samples (used as
                    fusion weights in hab_multisensor_fusion)
+
+Per-species overrides (merged over the global blocks): uq.species.<key>.classifier,
+.calibration, .intervals, .decision, .exceedance_recalibration; e.g. pin pDA to one model:
+  pDA: {classifier: {model: random_forest, class_weighting_grid: [{mode: power, power: 0.75, max_weight: 50}]},
+        calibration: {prior_correction_strength: 0.25}}
+Calibration reweighting (uq.calibration.reweight) and year-grouped intervals: hab_uq_selection.
+
+uq.reuse_frame_from: <uq.out_dir>/models of a finished run. Loads its cached matchup frame
+(matchups_<token>.parquet) and encoders instead of rebuilding matchups, for variants that only
+change the classifier / calibration / decision / interval settings (same features, sensors,
+splits and in-situ filter). Raises if the cache is missing.
 """
 
 from __future__ import annotations
@@ -46,13 +57,14 @@ from sit_fuse.train.sf_uq_utils import (
     predictive_entropy_norm, select_feature_columns, select_selective_threshold)
 from sit_fuse.pipelines.habs.uq.hab_context_encoder import default_encoder_cfg, fit_encoder
 from sit_fuse.pipelines.habs.uq.hab_uq_selection import (
-    decide, decision_spec, fit_exceedance_recalibration, fit_interval_calibration, selection_components,
-    selection_loss, select_decision_rule, wrap_calibrators)
+    calibration_reweight, decide, decision_spec, fit_exceedance_recalibration, fit_interval_calibration,
+    prevalence_target, selection_components, selection_loss, select_decision_rule, wrap_calibrators)
 from sit_fuse.pipelines.habs.uq.hab_insitu import assign_splits, insitu_filter_config, load_insitu, species_frame
 from sit_fuse.pipelines.habs.uq.hab_uq_common import (
     SENSORS, insitu_date_kwargs, ranked_probability_score, species_spec, instrument_dirs, utcnow_iso)
 from sit_fuse.pipelines.habs.hab_sensor_groups import expand_sensors
 from sit_fuse.pipelines.habs.uq.hab_uq_matchups import build_sensor_matchups, sample_level
+from sit_fuse.pipelines.habs.followon.ancillary import add_ancillary_columns, keep_column
 from sit_fuse.pipelines.habs.uq.hab_spatial_tier import pool_group_counts
 
 LOG = logging.getLogger("hab-uq-train")
@@ -66,6 +78,7 @@ HAB_NON_FEATURES = {
     "assign_tier",      # coverage diagnostic (joint / parent / spatial / none)
 }
 HAB_NON_FEATURE_PREFIXES = ("ref_soft_", "sensor_")
+ANCILLARY_PREFIXES = ("anc_", "phys_")
 
 
 def hab_feature_columns(df: pd.DataFrame, features_cfg: dict[str, Any],
@@ -74,7 +87,10 @@ def hab_feature_columns(df: pd.DataFrame, features_cfg: dict[str, Any],
     spatial_on = groups is not None and "spatial_tier" in groups
     cols = [c for c in select_feature_columns(df, features_cfg)
             if c not in HAB_NON_FEATURES and not c.startswith(HAB_NON_FEATURE_PREFIXES)
-            and (spatial_on or not c.startswith("sp_tier_"))]
+            and (spatial_on or not c.startswith("sp_tier_")) and not c.startswith(ANCILLARY_PREFIXES)]
+    # environmental / standard-product columns (followon.ancillary): only when requested by
+    # features.groups ("ancillary", "ancillary:<source>", "physical", "physical:<product>")
+    cols += sorted(c for c in df.columns if c.startswith(ANCILLARY_PREFIXES) and keep_column(c, features_cfg))
     if spatial_on:       # spatial_tier group: sp_tier_c, sp_tier_mass (encoder tier 2)
         cols += sorted(c for c in df.columns if c.startswith("sp_tier_") and c not in cols)
     if sensors and len(sensors) > 1:
@@ -309,6 +325,30 @@ def read_date_roles(path) -> dict[str, str]:
     return {k: m.get(v, v) for k, v in zip(d, t[col].str.strip().str.lower())}
 
 
+PRESENCE_SPLIT = "presence_test"
+
+
+def route_presence_only(samples: pd.DataFrame, cfg: dict[str, Any] | None, use_key: str = "") -> pd.DataFrame:
+    """
+    uq.species.<key>.presence_only: {methods: [ifcb], threshold: 1}
+    Rows from these methods never train, calibrate or enter the ordinal test scores. Rows in test
+    split groups move to split 'presence_test' (scored as presence / absence at evaluation, same
+    leakage-safe groups as the test set); rows in train / calibration groups are excluded.
+    """
+    if not cfg or samples.empty:
+        return samples
+    if "method" not in samples.columns:
+        raise ValueError(f"{use_key}: presence_only needs the non-strict in-situ table (method column)")
+    m = samples["method"].astype(str).isin([str(x) for x in cfg.get("methods", ["ifcb"])])
+    out = samples.copy()
+    out.loc[m & (out["split"] == "test"), "split"] = PRESENCE_SPLIT
+    out.loc[m & out["split"].isin(["train", "calibration"]), "split"] = "excluded"
+    LOG.info("%s presence_only %s: %d presence_test, %d excluded from train/calibration", use_key,
+             cfg.get("methods", ["ifcb"]), int((out["split"] == PRESENCE_SPLIT).sum()),
+             int((m & (samples["split"].isin(["train", "calibration"]))).sum()))
+    return out
+
+
 def split_config(hab_yml: dict[str, Any]) -> dict[str, Any]:
     """uq.splits, plus the encoder training window when splits.encoder_unseen_eval."""
     cfg = dict(hab_yml.get("uq", {}).get("splits") or {})
@@ -385,6 +425,12 @@ def train_species(hab_yml: dict[str, Any], use_key: str, out_dir: str | Path,
     clf_cfg = uq.get("classifier", {"model": "random_forest"})
     tgt_cfg = uq.get("target", {})
     cal_cfg = uq.get("calibration", {"method": "temperature", "prior_correction": True})
+    sp_cfg = (uq.get("species") or {}).get(use_key) or {}
+    if sp_cfg.get("classifier"):
+        clf_cfg = {**clf_cfg, **sp_cfg["classifier"]}
+    if sp_cfg.get("calibration"):
+        cal_cfg = {**cal_cfg, **sp_cfg["calibration"]}
+    int_cfg = {**(uq.get("intervals") or {}), **(sp_cfg.get("intervals") or {})}
     # sensor groups (olci, viirs) expand to their platforms: UQ stays per platform
     # (overpass time, band set), reading each platform's scenes from the group out_dir
     sensors = expand_sensors(uq.get("sensors") or list(hab_yml["instruments"].keys()))
@@ -392,62 +438,83 @@ def train_species(hab_yml: dict[str, Any], use_key: str, out_dir: str | Path,
     scope = uq.get("model_scope", "pooled")
     invalid = InvalidClusters.from_config(uq)
 
-    if samples is None:
-        ins = load_insitu(uq.get("insitu_file", hab_yml.get("insitu_file")),
-                          max_depth_m=uq.get("max_depth_m", 1.0),
-                          filters=insitu_filter_config(hab_yml), **insitu_date_kwargs(uq))
-        if (uq.get("sample_weighting") or {}).get("enabled") and ins.attrs.get("has_method") is False:
-            raise ValueError("uq.sample_weighting needs the non-strict in-situ table (method column); "
-                             f"{uq.get('insitu_file', hab_yml.get('insitu_file'))} has none")
-        samples = assign_splits(species_frame(ins, spec), split_config(hab_yml))
-    n_ex = int((samples["split"] == "excluded").sum())
-    if n_ex:
-        # buffer / unlisted days are never used; skip them before raster matching
-        LOG.info("%s: %d excluded samples skipped before matching", use_key, n_ex)
-        samples = samples[samples["split"] != "excluded"].reset_index(drop=True)
+    reuse = uq.get("reuse_frame_from")
+    if reuse and samples is None and matchups is None:
+        df, used, enc_by_sensor, feat_cols, sw_info, samples = _load_reused_frame(reuse, spec, uq)
+        sw = None            # source weights are already in the cached frame's weight column
+    else:
+        if samples is None:
+            ins = load_insitu(uq.get("insitu_file", hab_yml.get("insitu_file")),
+                              max_depth_m=uq.get("max_depth_m", 1.0),
+                              filters=insitu_filter_config(hab_yml), **insitu_date_kwargs(uq))
+            if (uq.get("sample_weighting") or {}).get("enabled") and ins.attrs.get("has_method") is False:
+                raise ValueError("uq.sample_weighting needs the non-strict in-situ table (method column); "
+                                 f"{uq.get('insitu_file', hab_yml.get('insitu_file'))} has none")
+            samples = assign_splits(species_frame(ins, spec), split_config(hab_yml))
+            samples = route_presence_only(samples, sp_cfg.get("presence_only"), use_key)
+        n_ex = int((samples["split"] == "excluded").sum())
+        if n_ex:
+            # buffer / unlisted days are never used; skip them before raster matching
+            LOG.info("%s: %d excluded samples skipped before matching", use_key, n_ex)
+            samples = samples[samples["split"] != "excluded"].reset_index(drop=True)
 
-    sw, sw_info = source_sample_weights(samples, uq.get("sample_weighting"))
-    if sw is not None:
-        LOG.info("%s sample_weighting: %s", use_key, sw_info)
-
-    rows_all, counts_all = [], {}
-    enc_by_sensor = {}
-    built = {}
-    for s in sensors:
-        if matchups is not None and s in matchups:
-            rows, counts = matchups[s]
-        else:
-            dirs = uq.get("product_dirs", {}).get(s) or instrument_dirs(hab_yml, s)
-            rows, counts = build_sensor_matchups(samples, s, dirs, uq, features_cfg, invalid)
-        if rows.empty or counts.empty or (counts["split"] == "train").sum() == 0:
-            LOG.warning("%s/%s: no usable matchups", use_key, s)
-            continue
+        sw, sw_info = source_sample_weights(samples, uq.get("sample_weighting"))
         if sw is not None:
-            rows, counts = apply_sample_weights(rows, counts, sw)
-        built[s] = (rows, counts)
-    enc_counts = {s: c for s, (_, c) in built.items()}
-    if enc_cfg.get("pool_sensor_group", False):
-        # production context assignment of a sensor group: one histogram over its platforms
-        enc_counts = pool_group_counts(enc_counts)
-    spatial_by_sensor = _spatial_providers(hab_yml, uq, enc_cfg, samples, built, enc_counts,
-                                           C, num_child, invalid, seed)
-    for s, (rows, counts) in built.items():
-        enc_rows, enc = cross_fit_encode(rows, enc_counts[s], C, num_child, enc_cfg, features_cfg, seed,
-                                         spatial_for=spatial_by_sensor.get(s))
-        enc_by_sensor[s] = enc
-        counts_all[s] = counts
-        rows_all.append(enc_rows)
-    del built
-    if not rows_all:
-        raise RuntimeError(f"No matchups for {use_key}")
-    used = list(enc_by_sensor)
-    df = add_sensor_columns(pd.concat(rows_all, ignore_index=True), used)
-    feat_cols = hab_feature_columns(df, features_cfg, used if scope == "pooled" else None)
-    for c in feat_cols:
-        if c not in df.columns:
-            df[c] = 0.0
+            LOG.info("%s sample_weighting: %s", use_key, sw_info)
+
+        rows_all, counts_all = [], {}
+        enc_by_sensor = {}
+        built = {}
+        for s in sensors:
+            if matchups is not None and s in matchups:
+                rows, counts = matchups[s]
+            else:
+                dirs = uq.get("product_dirs", {}).get(s) or instrument_dirs(hab_yml, s)
+                rows, counts = build_sensor_matchups(samples, s, dirs, uq, features_cfg, invalid)
+            if rows.empty or counts.empty or (counts["split"] == "train").sum() == 0:
+                LOG.warning("%s/%s: no usable matchups", use_key, s)
+                continue
+            if sw is not None:
+                rows, counts = apply_sample_weights(rows, counts, sw)
+            built[s] = (rows, counts)
+        enc_counts = {s: c for s, (_, c) in built.items()}
+        if enc_cfg.get("pool_sensor_group", False):
+            # production context assignment of a sensor group: one histogram over its platforms
+            enc_counts = pool_group_counts(enc_counts)
+        spatial_by_sensor = _spatial_providers(hab_yml, uq, enc_cfg, samples, built, enc_counts,
+                                               C, num_child, invalid, seed)
+        for s, (rows, counts) in built.items():
+            enc_rows, enc = cross_fit_encode(rows, enc_counts[s], C, num_child, enc_cfg, features_cfg, seed,
+                                             spatial_for=spatial_by_sensor.get(s))
+            enc_by_sensor[s] = enc
+            counts_all[s] = counts
+            rows_all.append(enc_rows)
+        del built
+        if not rows_all:
+            raise RuntimeError(f"No matchups for {use_key}")
+        used = list(enc_by_sensor)
+        df = add_sensor_columns(pd.concat(rows_all, ignore_index=True), used)
+        df = add_ancillary_columns(df, samples, uq)
+        feat_cols = hab_feature_columns(df, features_cfg, used if scope == "pooled" else None)
+        anc_cols = [c for c in feat_cols if c.startswith(ANCILLARY_PREFIXES)]
+        if anc_cols:   # missing ancillary values -> training-split medians (stored for inference)
+            fill = df.loc[df["split"] == "train", anc_cols].median(numeric_only=True).fillna(0.0)
+            df[anc_cols] = df[anc_cols].fillna(fill)
+            uq.setdefault("ancillary", {})["fill_values"] = {k: float(v) for k, v in fill.items()}
+        for c in feat_cols:
+            if c not in df.columns:
+                df[c] = 0.0
 
     train_s = df[df["split"] == "train"].drop_duplicates("sample_uid")
+    pi_target = None
+    rw_cfg = cal_cfg.get("reweight") or {}
+    if rw_cfg.get("prevalence"):
+        lab = df[df["split"].isin(["train", "calibration"])].drop_duplicates("sample_uid")
+        pi_target = prevalence_target(lab["ref_label"].astype(int).to_numpy(), _years(lab), C,
+                                      rw_cfg["prevalence"], min_year_n=int(rw_cfg.get("min_year_n", 20)),
+                                      values=rw_cfg.get("prevalence_values"))
+        LOG.info("%s calibration prevalence target (%s): %s", use_key, rw_cfg["prevalence"],
+                 None if pi_target is None else np.round(pi_target, 4).tolist())
     w_s = None if sw is None else train_s["sample_uid"].map(sw).fillna(1.0).to_numpy(dtype=float)
     pi_true = np.bincount(train_s["ref_label"].astype(int), weights=w_s, minlength=C).astype(float) + 1.0
     pi_true /= pi_true.sum()           # climatology (skill reference, fusion prior)
@@ -472,7 +539,8 @@ def train_species(hab_yml: dict[str, Any], use_key: str, out_dir: str | Path,
             # encoder_only has no class weights / training prior: prior strength is a no-op
             for g in (g_grid[:1] if cand == "encoder_only" else g_grid):
                 cal_g = {**cal_cfg, "prior_correction_strength": g}
-                res = _calibrate(df, fits, used, scope, feat_cols, C, cal_g, uq, pi_true, spec, sel_cfg)
+                res = _calibrate(df, fits, used, scope, feat_cols, C, cal_g, uq, pi_true, spec, sel_cfg,
+                                 pi_target=pi_target)
                 name = trial_name(cand, cw, g, cand == "encoder_only" or not cal_cfg.get("prior_correction", True))
                 trials[name] = {"score": res["score"], "components": res["components"], "model": cand,
                                 "class_weighting": cw, "prior_correction_strength": g}
@@ -481,9 +549,9 @@ def train_species(hab_yml: dict[str, Any], use_key: str, out_dir: str | Path,
     _, sel_key, cfg_sel, cal_sel, fits, res = best
     if lean and cfg_sel["model"] != "encoder_only":
         fits = _fit_scopes(df, used, scope, enc_by_sensor, feat_cols, tgt_cfg, cfg_sel, C, seed)
-        res = _calibrate(df, fits, used, scope, feat_cols, C, cal_sel, uq, pi_true, spec, sel_cfg)
+        res = _calibrate(df, fits, used, scope, feat_cols, C, cal_sel, uq, pi_true, spec, sel_cfg,
+                         pi_target=pi_target)
     # per-species overrides (uq.species.<key>.decision / .exceedance_recalibration)
-    sp_cfg = (uq.get("species") or {}).get(use_key) or {}
     ex_cfg = sp_cfg.get("exceedance_recalibration", cal_cfg.get("exceedance_recalibration"))
     exrecal = fit_exceedance_recalibration(res["Q"], res["y"], res["w"], spec, ex_cfg, groups=res.get("g"),
                                            seed=seed) if res["Q"] is not None else None
@@ -493,16 +561,16 @@ def train_species(hab_yml: dict[str, Any], use_key: str, out_dir: str | Path,
                  exrecal.get("enabled"), exrecal.get("maps"), exrecal.get("brier_before"), exrecal.get("brier_after_oof"))
     if ex_maps:
         res = _calibrate(df, fits, used, scope, feat_cols, C, cal_sel, uq, pi_true, spec, sel_cfg,
-                         exceed_maps=ex_maps)
+                         exceed_maps=ex_maps, pi_target=pi_target)
     dec_cfg = sp_cfg.get("decision", uq.get("decision"))
     decision = select_decision_rule(res["Q"], res["y"], res["w"], dec_cfg) \
         if res["Q"] is not None else {"rule": "argmax", "selected_by": "no calibration samples"}
     if decision["rule"] != "argmax":
         # selective thresholds use the decision rule's errors
         res = _calibrate(df, fits, used, scope, feat_cols, C, cal_sel, uq, pi_true, spec, sel_cfg,
-                         decision_rule=decision_spec(decision), exceed_maps=ex_maps)
+                         decision_rule=decision_spec(decision), exceed_maps=ex_maps, pi_target=pi_target)
     calibrators, selective, skill = res["calibrators"], res["selective"], res["skill"]
-    interval_cal = fit_interval_calibration(res["Q"], res["lv"], res["w"], spec, uq.get("intervals"))
+    interval_cal = fit_interval_calibration(res["Q"], res["lv"], res["w"], spec, int_cfg, groups=res.get("yr"))
     model_selection = {k: float(v["score"]) for k, v in trials.items()}
     missing = [s for s in used if calibrators.get(s) is None and calibrators.get("_pooled") is None]
     if missing and cal_cfg.get("require", True):
@@ -530,6 +598,10 @@ def train_species(hab_yml: dict[str, Any], use_key: str, out_dir: str | Path,
         # calibration-split components of the final probabilities (after exceedance recalibration)
         "calibration_components_final": res.get("components"),
         "split_summary": samples.groupby("split")["sample_uid"].nunique().to_dict(),
+        "calibration_reweight": res.get("reweight"),
+        "species_overrides": sorted(k for k in sp_cfg if k in ("classifier", "calibration", "intervals",
+                                                               "decision", "exceedance_recalibration")),
+        "reused_frame_from": reuse or None,
         "sample_weighting": sw_info,
     }
     out = Path(out_dir) / f"hab_uq_{spec.fname_token}.joblib"
@@ -606,8 +678,33 @@ def trial_name(model: str, cw: dict | None, g: float, no_prior: bool = False) ->
     return f"{model}|{tag}" + ("" if no_prior else f"|g{g:g}")
 
 
+def _years(meta: pd.DataFrame) -> np.ndarray:
+    if "date" not in meta:
+        return np.full(len(meta), "all")
+    return pd.to_datetime(meta["date"]).dt.year.astype(str).to_numpy()
+
+
+def _load_reused_frame(models_dir, spec, uq):
+    """Cached matchup frame + encoders of a finished run (uq.reuse_frame_from)."""
+    d = Path(models_dir)
+    mpq, mcsv = d / f"matchups_{spec.fname_token}.parquet", d / f"matchups_{spec.fname_token}.csv.gz"
+    bp = d / f"hab_uq_{spec.fname_token}.joblib"
+    if not bp.exists() or not (mpq.exists() or mcsv.exists()):
+        raise FileNotFoundError(f"uq.reuse_frame_from: need {bp} and {mpq.name} (or {mcsv.name}) in {d}")
+    df = pd.read_parquet(mpq) if mpq.exists() else pd.read_csv(mcsv)
+    src = joblib.load(bp)
+    used = [s for s in src["sensors"] if s in set(df["sensor"].astype(str))]
+    fill = ((src.get("uq_cfg") or {}).get("ancillary") or {}).get("fill_values")
+    if fill:
+        uq.setdefault("ancillary", {})["fill_values"] = fill
+    samples = df.drop_duplicates("sample_uid")[["sample_uid", "split"]]
+    LOG.info("%s: reusing matchup frame %s (%d rows, sensors %s)", spec.use_key if hasattr(spec, "use_key")
+             else spec.fname_token, d, len(df), used)
+    return df, used, dict(src["encoders"]), list(src["feature_columns"]), src.get("sample_weighting"), samples
+
+
 def _calibrate(df, fits, used, scope, feat_cols, C, cal_cfg, uq, pi_true, spec=None, sel_cfg=None,
-               decision_rule="argmax", exceed_maps=None):
+               decision_rule="argmax", exceed_maps=None, pi_target=None):
     """
     Per-sensor calibrators (pooled fallback), selective thresholds, skill, and the selection
     score (classifier.selection; default: sample-count-weighted mean calibration RPS, as before).
@@ -629,16 +726,34 @@ def _calibrate(df, fits, used, scope, feat_cols, C, cal_cfg, uq, pi_true, spec=N
     def make(key):
         return make_calibrator(cal_cfg, fits[key], C)
 
+    # calibration reweighting (period balance / prevalence target): one set of factors from the
+    # pooled calibration samples, applied to the pooled and per-sensor fits alike
+    fac, rw_info = {}, None
+    if raw and (cal_cfg.get("reweight") or pi_target is not None):
+        ycat = np.concatenate([v[1]["ref_label"].to_numpy().astype(int) for v in raw.values()])
+        wcat = np.concatenate([v[1]["weight"].to_numpy(float) for v in raw.values()])
+        yrcat = np.concatenate([_years(v[1]) for v in raw.values()])
+        f, rw_info = calibration_reweight(ycat, wcat, yrcat, C, cal_cfg.get("reweight") or {}, pi_target)
+        i = 0
+        for s, v in raw.items():
+            fac[s] = f[i:i + len(v[1])]
+            i += len(v[1])
+
+    def wts_of(s, meta):
+        w0 = meta["weight"].to_numpy(float)
+        return w0 * fac[s] if s in fac else w0
+
     if raw:
         Pp = np.vstack([v[0] for v in raw.values()])
         yp = np.concatenate([v[1]["ref_label"].to_numpy().astype(int) for v in raw.values()])
-        wp = np.concatenate([v[1]["weight"].to_numpy() for v in raw.values()])
+        wp = np.concatenate([wts_of(s, v[1]) for s, v in raw.items()])
         calibrators["_pooled"] = make(next(iter(raw.values()))[2]).fit(Pp, np.eye(C)[yp], wp)
         calibrators = wrap_calibrators(calibrators, exceed_maps)
-    scores, wts, Qs, ys, ws, lvs, gs = [], [], [], [], [], [], []
+    scores, wts, Qs, ys, ws, lvs, gs, yrs = [], [], [], [], [], [], [], []
     for s, (Ps, meta, key) in raw.items():
         y = meta["ref_label"].to_numpy().astype(int)
-        w = meta["weight"].to_numpy()
+        w = wts_of(s, meta)
+        yrs.append(_years(meta))
         c = (wrap_calibrators({s: make(key).fit(Ps, np.eye(C)[y], w)}, exceed_maps)[s]
              if len(y) >= min_cal else calibrators.get("_pooled"))
         calibrators[s] = c
@@ -659,7 +774,8 @@ def _calibrate(df, fits, used, scope, feat_cols, C, cal_cfg, uq, pi_true, spec=N
     out = {"calibrators": calibrators, "selective": selective, "skill": skill,
            "Q": np.vstack(Qs) if Qs else None, "y": np.concatenate(ys) if ys else None,
            "w": np.concatenate(ws) if ws else None, "lv": np.concatenate(lvs) if lvs else None,
-           "g": np.concatenate(gs) if gs else None}
+           "g": np.concatenate(gs) if gs else None, "yr": np.concatenate(yrs) if yrs else None,
+           "reweight": rw_info}
     metric = str((sel_cfg or {}).get("metric", "rps")).lower()
     if not Qs:
         out.update(score=np.inf, components={"rps": np.inf})

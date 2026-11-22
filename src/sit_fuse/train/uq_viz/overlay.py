@@ -502,6 +502,9 @@ DEFAULT_STYLE = {
              "contour": True, "contour_color": "#ff2a00", "points": True, "point_color": "#ff2a00",
              "label": "P(fire)"},
 }
+# style keys: cmap, alpha_max, p_min, p_max, alpha_gamma, scale (linear | log: ramp in log10 p, for rare classes
+# whose decision cutoffs are far below 0.05, e.g. GOES/TEMPO fire), contour, contour_color, contour_width, points,
+# point_color, point_size, label
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -645,7 +648,13 @@ def overlay_rgba(p: np.ndarray, st: dict):
     import matplotlib
     cmap = matplotlib.colormaps[st["cmap"]]
     lo, hi = float(st["p_min"]), float(st["p_max"])
-    q = np.clip((np.nan_to_num(p, nan=0.0) - lo) / max(hi - lo, 1e-6), 0, 1)
+    x = np.nan_to_num(p, nan=0.0)
+    if st.get("scale", "linear") == "log":         # rare-class products (fire): ramp in log10(p)
+        lo, hi = max(lo, 1e-6), max(hi, 2 * max(lo, 1e-6))
+        with np.errstate(divide="ignore"):
+            q = np.clip((np.log10(np.maximum(x, 1e-12)) - np.log10(lo)) / (np.log10(hi) - np.log10(lo)), 0, 1)
+    else:
+        q = np.clip((x - lo) / max(hi - lo, 1e-6), 0, 1)
     rgba = cmap(q)
     rgba[..., 3] = float(st["alpha_max"]) * q ** float(st.get("alpha_gamma", 1.0)) * (np.nan_to_num(p) >= lo)
     return rgba
@@ -662,7 +671,7 @@ def render_frame(fr: dict, static: dict, out_png: str) -> str:
     """One animation frame: panels (observation + see-through product overlays), colourbars, time stamp."""
     import matplotlib.pyplot as plt
     from matplotlib.cm import ScalarMappable
-    from matplotlib.colors import Normalize
+    from matplotlib.colors import LogNorm, Normalize
 
     from uq_viz import plotting as P
 
@@ -733,7 +742,7 @@ def render_frame(fr: dict, static: dict, out_png: str) -> str:
             notes.append(f"{o['name']} {o['time']:%H:%M}" + (f" ({fmt_dt(ref, o['time'])})"
                                                               if abs((o["time"] - ref).total_seconds()) >= 60 else ""))
         for o in pn.get("missing", []):
-            notes.append(f"{o}: none")
+            notes.append(o if ":" in o else f"{o}: none")
         ax.set_title(pn["title"], fontsize=8.5)
         ax.text(0.01, 0.01, " | ".join(notes), transform=ax.transAxes, fontsize=6, color="white", va="bottom",
                 zorder=10, bbox=dict(boxstyle="square,pad=0.2", fc="black", ec="none", alpha=0.55))
@@ -743,9 +752,13 @@ def render_frame(fr: dict, static: dict, out_png: str) -> str:
         for i, k in enumerate(kinds):
             st = styles[k]
             cax = holder.inset_axes([0.06 + i * (0.9 / len(kinds)), 0.62, 0.9 / len(kinds) - 0.08, 0.28])
-            sm = ScalarMappable(norm=Normalize(st["p_min"], st["p_max"]), cmap=st["cmap"])
+            log = st.get("scale", "linear") == "log"
+            lo = max(float(st["p_min"]), 1e-6) if log else float(st["p_min"])
+            norm = LogNorm(lo, max(float(st["p_max"]), 2 * lo)) if log else Normalize(lo, float(st["p_max"]))
+            sm = ScalarMappable(norm=norm, cmap=st["cmap"])
             cb = fig.colorbar(sm, cax=cax, orientation="horizontal")
-            cb.set_label(f"{st['label']}  (transparent below {st['p_min']:.2f}; outline = decision mask)",
+            cb.set_label(f"{st['label']}{' (log scale)' if log else ''}  (transparent below {lo:g}; "
+                         f"outline = decision mask)",
                          fontsize=7)
             cb.ax.tick_params(labelsize=6.5)
     fig.suptitle(f"{static.get('title') or 'SIT-FUSE probabilistic products'}  |  {fr['time']:%Y-%m-%d %H:%M} UTC",

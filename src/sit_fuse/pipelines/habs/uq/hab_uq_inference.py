@@ -164,6 +164,14 @@ def predict_frame(bundle: dict[str, Any], sensor: str, feat: pd.DataFrame,
     for s0 in range(0, len(feat), chunk):
         f = enc.transform(feat.iloc[s0:s0 + chunk].assign(sensor=sensor), fcfg)
         f = add_sensor_columns(f, bundle["sensors"])
+        anc = [c for c in cols if c.startswith(("anc_", "phys_"))]
+        if anc:          # ancillary columns (followon.ancillary) bypass the context encoder
+            miss = [c for c in anc if c not in feat.columns]
+            if miss:
+                raise ValueError(f"ancillary columns missing from the scene frame: {miss}")
+            fill = (bundle["uq_cfg"].get("ancillary") or {}).get("fill_values") or {}
+            for c in anc:
+                f[c] = feat[c].iloc[s0:s0 + chunk].fillna(fill.get(c, 0.0)).to_numpy()
         if s0 == 0:
             check_feature_coverage(bundle, f.columns)
         for c in cols:
@@ -205,6 +213,9 @@ def run_scene(bundle: dict[str, Any], sensor: str, date, search_dirs, out_dir,
     feat, valid = scene_feature_frame(bands, prof, uq.get("features", {}), pair, ref=None, invalid=invalid)
     if feat.empty:
         return None
+    if any(c.startswith(("anc_", "phys_")) for c in bundle["feature_columns"]):
+        from sit_fuse.pipelines.habs.followon.ancillary import add_pixel_ancillary
+        feat = add_pixel_ancillary(uq, feat, prof, sensor, date, bundle["feature_columns"])
     try:
         vals = predict_frame(bundle, sensor, feat)
     except ValueError as e:

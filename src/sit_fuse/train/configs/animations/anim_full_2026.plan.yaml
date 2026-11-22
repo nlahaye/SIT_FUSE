@@ -1,0 +1,30 @@
+# Evaluation-period animations (TEMPO + GOES-18 smoke and fire, fused smoke and fire) from the full all-scene run.
+# Run after uq_parallel.full_2026.yaml has finished its geo and fusion stages:
+#   cd /home/nlahaye/SIT_FUSE/src/sit_fuse/train
+#   python -m sit_fuse.local_launcher list   configs/animations/anim_full_2026.plan.yaml
+#   python -m sit_fuse.local_launcher run    configs/animations/anim_full_2026.plan.yaml
+#   python -m sit_fuse.local_launcher status configs/animations/anim_full_2026.plan.yaml
+# Each case is split by day (split_by: day) and the days are dealt to {n} shards; every shard renders its days with
+# {workers} processes. 3 cases x 4 shards x 4 workers = 48 cores. The dry_run jobs write frames_<day>.csv only
+# (which TEMPO / GOES / fused file each panel uses) and run first, so a wrong path shows up in seconds.
+launcher:
+  state_dir: /data/nlahaye/output/Learnergy/ANIMATIONS/FULL_2026/_launch
+  gpus: 0
+  cpus: 48
+  retries: 1
+vars:
+  train: /home/nlahaye/SIT_FUSE/src/sit_fuse/train
+  cfgdir: /home/nlahaye/SIT_FUSE/src/sit_fuse/train/configs/animations
+  py: python
+  n: 4
+  workers: 4
+jobs:
+  - name: anim_dry
+    cmd: "cd {train} && {py} make_overlay_animations.py -c {cfgdir}/anim_full_{case}.yaml --dry-run"
+    grid: {case: [park_2024, la_2025, oregon_2026]}
+    cpus: 1
+  - name: anim
+    cmd: "cd {train} && {py} make_overlay_animations.py -c {cfgdir}/anim_full_{case}.yaml --workers {workers} --shard {shard}/{n}"
+    grid: {case: [park_2024, la_2025, oregon_2026], shard: "range(4)"}
+    cpus: 4
+    after: [{name: anim_dry, on: [case]}]
