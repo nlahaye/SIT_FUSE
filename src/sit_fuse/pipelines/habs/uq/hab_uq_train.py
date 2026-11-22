@@ -53,6 +53,7 @@ from sit_fuse.pipelines.habs.uq.hab_uq_common import (
     SENSORS, insitu_date_kwargs, ranked_probability_score, species_spec, instrument_dirs, utcnow_iso)
 from sit_fuse.pipelines.habs.hab_sensor_groups import expand_sensors
 from sit_fuse.pipelines.habs.uq.hab_uq_matchups import build_sensor_matchups, sample_level
+from sit_fuse.pipelines.habs.followon.ancillary import add_ancillary_columns, keep_column
 from sit_fuse.pipelines.habs.uq.hab_spatial_tier import pool_group_counts
 
 LOG = logging.getLogger("hab-uq-train")
@@ -66,6 +67,7 @@ HAB_NON_FEATURES = {
     "assign_tier",      # coverage diagnostic (joint / parent / spatial / none)
 }
 HAB_NON_FEATURE_PREFIXES = ("ref_soft_", "sensor_")
+ANCILLARY_PREFIXES = ("anc_", "phys_")
 
 
 def hab_feature_columns(df: pd.DataFrame, features_cfg: dict[str, Any],
@@ -74,7 +76,10 @@ def hab_feature_columns(df: pd.DataFrame, features_cfg: dict[str, Any],
     spatial_on = groups is not None and "spatial_tier" in groups
     cols = [c for c in select_feature_columns(df, features_cfg)
             if c not in HAB_NON_FEATURES and not c.startswith(HAB_NON_FEATURE_PREFIXES)
-            and (spatial_on or not c.startswith("sp_tier_"))]
+            and (spatial_on or not c.startswith("sp_tier_")) and not c.startswith(ANCILLARY_PREFIXES)]
+    # environmental / standard-product columns (followon.ancillary): only when requested by
+    # features.groups ("ancillary", "ancillary:<source>", "physical", "physical:<product>")
+    cols += sorted(c for c in df.columns if c.startswith(ANCILLARY_PREFIXES) and keep_column(c, features_cfg))
     if spatial_on:       # spatial_tier group: sp_tier_c, sp_tier_mass (encoder tier 2)
         cols += sorted(c for c in df.columns if c.startswith("sp_tier_") and c not in cols)
     if sensors and len(sensors) > 1:
@@ -442,7 +447,13 @@ def train_species(hab_yml: dict[str, Any], use_key: str, out_dir: str | Path,
         raise RuntimeError(f"No matchups for {use_key}")
     used = list(enc_by_sensor)
     df = add_sensor_columns(pd.concat(rows_all, ignore_index=True), used)
+    df = add_ancillary_columns(df, samples, uq)
     feat_cols = hab_feature_columns(df, features_cfg, used if scope == "pooled" else None)
+    anc_cols = [c for c in feat_cols if c.startswith(ANCILLARY_PREFIXES)]
+    if anc_cols:   # missing ancillary values -> training-split medians (stored for inference)
+        fill = df.loc[df["split"] == "train", anc_cols].median(numeric_only=True).fillna(0.0)
+        df[anc_cols] = df[anc_cols].fillna(fill)
+        uq.setdefault("ancillary", {})["fill_values"] = {k: float(v) for k, v in fill.items()}
     for c in feat_cols:
         if c not in df.columns:
             df[c] = 0.0

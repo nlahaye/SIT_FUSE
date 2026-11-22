@@ -1,0 +1,19 @@
+# Per-platform encoder (VIIRS_SNPP) for the same-instrument representation study.
+#   python -m sit_fuse.pipelines.habs.followon.variants train -s train_VIIRS_SNPP.yaml
+#   python -m sit_fuse.pipelines.habs.hab_training_pipeline -y /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/same_instrument/VIIRS_SNPP/train_VIIRS_SNPP.yaml -n 6
+# Everything except the input platform matches the joint (production) VIIRS encoder: same training base,
+# window, architecture (DBN_ARCH_MAP) and preprocessing. Set train_min_date / train_max_date to the window
+# the production VIIRS_no_trop encoder was trained on if it differs from the base YAML.
+base_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/piplines/habs/hab_reflectance_model_train_ca_coast_2025_sensor_groups.yaml
+out: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/same_instrument/VIIRS_SNPP/train_VIIRS_SNPP.yaml
+output: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/VIIRS_SNPP/          # weights: <output>/VIIRS_no_trop/
+config_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/same_instrument/VIIRS_SNPP/config/                                 # model YAML: <config_dir>/model/train_model_VIIRS.yaml
+instruments: [VIIRS]
+overrides:
+  geo_zarr: {oc_geo_fpattern: /mnt/data1/cal_coast_geo.zarr, out_dir: /mnt/data1/, out_uid: cal_coast_geo}
+  instruments:
+    VIIRS:
+      no_trop:
+        input_oc_dir: /mnt/data1/REFLECTANCES/SNPP_VIIRS/
+        input_oc_re: '(SNPP_VIIRS\.(\d{8})\.L3m\.DAY\.)RRS.*\.4km.*nc'
+        run_preprocess_and_scale: true

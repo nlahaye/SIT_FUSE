@@ -36,6 +36,8 @@ Examples
 
   # daily chlorophyll (chlor_a; PACE: BGC suite) for HAB consistency diagnostics
   python sync_l3m_rrs.py --suite CHL --start 2023-01-01 --end 2026-09-30 --dir NPP_VIIRS=/data/chl/snpp
+  # standard products for the ancillary 'physical' features (FLH: MODIS only; KD / IOP: most platforms)
+  python sync_l3m_rrs.py --suite KD --start 2023-01-01 --end 2026-09-30 --dir S3A_OLCI=/data/kd/s3a
 
 Requires: pip install earthaccess
 """
@@ -83,19 +85,29 @@ INSTRUMENTS: dict[str, Instrument] = {
     "JPSS2_VIIRS": Instrument("JPSS2_VIIRS", "VIIRSJ2_L3m_RRS", "VIIRSJ2_L3m_RRS_NRT", "JPSS2_VIIRS"),
     "AQUA_MODIS": Instrument("AQUA_MODIS", "MODISA_L3m_RRS", "MODISA_L3m_RRS_NRT", "AQUA_MODIS"),
 }
-# --suite CHL: same platforms, chlorophyll collections (PACE chlor_a is in the BGC file)
+# --suite CHL / FLH / KD / IOP: same platforms, standard-product collections (named by
+# replacing _RRS with _<suite>; PACE: one file per suite, chlor_a in BGC). Not every platform
+# has every suite (e.g. no OLCI / VIIRS FLH): the CMR search then finds nothing and logs it.
 CHL_COLLECTIONS = {"PACE_OCI": ("PACE_OCI_L3M_BGC", "PACE_OCI_L3M_BGC_NRT")}
+SUITE_PRODUCT_RE = {"CHL": r"^chlor_a$", "FLH": r"^nflh$", "KD": r"^Kd_490$",
+                    "IOP": r"^(aph_443|bbp_443|adg_443)$"}
+PACE_SUITE_TOKEN = {"RRS": "AOP", "CHL": "BGC", "KD": "KD", "IOP": "IOP"}
+SUITES = ("RRS",) + tuple(SUITE_PRODUCT_RE)
 
 
 def for_suite(inst: Instrument, suite: str) -> Instrument:
     if suite == "RRS":
         return inst
-    if suite != "CHL":
+    if suite not in SUITE_PRODUCT_RE:
         raise ValueError(f"unknown suite {suite!r}")
-    std, nrt = CHL_COLLECTIONS.get(inst.key, (inst.std_collection.replace("_RRS", "_CHL"),
-                                               inst.nrt_collection.replace("_RRS", "_CHL")))
-    return Instrument(inst.key, std, nrt, inst.file_prefix,
-                      None if inst.key == "PACE_OCI" else r"^chlor_a$", "CHL")
+    if inst.key == "PACE_OCI":
+        if suite not in PACE_SUITE_TOKEN:
+            raise ValueError(f"PACE_OCI has no L3m {suite} suite")
+        tok = PACE_SUITE_TOKEN[suite]
+        std, nrt = f"PACE_OCI_L3M_{tok}", f"PACE_OCI_L3M_{tok}_NRT"
+        return Instrument(inst.key, std, nrt, inst.file_prefix, None, suite)
+    std, nrt = (inst.std_collection.replace("_RRS", f"_{suite}"), inst.nrt_collection.replace("_RRS", f"_{suite}"))
+    return Instrument(inst.key, std, nrt, inst.file_prefix, SUITE_PRODUCT_RE[suite], suite)
 
 
 ALIASES = {"SNPP_VIIRS": "NPP_VIIRS", "VIIRSN": "NPP_VIIRS", "NOAA20_VIIRS": "JPSS1_VIIRS",
@@ -147,7 +159,7 @@ def wanted(name: L3mName, inst: Instrument, res: str, include_aux: bool) -> bool
     if name.prefix != inst.file_prefix or name.res != res:
         return False
     if inst.key == "PACE_OCI":
-        return name.suite == ("AOP" if inst.suite == "RRS" else "BGC")
+        return name.suite == PACE_SUITE_TOKEN.get(inst.suite, inst.suite)
     if name.suite != inst.suite:
         return False
     if include_aux or inst.product_regex is None:
@@ -438,8 +450,9 @@ def parse_args(argv=None):
                    help="Restrict to this subset of the instruments that have directories")
     p.add_argument("--res", default="4km", choices=["4km", "9km", "0p1deg"],
                    help="Spatial resolution (0p1deg is PACE-only). Default 4km")
-    p.add_argument("--suite", default="RRS", choices=["RRS", "CHL"],
-                   help="RRS (default; PACE AOP) or CHL (chlor_a; PACE BGC)")
+    p.add_argument("--suite", default="RRS", choices=list(SUITES),
+                   help="RRS (default; PACE AOP), CHL (chlor_a; PACE BGC), FLH (nflh), KD (Kd_490), "
+                        "IOP (aph/bbp/adg_443)")
     p.add_argument("--include-aux", action="store_true",
                    help="Also fetch non-Rrs files of the RRS suite (aot_*, angstrom) for multi-file sensors")
     p.add_argument("--no-nrt", action="store_true", help="Never download NRT files as a fallback")

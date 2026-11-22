@@ -326,7 +326,7 @@ def scene_head_stack(model, data, ex_cfg, sigma=None, emb_stats=None, tiled=Fals
     return assemble_scene(np.asarray(data.targets_full), rows, tile_hw)
 
 
-def georeference_like_cf_gtiffs(stack, geo_zarr, work_zarr, out_tif) -> tuple[np.ndarray, dict]:
+def georeference_like_cf_gtiffs(stack, geo_zarr, work_zarr, out_tif, fusion=None) -> tuple[np.ndarray, dict]:
     """
     Resample a (n_bands, H, W) no-geo stack exactly as the context-free cluster
     GeoTIFFs are produced (YAML_TEMPLATE_CF_GTIFF: geo_zarr swath, nearest
@@ -339,6 +339,8 @@ def georeference_like_cf_gtiffs(stack, geo_zarr, work_zarr, out_tif) -> tuple[np
 
     da.to_zarr(da.from_array(np.moveaxis(stack, 0, -1).astype(np.float32)), work_zarr, overwrite=True)
     cfg = copy.deepcopy(YAML_TEMPLATE_CF_GTIFF)
+    if fusion:   # head_export.georef: e.g. {final_resolution: 0.01, resample_radius: 1500} for 1 km inputs
+        cfg["fusion"].update(fusion)
     cfg["low_res"]["data"]["filenames"] = [work_zarr]
     cfg["low_res"]["data"]["geo_filenames"] = [geo_zarr]
     tmp = str(out_tif) + ".tmp.tif"
@@ -573,7 +575,8 @@ def run_instrument(yml_conf, instrument, key, stages, model=None, load_dataset=N
             stack = scene_head_stack(model, data, ex, sigma=sigma, emb_stats=stats, tiled=tiled)
             if geo is not None:
                 work = os.path.join(out_dir, base + ".clust.head_outputs.zarr")
-                arr, prof = georef_fn(stack, geo, work, head_tif)
+                gopt = ex.get("georef") or {}
+                arr, prof = georef_fn(stack, geo, work, head_tif, **({"fusion": gopt} if gopt else {}))
                 if not ex.get("keep_no_geo", False):
                     import shutil
                     shutil.rmtree(work, ignore_errors=True)
