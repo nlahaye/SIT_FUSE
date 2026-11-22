@@ -6,6 +6,8 @@
 # 10-min frames), so the smoke fusion is refit at 5 min (smoke_5min -> FUSION/UQ_SMOKE_RECAL_5MIN). TEMPO stays at its
 # own hourly scans, carried forward causally to each GOES time.
 #
+#   firms_pull (fronts, VIIRS fire mask) ─> fire_rasters (FDCC, HMS, FIRMS VIIRS-observed, FIRMS positives) ─┐
+#   ┌────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 #   fire_matchup (FDCC, FIRMS VIIRS, FIRMS MODIS/Landsat, HMS) ─┬─> fire_attach ─┐
 #                                                               └─> fire_heads ──┴─> pin_splits ─┐   (GOES fire prep)
 #                                                                                                │
@@ -16,6 +18,15 @@
 #                                              └───────────────────────────────┴──> prod_goes_smoke_0726 ────────────┤
 #                                                      anim_dry (4 cases) ─> anim (Park, LA, Oregon) + anim_0726 <───┘
 #
+# Fire reference rasters (fire_rasters): native "rasters" per product, then each matchup job writes its scene-grid
+# "rasters_truth_*" (scene_grid.truth_dir of the goes18 matchup configs) for every matched GOES scene, i.e. all
+# 2026 (Oregon window) scenes with SIT-FUSE outputs plus Park / LA. The pull configs live in preprocessing/data_pull
+# (CHECK the file names in the cases below). Their time ranges: FDCC / HMS may cover only 2026 (one file per time
+# step, earlier files stay); the FIRMS config must span Park 2024 -> Oregon 2026, because rasterize_fire_fronts.py
+# rewrites fire_front_index.csv with only the steps of its own time range. Pulls skip files that exist
+# (overwrite: false); the rasterizer and matchups rewrite what they produce when overwrite: true (set
+# scene_grid.overwrite: true in goes18/g18_fdcc_matchup.yaml, otherwise existing FDCC truth rasters are kept).
+# pull_viirs_fire_mask.py needs EARTHDATA_TOKEN in the launcher's environment.
 # GOES fire prep (regenerated here): the four fire matchups (Park 2024, LA 2025, Oregon 2026) -> attach -> head
 # outputs -> pin_splits (TEMPO-aligned partitions; fails unless all three events have calibration + holdout scenes with
 # heads). fire_heads (export_head_outputs.py goes18/g18_export_fire.yaml with skip_existing + heads_from) keeps the
@@ -89,7 +100,27 @@ fusion:                         # both at the 5-min GOES cadence (frames 5 min, 
 
 extra_jobs:
   # --- GOES fire: TEMPO-aligned partitions + coverage gate (features of goes_fire_ts wait for it) ---------------
-  # GOES fire matchups, regenerated (as run_goes18.sh steps 1-3; config names as in goes18/)
+  # Native fire reference rasters (run in preprocessing/data_pull; outputs are the inputs of the matchup configs)
+  - name: firms_pull            # FIRMS detections (local CSVs) and the VIIRS fire mask (observed negatives)
+    cmd: "cd {train}/../preprocessing/data_pull && {py} {tool} {rcfg}{flags}"
+    cases:
+      - {src: firms, step: fronts, tool: pull_firms_fire_fronts.py, rcfg: firms_fire_fronts.example.local.yaml, flags: " --local-only --skip-feds"}
+      - {src: firms, step: viirs_mask, tool: pull_viirs_fire_mask.py, rcfg: firms_fire_fronts.example.local.yaml, flags: ""}
+    id_keys: [step]
+    cpus: 4
+  - name: fire_rasters          # FDCC + HMS: download and rasterize; FIRMS: two rasterize runs on the pulled vectors
+    cmd: "cd {train}/../preprocessing/data_pull && {py} {tool} {rcfg}"
+    cases:                      # rcfg = CHECK: your 2026 pull / rasterize configs
+      - {ref: fdcc, src: fdcc, tool: pull_goes_abi_fdcc.py, rcfg: abi_fdcc.yaml}
+      - {ref: hms_fire, src: hms, tool: pull_hms_smoke_fire.py, rcfg: hms_example_fire.yaml}
+      - {ref: firms_viirs, src: firms, tool: rasterize_fire_fronts.py, rcfg: firms_fire_fronts.example.local.yaml }       # -> rasters_viirs (negative_zone: observed)
+      - {ref: firms_modis_landsat, src: firms, tool: rasterize_fire_fronts.py, rcfg: firms_fire_fronts.example.local.not_viirs.yaml }     # -> rasters_pos (negative_zone: none)
+    id_keys: [ref]
+    after: [{name: firms_pull, "on": [src]}]   # FIRMS rasters wait for both pulls; FDCC / HMS start right away
+    cpus: 4
+
+  # GOES fire matchups, regenerated (as run_goes18.sh steps 1-3; config names as in goes18/); each writes its
+  # rasters_truth_* (scene-grid truth) and the records that point at them
   - name: fire_matchup
     cmd: "cd {train} && {py} {script} goes18/{cfg}"
     cases:
@@ -98,6 +129,7 @@ extra_jobs:
       - {ref: firms_modis_landsat, script: firms_fire_front_matchup_generator.py, cfg: g18_firms_modis_landsat_matchup.yaml}
       - {ref: hms_fire, script: build_simple_classifier_matchups.py, cfg: g18_hms_fire_matchup.yaml}
     id_keys: [ref]
+    after: [{name: fire_rasters, "on": [ref]}]
     cpus: 4
   - name: fire_attach           # -> goes18/g18_output_fdcc_hms_firms.yaml (input of g18_fire_ts_splits.yaml)
     cmd: "cd {train} && {py} attach_references.py goes18/g18_fdcc_fire_classifier_matchups.yaml goes18/g18_output_fdcc_hms_firms.yaml --add firms_viirs=goes18/g18_firms_viirs_classifier_matchups.yaml --add firms_modis_landsat=goes18/g18_firms_modis_landsat_classifier_matchups.yaml --add hms_fire=goes18/g18_hms_fire_classifier_matchups.yaml"
@@ -149,14 +181,14 @@ extra_jobs:
     grid: {case: [park_2024, la_2025, oregon_2026, oregon_0726]}
     after_geo: [goes_fire_ts]
     after_fusion: [fire_ts, smoke_5min]   # 5-min fused fire / smoke of Park, LA, Oregon (evaluation periods)
-    after: [{name: prod_goes_smoke_0726, on: [case]}, {name: prod_goes_fire_ts_0726, on: [case]}]
+    after: [{name: prod_goes_smoke_0726, "on": [case]}, {name: prod_goes_fire_ts_0726, "on": [case]}]
   - name: anim                  # split by day; days dealt to 4 shards x 4 workers per case
     cmd: "cd {train} && {py} make_overlay_animations.py -c configs/animations/anim_ts_{case}.yaml --workers 4 --shard {shard}/4"
     grid: {case: [park_2024, la_2025, oregon_2026], shard: "range(4)"}
     cpus: 4
-    after: [{name: anim_dry, on: [case]}]
+    after: [{name: anim_dry, "on": [case]}]
   - name: anim_0726             # one segment (split_by: none, ~216 frames): one job, 16 workers
     cmd: "cd {train} && {py} make_overlay_animations.py -c configs/animations/anim_ts_{case}.yaml --workers 16"
     cases: [{case: oregon_0726}]
     cpus: 16
-    after: [{name: anim_dry, on: [case]}]
+    after: [{name: anim_dry, "on": [case]}]
