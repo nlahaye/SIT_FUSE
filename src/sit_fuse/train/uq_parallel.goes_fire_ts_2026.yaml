@@ -6,6 +6,7 @@
 # 10-min frames), so the smoke fusion is refit at 5 min (smoke_5min -> FUSION/UQ_SMOKE_RECAL_5MIN). TEMPO stays at its
 # own hourly scans, carried forward causally to each GOES time.
 #
+#   full_geo (8 shards: SIT-FUSE .full_geo.tif cluster rasters) ───────────────────────────────────────────┐
 #   firms_pull (fronts, VIIRS fire mask) ─> fire_rasters (FDCC, HMS, FIRMS VIIRS-observed, FIRMS positives) ─┐
 #   ┌────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 #   fire_matchup (FDCC, FIRMS VIIRS, FIRMS MODIS/Landsat, HMS) ─┬─> fire_attach ─┐
@@ -18,6 +19,9 @@
 #                                              └───────────────────────────────┴──> prod_goes_smoke_0726 ────────────┤
 #                                                      anim_dry (4 cases) ─> anim (Park, LA, Oregon) + anim_0726 <───┘
 #
+# full_geo: the matchup generators read the georeferenced SIT-FUSE cluster rasters (<input>.clust.data_<N>clusters
+# .zarr.full_geo.tif) as their scenes; make_full_geo.py writes the missing ones with SIT-FUSE's geotiff writer
+# (postprocessing/generate_cluster_geotiffs.py) from the inference YAMLs in goes18/g18_full_geo_2026.yaml.
 # Fire reference rasters (fire_rasters): native "rasters" per product, then each matchup job writes its scene-grid
 # "rasters_truth_*" (scene_grid.truth_dir of the goes18 matchup configs) for every matched GOES scene, i.e. all
 # 2026 (Oregon window) scenes with SIT-FUSE outputs plus Park / LA. The pull configs live in preprocessing/data_pull
@@ -112,12 +116,18 @@ extra_jobs:
     cmd: "cd {train}/../preprocessing/data_pull && {py} {tool} {rcfg}"
     cases:                      # rcfg = CHECK: your 2026 pull / rasterize configs
       - {ref: fdcc, src: fdcc, tool: pull_goes_abi_fdcc.py, rcfg: abi_fdcc.yaml}
-      - {ref: hms_fire, src: hms, tool: pull_hms_smoke_fire.py, rcfg: hms_example_fire.yaml}
-      - {ref: firms_viirs, src: firms, tool: rasterize_fire_fronts.py, rcfg: firms_fire_fronts.example.local.yaml }       # -> rasters_viirs (negative_zone: observed)
-      - {ref: firms_modis_landsat, src: firms, tool: rasterize_fire_fronts.py, rcfg: firms_fire_fronts.example.local.not_viirs.yaml }     # -> rasters_pos (negative_zone: none)
+      - {ref: hms_fire, src: hms, tool: pull_hms_smoke_fire.py, rcfg: hms_pull.yaml}
+      - {ref: firms_viirs, src: firms, tool: rasterize_fire_fronts.py, rcfg: firms_fronts_viirs_obs.yaml}       # -> rasters_viirs (negative_zone: observed)
+      - {ref: firms_modis_landsat, src: firms, tool: rasterize_fire_fronts.py, rcfg: firms_fronts_pos.yaml}     # -> rasters_pos (negative_zone: none)
     id_keys: [ref]
     after: [{name: firms_pull, "on": [src]}]   # FIRMS rasters wait for both pulls; FDCC / HMS start right away
     cpus: 4
+
+  # Georeferenced SIT-FUSE cluster rasters (the matchup scenes); existing ones are skipped
+  - name: full_geo
+    cmd: "cd {train} && {py} make_full_geo.py goes18/g18_full_geo_2026.yaml --shard {shard}/8"
+    grid: {shard: "range(8)"}
+    cpus: 2
 
   # GOES fire matchups, regenerated (as run_goes18.sh steps 1-3; config names as in goes18/); each writes its
   # rasters_truth_* (scene-grid truth) and the records that point at them
@@ -129,7 +139,7 @@ extra_jobs:
       - {ref: firms_modis_landsat, script: firms_fire_front_matchup_generator.py, cfg: g18_firms_modis_landsat_matchup.yaml}
       - {ref: hms_fire, script: build_simple_classifier_matchups.py, cfg: g18_hms_fire_matchup.yaml}
     id_keys: [ref]
-    after: [{name: fire_rasters, "on": [ref]}]
+    after: [{name: fire_rasters, "on": [ref]}, full_geo]   # full_geo: every shard
     cpus: 4
   - name: fire_attach           # -> goes18/g18_output_fdcc_hms_firms.yaml (input of g18_fire_ts_splits.yaml)
     cmd: "cd {train} && {py} attach_references.py goes18/g18_fdcc_fire_classifier_matchups.yaml goes18/g18_output_fdcc_hms_firms.yaml --add firms_viirs=goes18/g18_firms_viirs_classifier_matchups.yaml --add firms_modis_landsat=goes18/g18_firms_modis_landsat_classifier_matchups.yaml --add hms_fire=goes18/g18_hms_fire_classifier_matchups.yaml"
