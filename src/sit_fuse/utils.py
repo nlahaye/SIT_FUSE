@@ -649,8 +649,8 @@ def _oc_geo_1d(filename, **kwargs):
     if "PACE" not in filename:
         stem = "RRS.Rrs_445" if "JPSS" in filename else "RRS.Rrs_443"
         base = f"{filename}{stem}.4km"
-    else:  # PACE has its own naming convention
-        base = f"{filename}AOP.V3_2.4km"
+    else:  # PACE has its own naming convention (pace_product / pace_res: e.g. gridded L2 at 1km)
+        base = f"{filename}{kwargs.get('pace_product', 'AOP.V3_2')}.{kwargs.get('pace_res', '4km')}"
 
     flename = base + ".nc"
     print(flename, os.path.exists(flename), kwargs.get("nrt", False))
@@ -800,11 +800,13 @@ def _oc_line_slices(kwargs):
 
 
 def read_pace_oc(filename, **kwargs):
-    vrs = ["AOP.V3_2"] #["RRS.V3_0.Rrs"]
+    # pace_product / pace_res select other PACE products or grids, e.g. the gridded L2
+    # AOP files of followon.pace_l2 (PACE_OCI.<date>.L3m.DAY.AOP.V3_2.1km.nc)
+    vrs = [kwargs.get("pace_product", "AOP.V3_2")] #["RRS.V3_0.Rrs"]
     internal_vars = ["Rrs"]
-    kwrg = {}
+    kwrg = {k: kwargs[k] for k in ("pace_product", "pace_res") if k in kwargs}
 
-    base = filename + vrs[0] + ".4km"
+    base = filename + vrs[0] + "." + kwargs.get("pace_res", "4km")
     flename = base + ".nc"
     if not os.path.exists(flename) and kwargs.get("nrt", False):
         flename = base + ".NRT.nc"

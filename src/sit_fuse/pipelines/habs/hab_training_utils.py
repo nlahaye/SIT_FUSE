@@ -39,7 +39,8 @@ def gen_geo_zarr_oc_daily(yml_conf):
     end_lat = yml_conf["end_lat"]
     
     fglob = glob.glob(yml_conf["geo_zarr"]["oc_geo_fpattern"])
-    loc = read_oc_geo(fglob[0])
+    # geo_zarr.reader_kwargs: e.g. {pace_res: 1km} for gridded PACE L2 stems
+    loc = read_oc_geo(fglob[0], **(yml_conf["geo_zarr"].get("reader_kwargs") or {}))
  
     lat = np.array(loc[0])
     lon = np.array(loc[1])
@@ -172,7 +173,7 @@ def find_train_test_fpaths(yml_conf, config_dict, instrument, key):
             mtch = re.search(str(in_re), fle)
             if mtch:
                 matched_per_source[in_dir] += 1
-                if "GOES" in instrument:
+                if "GOES" in instrument and len(mtch.group(2)) != 8:   # raw ABI scan start; daily composites: %Y%m%d
                     dt = datetime.strptime(mtch.group(2), "%Y%j%H%M%S")
                 else:
                     dt = datetime.strptime(mtch.group(2), "%Y%m%d")
@@ -261,6 +262,10 @@ def update_training_config(yml_conf, config_dict, instrument, key):
 
     config_dict["output"]["out_dir"] = os.path.join(yml_conf["output"], instrument + "_" + key)
 
+    # instruments.<INST>.<key>.model_overrides: deep-merged into the model YAML
+    # (e.g. data.number_channels, data.reader_kwargs.pace_res for non-default inputs)
+    _merge_overrides(config_dict, yml_conf["instruments"][instrument][key].get("model_overrides"))
+
     # Carry the pipeline's compute: section into the model YAML so training
     # (run_heir_training) and later inference use the same limits.
     merge_compute_conf(yml_conf, config_dict)
@@ -271,6 +276,15 @@ def update_training_config(yml_conf, config_dict, instrument, key):
     os.makedirs(config_dict["output"]["out_dir"], exist_ok=True)
 
     return config_dict
+
+
+def _merge_overrides(base, over):
+    for k, v in (over or {}).items():
+        if isinstance(v, dict) and isinstance(base.get(k), dict):
+            _merge_overrides(base[k], v)
+        else:
+            base[k] = copy.deepcopy(v)
+    return base
 
 
 def run_data_preprocessing(yml_conf):

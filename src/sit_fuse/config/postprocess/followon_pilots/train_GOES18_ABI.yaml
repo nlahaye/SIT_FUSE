@@ -1,0 +1,34 @@
+# GOES-18 ABI ocean encoder (pilot 4a): daily clear-sky median reflectance composites (C01 0.47, C02 0.64,
+# C03 0.86 um) from followon.goes_ocean, 0.02 deg grid over roi "ca" (30-38.94 N, 128-116 W).
+#   python -m sit_fuse.pipelines.habs.followon.goes_ocean geo --out /mnt/data1/goes18_geo.zarr --res 0.02
+#   python -m sit_fuse.pipelines.habs.hab_training_pipeline -y train_GOES18_ABI.yaml -n 6
+# The geo zarr must exist first (the pipeline's own geo step reads L3m netCDF, not GeoTIFF).
+start_lon: -128.00
+end_lon: -116.00
+start_lat: 30.00
+end_lat: 38.94
+
+geo_zarr:
+ oc_geo_fpattern: "/mnt/data1/goes18_geo.zarr"
+ out_dir: "/mnt/data1/"
+ out_uid: "goes18_geo"
+
+sif_dir: "/mnt/data1/TROPOSIF/"
+train_min_date: "20240305"      # same window as the ocean-colour encoders
+train_max_date: "20241023"
+
+roi: "ca"
+output: "/mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/GOES18_ABI/"      # weights: <output>/GOES18_ABI_no_trop/
+config_dir: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots/goes18/train_config/"                            # <config_dir>/model/train_model_GOES18_ABI.yaml
+
+compute: {num_threads: 6, num_loader_workers: 2, nice: 10, use_gpu: true}
+
+instruments:
+ GOES18_ABI:
+  no_trop:
+   input_oc_dir: "/mnt/data1/REFLECTANCES/GOES18_ABI_DAILY/"
+   input_oc_re: '(GOES18_ABI\.(\d{8})\.L3m\.DAY\.RHO\.tif)'
+   run_preprocess: false
+   run_preprocess_and_scale: true
+   model_overrides:
+    data: {number_channels: 3, fill_value: -999.0, chan_dim: 0}

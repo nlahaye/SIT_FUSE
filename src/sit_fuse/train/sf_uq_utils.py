@@ -1430,7 +1430,7 @@ class ProbabilityCalibrator:
     Post-hoc calibration applied after the classifier.
 
     1. Prior correction: undo training-set class balancing,
-       p'_c ∝ p_c * pi_true_c / pi_train_c.
+       p'_c ∝ p_c * (pi_true_c / pi_train_c) ** prior_strength (default 1).
     2. method: temperature | platt | isotonic | none
        Fit by minimizing weighted (soft) cross-entropy on calibration data.
     3. Optional label-noise correction (option C): noise_T[k, j] =
@@ -1442,8 +1442,12 @@ class ProbabilityCalibrator:
        transform() returns corrected probabilities.
     """
 
-    def __init__(self, method="temperature", pi_train=None, pi_true=None, noise_T=None):
+    def __init__(self, method="temperature", pi_train=None, pi_true=None, noise_T=None,
+                 prior_strength=1.0):
         self.method = str(method).lower()
+        # 1 = full prior correction (default); 0 = keep the class-balanced prior;
+        # in between: p'_c ∝ p_c * (pi_true_c / pi_train_c) ** prior_strength
+        self.prior_strength = float(prior_strength)
         self.pi_train = None if pi_train is None else np.asarray(pi_train, dtype=np.float64)
         self.pi_true = None if pi_true is None else np.asarray(pi_true, dtype=np.float64)
         self.T = 1.0
@@ -1457,6 +1461,9 @@ class ProbabilityCalibrator:
         if self.pi_train is None or self.pi_true is None:
             return P
         r = np.clip(self.pi_true, EPS, None) / np.clip(self.pi_train, EPS, None)
+        g = getattr(self, "prior_strength", 1.0)          # older pickles: full correction
+        if g != 1.0:
+            r = r ** g
         Q = P * r[None, :]
         return Q / np.maximum(Q.sum(axis=1, keepdims=True), EPS)
 

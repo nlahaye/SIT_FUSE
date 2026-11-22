@@ -1,0 +1,249 @@
+# Local-launcher plan for the next steps on the full 2023-01-01..2026-09-30 run (uq_full_2023_2026_ifcb):
+#   (1) year effect: calibration reweighting sweep (year balance / label-shift prevalence) for all PN streams,
+#       pDA and Total_Phytoplankton, on the new production matchup frames (test rows unchanged vs production)
+#   (2) pDA: random forest, power-0.75 class weights, prior strength 0.25, threshold rule max_flag_ratio 1.5
+#   (3) P. delicatissima: year-grouped interval calibration (worst calibration year reaches 0.9)
+#   (4) P. seriata, total PN, cDA: retrained on the QC-fixed table (no setting changes) so every stream uses
+#       the same in-situ data; size-class combination vs direct total PN (combine)
+#   (5) Total_Phytoplankton: full 2023-2026 product (train, evaluate, infer, fuse, animate), plus a
+#       light-microscopy-only variant and a microscopy / IFCB / pier subset evaluation
+#   (6) Alexandrium_spp: experimental production stream (own bins 1 / 1e3 / 5e3 cells/L; train, evaluate,
+#       subsets, infer, fuse, animate). Trained on light microscopy; IFCB scored as presence only
+#       (P(>= 1 cell/L) vs detection, per sensor and fused). No PSP target and no C-HARM comparison.
+#   (0) insitu_qc first: SIO 2023-04-10 Alexandrium value removed, double-ingested pier rows merged,
+#       CPP CP241216 re-dated, IFCB 51-class (Santa Cruz, MBARI) unmapped species set to NaN
+#       (sit_fuse.pipelines.habs.insitu.qc_fixes; originals kept as *.pre_qc.csv, rerun-safe).
+#       All experiments read the non-strict combined_augmented.csv (no *_strict.csv anywhere).
+#   then report tables (weighted F1 per sensor / fused / original / most-common-bin, QWK, RPSS, coverage,
+#   per-year observed rate vs mean forecast probability).
+# HAB YAML: hab_reflectance_geotiff_gen_s_ca_2023_2026_full_CA.yaml (next_steps version: species_run adds
+#   Total_Phytoplankton and Alexandrium_spp; uq.species.pDA / Pseudo_nitzschia_delicatissima_group /
+#   Alexandrium_spp overrides; microscopy subset).
+# Variant spec: next_steps_variants.yaml (copy both next to the production YAML, path below).
+#
+#   insitu_qc ─► snapshot ─► train_eval x 7 streams ─┬─► infer_fuse x sp x year ─► animate
+#                                                    ├─► combine ─► points pda ─► maps pda x year ─► charm_animate pda
+#                                                    ├─► subset_eval x sp (7 streams)
+#                                                    ├─► variants ─► sweep x variant x sp ──► compare x token
+#                                                    │             └► pilots x {tphyto_microscopy} ─► compare_pilots (vs production)
+#                                                    └────────────────────────────────────► report_tables (after sweep, pilots, subset_eval)
+#   points, maps, subset_eval ─► summary
+#
+# Order matters for (1): the sweep reuses <uq>/models/matchups_<token>.parquet, which exists for
+# every stream only after train_eval (all retrained on the QC-fixed table).
+# Evaluation and animation per stream:
+#   All 7 streams (seriata, delicatissima, PN total, pDA, cDA, Total_Phytoplankton, Alexandrium_spp): evaluate
+#     (train_eval, year strata), subset_eval, report_tables, new 2023-2026 products (infer_fuse x 4 years) and
+#     fused / filtered MP4s (animate); pDA also C-HARM maps + MP4s; Alexandrium also IFCB presence scores.
+#     The calibration sweep is evaluation-only: if a variant wins, re-run infer_fuse and
+#     animate for that stream with the variant YAML (commented job 'apply_winner' at the end). No data pulls: inputs, heads,
+# C-HARM and CHL caches from the follow-on fixes run cover 2023-01-01..2026-09-30.
+#
+#   python -m sit_fuse.local_launcher list   hab_uq_next_steps_launch.yaml
+#   python -m sit_fuse.local_launcher run    hab_uq_next_steps_launch.yaml --dry-run
+#   systemd-run --user --scope -p MemoryMax=108G -p MemoryHigh=100G -p MemorySwapMax=0 \
+#     python -m sit_fuse.local_launcher run hab_uq_next_steps_launch.yaml
+#   python -m sit_fuse.local_launcher status hab_uq_next_steps_launch.yaml
+# Resume: rerun the same command. Failed jobs: --rerun-failed. One stage: --only 'sweep.*'.
+#
+# Resource budget (16 cores, 2 GPUs, 181 GB): 9 cores (60 %), ~108 GB (60 %, enforced by the scope above).
+# All jobs are CPU-only (gpu: 0); GPU 0 stays listed so the budget matches the other plans.
+launcher:
+  state_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/launch/uq_next_steps
+  gpus: [0]
+  cpus: 9
+  pin_cpus: true
+  max_parallel: null
+  retries: 1
+  nice: 10
+
+vars:
+  py: python
+  cfg: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/postprocess
+  yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/postprocess/hab_reflectance_geotiff_gen_s_ca_2023_2026_full_CA.yaml
+  uq: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/uq_full_2023_2026_ifcb       # = uq.out_dir
+  ns: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/next_steps          # = variant out_root
+  state: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/launch/uq_next_steps
+  insitu: /mnt/data1/habs/insitu_augmented_ifcb_2023_2026                          # uq.insitu_file dir
+  mod: sit_fuse.pipelines.habs.uq
+  fo: sit_fuse.pipelines.habs.followon
+
+jobs:
+  # (0) In-situ QC fixes on combined_augmented.csv, the only in-situ table used by every experiment
+  #     (always from the untouched *.pre_qc.csv copy).
+  - name: insitu_qc
+    cmd: >-
+      f={insitu}/combined_augmented;
+      if [ ! -f $f.pre_qc.csv ]; then cp $f.csv $f.pre_qc.csv || exit 1; fi;
+      {py} -m sit_fuse.pipelines.habs.insitu.qc_fixes $f.pre_qc.csv $f.csv --log $f.qc_log.csv
+    cpus: 1
+    gpu: 0
+    priority: 3
+    provides: ["{insitu}/combined_augmented.qc_log.csv"]
+
+  # Keep the current evaluation + C-HARM summaries (cp -n: never overwritten).
+  - name: snapshot
+    cmd: >-
+      mkdir -p {uq}/before_nextsteps &&
+      cp -rn {uq}/evaluation {uq}/before_nextsteps/ &&
+      cp -rn {uq}/models {uq}/before_nextsteps/ &&
+      (cp -n {uq}/charm_compare/summary_*.csv {uq}/before_nextsteps/ 2>/dev/null || true)
+    cpus: 1
+    gpu: 0
+    priority: 3
+    after: [{name: insitu_qc, on: []}]
+    provides: ["{uq}/before_nextsteps/evaluation"]
+
+  # All streams on the QC-fixed table: (2) pDA, (3) delicatissima intervals, (4) seriata / PN total / cDA,
+  # (5) Total_Phytoplankton, (6) Alexandrium (microscopy training + IFCB presence scores).
+  # Evaluation now adds year strata, exceedance mean_p (calibration in the large) and fused test predictions.
+  - name: train_eval
+    cmd: "{py} -m {mod}.hab_uq_pipeline -y {yaml} --stages train,evaluate --species {sp} -n 4"
+    grid:
+      sp: &all_sp [Pseudo_nitzschia_seriata_group, Pseudo_nitzschia_delicatissima_group, Pseudo_nitzschia_total,
+                   pDA, cDA, Total_Phytoplankton, Alexandrium_spp]
+    cpus: 4
+    gpu: 0
+    priority: 1
+    after: [{name: snapshot, on: []}]
+
+  # Provenance subsets (oos_piers, non_pier, ifcb, microscopy) for every stream.
+  - name: subset_eval
+    cmd: "{py} -m {mod}.hab_uq_subset_eval -y {yaml} --species {sp}"
+    grid:
+      sp: *all_sp
+    cpus: 2
+    gpu: 0
+    after: [{name: train_eval, on: []}]
+
+  # Products for every stream (one-day temporal-filter reset at each 1 Jan window start).
+  - name: infer_fuse
+    cmd: "{py} -m {mod}.hab_uq_pipeline -y {yaml} --stages infer,fuse --species {sp} --window {win} -n 3"
+    grid:
+      sp: *all_sp
+      win: ["2023-01-01:2023-12-31", "2024-01-01:2024-12-31", "2025-01-01:2025-12-31", "2026-01-01:2026-09-30"]
+    cpus: 3
+    gpu: 0
+    after: [{name: train_eval, on: [sp]}]
+
+  # Fused + filtered MP4s per window; threshold_index 0 maps P(>= first alert threshold):
+  # PN groups / total 1e4 cells/L, Total_Phytoplankton 1e5, Alexandrium 1e3 cells/L, pDA 0.5 ng/mL, cDA 10 pg/cell.
+  - name: animate
+    cmd: "{py} -m {mod}.hab_uq_pipeline -y {yaml} --stages animate --species Pseudo_nitzschia_seriata_group,Pseudo_nitzschia_delicatissima_group,Pseudo_nitzschia_total,pDA,cDA,Total_Phytoplankton,Alexandrium_spp -n 2"
+    cpus: 2
+    gpu: 0
+    after: [{name: infer_fuse, on: []}]
+
+  # (4) size-class combination vs direct total PN (retrained seriata / delicatissima / PN total models).
+  - name: combine
+    cmd: "{py} -m {mod}.hab_charm_compare combine -y {yaml}"
+    cpus: 2
+    gpu: 0
+    after: [{name: train_eval, on: []}]
+
+  # (2) pDA against C-HARM with the new model (C-HARM cache from the follow-on fixes run).
+  - name: points
+    cmd: "{py} -m {mod}.hab_charm_compare points -y {yaml} --target pda"
+    cpus: 2
+    gpu: 0
+    after: [{name: combine, on: []}, {name: infer_fuse, on: []}]
+
+  - name: maps
+    cmd: "{py} -m {mod}.hab_charm_compare maps -y {yaml} --target pda --year {year}"
+    grid:
+      year: [2023, 2024, 2025, 2026]
+    cpus: 1
+    gpu: 0
+    after: [{name: points, on: []}]
+
+  - name: charm_animate
+    cmd: "{py} -m {mod}.hab_charm_animate -y {yaml} --target pda --lead 0 --layout compare,types"
+    cpus: 1
+    gpu: 0
+    after: [{name: maps, on: []}]
+
+  - name: summary
+    cmd: "{py} -m {mod}.hab_charm_compare summary -y {yaml}"
+    cpus: 1
+    gpu: 0
+    after: [{name: points, on: []}, {name: maps, on: []}, {name: subset_eval, on: []}]
+
+  # (1), (5), (6): variant YAMLs (after the production retrain so reuse_frame_from finds every frame).
+  - name: variants
+    cmd: "{py} -m {fo}.variants hab -s {cfg}/next_steps_variants.yaml"
+    cpus: 1
+    gpu: 0
+    priority: 2
+    after: [{name: train_eval, on: []}]
+    provides: ["{ns}/year_balanced/hab_year_balanced.yaml"]
+
+  # (1) Calibration sweep: train (calibration refit on the reused frame) + evaluate, per variant x species.
+  - name: sweep
+    cmd: "{py} -m {mod}.hab_uq_pipeline -y {ns}/{v}/hab_{v}.yaml --stages train,evaluate --species {sp} -n 2"
+    grid:
+      v: [year_balanced, prev_median, year_bal_prev_median, prev_mean]
+      sp: [Pseudo_nitzschia_total, Pseudo_nitzschia_seriata_group, Pseudo_nitzschia_delicatissima_group,
+           pDA, Total_Phytoplankton]
+    cpus: 2
+    gpu: 0
+    after: [{name: variants, on: []}]
+
+  # (5) microscopy-only Total_Phytoplankton: new matchups, train + evaluate.
+  - name: pilots
+    cmd: "{py} -m {mod}.hab_uq_pipeline -y {ns}/{v}/hab_{v}.yaml --stages train,evaluate --species {sp} -n 4"
+    cases:
+      - {v: tphyto_microscopy, sp: Total_Phytoplankton}
+    id_keys: [v]
+    cpus: 4
+    gpu: 0
+    after: [{name: variants, on: []}]
+
+  # Paired comparison vs production (same test rows; block bootstrap over split_group), year strata included.
+  - name: compare
+    cmd: >-
+      {py} -m {fo}.variant_compare --baseline baseline --variant baseline={uq}
+      --variant year_balanced={ns}/year_balanced/uq --variant prev_median={ns}/prev_median/uq
+      --variant year_bal_prev_median={ns}/year_bal_prev_median/uq --variant prev_mean={ns}/prev_mean/uq
+      --token {tok} --out {ns}/compare
+    grid:
+      tok: [pseudo_nitzschia_total_bloom, pseudo_nitzschia_seriata_bloom, pseudo_nitzschia_delicatissima_bloom,
+            particulate_domoic_acid, total_phytoplankton]
+    cpus: 1
+    gpu: 0
+    after: [{name: sweep, on: []}]
+
+  - name: compare_pilots
+    cmd: >-
+      {py} -m {fo}.variant_compare --baseline {base} --variant {base}={bdir} --variant {v}={ns}/{v}/uq
+      --token {tok} --out {ns}/compare_pilots --by-site
+    cases:
+      - {v: tphyto_microscopy, base: production, bdir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/uq_full_2023_2026_ifcb, tok: total_phytoplankton}
+    id_keys: [v]
+    cpus: 1
+    gpu: 0
+    after: [{name: pilots, on: []}, {name: train_eval, on: []}]
+
+  # Report tables: production + every variant (skill_*.csv, year_calibration_*.csv, subsets_*.csv).
+  - name: report_tables
+    cmd: >-
+      {py} -m {mod}.hab_report_tables --run production={uq}
+      --run year_balanced={ns}/year_balanced/uq --run prev_median={ns}/prev_median/uq
+      --run year_bal_prev_median={ns}/year_bal_prev_median/uq --run prev_mean={ns}/prev_mean/uq
+      --run tphyto_microscopy={ns}/tphyto_microscopy/uq
+
+      --out {ns}/report --tag next_steps
+    cpus: 1
+    gpu: 0
+    after: [{name: sweep, on: []}, {name: pilots, on: []}, {name: subset_eval, on: []}]
+
+  # Apply a sweep winner (enable after reviewing report/skill_next_steps.csv and compare/): products and MP4s
+  # for one stream from the winning variant YAML, written under {ns}/<variant>/uq. Example:
+  # - name: apply_winner
+  #   cmd: >-
+  #     {py} -m {mod}.hab_uq_pipeline -y {ns}/year_balanced/hab_year_balanced.yaml
+  #     --stages infer,fuse,animate --species Pseudo_nitzschia_seriata_group --window {win} -n 3
+  #   grid:
+  #     win: ["2023-01-01:2023-12-31", "2024-01-01:2024-12-31", "2025-01-01:2025-12-31", "2026-01-01:2026-09-30"]
+  #   cpus: 3
+  #   gpu: 0
+  #   after: [{name: report_tables, on: []}]

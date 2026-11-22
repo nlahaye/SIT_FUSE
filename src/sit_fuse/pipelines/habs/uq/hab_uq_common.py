@@ -44,7 +44,10 @@ except Exception:  # pragma: no cover - fallback copy for standalone use
 EPS = 1e-7
 NODATA = -9999.0
 CELL_RANGES = [0, 1000, 10000, 100000, 1000000, 10000000, 100000000]
+# cellular domoic acid (pg DA / PN cell); 10 pg/cell is the alert level used here
+CDA_RANGES = [0, 1, 3, 10, 30, 1000]
 GEOTIFF_SCALE = 1000.0
+PN_GROUPS = ["Pseudo_nitzschia_seriata_group", "Pseudo_nitzschia_delicatissima_group"]
 
 
 # ---------------------------------------------------------------------------
@@ -60,6 +63,10 @@ class SpeciesSpec:
     detection_floor: float          # lower edge used for log-space interpolation of bin 0
     alert_thresholds: list[float] = field(default_factory=list)
     measurement_sigma_dex: float = 0.2   # default log10 measurement error of the reference
+    # derived in-situ target computed in hab_insitu.species_frame, e.g.
+    #   {"kind": "sum", "columns": [...]}                       (total Pseudo-nitzschia)
+    #   {"kind": "cellular_da", "pda": "pDA", "pn": [...], "min_pn_cells": 1000, "pda_lod": 0.02}
+    derived: dict[str, Any] | None = None
 
     @property
     def n_classes(self) -> int:
@@ -81,6 +88,14 @@ DEFAULT_SPECIES = {
                        0.01, [0.5, 1.0], 0.15),
     "Alexandrium_spp": SpeciesSpec("Alexandrium_spp", CELL_RANGES, "cells/L",
                                    USE_KEY_FNAME_MAP["Alexandrium_spp"], 100.0, [1e3], 0.25),
+    # total Pseudo-nitzschia (seriata + delicatissima), the quantity C-HARM predicts
+    "Pseudo_nitzschia_total": SpeciesSpec(
+        "Pseudo_nitzschia_total", CELL_RANGES, "cells/L", "pseudo_nitzschia_total_bloom", 100.0,
+        [1e4, 1e5], 0.2, {"kind": "sum", "columns": list(PN_GROUPS)}),
+    # experimental cellular DA = pDA / total PN (pg/cell); pDA non-detects become upper bounds
+    "cDA": SpeciesSpec("cDA", CDA_RANGES, "pg/cell", "cellular_domoic_acid", 0.1, [10.0], 0.3,
+                       {"kind": "cellular_da", "pda": "pDA", "pn": list(PN_GROUPS),
+                        "min_pn_cells": 1000.0, "pda_lod": 0.02, "max_censored_upper": 10.0}),
 }
 
 
@@ -90,6 +105,8 @@ def species_spec(use_key: str, overrides: dict[str, Any] | None = None) -> Speci
         base = SpeciesSpec(use_key, CELL_RANGES, "cells/L", use_key.lower(), 100.0)
     if overrides:
         kw = {**base.__dict__, **{k: v for k, v in overrides.items() if k in base.__dict__}}
+        if isinstance(overrides.get("derived"), dict) and base.derived:
+            kw["derived"] = {**base.derived, **overrides["derived"]}   # e.g. only pda_lod changed
         base = SpeciesSpec(**kw)
     return base
 
@@ -236,6 +253,8 @@ SENSORS = {
     "s3a": SensorSpec("s3a", INSTRUMENT_PREFIX["s3a"], "Sentinel-3A", 10.0, "descending", "olci"),
     "s3b": SensorSpec("s3b", INSTRUMENT_PREFIX["s3b"], "Sentinel-3B", 10.0, "descending", "olci"),
     "pace": SensorSpec("pace", INSTRUMENT_PREFIX["pace"], "PACE", 13.0, "ascending", "oci"),
+    # GOES-18 ABI daily composite (followon.goes_ocean): median of ~17-23 UTC scans -> local noon
+    "goes18": SensorSpec("goes18", INSTRUMENT_PREFIX["goes18"], "GOES-18", 12.0, "geostationary", "abi"),
 }
 
 

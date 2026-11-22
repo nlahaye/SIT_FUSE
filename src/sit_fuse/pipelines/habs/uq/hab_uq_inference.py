@@ -48,7 +48,7 @@ from sit_fuse.pipelines.habs.uq.hab_uq_common import (
     log10_concentration_quantile, overpass_hours_utc, ordinal_moments, species_spec,
     pixel_centers, utcnow_iso)
 from sit_fuse.pipelines.habs.uq.hab_uq_matchups import load_scene
-from sit_fuse.pipelines.habs.uq.hab_uq_selection import decide, interval_bounds
+from sit_fuse.pipelines.habs.uq.hab_uq_selection import decide, decision_spec, interval_bounds
 from sit_fuse.pipelines.habs.uq.hab_uq_train import add_sensor_columns, member_probabilities
 
 LOG = logging.getLogger("hab-uq-inference")
@@ -82,7 +82,7 @@ def _thr_name(t: float) -> str:
 
 
 def summarize_probabilities(Q: np.ndarray, members: np.ndarray | None, spec, selective_thr: float | None,
-                            quantiles=(0.05, 0.5, 0.95), decision: str = "argmax",
+                            quantiles=(0.05, 0.5, 0.95), decision="argmax",
                             interval_cal: dict | None = None) -> dict[str, np.ndarray]:
     out = {}
     C = Q.shape[1]
@@ -124,7 +124,7 @@ HEAD_ONLY_PREFIXES = ("mc_", "ood_")
 
 def bundle_summary_options(bundle: dict[str, Any]) -> dict[str, Any]:
     """Decision rule and interval calibration stored at training (defaults for older bundles)."""
-    return {"decision": (bundle.get("decision") or {}).get("rule", "argmax"),
+    return {"decision": decision_spec(bundle),
             "interval_cal": bundle.get("interval_calibration")}
 
 
@@ -164,6 +164,14 @@ def predict_frame(bundle: dict[str, Any], sensor: str, feat: pd.DataFrame,
     for s0 in range(0, len(feat), chunk):
         f = enc.transform(feat.iloc[s0:s0 + chunk].assign(sensor=sensor), fcfg)
         f = add_sensor_columns(f, bundle["sensors"])
+        anc = [c for c in cols if c.startswith(("anc_", "phys_"))]
+        if anc:          # ancillary columns (followon.ancillary) bypass the context encoder
+            miss = [c for c in anc if c not in feat.columns]
+            if miss:
+                raise ValueError(f"ancillary columns missing from the scene frame: {miss}")
+            fill = (bundle["uq_cfg"].get("ancillary") or {}).get("fill_values") or {}
+            for c in anc:
+                f[c] = feat[c].iloc[s0:s0 + chunk].fillna(fill.get(c, 0.0)).to_numpy()
         if s0 == 0:
             check_feature_coverage(bundle, f.columns)
         for c in cols:
@@ -205,6 +213,9 @@ def run_scene(bundle: dict[str, Any], sensor: str, date, search_dirs, out_dir,
     feat, valid = scene_feature_frame(bands, prof, uq.get("features", {}), pair, ref=None, invalid=invalid)
     if feat.empty:
         return None
+    if any(c.startswith(("anc_", "phys_")) for c in bundle["feature_columns"]):
+        from sit_fuse.pipelines.habs.followon.ancillary import add_pixel_ancillary
+        feat = add_pixel_ancillary(uq, feat, prof, sensor, date, bundle["feature_columns"])
     try:
         vals = predict_frame(bundle, sensor, feat)
     except ValueError as e:

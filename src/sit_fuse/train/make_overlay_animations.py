@@ -16,6 +16,8 @@ Inputs (YAML; see overlay_animation.example.yaml)
   products: tempo_smoke, goes_smoke (+ optional tempo_fire, goes_fire, fused_smoke): {geo_dir, model, product, sensor}
             fused products (sensor: fused, model: fused, geo_dir: <fusion output_dir>/<grid>) are matched in time
             like GOES (nearest scene within frames.goes_window_minutes)
+            a product whose geo_dir has no rasters is skipped with a warning (its panels show the observation and
+            "<name>: no products"; it is dropped from frames.require), so one missing stage does not stop the run
   panels: [{title, obs, overlays: [...]}]   default: one panel per observation, overlaid with that sensor's
           products (smoke, then fire when configured), plus one panel of fused products over GOES true colour;
           a null / {blank: true} entry leaves an empty cell
@@ -127,11 +129,15 @@ def build(cfg: dict, base: Path, sample_enhance: bool = False, cache_dir=None):
         for k, o in obs.items():
             if o.enhance["method"] == "hist" and not o.enhance.get("lut"):
                 o.enhance["lut"] = enhance_lut(k, o, grid, cache_dir)
-    prods = {}
+    prods, unavailable = {}, set()
     for k, v in (cfg.get("products") or {}).items():
         if v and v.get("geo_dir") and v.get("enabled", True):
             v = dict(v, geo_dir=_resolve(base, v["geo_dir"]), manifest=_resolve(base, v.get("manifest")))
-            prods[k] = O.ProductSource(k, v, t0, t1, grid, shift)
+            try:
+                prods[k] = O.ProductSource(k, v, t0, t1, grid, shift)
+            except FileNotFoundError as e:      # missing geo_dir / no rasters of this product: use what is there
+                LOG.warning("product %s not available (%s); its panels show the observation only", k, e)
+                unavailable.add(k)
     ncols = cfg.get("ncols")
     if cfg.get("panels"):
         panels = [p if p else {"blank": True} for p in cfg["panels"]]
@@ -141,10 +147,11 @@ def build(cfg: dict, base: Path, sample_enhance: bool = False, cache_dir=None):
     for pn in panels:
         if pn.get("blank"):
             continue
-        bad = [o for o in pn.get("overlays", []) if o not in prods]
+        bad = [o for o in pn.get("overlays", []) if o not in prods and o not in unavailable]
         if bad:
             LOG.warning("panel %r: overlays %s not configured; dropped", pn.get("title"), bad)
-            pn["overlays"] = [o for o in pn.get("overlays", []) if o in prods]
+        pn["unavailable"] = [o for o in pn.get("overlays", []) if o in unavailable]
+        pn["overlays"] = [o for o in pn.get("overlays", []) if o in prods]
         if pn.get("obs") and pn["obs"] not in obs:
             LOG.warning("panel %r: observation %r not configured", pn.get("title"), pn["obs"])
 
@@ -183,6 +190,9 @@ def build(cfg: dict, base: Path, sample_enhance: bool = False, cache_dir=None):
     if req is True:                     # every sensor with a configured product (tempo, goes, fused)
         req = sorted({p.sensor for p in prods.values()})
     req = {str(x) for x in ([req] if isinstance(req, str) else (req or []))}
+    if req & unavailable:
+        LOG.warning("frames.require: %s not available; not required", sorted(req & unavailable))
+        req -= unavailable
     bad = sorted(x for x in req if x not in prods and x not in {p.sensor for p in prods.values()})
     if bad:
         raise ValueError(f"frames.require {bad}: not a configured product {sorted(prods)} or sensor "
@@ -242,6 +252,7 @@ def build(cfg: dict, base: Path, sample_enhance: bool = False, cache_dir=None):
                 else:
                     s = p.nearest(ref_t, gw)
                 (ovs.append(s) if s else missing.append(k))
+            missing += [f"{k}: no products" for k in pn.get("unavailable", [])]
             fr["panels"].append({"title": pn.get("title", oname or "products"), "obs": ospec, "obs_name": oname,
                                  "overlays": ovs, "missing": missing})
         if not any(pn.get("obs") or pn.get("overlays") for pn in fr["panels"]):

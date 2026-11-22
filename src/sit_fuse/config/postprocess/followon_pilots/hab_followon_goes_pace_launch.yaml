@@ -1,0 +1,248 @@
+# Local-launcher plan, follow-on stream (4): pilots for GOES-18 ABI (4a) and native-resolution PACE OCI (4b).
+#
+# 4a GOES-18: daily clear-sky median composites of ABI CONUS/PACUS L2 CMI C01-C03 (0.47 / 0.64 / 0.86 um) with
+#    the ABI clear-sky mask (ACMC BCM) and a C03 cap for residual cloud, glint and land, 16-23 UTC, 0.02 deg,
+#    roi "ca" (cf. Zheng et al. 2023, RSE 295:113660, GOES-R ABI ocean-colour daily composites). Encoder trained
+#    on the 2024 window used for the ocean-colour encoders; heads 2023-2026; UQ heads (goes18 only).
+#    goes_compare scores GOES-only heads against the production polar-orbiter heads on shared in-situ samples
+#    (pooled over sensors, so a sample counts once per variant).
+# 4b PACE: OCI L2 AOP granules gridded to 0.01 deg (~1 km) daily files. Three PACE-only UQ variants on the same
+#    samples: pace_l3m_4km (production 4 km L3m heads), pace_l2g_1km (encoder retrained at 1 km) and
+#    pace_zs_1km (production 4 km encoder applied to the 1 km inputs). pace_compare: baseline pace_l3m_4km.
+#
+#   variants ────────────────────────────────────────────────────────────┐
+#   goes_geo, goes_composite x year ─► goes_train (GPU) ─► goes_heads x year ─┴► goes_train_eval x sp ─► goes_compare x sp
+#   pace_geo, pace_l2 x month (pull + grid, raw deleted) ─► pace_train (GPU) ─► pace_zs_model
+#     ─► pace_heads x {l2g_1km, zs_1km} x year ─► pace_train_eval x variant x sp ─► pace_compare x sp
+#   pace_rrs_sync (4 km L3m, baseline heads already exist) ─► pace_train_eval (pace_l3m_4km)
+#
+# Data pulls:
+#   goes_composite  s3://noaa-goes18 (anonymous); ~14 scans x 4 files per day, raw deleted after each day
+#   pace_l2         earthaccess PACE_OCI_L2_AOP (latest version), Earthdata login in ~/.netrc; granules
+#                   intersecting the roi only, one month at a time, raw deleted after gridding
+#                   (~1-1.5 GB per granule, about 2 granules per day: up to ~90 GB raw per running month)
+#   pace_rrs_sync   PACE L3m AOP 4 km (only missing days)
+#
+#   python -m sit_fuse.local_launcher list   hab_followon_goes_pace_launch.yaml
+#   python -m sit_fuse.local_launcher run    hab_followon_goes_pace_launch.yaml --dry-run
+#   systemd-run --user --scope -p MemoryMax=108G -p MemoryHigh=100G -p MemorySwapMax=0 \
+#     python -m sit_fuse.local_launcher run hab_followon_goes_pace_launch.yaml
+#   python -m sit_fuse.local_launcher status hab_followon_goes_pace_launch.yaml
+# Resume: rerun the same command (composites, gridded days, checkpoints and head outputs are skipped when done).
+# GOES only: --only 'goes*' 'variants'. PACE only: --only 'pace*' 'variants'.
+#
+# Resource budget (16 cores, 2 GPUs, 181 GB): 1 GPU (id 0), 9 cores (60 %), ~108 GB (60 %, enforced by the scope).
+# Encoder training takes the whole GPU (gpu 1, 6 cores, GOES and PACE one after another); heads share it (0.5,
+# 4 cores). Do not run concurrently with the same-instrument plan (both use GPU 0).
+launcher:
+  state_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/launch/followon_goes_pace
+  gpus: [0]
+  cpus: 9
+  pin_cpus: true
+  max_parallel: null
+  retries: 1
+  nice: 10
+
+vars:
+  py: python
+  yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/postprocess/hab_reflectance_geotiff_gen_s_ca_2023_2026_full_CA.yaml
+  cfg: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/postprocess/followon_pilots
+  root: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526
+  uq: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/uq_full_2023_2026_ifcb       # production uq.out_dir
+  pil: "{root}/followon/pilots"
+  state: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/launch/followon_goes_pace
+  reflectances: /mnt/data1/REFLECTANCES
+  goes_out: /mnt/data1/REFLECTANCES/GOES18_ABI_DAILY
+  pace_1km: /mnt/data1/REFLECTANCES/PACE_OCI_L2G_1KM
+  mod: sit_fuse.pipelines.habs.uq
+  habs: sit_fuse.pipelines.habs
+  fo: sit_fuse.pipelines.habs.followon
+
+jobs:
+  # HAB YAMLs: goes18, pace_l3m_4km, pace_l2g_1km, pace_zs_1km (pilot_variants.yaml)
+  - name: variants
+    cmd: "{py} -m {fo}.variants hab -s {cfg}/pilot_variants.yaml"
+    cpus: 1
+    gpu: 0
+    priority: 3
+
+  # ---------------------------------------------------------------- 4a GOES-18
+  - name: goes_geo
+    cmd: "{py} -m {fo}.goes_ocean geo --out /mnt/data1/goes18_geo.zarr --res 0.02"
+    cpus: 1
+    gpu: 0
+    priority: 3
+    creates: ["/mnt/data1/goes18_geo.zarr"]
+
+  - name: goes_composite
+    cmd: >-
+      {py} -m {fo}.goes_ocean composite --start {s} --end {e} --out {goes_out}
+      --raw /mnt/data1/GOES18_RAW/{yr} --hour-start 16 --hour-end 23 --minutes 30
+      --min-clear 2 --max-nir 0.12 --threads 2 --res 0.02
+    cases:
+      - {yr: "2024", s: "2024-01-01", e: "2024-12-31"}      # encoder training year first
+      - {yr: "2023", s: "2023-01-04", e: "2023-12-31"}      # GOES-18 operational as GOES-West from 2023-01-04
+      - {yr: "2025", s: "2025-01-01", e: "2025-12-31"}
+      - {yr: "2026", s: "2026-01-01", e: "2026-09-30"}
+    id_keys: [yr]
+    cpus: 2
+    gpu: 0
+    priority: 2
+
+  - name: goes_train
+    cmd: >-
+      mkdir -p {pil}/goes18/train_config/model &&
+      {py} -m {habs}.hab_training_pipeline -y {cfg}/train_GOES18_ABI.yaml -n 6
+    cpus: 6
+    gpu: 1
+    priority: 2
+    after: [{name: goes_geo, on: []}, {name: goes_composite, on: []}]
+
+  - name: goes_heads
+    cmd: >-
+      {py} -m {habs}.hab_inference_pipeline -y {pil}/goes18/hab_goes18.yaml --stages heads
+      --instruments goes18 --window {win} -n 4
+    grid:
+      win: ["2023-01-04:2023-12-31", "2024-01-01:2024-12-31", "2025-01-01:2025-12-31", "2026-01-01:2026-09-30"]
+    cpus: 4
+    gpu: 0.5
+    priority: 1
+    after: [{name: goes_train, on: []}, {name: variants, on: []}]
+
+  - name: goes_train_eval
+    cmd: "{py} -m {mod}.hab_uq_pipeline -y {pil}/goes18/hab_goes18.yaml --stages train,evaluate --species {sp} -n 4"
+    grid:
+      sp: [Pseudo_nitzschia_seriata_group, Pseudo_nitzschia_delicatissima_group, Pseudo_nitzschia_total, pDA]
+    cpus: 4
+    gpu: 0
+    after: [{name: goes_heads, on: []}]
+
+  - name: goes_compare
+    cmd: >-
+      {py} -m {fo}.variant_compare --variant production={uq} --variant goes18={pil}/goes18/uq
+      --baseline production --token {tok} --out {pil}/compare_goes18 --n-boot 500 --pool-sensors
+    cases:
+      - {sp: Pseudo_nitzschia_seriata_group,       tok: pseudo_nitzschia_seriata_bloom}
+      - {sp: Pseudo_nitzschia_delicatissima_group, tok: pseudo_nitzschia_delicatissima_bloom}
+      - {sp: Pseudo_nitzschia_total,               tok: pseudo_nitzschia_total_bloom}
+      - {sp: pDA,                                  tok: particulate_domoic_acid}
+    id_keys: [tok]
+    cpus: 2
+    gpu: 0
+    after: [{name: goes_train_eval, on: [sp]}]
+
+  # ---------------------------------------------------------------- 4b PACE
+  - name: pace_rrs_sync
+    cmd: >-
+      {py} -m sit_fuse.preprocessing.data_pull.sync_l3m_rrs --start 2024-03-05 --end 2026-09-30
+      --dir PACE_OCI={reflectances}/PACE_OCI --res 4km --layout flat --threads 2
+      --nrt-archive-dir {reflectances}/nrt_archive/PACE_OCI --report {state}/rrs_sync_PACE_OCI.csv
+    cpus: 1
+    gpu: 0
+    priority: 2
+
+  - name: pace_geo
+    cmd: "{py} -m {fo}.pace_l2 geo --out /mnt/data1/pace_l2g_1km_geo.zarr --res 0.01"
+    cpus: 1
+    gpu: 0
+    priority: 3
+    creates: ["/mnt/data1/pace_l2g_1km_geo.zarr"]
+
+  # one month per job: pull the roi granules, grid to 0.01 deg, delete the raw granules
+  - name: pace_l2
+    cmd: >-
+      {py} -m {fo}.pace_l2 pull --start {s} --end {e} --raw /mnt/data1/PACE_L2_RAW/{month} --threads 2 &&
+      {py} -m {fo}.pace_l2 grid --start {s} --end {e} --raw /mnt/data1/PACE_L2_RAW/{month}
+      --out {pace_1km} --res 0.01 --threads 2 --delete-raw
+    cases:
+      - {month: "2024-03", s: "2024-03-05", e: "2024-03-31"}
+      - {month: "2024-04", s: "2024-04-01", e: "2024-04-30"}
+      - {month: "2024-05", s: "2024-05-01", e: "2024-05-31"}
+      - {month: "2024-06", s: "2024-06-01", e: "2024-06-30"}
+      - {month: "2024-07", s: "2024-07-01", e: "2024-07-31"}
+      - {month: "2024-08", s: "2024-08-01", e: "2024-08-31"}
+      - {month: "2024-09", s: "2024-09-01", e: "2024-09-30"}
+      - {month: "2024-10", s: "2024-10-01", e: "2024-10-31"}
+      - {month: "2024-11", s: "2024-11-01", e: "2024-11-30"}
+      - {month: "2024-12", s: "2024-12-01", e: "2024-12-31"}
+      - {month: "2025-01", s: "2025-01-01", e: "2025-01-31"}
+      - {month: "2025-02", s: "2025-02-01", e: "2025-02-28"}
+      - {month: "2025-03", s: "2025-03-01", e: "2025-03-31"}
+      - {month: "2025-04", s: "2025-04-01", e: "2025-04-30"}
+      - {month: "2025-05", s: "2025-05-01", e: "2025-05-31"}
+      - {month: "2025-06", s: "2025-06-01", e: "2025-06-30"}
+      - {month: "2025-07", s: "2025-07-01", e: "2025-07-31"}
+      - {month: "2025-08", s: "2025-08-01", e: "2025-08-31"}
+      - {month: "2025-09", s: "2025-09-01", e: "2025-09-30"}
+      - {month: "2025-10", s: "2025-10-01", e: "2025-10-31"}
+      - {month: "2025-11", s: "2025-11-01", e: "2025-11-30"}
+      - {month: "2025-12", s: "2025-12-01", e: "2025-12-31"}
+      - {month: "2026-01", s: "2026-01-01", e: "2026-01-31"}
+      - {month: "2026-02", s: "2026-02-01", e: "2026-02-28"}
+      - {month: "2026-03", s: "2026-03-01", e: "2026-03-31"}
+      - {month: "2026-04", s: "2026-04-01", e: "2026-04-30"}
+      - {month: "2026-05", s: "2026-05-01", e: "2026-05-31"}
+      - {month: "2026-06", s: "2026-06-01", e: "2026-06-30"}
+      - {month: "2026-07", s: "2026-07-01", e: "2026-07-31"}
+      - {month: "2026-08", s: "2026-08-01", e: "2026-08-31"}
+      - {month: "2026-09", s: "2026-09-01", e: "2026-09-30"}
+    id_keys: [month]
+    cpus: 2
+    gpu: 0
+    priority: 2
+
+  - name: pace_train
+    cmd: >-
+      mkdir -p {pil}/pace_l2g_1km/train_config/model &&
+      {py} -m {habs}.hab_training_pipeline -y {cfg}/train_PACE_OCI_L2G_1km.yaml -n 6
+    cpus: 6
+    gpu: 1
+    priority: 2
+    after: [{name: pace_geo, on: []}, {name: pace_l2, on: []}]
+
+  # zero-shot model YAML: 1 km file lists + reader_kwargs from the 1 km training, weights / scaler of the
+  # production 4 km PACE encoder
+  - name: pace_zs_model
+    cmd: >-
+      {py} -m {fo}.variants model --src {pil}/pace_l2g_1km/train_config/model/train_model_PACE_OCI.yaml
+      --out {pil}/pace_zs_1km/model/train_model_PACE_OCI.yaml
+      --out-dir /mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025//PACE_OCI_no_trop/
+    cpus: 1
+    gpu: 0
+    after: [{name: pace_train, on: []}]
+
+  - name: pace_heads
+    cmd: >-
+      {py} -m {habs}.hab_inference_pipeline -y {pil}/{v}/hab_{v}.yaml --stages heads
+      --instruments pace --window {win} -n 4
+    grid:
+      v: [pace_l2g_1km, pace_zs_1km]
+      win: ["2024-03-05:2024-12-31", "2025-01-01:2025-12-31", "2026-01-01:2026-09-30"]
+    cpus: 4
+    gpu: 0.5
+    priority: 1
+    after: [{name: pace_zs_model, on: []}, {name: variants, on: []}]
+
+  - name: pace_train_eval
+    cmd: "{py} -m {mod}.hab_uq_pipeline -y {pil}/{v}/hab_{v}.yaml --stages train,evaluate --species {sp} -n 4"
+    grid:
+      v: [pace_l3m_4km, pace_l2g_1km, pace_zs_1km]
+      sp: [Pseudo_nitzschia_seriata_group, Pseudo_nitzschia_delicatissima_group, Pseudo_nitzschia_total, pDA]
+    cpus: 4
+    gpu: 0
+    after: [{name: pace_heads, on: [v]}, {name: pace_rrs_sync, on: []}, {name: variants, on: []}]
+
+  - name: pace_compare
+    cmd: >-
+      {py} -m {fo}.variant_compare --variant pace_l3m_4km={pil}/pace_l3m_4km/uq
+      --variant pace_l2g_1km={pil}/pace_l2g_1km/uq --variant pace_zs_1km={pil}/pace_zs_1km/uq
+      --baseline pace_l3m_4km --token {tok} --out {pil}/compare_pace --n-boot 500 --by-site
+    cases:
+      - {sp: Pseudo_nitzschia_seriata_group,       tok: pseudo_nitzschia_seriata_bloom}
+      - {sp: Pseudo_nitzschia_delicatissima_group, tok: pseudo_nitzschia_delicatissima_bloom}
+      - {sp: Pseudo_nitzschia_total,               tok: pseudo_nitzschia_total_bloom}
+      - {sp: pDA,                                  tok: particulate_domoic_acid}
+    id_keys: [tok]
+    cpus: 2
+    gpu: 0
+    after: [{name: pace_train_eval, on: [sp]}]

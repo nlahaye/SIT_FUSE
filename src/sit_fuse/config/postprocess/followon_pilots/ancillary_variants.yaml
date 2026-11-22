@@ -1,0 +1,40 @@
+# HAB variant spec: interpretability baselines (1) and additional inputs (2).
+#   python -m sit_fuse.pipelines.habs.followon.variants hab -s ancillary_variants.yaml
+# Writes <out_root>/<name>/hab_<name>.yaml; uq.out_dir = <out_root>/<name>/uq. Splits (uq.splits.date_roles_file)
+# are inherited, so every variant is scored on the same test samples (paired comparison with variant_compare).
+base_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/postprocess/hab_reflectance_geotiff_gen_s_ca_2023_2026_full_CA.yaml
+out_root: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/ancillary
+
+variants:
+  baseline: {reuse_out_dir: true}                               # production heads (uq_full_2023_2026_ifcb)
+  anc_all: {features_add: [ancillary]}                          # SST + upwelling + climate indices + discharge
+  anc_sst: {features_add: ["ancillary:sst"]}
+  anc_upwelling: {features_add: ["ancillary:upwelling"]}
+  anc_indices: {features_add: ["ancillary:indices"]}
+  anc_discharge: {features_add: ["ancillary:discharge"]}
+  phys_std: {features_add: [physical]}                          # standard L3m products, same platform and day
+  anc_phys: {features_add: [ancillary, physical]}
+  physics_only: {features_set: [ancillary, physical]}           # no SIT-FUSE representation: physical baseline
+
+# merged into every variant (variant keys win)
+common:
+  species_run: [Pseudo_nitzschia_seriata_group, Pseudo_nitzschia_delicatissima_group, Pseudo_nitzschia_total, pDA]
+  overrides:
+    uq:
+      ancillary:
+        cache_dir: /mnt/data1/HAB_ANCILLARY
+        bbox: [30.0, 38.94, -128.0, -116.0]
+        sst: {stride: 2, windows: [3, 7], gradient: true}
+        upwelling: {windows: [3, 7, 14], climatology_years: [1988, 2022]}
+        indices: {names: [mei, pdo, npgo, oni], lag_months: 1}
+        discharge: {windows: [1, 7], max_km: 60}
+        physical:
+          products: {chlor_a: CHL, nflh: FLH, Kd_490: KD, aph_443: IOP, bbp_443: IOP, adg_443: IOP}
+          dirs:
+            s3a:   [/mnt/data1/CHL/S3A_OLCI, /mnt/data1/OC_PRODUCTS/S3A_OLCI]
+            s3b:   [/mnt/data1/CHL/S3B_OLCI, /mnt/data1/OC_PRODUCTS/S3B_OLCI]
+            snpp:  [/mnt/data1/CHL/SNPP_VIIRS, /mnt/data1/OC_PRODUCTS/SNPP_VIIRS]
+            jpss1: [/mnt/data1/CHL/JPSS1_VIIRS, /mnt/data1/OC_PRODUCTS/JPSS1_VIIRS]
+            jpss2: [/mnt/data1/CHL/JPSS2_VIIRS, /mnt/data1/OC_PRODUCTS/JPSS2_VIIRS]
+            modis: [/mnt/data1/CHL/AQUA_MODIS, /mnt/data1/OC_PRODUCTS/AQUA_MODIS]
+            pace:  [/mnt/data1/CHL/PACE_OCI, /mnt/data1/OC_PRODUCTS/PACE_OCI]

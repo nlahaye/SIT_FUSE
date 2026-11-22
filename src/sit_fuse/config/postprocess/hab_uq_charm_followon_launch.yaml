@@ -1,0 +1,156 @@
+# Local-launcher plan for the C-HARM follow-on on the full 2023-01-01..2026-09-30 run (uq_full_2023_2026_ifcb).
+# HAB YAML: hab_reflectance_geotiff_gen_s_ca_2023_2026_full_CA.yaml (updated: species_run + uq.charm + animation sites).
+# Reuses the finished seriata / delicatissima / pDA models and fused products of hab_uq_full_2023_2026_launch.yaml;
+# only the two new targets (direct total PN, experimental cDA) are trained, inferred and fused here.
+#
+#   charm_fetch x lead ───────────────────────────────────────────────┐
+#   train_eval x {PN_total, cDA} ─┬─► subset_eval                      ├─► points x target ─┐
+#                                 ├─► combine ─────────────────────────┤                    ├─► summary
+#                                 └─► infer_fuse x sp x year ─┬────────┴─► maps x target x year ─┐
+#   chl_sync x instrument ────────────────────────────────────┴─► consistency x year ────────────┴─► charm_animate x target
+#                                                               └─► animate (all species, in-situ sites)
+#
+# Data pulls: charm_fetch (NOAA CoastWatch ERDDAP griddap, no credentials; latest C-HARM version per valid date,
+# cached in uq.charm.cache_dir, only missing chunks requested) and chl_sync (OB.DAAC L3m CHL / PACE BGC via
+# earthaccess; needs ~/.netrc). Preview: add --dry-run to a chl_sync command; re-index C-HARM only: fetch --offline.
+#
+#   python -m sit_fuse.local_launcher list   hab_uq_charm_followon_launch.yaml
+#   python -m sit_fuse.local_launcher run    hab_uq_charm_followon_launch.yaml --dry-run
+#   systemd-run --user --scope -p MemoryMax=108G -p MemoryHigh=100G -p MemorySwapMax=0 \
+#     python -m sit_fuse.local_launcher run hab_uq_charm_followon_launch.yaml
+#   python -m sit_fuse.local_launcher status hab_uq_charm_followon_launch.yaml
+# Resume: rerun the same command. Failed jobs: --rerun-failed. One stage: --only 'maps.*'.
+#
+# Resource budget (16 cores, 2 GPUs, 181 GB): 1 GPU, 9 cores (60 %), ~108 GB (60 %, enforced by the scope above).
+# Nothing here needs the GPU (heads are not rerun); gpus: [0] is kept so no job can touch GPU 1.
+launcher:
+  state_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/launch/uq_charm_followon
+  gpus: [0]
+  cpus: 9
+  pin_cpus: true
+  max_parallel: null
+  retries: 1              # ERDDAP / OB.DAAC transient errors: one automatic retry (fetches are resumable)
+  nice: 10
+
+vars:
+  py: python
+  yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/postprocess/hab_reflectance_geotiff_gen_s_ca_2023_2026_full_CA.yaml
+  root: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526
+  chl: /mnt/data1/CHL                                              # = uq.charm.chl_dirs parent
+  mod: sit_fuse.pipelines.habs.uq
+
+jobs:
+  # 0a) C-HARM nowcast + 1-3 day forecasts by valid date, PN / pDA / cDA probabilities, chla and context vars.
+  - name: charm_fetch
+    cmd: "{py} -m {mod}.hab_charm fetch -y {yaml} --start 2023-01-01 --end 2026-09-30 --lead {lead}"
+    grid:
+      lead: [0, 1, 2, 3]
+    cpus: 1
+    gpu: 0
+    priority: 2
+
+  # 0b) Daily L3m chlorophyll for the consistency checks (same platforms as the Rrs inputs).
+  - name: chl_sync
+    cmd: >-
+      {py} -m sit_fuse.preprocessing.data_pull.sync_l3m_rrs --suite CHL --start 2023-01-01 --end 2026-09-30
+      --dir {key}={chl}/{subdir} --res 4km --layout flat --threads 4
+      --nrt-archive-dir {chl}/nrt_archive/{subdir}
+      --report {root}/launch/uq_charm_followon/chl_sync_{subdir}.csv
+    cases:
+      - {key: S3A_OLCI,    subdir: S3A_OLCI}
+      - {key: S3B_OLCI,    subdir: S3B_OLCI}
+      - {key: NPP_VIIRS,   subdir: SNPP_VIIRS}
+      - {key: JPSS1_VIIRS, subdir: JPSS1_VIIRS}
+      - {key: JPSS2_VIIRS, subdir: JPSS2_VIIRS}
+      - {key: AQUA_MODIS,  subdir: AQUA_MODIS}
+      - {key: PACE_OCI,    subdir: PACE_OCI}       # BGC files (chlor_a), from 2024-03
+    id_keys: [subdir]
+    cpus: 1
+    gpu: 0
+    priority: 2
+
+  # 1) Train + evaluate the new targets (same selection / calibration / decision settings as the other species).
+  - name: train_eval
+    cmd: "{py} -m {mod}.hab_uq_pipeline -y {yaml} --stages train,evaluate --species {sp} -n 4"
+    grid:
+      sp: [Pseudo_nitzschia_total, cDA]
+    cpus: 4
+    gpu: 0
+    priority: 1
+
+  - name: subset_eval
+    cmd: "{py} -m {mod}.hab_uq_subset_eval -y {yaml} --species {sp}"
+    grid:
+      sp: [Pseudo_nitzschia_total, cDA]
+    cpus: 2
+    gpu: 0
+    after: [{name: train_eval, on: [sp]}]
+
+  # 2) Per-sensor + fused products for the new targets, one job per species x year.
+  - name: infer_fuse
+    cmd: "{py} -m {mod}.hab_uq_pipeline -y {yaml} --stages infer,fuse --species {sp} --window {win} -n 3"
+    grid:
+      sp: [Pseudo_nitzschia_total, cDA]
+      win: ["2023-01-01:2023-12-31", "2024-01-01:2024-12-31", "2025-01-01:2025-12-31", "2026-01-01:2026-09-30"]
+    cpus: 3
+    gpu: 0
+    after: [{name: train_eval, on: [sp]}]
+
+  # 3) Size-class combination checks vs the direct total-PN model (copula rho by season, bounds,
+  #    independence, comonotonic) on calibration samples -> charm_compare/pn_combination.json.
+  - name: combine
+    cmd: "{py} -m {mod}.hab_charm_compare combine -y {yaml}"
+    cpus: 2
+    gpu: 0
+    after: [{name: train_eval, on: []}]
+
+  # 4) In-situ evaluation on the test split, all leads, fused + per-type + per-sensor streams.
+  - name: points
+    cmd: "{py} -m {mod}.hab_charm_compare points -y {yaml} --target {target}"
+    grid:
+      target: [pn, pda, cda]
+    cpus: 2
+    gpu: 0
+    after: [{name: charm_fetch, on: []}, {name: combine, on: []}]
+
+  # 5) Map agreement: C-HARM regridded to the product grid, daily stacks + Hovmoller / coastal stats.
+  - name: maps
+    cmd: "{py} -m {mod}.hab_charm_compare maps -y {yaml} --target {target} --year {year}"
+    grid:
+      target: [pn, pda, cda]
+      year: [2023, 2024, 2025, 2026]
+    cpus: 1
+    gpu: 0
+    after: [{name: infer_fuse, on: []}, {name: combine, on: []}, {name: charm_fetch, on: []}]
+
+  # 6) Phase-1 physical consistency flags (chl ceiling, size-class bounds, pDA vs PN); diagnostics only.
+  - name: consistency
+    cmd: "{py} -m {mod}.hab_charm_compare consistency -y {yaml} --year {year}"
+    grid:
+      year: [2023, 2024, 2025, 2026]
+    cpus: 1
+    gpu: 0
+    after: [{name: chl_sync, on: []}, {name: infer_fuse, on: []}, {name: charm_fetch, on: []}]
+
+  # 7) C-HARM comparison animations (compare + types layouts) with in-situ sites, samples and flag hatching.
+  - name: charm_animate
+    cmd: "{py} -m {mod}.hab_charm_animate -y {yaml} --target {target} --lead 0 --layout compare,types"
+    grid:
+      target: [pn, pda, cda]
+    cpus: 1
+    gpu: 0
+    after: [{name: maps, on: [target]}, {name: consistency, on: []}]
+
+  # 8) Product animations for all five species with persistent in-situ station markers (one job: shared manifest).
+  - name: animate
+    cmd: "{py} -m {mod}.hab_uq_pipeline -y {yaml} --stages animate -n 2"
+    cpus: 2
+    gpu: 0
+    after: [{name: infer_fuse, on: []}]
+
+  - name: summary
+    cmd: "{py} -m {mod}.hab_charm_compare summary -y {yaml}"
+    cpus: 1
+    gpu: 0
+    after: [{name: points, on: []}, {name: maps, on: []}, {name: consistency, on: []},
+            {name: subset_eval, on: []}]

@@ -1,0 +1,198 @@
+# Local-launcher plan, follow-on streams (1) interpretability and (2) additional inputs, on the full
+# 2023-01-01..2026-09-30 run (production heads and splits: uq_full_2023_2026_ifcb). No encoder retraining and no GPU:
+# every variant reuses the production head outputs and retrains only the UQ heads.
+#
+#   (1) interpretability
+#       importance x sp   grouped permutation importance (season x site strata) + grouped SHAP, production heads
+#       contrast          seriata vs delicatissima group importances (block-bootstrap CI, rank correlation)
+#       train_tp          Total_Phytoplankton head (reference for the conditional test)
+#       conditional       species product vs total-phytoplankton product: Delta R^2 of observed log10 counts
+#       composites        cluster -> environment (SST, anomaly, gradient, upwelling, L3m products; BH q values)
+#       physics_only      variant with only ancillary + physical features (scored in compare)
+#   (2) additional inputs
+#       variants (HAB YAML per variant) -> train_eval x variant x sp -> compare x sp (paired vs baseline)
+#       importance_anc x sp  importance in the anc_phys variant (representation vs environmental groups)
+#
+#   variants ─┬─► anc_pull x source ─┬─► train_eval x variant x sp ─┬─► compare x sp
+#             │   phys_sync x suite ─┤                              └─► importance_anc x sp
+#             │                      └─► composites
+#   importance x sp ─► contrast           train_tp ─► conditional
+#
+# Data pulls (resumable, cached; ERDDAP / NOAA / USGS need no credentials, OB.DAAC L3m needs ~/.netrc):
+#   anc_pull   MUR SST L4 + anomaly (ERDDAP jplMURSST41 / jplMURSST41anom1day), CUTI / BEUTI daily (ERDDAP),
+#              MEI / PDO / NPGO / ONI monthly, USGS daily discharge (12 S/C California gauges)
+#   phys_sync  L3m CHL (into /mnt/data1/CHL, already mostly present from the fixes run), KD and IOP for all
+#              platforms, FLH for MODIS (into /mnt/data1/OC_PRODUCTS); only missing days are fetched
+#
+#   python -m sit_fuse.local_launcher list   hab_followon_interpret_ancillary_launch.yaml
+#   python -m sit_fuse.local_launcher run    hab_followon_interpret_ancillary_launch.yaml --dry-run
+#   systemd-run --user --scope -p MemoryMax=108G -p MemoryHigh=100G -p MemorySwapMax=0 \
+#     python -m sit_fuse.local_launcher run hab_followon_interpret_ancillary_launch.yaml
+#   python -m sit_fuse.local_launcher status hab_followon_interpret_ancillary_launch.yaml
+# Resume: rerun the same command. Failed jobs: --rerun-failed. One stage: --only 'train_eval.*'.
+# SHAP: pip install shap (otherwise the SHAP step is skipped with a warning; permutation importance still runs).
+#
+# Resource budget (16 cores, 2 GPUs, 181 GB): 9 cores (60 %), ~108 GB (60 %, enforced by the scope above), no GPU.
+# Running alongside another follow-on plan: split the cores, e.g. this plan with --cpus 4 --gpus 0 and the GPU plan
+# with --cpus 5 (both inside the same systemd scope, so the 108 GB cap is shared).
+launcher:
+  state_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/launch/followon_interpret_ancillary
+  gpus: []
+  cpus: 9
+  pin_cpus: true
+  max_parallel: null
+  retries: 1              # transient download / ERDDAP errors; all pulls are resumable
+  nice: 10
+
+vars:
+  py: python
+  yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/postprocess/hab_reflectance_geotiff_gen_s_ca_2023_2026_full_CA.yaml
+  cfg: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/postprocess/followon_pilots
+  root: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526
+  uq: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/uq_full_2023_2026_ifcb       # = uq.out_dir (production)
+  anc: "{root}/followon/ancillary"
+  interp: "{root}/followon/interpret"
+  state: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/launch/followon_interpret_ancillary
+  chl: /mnt/data1/CHL
+  ocp: /mnt/data1/OC_PRODUCTS
+  mod: sit_fuse.pipelines.habs.uq
+  fo: sit_fuse.pipelines.habs.followon
+
+jobs:
+  # HAB YAML per variant (anc_all, anc_sst, anc_upwelling, anc_indices, anc_discharge, phys_std, anc_phys,
+  # physics_only; baseline = production out_dir). All carry uq.ancillary (cache, physical product dirs).
+  - name: variants
+    cmd: "{py} -m {fo}.variants hab -s {cfg}/ancillary_variants.yaml"
+    cpus: 1
+    gpu: 0
+    priority: 3
+    provides: ["{anc}/anc_all/hab_anc_all.yaml"]
+
+  - name: anc_pull
+    cmd: >-
+      {py} -m {fo}.ancillary pull -y {anc}/anc_all/hab_anc_all.yaml --sources {src}
+      --start 2022-12-01 --end 2026-10-31 --threads 2
+    grid:
+      src: [sst, upwelling, indices, discharge]
+    cpus: 1
+    gpu: 0
+    priority: 2
+    after: [{name: variants, on: []}]
+
+  - name: phys_sync
+    cmd: >-
+      {py} -m sit_fuse.preprocessing.data_pull.sync_l3m_rrs --suite {suite} --start 2023-01-01 --end 2026-09-30
+      --dir {key}={dest}/{subdir} --res 4km --layout flat --threads 2
+      --nrt-archive-dir {dest}/nrt_archive/{subdir}
+      --report {state}/{suite}_sync_{subdir}.csv
+    cases:
+      - {suite: CHL, key: S3A_OLCI, subdir: S3A_OLCI, dest: "{chl}"}
+      - {suite: CHL, key: S3B_OLCI, subdir: S3B_OLCI, dest: "{chl}"}
+      - {suite: CHL, key: NPP_VIIRS, subdir: SNPP_VIIRS, dest: "{chl}"}
+      - {suite: CHL, key: JPSS1_VIIRS, subdir: JPSS1_VIIRS, dest: "{chl}"}
+      - {suite: CHL, key: JPSS2_VIIRS, subdir: JPSS2_VIIRS, dest: "{chl}"}
+      - {suite: CHL, key: AQUA_MODIS, subdir: AQUA_MODIS, dest: "{chl}"}
+      - {suite: CHL, key: PACE_OCI, subdir: PACE_OCI, dest: "{chl}"}
+      - {suite: KD, key: S3A_OLCI, subdir: S3A_OLCI, dest: "{ocp}"}
+      - {suite: KD, key: S3B_OLCI, subdir: S3B_OLCI, dest: "{ocp}"}
+      - {suite: KD, key: NPP_VIIRS, subdir: SNPP_VIIRS, dest: "{ocp}"}
+      - {suite: KD, key: JPSS1_VIIRS, subdir: JPSS1_VIIRS, dest: "{ocp}"}
+      - {suite: KD, key: JPSS2_VIIRS, subdir: JPSS2_VIIRS, dest: "{ocp}"}
+      - {suite: KD, key: AQUA_MODIS, subdir: AQUA_MODIS, dest: "{ocp}"}
+      - {suite: KD, key: PACE_OCI, subdir: PACE_OCI, dest: "{ocp}"}
+      - {suite: IOP, key: S3A_OLCI, subdir: S3A_OLCI, dest: "{ocp}"}
+      - {suite: IOP, key: S3B_OLCI, subdir: S3B_OLCI, dest: "{ocp}"}
+      - {suite: IOP, key: NPP_VIIRS, subdir: SNPP_VIIRS, dest: "{ocp}"}
+      - {suite: IOP, key: JPSS1_VIIRS, subdir: JPSS1_VIIRS, dest: "{ocp}"}
+      - {suite: IOP, key: JPSS2_VIIRS, subdir: JPSS2_VIIRS, dest: "{ocp}"}
+      - {suite: IOP, key: AQUA_MODIS, subdir: AQUA_MODIS, dest: "{ocp}"}
+      - {suite: IOP, key: PACE_OCI, subdir: PACE_OCI, dest: "{ocp}"}
+      - {suite: FLH, key: AQUA_MODIS, subdir: AQUA_MODIS, dest: "{ocp}"}   # no OLCI / VIIRS / PACE L3m FLH
+    id_keys: [suite, subdir]
+    cpus: 1
+    gpu: 0
+    priority: 2
+
+  # ---------------------------------------------------------------- (1) interpretability, production heads
+  - name: importance
+    cmd: >-
+      {py} -m {fo}.interpret importance -y {yaml} --species {sp} --out {interp}/production
+      --split test --n-repeats 5 --n-boot 500 --shap 2000
+    grid:
+      sp: [Pseudo_nitzschia_seriata_group, Pseudo_nitzschia_delicatissima_group, Pseudo_nitzschia_total, pDA]
+    cpus: 3
+    gpu: 0
+    priority: 1
+
+  - name: contrast
+    cmd: >-
+      {py} -m {fo}.interpret contrast
+      --a $(ls {interp}/production/importance_pseudo_nitzschia_seriata_bloom_samples.* | head -1)
+      --b $(ls {interp}/production/importance_pseudo_nitzschia_delicatissima_bloom_samples.* | head -1)
+      --out {interp}/production --n-boot 500
+    cpus: 1
+    gpu: 0
+    after: [{name: importance, on: []}]
+
+  - name: train_tp
+    cmd: "{py} -m {mod}.hab_uq_pipeline -y {yaml} --stages train,evaluate --species Total_Phytoplankton -n 4"
+    cpus: 4
+    gpu: 0
+    priority: 1
+
+  - name: conditional
+    cmd: >-
+      {py} -m {fo}.interpret conditional -y {yaml} --species Pseudo_nitzschia_seriata_group
+      --species Pseudo_nitzschia_delicatissima_group --species Pseudo_nitzschia_total
+      --reference Total_Phytoplankton --out {interp}/conditional --n-boot 500
+    cpus: 2
+    gpu: 0
+    after: [{name: train_tp, on: []}]
+
+  - name: composites
+    cmd: >-
+      {py} -m {fo}.interpret composites -y {anc}/anc_all/hab_anc_all.yaml
+      --sensors s3a,s3b,snpp,jpss1,jpss2,modis,pace --start 2023-01-01 --end 2026-09-30
+      --every 5 --pixels-per-scene 4000 --out {interp}/composites
+    cpus: 3
+    gpu: 0
+    after: [{name: anc_pull, on: []}, {name: phys_sync, on: []}]
+
+  # ---------------------------------------------------------------- (2) additional inputs
+  - name: train_eval
+    cmd: "{py} -m {mod}.hab_uq_pipeline -y {anc}/{v}/hab_{v}.yaml --stages train,evaluate --species {sp} -n 4"
+    grid:
+      v: [anc_all, anc_sst, anc_upwelling, anc_indices, anc_discharge, phys_std, anc_phys, physics_only]
+      sp: [Pseudo_nitzschia_seriata_group, Pseudo_nitzschia_delicatissima_group, Pseudo_nitzschia_total, pDA]
+    cpus: 4
+    gpu: 0
+    after: [{name: anc_pull, on: []}, {name: phys_sync, on: []}]
+
+  # paired block-bootstrap scores (RPS, RPSS vs baseline, NLL, exceedance Brier / AUC) by year, season, sensor, site
+  - name: compare
+    cmd: >-
+      {py} -m {fo}.variant_compare --variant baseline={uq}
+      --variant anc_all={anc}/anc_all/uq --variant anc_sst={anc}/anc_sst/uq
+      --variant anc_upwelling={anc}/anc_upwelling/uq --variant anc_indices={anc}/anc_indices/uq
+      --variant anc_discharge={anc}/anc_discharge/uq --variant phys_std={anc}/phys_std/uq
+      --variant anc_phys={anc}/anc_phys/uq --variant physics_only={anc}/physics_only/uq
+      --baseline baseline --token {tok} --out {anc}/compare --n-boot 500 --by-site
+    cases:
+      - {sp: Pseudo_nitzschia_seriata_group,       tok: pseudo_nitzschia_seriata_bloom}
+      - {sp: Pseudo_nitzschia_delicatissima_group, tok: pseudo_nitzschia_delicatissima_bloom}
+      - {sp: Pseudo_nitzschia_total,               tok: pseudo_nitzschia_total_bloom}
+      - {sp: pDA,                                  tok: particulate_domoic_acid}
+    id_keys: [tok]
+    cpus: 2
+    gpu: 0
+    after: [{name: train_eval, on: [sp]}]
+
+  - name: importance_anc
+    cmd: >-
+      {py} -m {fo}.interpret importance -y {anc}/anc_phys/hab_anc_phys.yaml --species {sp}
+      --out {interp}/anc_phys --split test --n-repeats 5 --n-boot 500 --shap 2000
+    grid:
+      sp: [Pseudo_nitzschia_seriata_group, Pseudo_nitzschia_delicatissima_group, Pseudo_nitzschia_total, pDA]
+    cpus: 3
+    gpu: 0
+    after: [{name: train_eval, on: [sp]}]
