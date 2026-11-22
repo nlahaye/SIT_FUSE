@@ -6,13 +6,20 @@
 # 10-min frames), so the smoke fusion is refit at 5 min (smoke_5min -> FUSION/UQ_SMOKE_RECAL_5MIN). TEMPO stays at its
 # own hourly scans, carried forward causally to each GOES time.
 #
-#   pin_splits ─> goes_fire_ts: features -> train -> infer -> evaluate -> geo ─┬─> fusion fire_ts fit ─> apply/merge ─┐
+#   fire_matchup (FDCC, FIRMS VIIRS, FIRMS MODIS/Landsat, HMS) ─┬─> fire_attach ─┐
+#                                                               └─> fire_heads ──┴─> pin_splits ─┐   (GOES fire prep)
+#                                                                                                │
+#               goes_fire_ts: features -> train -> infer -> evaluate -> geo ─┬─> fusion fire_ts fit ─> apply/merge ─┐
 #                                                                              │        │ (with tempo_fire)          │
 #   prod_heads_0726 (shared GOES head export, starts right away) ──────────────┼────────┴─> prod_goes_fire_ts_0726 ──┤
 #   fusion smoke_5min fit (starts right away) ─┬─> apply/merge ────────────────┼─────────────────────────────────────┤
 #                                              └───────────────────────────────┴──> prod_goes_smoke_0726 ────────────┤
 #                                                      anim_dry (4 cases) ─> anim (Park, LA, Oregon) + anim_0726 <───┘
 #
+# GOES fire prep (regenerated here): the four fire matchups (Park 2024, LA 2025, Oregon 2026) -> attach -> head
+# outputs -> pin_splits (TEMPO-aligned partitions; fails unless all three events have calibration + holdout scenes with
+# heads). fire_heads (export_head_outputs.py goes18/g18_export_fire.yaml with skip_existing + heads_from) keeps the
+# same-encoder heads already in UQ_FIRE, links those in UQ_SMOKE, and exports only scenes found in neither (1 GPU).
 # Head outputs are shared between smoke and fire: both use the GOES encoder (goes_tempo_test_3, GOES_TEMPO_UPDATED).
 # prod_heads_0726 runs only the head export of the smoke 0726 production (build_production_run.py --only 'heads_*'):
 # its heads/goes_0 is first filled from existing same-encoder heads (sensors.goes.heads_from: smoke quick test, fire
@@ -24,16 +31,18 @@
 # of the matching fit above) -> PRODUCTION_2026_07_OR0726_{SMOKE,FIRE_TS}/{goes_*,fusion_*}.
 #
 #   cd SIT_FUSE/src/sit_fuse/train
-#   python pin_matchup_splits.py goes18/g18_fire_ts_splits.yaml --check-only     # 1. inventory: events, days, heads
+#   python pin_matchup_splits.py goes18/g18_fire_ts_splits.yaml --check-only     # 1. after fire_attach: inventory
 #   python plan_uq_jobs.py uq_parallel.goes_fire_ts_2026.yaml                    # 2. report + plan file
 #   python plan_uq_jobs.py uq_parallel.goes_fire_ts_2026.yaml --run -- --dry-run # 3. check the commands
 #   (set -m; nohup python plan_uq_jobs.py uq_parallel.goes_fire_ts_2026.yaml --run > goes_fire_ts_2026.log 2>&1 &)
 #   python -m sit_fuse.local_launcher status /data/nlahaye/output/Learnergy/launch_goes_fire_ts_2026/uq_plan.yaml
 #
 # pin_splits fails (and nothing downstream of it starts) when an event lacks calibration / holdout scenes with head
-# outputs or Oregon is missing from the GOES fire matchups; then rerun the GOES fire prep plan
-# (python -m sit_fuse.local_launcher run goes18/g18_fire_prep_plan.yaml: Oregon inference, matchups, attach, head
-# export) and this plan again. The smoke production does not depend on it and keeps running.
+# outputs or an event is missing from the regenerated GOES fire matchups (check the FDCC matchup config: event_windows,
+# encoder_split.inference_yamls, SIT-FUSE output directory); fix, then `--run -- --rerun-failed` (the matchup jobs
+# rerun only with --force: `--run -- --only 'fire_*' --force`). The smoke production does not depend on it.
+# The SIT-FUSE encoder outputs of all three events (GOES_TEMPO_UPDATED) must exist already; this plan runs no
+# encoder inference (goes18/g18_fire_prep_plan.yaml is no longer needed for this run).
 # The two production jobs run their own launcher (build_production_run.py --run): their cpus here are the budget the
 # nested launcher uses (launcher.cpus of the production YAML), GPUs 4-7 (smoke) and 0-3 (fire) from those YAMLs.
 # After a failure: fix, then `--run -- --rerun-failed`; a failed production job reruns only its unfinished jobs.
@@ -43,7 +52,8 @@ python: python
 launcher:
   state_dir: /data/nlahaye/output/Learnergy/launch_goes_fire_ts_2026
   cpus: 48
-  gpus: 0                       # UQ stages are CPU only; the production jobs use their own GPU lists
+  gpus: [0]                     # fire_heads only; UQ stages are CPU only; productions use their own GPU lists
+                                # (fire 0-3 starts after goes_fire_ts geo, long after fire_heads)
   retries: 1
 stages: [features, train, infer, evaluate, geo, fusion]
 resume: true
@@ -79,9 +89,33 @@ fusion:                         # both at the 5-min GOES cadence (frames 5 min, 
 
 extra_jobs:
   # --- GOES fire: TEMPO-aligned partitions + coverage gate (features of goes_fire_ts wait for it) ---------------
+  # GOES fire matchups, regenerated (as run_goes18.sh steps 1-3; config names as in goes18/)
+  - name: fire_matchup
+    cmd: "cd {train} && {py} {script} goes18/{cfg}"
+    cases:
+      - {ref: fdcc, script: build_fdcc_matchups.py, cfg: g18_fdcc_matchup.yaml}
+      - {ref: firms_viirs, script: firms_fire_front_matchup_generator.py, cfg: g18_firms_viirs_matchup.yaml}
+      - {ref: firms_modis_landsat, script: firms_fire_front_matchup_generator.py, cfg: g18_firms_modis_landsat_matchup.yaml}
+      - {ref: hms_fire, script: build_simple_classifier_matchups.py, cfg: g18_hms_fire_matchup.yaml}
+    id_keys: [ref]
+    cpus: 4
+  - name: fire_attach           # -> goes18/g18_output_fdcc_hms_firms.yaml (input of g18_fire_ts_splits.yaml)
+    cmd: "cd {train} && {py} attach_references.py goes18/g18_fdcc_fire_classifier_matchups.yaml goes18/g18_output_fdcc_hms_firms.yaml --add firms_viirs=goes18/g18_firms_viirs_classifier_matchups.yaml --add firms_modis_landsat=goes18/g18_firms_modis_landsat_classifier_matchups.yaml --add hms_fire=goes18/g18_hms_fire_classifier_matchups.yaml"
+    cases: [{prep: fire}]
+    id_keys: []
+    after: [fire_matchup]
+    cpus: 2
+  - name: fire_heads            # every matched scene: reuse UQ_FIRE / UQ_SMOKE heads (tag-checked), export the rest
+    cmd: "cd {train} && {py} export_head_outputs.py goes18/g18_export_fire.yaml"
+    cases: [{prep: fire}]
+    id_keys: []
+    after: [fire_matchup]       # reads the FDCC matchups (sit_fuse_input of every record)
+    cpus: 8
+    gpu: 1
   - name: pin_splits
     cmd: "cd {train} && {py} pin_matchup_splits.py goes18/g18_fire_ts_splits.yaml"
     before: [goes_fire_ts]
+    after: [fire_attach, fire_heads]
     cpus: 2
 
   # --- shared GOES head outputs (smoke + fire, one encoder), Oregon, 26 July 2026 ------------------------------
