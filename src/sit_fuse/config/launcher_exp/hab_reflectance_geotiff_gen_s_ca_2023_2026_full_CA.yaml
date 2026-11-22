@@ -113,7 +113,8 @@ uq:
   start_date: &full_start "2023-01-01"
   end_date: &full_end "2026-09-30"
   species_run: [Pseudo_nitzschia_seriata_group, Pseudo_nitzschia_delicatissima_group, pDA,
-                Pseudo_nitzschia_total, cDA, Total_Phytoplankton]   # added: direct total-PN (C-HARM comparison) and experimental cellular DA
+                Pseudo_nitzschia_total, cDA, Total_Phytoplankton, Alexandrium_spp]   # added: direct total-PN (C-HARM comparison) and experimental cellular DA
+                # Alexandrium_spp: experimental stream (PSP-producer proxy; no PSP toxin targets available)
                 # Total_Phytoplankton (cells/L): IFCB and light microscopy resolve different size ranges, so totals are
                 # not strictly equivalent; scored per provenance (evaluation.subsets) and by a microscopy-only variant
   max_depth_m: 1.0           # also enforced at ingestion (insitu_sources cleaning.max_depth_m)
@@ -265,6 +266,17 @@ uq:
     # (rows need >= 1 group measured). cDA = pDA / total PN (pg/cell) on rows with PN >= min_pn_cells;
     # pDA non-detects become censored rows (upper bound pda_lod / PN) kept only if bound < max_censored_upper.
     Pseudo_nitzschia_total: {alert_thresholds: [10000, 100000]}
+    # Alexandrium spp. (cells/L), experimental. PN bins (1e4 / 1e5) leave ~96% of site-days in bin 0, so
+    # Alexandrium uses its own edges: absent | present (>=1) | elevated (>=1e3, CDPH-style alert level) |
+    # bloom (>=5e3). 2023-2026 site-days per bin: 4973 / 1185 / 178 / 63 (all methods). threshold_index 0
+    # in uq.animation therefore maps P(>= 1000 cells/L).
+    Alexandrium_spp:
+      edges: [0, 1, 1000, 5000, 100000000]
+      detection_floor: 0.1          # log10 position of non-detects (below the 1 cell/L presence edge)
+      alert_thresholds: [1000, 5000]
+      measurement_sigma_dex: 0.3    # low counts are few-cell (Poisson) estimates
+      decision: {rule: auto, metric: qwk, candidates: [argmax, median, expected, threshold],
+                 max_flag_ratio: 1.5, min_events: 5}
     cDA:
       alert_thresholds: [10.0]
       derived: {kind: cellular_da, pda: pDA, min_pn_cells: 1000, pda_lod: 0.02, max_censored_upper: 10.0}

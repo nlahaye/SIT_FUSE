@@ -14,8 +14,10 @@
 # B) Total_Phytoplankton trained and scored on light-microscopy counts only (IFCB and microscopy resolve
 #    different size ranges).
 # C) Alexandrium pilot (UQ level only: the encoder head outputs are species-agnostic, so no new heads or
-#    production products are needed). Bins: <200 (non-detect / trace), 200-1e3, 1e3-1e4 (shellfish-toxicity
-#    risk), >=1e4 (bloom). Alerts at 1e3 and 1e4 cells/L.
+#    production products are needed). Alexandrium-specific bins (PN bins leave 96 % of site-days in bin 0):
+#    0 (not detected), detected-1e3, 1e3-5e3 (shellfish-toxicity risk), >=5e3 (high for California).
+#    Edge 1 cell/L separates non-detects from detections (smallest counts: microscopy 4-10, IFCB ~33 cells/L).
+#    Alerts at 1e3 and 5e3 cells/L; >=1e4 (28 site-days 2023-2026) is reported descriptively.
 base_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/postprocess/hab_reflectance_geotiff_gen_s_ca_2023_2026_full_CA.yaml
 out_root: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/next_steps
 
@@ -24,10 +26,10 @@ x-cal-species: &cal_species [Pseudo_nitzschia_total, Pseudo_nitzschia_seriata_gr
                              Pseudo_nitzschia_delicatissima_group, pDA, Total_Phytoplankton]
 x-alex: &alex
   Alexandrium_spp:
-    edges: [0, 200, 1000, 10000, 100000000]
-    detection_floor: 10.0
-    alert_thresholds: [1000, 10000]
-    measurement_sigma_dex: 0.25
+    edges: [0, 1, 1000, 5000, 100000000]
+    detection_floor: 0.1          # log10 position of non-detects (below the 1 cell/L presence edge)
+    alert_thresholds: [1000, 5000]
+    measurement_sigma_dex: 0.3    # low counts are few-cell (Poisson) estimates
     decision: {rule: auto, metric: qwk, candidates: [argmax, median, expected, threshold],
                max_flag_ratio: 1.5, min_events: 5}
 
@@ -59,9 +61,7 @@ variants:
     overrides: {uq: {insitu_filter: {methods: [microscopy, lm_settled]}}}
 
   # ------------------------------------------------------------------ C) Alexandrium pilot
-  alex_all:                                           # piers + IFCB + cruise counts
-    species_run: [Alexandrium_spp]
-    overrides: {uq: {species: *alex}}
+  # alex_all removed: Alexandrium_spp (all methods) is now in the production species_run
   alex_microscopy:                                    # light-microscopy counts only
     species_run: [Alexandrium_spp]
     overrides: {uq: {species: *alex, insitu_filter: {methods: [microscopy, lm_settled]}}}
