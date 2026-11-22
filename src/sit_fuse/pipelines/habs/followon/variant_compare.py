@@ -9,6 +9,7 @@ Scores (sample weights from the 'weight' column when present)
   rpss_vs_baseline     1 - RPS_variant / RPS_baseline
   nll                  -log p(observed bin)
   brier_ge<k>, auc_ge<k>   exceedance P(bin >= k), k = 1..C-1
+  rate_ge<k>, mean_p_ge<k> observed rate and mean forecast probability (calibration in the large)
 Strata: overall, year, season, sensor (and Location_Code with --by-site).
 Also: test-sample counts per variant and, when models/matchups_<token>.parquet exists, matchup
 row counts and median match distance per sensor.
@@ -102,6 +103,7 @@ def scores(P: np.ndarray, y: np.ndarray, w: np.ndarray) -> dict[str, float]:
         out[f"brier_ge{k}"] = float(np.average((pe - ye) ** 2, weights=w))
         out[f"auc_ge{k}"] = auc(pe, ye, w)
         out[f"rate_ge{k}"] = float(np.average(ye, weights=w))
+        out[f"mean_p_ge{k}"] = float(np.average(pe, weights=w))
     return out
 
 

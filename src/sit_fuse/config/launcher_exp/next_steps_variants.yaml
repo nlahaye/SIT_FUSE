@@ -1,0 +1,67 @@
+# HAB variant spec for the next-steps runs.
+#   python -m sit_fuse.pipelines.habs.followon.variants hab -s next_steps_variants.yaml
+# Writes <out_root>/<name>/hab_<name>.yaml with uq.out_dir = <out_root>/<name>/uq. Splits (uq.splits.date_roles_file)
+# are inherited, so every variant is scored on the same test days (paired comparison with variant_compare).
+#
+# A) Calibration sweep for the year effect (all PN streams, pDA, Total_Phytoplankton). Models, features and test
+#    rows are unchanged: uq.reuse_frame_from loads the production matchup frame and encoders, and only the
+#    calibration-stage weights change (uq.calibration.reweight; see hab_uq_selection.calibration_reweight).
+#      year_balanced          each year carries equal total weight in the temperature / prior-strength fits
+#      prev_median            label-shift reweighting of calibration classes to the median per-year prevalence
+#                             (train + calibration samples), so one bloom year (2024) does not set the base rate
+#      year_bal_prev_median   both
+#      prev_mean              mean per-year prevalence (sensitivity to the choice of target)
+# B) Total_Phytoplankton trained and scored on light-microscopy counts only (IFCB and microscopy resolve
+#    different size ranges).
+# C) Alexandrium pilot (UQ level only: the encoder head outputs are species-agnostic, so no new heads or
+#    production products are needed). Bins: <200 (non-detect / trace), 200-1e3, 1e3-1e4 (shellfish-toxicity
+#    risk), >=1e4 (bloom). Alerts at 1e3 and 1e4 cells/L.
+base_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/postprocess/hab_reflectance_geotiff_gen_s_ca_2023_2026_full_CA.yaml
+out_root: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/next_steps
+
+x-reuse: &reuse "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/uq_full_2023_2026_ifcb/models"   # = production uq.out_dir/models
+x-cal-species: &cal_species [Pseudo_nitzschia_total, Pseudo_nitzschia_seriata_group,
+                             Pseudo_nitzschia_delicatissima_group, pDA, Total_Phytoplankton]
+x-alex: &alex
+  Alexandrium_spp:
+    edges: [0, 200, 1000, 10000, 100000000]
+    detection_floor: 10.0
+    alert_thresholds: [1000, 10000]
+    measurement_sigma_dex: 0.25
+    decision: {rule: auto, metric: qwk, candidates: [argmax, median, expected, threshold],
+               max_flag_ratio: 1.5, min_events: 5}
+
+variants:
+  baseline: {reuse_out_dir: true}                     # production run (after the next-steps retrain)
+
+  # ------------------------------------------------------------------ A) calibration sweep
+  year_balanced:
+    species_run: *cal_species
+    set: {uq.reuse_frame_from: *reuse}
+    overrides: {uq: {calibration: {reweight: {period_balance: year, min_year_n: 20, max_factor: 5}}}}
+  prev_median:
+    species_run: *cal_species
+    set: {uq.reuse_frame_from: *reuse}
+    overrides: {uq: {calibration: {reweight: {prevalence: median_year, min_year_n: 20, max_factor: 5}}}}
+  year_bal_prev_median:
+    species_run: *cal_species
+    set: {uq.reuse_frame_from: *reuse}
+    overrides: {uq: {calibration: {reweight: {period_balance: year, prevalence: median_year,
+                                              min_year_n: 20, max_factor: 5}}}}
+  prev_mean:
+    species_run: *cal_species
+    set: {uq.reuse_frame_from: *reuse}
+    overrides: {uq: {calibration: {reweight: {prevalence: mean_year, min_year_n: 20, max_factor: 5}}}}
+
+  # ------------------------------------------------------------------ B) Total_Phytoplankton, microscopy only
+  tphyto_microscopy:
+    species_run: [Total_Phytoplankton]
+    overrides: {uq: {insitu_filter: {methods: [microscopy, lm_settled]}}}
+
+  # ------------------------------------------------------------------ C) Alexandrium pilot
+  alex_all:                                           # piers + IFCB + cruise counts
+    species_run: [Alexandrium_spp]
+    overrides: {uq: {species: *alex}}
+  alex_microscopy:                                    # light-microscopy counts only
+    species_run: [Alexandrium_spp]
+    overrides: {uq: {species: *alex, insitu_filter: {methods: [microscopy, lm_settled]}}}

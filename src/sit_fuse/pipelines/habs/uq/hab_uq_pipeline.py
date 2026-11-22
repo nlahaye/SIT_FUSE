@@ -109,6 +109,20 @@ def run_hab_uq_pipeline(yml, stages=("train", "evaluate", "infer", "fuse"), spec
                 rep["fused"] = score_block(fz["P_test"], fz["meta_test"], spec, bundle["pi_true"],
                                            **eval_options(bundle))
                 rep["fused"]["weights"] = fz["weights"]
+                # fused calibration-in-the-large per year (year effect) + per-sample fused predictions
+                mt_f = fz["meta_test"].reset_index(drop=True)
+                if "date" in mt_f:
+                    yrs = pd.to_datetime(mt_f["date"]).dt.year.astype(str).to_numpy()
+                    rep["fused_by_year"] = {
+                        k: score_block(fz["P_test"][yrs == k], mt_f[yrs == k].reset_index(drop=True), spec,
+                                       bundle["pi_true"], **eval_options(bundle))
+                        for k in np.unique(yrs) if int((yrs == k).sum()) >= 5}
+                    keep = [c for c in ("sample_uid", "date", "Location_Code", "ref_label", "value", "log10_value",
+                                        "weight", "split_group", "source", "method") if c in mt_f]
+                    fp = pd.concat([mt_f[keep], pd.DataFrame(fz["P_test"], columns=[
+                        f"p_{i}" for i in range(fz["P_test"].shape[1])])], axis=1)
+                    fp.assign(sensor="fused").to_csv(
+                        out_root / "evaluation" / f"hab_uq_fused_test_predictions_{spec.fname_token}.csv", index=False)
                 bundle["fusion_weights"] = fz["weights"]
                 joblib.dump({k: v for k, v in bundle.items() if k != "path"}, bundle["path"])
             with open(out_root / "evaluation" / f"hab_uq_evaluation_{spec.fname_token}.json", "w") as f:

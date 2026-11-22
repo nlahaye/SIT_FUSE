@@ -51,6 +51,27 @@ Intervals (uq.intervals)
                          so censored-aware coverage meets `target`; a may widen (a < 0.05) or
                          narrow (a > 0.05) the nominal 90 % interval. Optional pad_dex widening
                          when the tail grid cannot reach the target.
+  group_by: year         coverage criterion per calendar year of the calibration samples
+  group_rule: min        min (every year with >= min_group_n samples meets target) | mean
+  min_group_n: 30        (per species: uq.species.<key>.intervals, merged over uq.intervals)
+  A pooled fit meets the target on average; when one year dominates the calibration
+  samples, other years under-cover. group_rule min trades width for per-year coverage.
+
+Calibration reweighting (uq.calibration.reweight; per species: uq.species.<key>.calibration.reweight)
+  {period_balance: year | null, prevalence: null | median_year | mean_year | fixed,
+   prevalence_values: [...] (fixed), min_year_n: 20, max_factor: 5.0}
+  Multiplies calibration-sample weights before the calibrators, model selection, exceedance
+  recalibration, decision rule and interval calibration are fitted, so every downstream
+  component (and inference, which only applies the fitted calibrators) sees the same target.
+    period_balance: year   each calendar year (>= min_year_n samples) gets equal total weight;
+                           sparse years keep their mean per-sample weight
+    prevalence             label-shift importance weights pi_target[c] / pi_cal[c] (after period
+                           balancing), pi_target from the per-year class shares of the labelled
+                           train + calibration samples (median_year: per-class median over years,
+                           renormalised; mean_year: mean over years = equal-year climatology)
+  A static target cannot add year-to-year skill: it sets the long-run level the probabilities
+  are calibrated to (e.g. not the 2024-dominated pooled rate). Year skill needs inputs that
+  carry the anomaly (follow-on ancillary experiment).
 """
 
 from __future__ import annotations
@@ -470,11 +491,15 @@ def interval_report(P, log10_obs, w, spec, tail=0.05, pad_dex=0.0, prefix="inter
     return out
 
 
-def fit_interval_calibration(P, log10_obs, w, spec, cfg: dict[str, Any] | None) -> dict[str, Any] | None:
+def fit_interval_calibration(P, log10_obs, w, spec, cfg: dict[str, Any] | None,
+                             groups=None) -> dict[str, Any] | None:
     """
-    uq.intervals: {recalibrate: true, target: 0.9, tails: [...], max_pad_dex: 1.0, pad_step_dex: 0.05}
+    uq.intervals: {recalibrate: true, target: 0.9, tails: [...], max_pad_dex: 1.0, pad_step_dex: 0.05,
+                   group_by: year, group_rule: min | mean, min_group_n: 30}
     Largest tail mass (narrowest interval) whose censored-aware calibration coverage >= target;
-    if none reaches it, the smallest tail plus the smallest pad_dex that does.
+    if none reaches it, the smallest tail plus the smallest pad_dex that does. With group_by and
+    groups (one label per sample, e.g. year), the criterion is the min (or mean) of the per-group
+    coverages over groups with >= min_group_n samples (pooled when fewer than two qualify).
     """
     cfg = cfg or {}
     if not cfg.get("recalibrate", False) or P is None or len(P) == 0:
@@ -484,18 +509,110 @@ def fit_interval_calibration(P, log10_obs, w, spec, cfg: dict[str, Any] | None) 
     P, log10_obs, w = np.asarray(P)[ok], np.asarray(log10_obs, float)[ok], np.asarray(w, float)[ok]
     if not len(P):
         return None
+    rule = str(cfg.get("group_rule", "min")).lower()
+    gidx = {}
+    if cfg.get("group_by") and groups is not None:
+        g = np.asarray(groups)[ok]
+        gidx = {str(k): np.flatnonzero(g == k) for k in np.unique(g)}
+        gidx = {k: v for k, v in gidx.items() if len(v) >= int(cfg.get("min_group_n", 30))}
+        if len(gidx) < 2:
+            gidx = {}
+
+    def cover(a, pad=0.0):
+        hit = interval_covered(P, log10_obs, spec, a, pad).astype(float)
+        pooled = float(np.average(hit, weights=w))
+        if not gidx:
+            return pooled, pooled, None
+        per = {k: float(np.average(hit[v], weights=w[v])) for k, v in gidx.items()}
+        crit = min(per.values()) if rule == "min" else float(np.mean(list(per.values())))
+        return crit, pooled, per
+
     tails = sorted({float(t) for t in (cfg.get("tails") or DEFAULT_TAILS)}, reverse=True)
+    base = {"target": target, "nominal_tail": 0.05, "n": int(len(P)),
+            "group_by": cfg.get("group_by") if gidx else None, "group_rule": rule if gidx else None}
     grid = {}
     for a in tails:
-        grid[a] = float(np.average(interval_covered(P, log10_obs, spec, a), weights=w))
-        if grid[a] >= target:
-            return {"target": target, "tail": a, "pad_dex": 0.0, "calibration_coverage": grid[a],
-                    "nominal_tail": 0.05, "n": int(len(P)), "grid": grid, "reached_target": True}
+        crit, pooled, per = cover(a)
+        grid[a] = crit
+        if crit >= target:
+            return {**base, "tail": a, "pad_dex": 0.0, "calibration_coverage": pooled,
+                    "criterion_coverage": crit, "group_coverage": per, "grid": grid, "reached_target": True}
     a = tails[-1]
     step, mx = float(cfg.get("pad_step_dex", 0.05)), float(cfg.get("max_pad_dex", 1.0))
-    pad, cov = 0.0, grid[a]
-    while cov < target and pad < mx - 1e-12:
+    pad = 0.0
+    crit, pooled, per = cover(a)
+    while crit < target and pad < mx - 1e-12:
         pad = round(pad + step, 6)
-        cov = float(np.average(interval_covered(P, log10_obs, spec, a, pad), weights=w))
-    return {"target": target, "tail": a, "pad_dex": pad, "calibration_coverage": cov,
-            "nominal_tail": 0.05, "n": int(len(P)), "grid": grid, "reached_target": bool(cov >= target)}
+        crit, pooled, per = cover(a, pad)
+    return {**base, "tail": a, "pad_dex": pad, "calibration_coverage": pooled, "criterion_coverage": crit,
+            "group_coverage": per, "grid": grid, "reached_target": bool(crit >= target)}
+
+
+# ---------------------------------------------------------------------------
+# Calibration reweighting (year balance, label-shift prevalence target)
+# ---------------------------------------------------------------------------
+
+def prevalence_target(y, years, C: int, how: str = "median_year", w=None, min_year_n: int = 20,
+                      values=None) -> np.ndarray | None:
+    """Target class distribution from labelled samples grouped by year (None if < 2 usable years)."""
+    how = str(how or "").lower()
+    if how in ("", "none", "null", "false"):
+        return None
+    if how == "fixed":
+        v = np.asarray(values, float)
+        if v.shape != (C,) or v.sum() <= 0:
+            raise ValueError(f"calibration.reweight.prevalence_values must have {C} entries")
+        return v / v.sum()
+    y = np.asarray(y).astype(int)
+    w = np.ones(len(y)) if w is None else np.asarray(w, float)
+    yrs = np.asarray(years).astype(str)
+    shares = []
+    for k in np.unique(yrs):
+        m = yrs == k
+        if m.sum() < min_year_n:
+            continue
+        sh = np.bincount(y[m], weights=w[m], minlength=C).astype(float) + 0.5   # Jeffreys-type smoothing
+        shares.append(sh / sh.sum())
+    if len(shares) < 2:
+        return None
+    S = np.vstack(shares)
+    t = np.median(S, axis=0) if how == "median_year" else S.mean(axis=0)
+    return t / t.sum()
+
+
+def calibration_reweight(y, w, years, C: int, cfg: dict[str, Any] | None,
+                         pi_target=None) -> tuple[np.ndarray, dict[str, Any] | None]:
+    """Multiplicative calibration-sample weights (see module docstring). Returns (factor, info)."""
+    y = np.asarray(y).astype(int)
+    w = np.asarray(w, float)
+    f = np.ones(len(y))
+    cfg = cfg or {}
+    if not cfg or len(y) == 0:
+        return f, None
+    info: dict[str, Any] = {}
+    yrs = np.asarray(years).astype(str)
+    min_n = int(cfg.get("min_year_n", 20))
+    if str(cfg.get("period_balance") or "").lower() == "year":
+        ks, cnt = np.unique(yrs, return_counts=True)
+        big = [k for k, c in zip(ks, cnt) if c >= min_n]
+        if len(big) >= 2:
+            wy = {k: float(w[yrs == k].sum()) for k in big}
+            tgt = sum(wy.values()) / len(big)
+            fac = {k: tgt / max(v, EPS) for k, v in wy.items()}
+            for k, v in fac.items():
+                f[yrs == k] *= v
+            info["year_factors"] = fac
+    if pi_target is not None:
+        pt = np.asarray(pi_target, float)
+        pc = np.bincount(y, weights=w * f, minlength=C).astype(float)
+        pc = pc / max(pc.sum(), EPS)
+        mx = float(cfg.get("max_factor", 5.0))
+        cf = np.where(pc > 0, pt / np.maximum(pc, EPS), 1.0)
+        cf = np.clip(cf, 1.0 / mx, mx)
+        f *= cf[y]
+        info.update(pi_target=pt.tolist(), pi_calibration=pc.tolist(), class_factors=cf.tolist())
+    if not info:
+        return np.ones(len(y)), None
+    f *= w.sum() / max(float((w * f).sum()), EPS)        # total weight unchanged
+    info["effective_n"] = float((w * f).sum() ** 2 / max(float(((w * f) ** 2).sum()), EPS))
+    return f, info

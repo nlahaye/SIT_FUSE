@@ -31,7 +31,8 @@ Metrics
                 the joint cluster, its parent, the spatial tier or none
                 (assignment_coverage), and all scores per dominant tier (by_assign_tier)
 CIs: grouped bootstrap over split groups (station x time block).
-Stratification: sensor, station, season, and any extra column.
+Stratification: sensor, station, season, year, and any extra column.
+exceedance.<t>.mean_p next to base_rate: calibration-in-the-large per stratum (year effect).
 """
 
 from __future__ import annotations
@@ -123,7 +124,7 @@ def prob_scores(P, y, w, spec, pi_clim, log10_obs=None, interval_cal=None) -> di
             pe = exceedance_probability(P, spec.edges, t, spec.detection_floor)
             ye = (obs >= t).astype(float)
             tab, ece = reliability_table(pe, ye, np.asarray(w, float), n_bins=10)
-            d = {"base_rate": float(np.average(ye, weights=w)),
+            d = {"base_rate": float(np.average(ye, weights=w)), "mean_p": float(np.average(pe, weights=w)),
                  "brier": float((wn * (pe - ye) ** 2).sum()), "ece": ece, "reliability": tab}
             if 0 < ye.sum() < len(ye):
                 from sklearn.metrics import roc_auc_score
@@ -249,7 +250,7 @@ def prediction_table(P, meta, base, spec, eo) -> pd.DataFrame:
 
 
 def evaluate_bundle(bundle, frame: pd.DataFrame, out_dir, n_boot: int = 500,
-                    strata=("sensor", "Location_Code", "season")) -> dict[str, Any]:
+                    strata=("sensor", "Location_Code", "season", "year")) -> dict[str, Any]:
     spec = species_spec(bundle["species"], bundle["spec"])
     P, meta, base = predict_samples(bundle, frame, "test")
     if P is None:
@@ -257,6 +258,7 @@ def evaluate_bundle(bundle, frame: pd.DataFrame, out_dir, n_boot: int = 500,
     meta["season"] = pd.to_datetime(meta["date"]).dt.month.map(
         lambda m: {12: "DJF", 1: "DJF", 2: "DJF", 3: "MAM", 4: "MAM", 5: "MAM",
                    6: "JJA", 7: "JJA", 8: "JJA"}.get(m, "SON"))
+    meta["year"] = pd.to_datetime(meta["date"]).dt.year.astype(str)   # year effect: mean_p vs base_rate
     pi = bundle["pi_true"]
     eo = eval_options(bundle)
     report = {"species": bundle["species"], "overall": score_block(P, meta, spec, pi, base, **eo),
