@@ -325,6 +325,30 @@ def read_date_roles(path) -> dict[str, str]:
     return {k: m.get(v, v) for k, v in zip(d, t[col].str.strip().str.lower())}
 
 
+PRESENCE_SPLIT = "presence_test"
+
+
+def route_presence_only(samples: pd.DataFrame, cfg: dict[str, Any] | None, use_key: str = "") -> pd.DataFrame:
+    """
+    uq.species.<key>.presence_only: {methods: [ifcb], threshold: 1}
+    Rows from these methods never train, calibrate or enter the ordinal test scores. Rows in test
+    split groups move to split 'presence_test' (scored as presence / absence at evaluation, same
+    leakage-safe groups as the test set); rows in train / calibration groups are excluded.
+    """
+    if not cfg or samples.empty:
+        return samples
+    if "method" not in samples.columns:
+        raise ValueError(f"{use_key}: presence_only needs the non-strict in-situ table (method column)")
+    m = samples["method"].astype(str).isin([str(x) for x in cfg.get("methods", ["ifcb"])])
+    out = samples.copy()
+    out.loc[m & (out["split"] == "test"), "split"] = PRESENCE_SPLIT
+    out.loc[m & out["split"].isin(["train", "calibration"]), "split"] = "excluded"
+    LOG.info("%s presence_only %s: %d presence_test, %d excluded from train/calibration", use_key,
+             cfg.get("methods", ["ifcb"]), int((out["split"] == PRESENCE_SPLIT).sum()),
+             int((m & (samples["split"].isin(["train", "calibration"]))).sum()))
+    return out
+
+
 def split_config(hab_yml: dict[str, Any]) -> dict[str, Any]:
     """uq.splits, plus the encoder training window when splits.encoder_unseen_eval."""
     cfg = dict(hab_yml.get("uq", {}).get("splits") or {})
@@ -427,6 +451,7 @@ def train_species(hab_yml: dict[str, Any], use_key: str, out_dir: str | Path,
                 raise ValueError("uq.sample_weighting needs the non-strict in-situ table (method column); "
                                  f"{uq.get('insitu_file', hab_yml.get('insitu_file'))} has none")
             samples = assign_splits(species_frame(ins, spec), split_config(hab_yml))
+            samples = route_presence_only(samples, sp_cfg.get("presence_only"), use_key)
         n_ex = int((samples["split"] == "excluded").sum())
         if n_ex:
             # buffer / unlisted days are never used; skip them before raster matching

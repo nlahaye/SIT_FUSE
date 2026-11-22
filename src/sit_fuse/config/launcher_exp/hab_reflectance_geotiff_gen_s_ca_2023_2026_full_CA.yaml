@@ -25,8 +25,8 @@ no_heir: True
 config_dir: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/"
 geo_zarr: "/mnt/data1/cal_coast_geo.zarr"
  
-insitu_file: "/mnt/data1/habs/insitu_augmented_ifcb_2023_2026/combined_augmented_strict.csv"   # was insitu_augmented_clean/
-#/mnt/data1/habs/insitu_augmented_v2/combined_augmented_strict.csv 
+# All experiments use the non-strict combined_augmented.csv (top-level, uq.insitu_file, subset_insitu_file).
+insitu_file: "/mnt/data1/habs/insitu_augmented_ifcb_2023_2026/combined_augmented.csv"   # was combined_augmented_strict.csv
 insitu_matchup_circle_max_radius: [0.09]
 start_date: "2023-01-01"   # was 2024-03-01
 end_date: "2026-10-01"     # was 2025-12-01
@@ -268,9 +268,14 @@ uq:
     Pseudo_nitzschia_total: {alert_thresholds: [10000, 100000]}
     # Alexandrium spp. (cells/L), experimental. PN bins (1e4 / 1e5) leave ~96% of site-days in bin 0, so
     # Alexandrium uses its own edges: absent | present (>=1) | elevated (>=1e3, CDPH-style alert level) |
-    # bloom (>=5e3). 2023-2026 site-days per bin: 4973 / 1185 / 178 / 63 (all methods). threshold_index 0
-    # in uq.animation therefore maps P(>= 1000 cells/L).
+    # bloom (>=5e3). Trained on light-microscopy counts only; 2023-2026 site-days per bin (QC-fixed table):
+    # 1352 / 201 / 136 / 62. threshold_index 0 in uq.animation maps P(>= 1000 cells/L).
+    # IFCB is presence-only: the classifier never resolves bloom magnitude here (0 site-days >= 1e4), so IFCB
+    # rows never train / calibrate; IFCB rows in test split groups score P(>= 1 cell/L) vs detection
+    # (evaluation json "presence", report_tables presence_<tag>.csv). Santa Cruz / MBARI IFCB Alexandrium
+    # values are NaN in the QC-fixed table (51-class classifier, Alexandrium_singlet not mapped).
     Alexandrium_spp:
+      presence_only: {methods: [ifcb], threshold: 1}
       edges: [0, 1, 1000, 5000, 100000000]
       detection_floor: 0.1          # log10 position of non-detects (below the 1 cell/L presence edge)
       alert_thresholds: [1000, 5000]

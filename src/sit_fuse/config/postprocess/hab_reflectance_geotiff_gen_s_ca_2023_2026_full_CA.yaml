@@ -25,8 +25,8 @@ no_heir: True
 config_dir: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/"
 geo_zarr: "/mnt/data1/cal_coast_geo.zarr"
  
-insitu_file: "/mnt/data1/habs/insitu_augmented_ifcb_2023_2026/combined_augmented_strict.csv"   # was insitu_augmented_clean/
-#/mnt/data1/habs/insitu_augmented_v2/combined_augmented_strict.csv 
+# All experiments use the non-strict combined_augmented.csv (top-level, uq.insitu_file, subset_insitu_file).
+insitu_file: "/mnt/data1/habs/insitu_augmented_ifcb_2023_2026/combined_augmented.csv"   # was combined_augmented_strict.csv
 insitu_matchup_circle_max_radius: [0.09]
 start_date: "2023-01-01"   # was 2024-03-01
 end_date: "2026-10-01"     # was 2025-12-01
@@ -113,7 +113,10 @@ uq:
   start_date: &full_start "2023-01-01"
   end_date: &full_end "2026-09-30"
   species_run: [Pseudo_nitzschia_seriata_group, Pseudo_nitzschia_delicatissima_group, pDA,
-                Pseudo_nitzschia_total, cDA]   # added: direct total-PN (C-HARM comparison) and experimental cellular DA
+                Pseudo_nitzschia_total, cDA, Total_Phytoplankton, Alexandrium_spp]   # added: direct total-PN (C-HARM comparison) and experimental cellular DA
+                # Alexandrium_spp: experimental stream (PSP-producer proxy; no PSP toxin targets available)
+                # Total_Phytoplankton (cells/L): IFCB and light microscopy resolve different size ranges, so totals are
+                # not strictly equivalent; scored per provenance (evaluation.subsets) and by a microscopy-only variant
   max_depth_m: 1.0           # also enforced at ingestion (insitu_sources cleaning.max_depth_m)
   # Train AND evaluate on one provenance only (rerun from --stages train; needs the
   # non-strict insitu_file). e.g. oos_piers, or {sources: [...], methods: [...], location_codes: [...]}
@@ -228,14 +231,19 @@ uq:
                 # interpolated, so it moves only through the 1 ng/mL map), fitted on calibration samples after model and
                 # strength selection. auto: kept only if day-grouped 5-fold out-of-fold Brier improves.
                 exceedance_recalibration: {enabled: auto, method: platt, thresholds: alert,
-                                           min_events: 10, n_folds: 5, ridge: 1.0}}
+                                           min_events: 10, n_folds: 5, ridge: 1.0},
+                # Calibration reweighting (off in production; set by the next-steps calibration sweep):
+                #   period_balance: year -> each year carries equal total weight in temperature / prior fits
+                #   prevalence: median_year | mean_year | fixed (+ pi_target) -> label-shift class shares
+                # reweight: {period_balance: year, prevalence: median_year, min_year_n: 20, max_factor: 5}
+                }
   # Hard label for pred_label and the hard metrics. Full prior correction removes the class-weighting
   # shift from the probabilities, so minority-bin recall comes from the rule rather than argmax.
   decision: {rule: auto, metric: qwk, candidates: [argmax, median, expected]}   # argmax | median | expected | auto
   # 90 % interval: coverage counts non-detects (stored at log10 detection floor) as covered when the
   # lower bound reaches bin 0; recalibrate picks the tail mass reaching `target` on calibration samples
   # (bands log10_conc_lo90 / hi90; q05/q95 unchanged)
-  intervals: {recalibrate: true, target: 0.9}
+  intervals: {recalibrate: true, target: 0.9}   # optional group_by: year (group_rule: min | mean, min_group_n)
   selective: {target_coverage: 0.8, bin_tolerance: 0}
 
   species:                   # optional overrides of hab_uq_common.DEFAULT_SPECIES
@@ -244,12 +252,36 @@ uq:
       measurement_sigma_dex: 0.15
       # Hard label: highest k with P(bin >= k) >= tau_k, tau tuned on calibration samples (QWK), flagged
       # share capped at 2x the observed share. median / expected need P(bin >= 1) >= 0.5 and stay in bin 0.
-      decision: {rule: threshold, metric: qwk, max_flag_ratio: 2.0, min_events: 5}
+      decision: {rule: threshold, metric: qwk, max_flag_ratio: 1.5, min_events: 5}   # was 2.0 (over-flagging)
+      # Per-species overrides (merged over uq.classifier / uq.calibration): revert to the random forest with
+      # power-0.75 class weights and partial prior correction (the setting behind the stronger earlier pDA run)
+      classifier: {model: random_forest, class_weighting_grid: [{mode: power, power: 0.75, max_weight: 50}]}
+      calibration: {prior_correction_strength: 0.25}
     Pseudo_nitzschia_seriata_group: {alert_thresholds: [10000, 100000]}
+    # Intervals under-covered (0.88): tail chosen so the worst calibration year reaches the 0.9 target
+    Pseudo_nitzschia_delicatissima_group:
+      intervals: {group_by: year, group_rule: min, min_group_n: 30}
+    Total_Phytoplankton: {alert_thresholds: [100000, 1000000]}     # bin edges 1e5 / 1e6 cells/L (as in the pilot run)
     # Derived targets (hab_insitu.add_derived_target). Total PN = seriata + delicatissima cells/L
     # (rows need >= 1 group measured). cDA = pDA / total PN (pg/cell) on rows with PN >= min_pn_cells;
     # pDA non-detects become censored rows (upper bound pda_lod / PN) kept only if bound < max_censored_upper.
     Pseudo_nitzschia_total: {alert_thresholds: [10000, 100000]}
+    # Alexandrium spp. (cells/L), experimental. PN bins (1e4 / 1e5) leave ~96% of site-days in bin 0, so
+    # Alexandrium uses its own edges: absent | present (>=1) | elevated (>=1e3, CDPH-style alert level) |
+    # bloom (>=5e3). Trained on light-microscopy counts only; 2023-2026 site-days per bin (QC-fixed table):
+    # 1352 / 201 / 136 / 62. threshold_index 0 in uq.animation maps P(>= 1000 cells/L).
+    # IFCB is presence-only: the classifier never resolves bloom magnitude here (0 site-days >= 1e4), so IFCB
+    # rows never train / calibrate; IFCB rows in test split groups score P(>= 1 cell/L) vs detection
+    # (evaluation json "presence", report_tables presence_<tag>.csv). Santa Cruz / MBARI IFCB Alexandrium
+    # values are NaN in the QC-fixed table (51-class classifier, Alexandrium_singlet not mapped).
+    Alexandrium_spp:
+      presence_only: {methods: [ifcb], threshold: 1}
+      edges: [0, 1, 1000, 5000, 100000000]
+      detection_floor: 0.1          # log10 position of non-detects (below the 1 cell/L presence edge)
+      alert_thresholds: [1000, 5000]
+      measurement_sigma_dex: 0.3    # low counts are few-cell (Poisson) estimates
+      decision: {rule: auto, metric: qwk, candidates: [argmax, median, expected, threshold],
+                 max_flag_ratio: 1.5, min_events: 5}
     cDA:
       alert_thresholds: [10.0]
       derived: {kind: cellular_da, pda: pDA, min_pn_cells: 1000, pda_lod: 0.02, max_censored_upper: 10.0}
@@ -266,6 +298,7 @@ uq:
       oos_piers: {sources: oos_piers}              # combined_full + calhabmap_erddap (CalHABMAP piers, as in the 2026 paper)
       non_pier: {exclude_sources: oos_piers}       # IFCB, cruise
       ifcb: {methods: [ifcb]}
+      microscopy: {methods: [microscopy, lm_settled]}   # light-microscopy counts (Total_Phytoplankton comparability)
       # holdout_piers: {location_codes: [SMP, MBF]}   # = uq.splits.holdout_locations
     subset_recalibrate_fusion: false               # true: fusion weights from subset calibration rows only
 

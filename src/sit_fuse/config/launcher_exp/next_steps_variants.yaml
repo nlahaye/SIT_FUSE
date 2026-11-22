@@ -61,7 +61,5 @@ variants:
     overrides: {uq: {insitu_filter: {methods: [microscopy, lm_settled]}}}
 
   # ------------------------------------------------------------------ C) Alexandrium pilot
-  # alex_all removed: Alexandrium_spp (all methods) is now in the production species_run
-  alex_microscopy:                                    # light-microscopy counts only
-    species_run: [Alexandrium_spp]
-    overrides: {uq: {species: *alex, insitu_filter: {methods: [microscopy, lm_settled]}}}
+  # alex_all / alex_microscopy removed: production Alexandrium_spp trains on light microscopy and scores
+  # IFCB as presence only (uq.species.Alexandrium_spp.presence_only), which covers both pilots.

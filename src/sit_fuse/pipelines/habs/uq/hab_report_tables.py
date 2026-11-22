@@ -9,6 +9,8 @@ Reads <uq.out_dir>/evaluation/hab_uq_evaluation_<token>.json and hab_uq_test_pre
   year_calibration_<tag>.csv  per run x species x product (per_sensor | fused) x year x alert threshold:
                            observed rate, mean forecast probability, ratio, weighted F1, QWK
   subsets_<tag>.csv        evaluation subsets (oos_piers, ifcb, ...) when present
+  presence_<tag>.csv       presence-only scoring (uq.species.<key>.presence_only, e.g. IFCB for
+                           Alexandrium): per run x species x product (per_sensor | fused) x stratum
 
 Always-most-common-bin is the test-set majority bin (weighted), an optimistic reference.
 Runs are name=uq_out_dir; several runs (e.g. calibration variants) give one long table each.
@@ -135,9 +137,29 @@ def _exceed(P, t, edges, j, token):
         return None
 
 
+def presence_rows(run: str, ev: Path, token: str) -> list[dict]:
+    jp = ev / f"hab_uq_evaluation_{token}.json"
+    if not jp.exists():
+        return []
+    pr = json.loads(jp.read_text()).get("presence") or {}
+    rows = []
+    for product, blk in (("per_sensor", pr), ("fused", pr.get("fused") or {})):
+        if not blk.get("overall"):
+            continue
+        base = {"run": run, "token": token, "product": product, "threshold": blk.get("threshold"),
+                "climatology_p": blk.get("climatology_p")}
+        ci = blk.get("overall_ci") or {}
+        rows.append({**base, "stratum": "overall", "group": "all", **blk["overall"],
+                     **{f"{k}_{b}": v.get(b) for k, v in ci.items() for b in ("lo95", "hi95")}})
+        for col in ("sensor", "Location_Code", "year"):
+            for g, r in (blk.get(f"by_{col}") or {}).items():
+                rows.append({**base, "stratum": col, "group": g, **r})
+    return rows
+
+
 def collect(runs: dict[str, str], out: str, tokens: list[str] | None = None, tag: str = "report") -> dict[str, str]:
     Path(out).mkdir(parents=True, exist_ok=True)
-    skills, years, subs = [], [], []
+    skills, years, subs, pres = [], [], [], []
     for run, d in runs.items():
         ev = Path(d) / "evaluation"
         toks = tokens or sorted(p.stem.replace("hab_uq_evaluation_", "") for p in ev.glob("hab_uq_evaluation_*.json"))
@@ -148,11 +170,12 @@ def collect(runs: dict[str, str], out: str, tokens: list[str] | None = None, tag
                 continue
             skills.append(r)
             years += year_rows(run, ev, t)
+            pres += presence_rows(run, ev, t)
         ss = ev / "subsets" / "subset_summary.csv"
         if ss.exists():
             subs.append(pd.read_csv(ss).assign(run=run))
     paths = {}
-    for name, rows in (("skill", skills), ("year_calibration", years)):
+    for name, rows in (("skill", skills), ("year_calibration", years), ("presence", pres)):
         if rows:
             p = Path(out) / f"{name}_{tag}.csv"
             pd.DataFrame(rows).to_csv(p, index=False)

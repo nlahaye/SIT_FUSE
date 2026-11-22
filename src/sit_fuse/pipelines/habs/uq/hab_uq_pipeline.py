@@ -60,7 +60,8 @@ def run_hab_uq_pipeline(yml, stages=("train", "evaluate", "infer", "fuse"), spec
              evaluation and animation always use uq.date_windows so splits and in-situ load are unchanged.
     """
     from sit_fuse.pipelines.habs.uq.hab_uq_train import train_species
-    from sit_fuse.pipelines.habs.uq.hab_uq_evaluate import eval_options, evaluate_bundle, predict_samples, score_block
+    from sit_fuse.pipelines.habs.uq.hab_uq_evaluate import (eval_options, evaluate_bundle, predict_samples,
+                                                           presence_config, presence_scores, score_block)
     from sit_fuse.pipelines.habs.uq.hab_uq_inference import run_inference
     from sit_fuse.pipelines.habs.uq.hab_multisensor_fusion import fuse_samples, run_fusion
 
@@ -125,6 +126,16 @@ def run_hab_uq_pipeline(yml, stages=("train", "evaluate", "infer", "fuse"), spec
                         out_root / "evaluation" / f"hab_uq_fused_test_predictions_{spec.fname_token}.csv", index=False)
                 bundle["fusion_weights"] = fz["weights"]
                 joblib.dump({k: v for k, v in bundle.items() if k != "path"}, bundle["path"])
+            pcfg = presence_config(bundle)
+            if pcfg and Pc is not None and len(bundle["sensors"]) > 1:
+                # fused presence score on the presence-only rows (e.g. IFCB), weights from calibration
+                Pp, mp, _ = predict_samples(bundle, frame, "presence_test")
+                if Pp is not None:
+                    fzp = fuse_samples(bundle, Pc, mc, Pp, mp, method=uq.get("fusion", {}).get("pool", "log"))
+                    prf = presence_scores(fzp["P_test"], fzp["meta_test"], spec, bundle["pi_true"], pcfg,
+                                          n_boot=200)
+                    prf.pop("_p"); prf.pop("_obs")
+                    rep.setdefault("presence", {})["fused"] = prf
             with open(out_root / "evaluation" / f"hab_uq_evaluation_{spec.fname_token}.json", "w") as f:
                 json.dump(rep, f, indent=2, default=str)
             if uq.get("evaluation", {}).get("subsets"):
@@ -136,7 +147,7 @@ def run_hab_uq_pipeline(yml, stages=("train", "evaluate", "infer", "fuse"), spec
                     summary.setdefault(use_key, {})["subsets"] = sub.get("summary_rows")
                 except ValueError as e:
                     LOG.warning("%s: subset evaluation skipped: %s", use_key, e)
-            summary[use_key] = {k: rep.get(k) for k in ("overall", "fused")}
+            summary[use_key] = {k: rep.get(k) for k in ("overall", "fused", "presence")}
         if "ablation" in stages:
             summary.setdefault(use_key, {})["ablation"] = run_ablation(yml, use_key, out_root)
         # uq.date_windows (else uq.start_date / end_date): inference on the union of days,
