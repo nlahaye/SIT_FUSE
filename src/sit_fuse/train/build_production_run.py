@@ -29,6 +29,15 @@ A fusion with `sources: evaluation` (+ `dates: [YYYY-MM-DD, ...]`, optional `spl
 geo dirs instead (e.g. past events such as the LA / Park fires) and applies the frozen weights to all splits of those
 days; it needs no production pipeline and runs right away. Fused products are available to the animations as
 fused_<fusion name> (and fused_<product> when there is one production fusion).
+Head outputs that already exist elsewhere are shared instead of exported again: sensors.<s>.heads_from (and
+pipelines.<p>.heads_from) list directories (searched recursively: other productions' heads/<export>, evaluation
+head-output dirs of smoke and fire runs). Each missing <input>.head_outputs.tif in heads/<export> is symlinked from the
+first directory holding it whose tags show the same SIT-FUSE model and head settings, so a list may mix smoke and fire
+dirs: heads of another encoder are skipped, and only inputs with no matching head output anywhere are exported.
+A production fusion source can also point at existing geo products instead of a pipeline of this run:
+fusion.<name>.pipelines.<source>: {geo_dir: <dir>[, manifest: <json>, model: <name>]} (e.g. hourly TEMPO from another
+production or from the evaluation run, fused with this run's 5-min GOES). Such a source adds no dependency; since its
+frames keep their own classifier_split, output.splits then covers every split (production, mixed, ...).
 With an `animation:` section it also writes <output_root>/configs/overlay_animation.yaml (make_overlay_animations.py)
 with the product geo dirs (and fused products, sensor: fused) filled in. With `animation.sets: {name: overrides}`
 each set (bbox, time_range, resolution, split_by, frames, include, shards, cpus, title, observations, products ...;
@@ -98,6 +107,75 @@ def head_path(hdir, f):
         if alt.exists():
             return alt
     return p
+
+
+HEAD_SETTING_TAGS = ("top_k_parent", "top_k_child", "n_parent_ranks")
+_HEAD_INDEX: dict[str, dict[str, str]] = {}
+
+
+def _head_index(d):
+    """{head-output file name: path} of every *.head_outputs.tif under d (recursive, cached; symlinks followed)."""
+    d = str(d)
+    if d not in _HEAD_INDEX:
+        idx = {}
+        for r, _, fs in os.walk(d, followlinks=True):
+            for f in fs:
+                if f.endswith(".head_outputs.tif"):
+                    idx.setdefault(f, os.path.join(r, f))
+        _HEAD_INDEX[d] = idx
+    return _HEAD_INDEX[d]
+
+
+def _same_encoder(tags, settings):
+    """True when a head output's tags match the export settings: same SIT-FUSE model yaml (path, or file name when
+    the tree was moved) and the same top_k_parent / top_k_child / n_parent_ranks."""
+    a, b = str(tags.get("sit_fuse_yaml") or ""), str(settings["sit_fuse_yaml"])
+    if not a or not (os.path.realpath(a) == os.path.realpath(b) or Path(a).name == Path(b).name):
+        return False
+    he = settings.get("head_export") or {}
+    return all(str(tags.get(k)) == str(he.get(k, {"top_k_parent": 5, "top_k_child": 3, "n_parent_ranks": 2}[k]))
+               for k in HEAD_SETTING_TAGS)
+
+
+def sync_heads(hdir, items, settings, sources, name):
+    """Link head outputs that already exist elsewhere (heads_from: other productions, evaluation head-output dirs, smoke
+    or fire runs) into hdir, per file, for the inputs in items that have none in hdir. A candidate is linked only when
+    its tags show the same encoder and head settings as this export (_same_encoder), so heads of another encoder (e.g.
+    the fire encoder for a smoke export) are never used. Returns {source: n linked} and {source: n rejected}."""
+    import rasterio
+    linked, rejected = {}, {}
+    if not sources:
+        return linked, rejected
+    hdir = Path(hdir)
+    hdir.mkdir(parents=True, exist_ok=True)
+    ok_cache = {}
+    for f, _ in items:
+        dst = head_path(hdir, f)
+        if dst.exists():
+            continue
+        n = Path(f).name
+        n = strip_stand_in(n, STAND_IN_SUFFIXES) or n
+        cands = [f"{n}.head_outputs.tif", f"{n[:-4] if n.endswith('.tif') else n}.head_outputs.tif"]
+        for src in sources:
+            if os.path.realpath(src) == os.path.realpath(hdir):
+                continue
+            hit = next((_head_index(src)[c] for c in cands if c in _head_index(src)), None)
+            if not hit:
+                continue
+            if hit not in ok_cache:
+                try:
+                    with rasterio.open(hit) as r:
+                        ok_cache[hit] = _same_encoder(r.tags(), settings)
+                except Exception as e:  # noqa: BLE001  (unreadable / truncated file: export a new one)
+                    print(f"WARNING heads/{name}: unreadable head output {hit} ({e}); not linked")
+                    ok_cache[hit] = False
+            if not ok_cache[hit]:
+                rejected[src] = rejected.get(src, 0) + 1
+                continue
+            os.symlink(os.path.realpath(hit), dst)
+            linked[src] = linked.get(src, 0) + 1
+            break
+    return linked, rejected
 
 
 def unusable(hdir, items):
@@ -345,6 +423,21 @@ def main(argv=None):
         hdir = root / "heads" / e["name"]
         product = str(p.get("product") or uq["data"].get("product") or "").lower()
         recs = []
+        hsrc = [_abs(base, d) for d in list(sensors[s].get("heads_from") or []) + list(p.get("heads_from") or [])]
+        e.setdefault("heads_from", [])
+        new_src = [d for d in hsrc if d not in e["heads_from"]]
+        if new_src and not a.reexport:              # share existing head outputs of the same encoder (tag-checked)
+            if hdir.is_symlink():
+                print(f"WARNING heads/{e['name']} is a symlink to {os.path.realpath(hdir)}: new exports land there")
+            missing = [d for d in new_src if not Path(d).is_dir()]
+            for d in missing:
+                print(f"WARNING heads/{e['name']}: heads_from {d} not found")
+            lk, rj = sync_heads(hdir, inputs[s], hs, [d for d in new_src if d not in missing], e["name"])
+            e["heads_from"] += new_src
+            for d in new_src:
+                if lk.get(d) or rj.get(d):
+                    print(f"  heads/{e['name']}: {lk.get(d, 0)} head output(s) linked from {d}"
+                          + (f", {rj[d]} skipped (other encoder or head settings)" if rj.get(d) else ""))
         skip = unusable(hdir, inputs[s])
         if skip and e["name"] not in skipped:
             skipped[e["name"]] = skip
@@ -454,7 +547,22 @@ def main(argv=None):
         fmap = fs.get("pipelines") or {}
         if isinstance(fmap, list):              # [tempo_smoke, goes_smoke] -> by sensor
             fmap = {pipes[x]["sensor"]: x for x in fmap}
+        external = {}                       # source -> existing geo dir (not a pipeline of this run)
         for src, sc in (fcfg.get("sources") or {}).items():
+            ext = fmap.get(src) if not ev_src else None
+            if isinstance(ext, dict):
+                if not ext.get("geo_dir"):
+                    raise ValueError(f"fusion {fname}: source {src!r}: give geo_dir (or a pipeline name)")
+                gd = _abs(base, ext["geo_dir"])
+                sc["geo_dir"] = gd
+                sc["manifest"] = _abs(base, ext["manifest"]) if ext.get("manifest") else \
+                    str(Path(gd) / "geo_products_manifest.json")
+                if ext.get("model"):
+                    sc["model"] = ext["model"]
+                if not Path(sc["manifest"]).exists():
+                    print(f"WARNING fusion {fname}: source {src} manifest {sc['manifest']} not found")
+                external[src] = gd
+                continue
             if ev_src:                          # evaluation-period geo products (e.g. past events), no production deps
                 for k in ("geo_dir", "manifest"):
                     if sc.get(k):
@@ -478,17 +586,19 @@ def main(argv=None):
                          "output": dict(fcfg.get("output") or {}, splits=list(splits))})
             if fs.get("dates"):
                 fcfg["temporal"] = dict(fcfg.get("temporal") or {}, dates=[str(d) for d in fs["dates"]])
-        else:
+        else:                                   # external sources keep their own splits -> mixed frames
+            splits = ["production", "mixed", "calibration", "holdout", "dev", "none"] if external else ["production"]
             fcfg.update({"output_dir": str(fout), "references": {},
-                         "output": dict(fcfg.get("output") or {}, splits=["production"])})
+                         "output": dict(fcfg.get("output") or {}, splits=splits)})
         fcfg["fusion"] = dict(fcfg.get("fusion") or {}, models_from=str(fit_dir))
         if fs.get("grids"):
             fcfg["grids"] = {g: v for g, v in fcfg["grids"].items() if g in fs["grids"]}
             fcfg["fusion"]["grids"] = [g for g in fcfg["fusion"].get("grids", fs["grids"]) if g in fs["grids"]]
         fpath = _write(cdir / f"fusion_{fname}.yaml", fcfg)
         nfs, fcpus = int(fs.get("shards", 1)), int(fs.get("cpus", 2))
-        used = [] if ev_src else sorted(set(fmap[x] for x in fcfg["sources"]))
-        sh = hashlib.sha1(" ".join(scene_hash[x] for x in used).encode()).hexdigest()[:10] if used else "evaluation"
+        used = [] if ev_src else sorted(set(fmap[x] for x in fcfg["sources"] if x not in external))
+        sh = hashlib.sha1(" ".join([scene_hash[x] for x in used] + sorted(external.values())).encode()
+                          ).hexdigest()[:10] if used else "evaluation"
         sh += " cfg " + hashlib.sha1(Path(fpath).read_bytes()).hexdigest()[:8]   # config edits -> rerun
         fu = f"cd {td} && {py} fuse_multiscale_products.py -c {shlex.quote(str(fpath))}"
         ftok = str(state / "tokens" / f"fusion_{fname}")
