@@ -1,0 +1,59 @@
+# GOES-18 smoke production for the Oregon fires on 26 July 2026 at the 5-min GOES cadence: every ABI CONUS scene
+# (sensors.goes.every_minutes unset -> no thinning; ~216 scenes), hist_gradient_boosting, geo products, and the
+# GOES + TEMPO smoke fusion at the same 5-min cadence (one fused frame per GOES scene; TEMPO, hourly by nature, is
+# carried forward causally from the smoke quick-test production). Uses the recalibrated GOES smoke run
+# (goes18/g18_uq_config_smoke_recal.yaml: models, calibrators, cutoffs, area calibration) and the 5-min smoke fusion
+# weights (configs/fusion_config.smoke_5min.yaml -> FUSION/UQ_SMOKE_RECAL_5MIN, fitted in the same plan first).
+# No animation here; configs/animations/anim_ts_oregon_0726.yaml reads goes_smoke/geo and fusion_smoke/fine.
+# Run as part of uq_parallel.goes_fire_ts_2026.yaml (job prod_goes_smoke_0726), or alone:
+#   cd SIT_FUSE/src/sit_fuse/train
+#   python build_production_run.py production_2026_goes_smoke_0726.yaml                 # configs + plan, scene counts
+#   python build_production_run.py production_2026_goes_smoke_0726.yaml --run -- --dry-run
+#   python build_production_run.py production_2026_goes_smoke_0726.yaml --run                                     # GPUs 4-7, 16 CPUs (launcher:)
+# Head outputs: smoke and fire share the GOES encoder (goes_tempo_test_3, GOES_TEMPO_UPDATED), so heads/goes_0 is filled
+# from heads_from first (per file, tag-checked) and only scenes with no head output anywhere are exported. In the plan
+# this run's head export goes first (prod_heads_0726); the fire 0726 production then links all of its heads from here.
+# CHECK = path assumed from the earlier production setups; confirm it exists before running.
+
+output_root: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_SMOKE
+start: 2026-07-26T12:00:00Z            # [start, end) UTC: Pacific daylight of 26 July (as the fire 0726 run)
+end: 2026-07-27T06:00:00Z
+bbox: [-125.0, -110.0, 40.0, 49.0]     # [W, E, S, N]: Oregon, Washington, Idaho (as the fire 0726 run)
+python: python
+resume: true
+launcher:
+  cpus: 16
+  gpus: [4, 5, 6, 7]
+  state_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_SMOKE/launch
+resources: {infer: 4, infer_merge: 2, geo: 4}
+shards: {inference: 8}
+export: {shards: 4, cpus: 4, gpu: 1}   # ~216 five-minute CONUS scenes; one GPU per export shard
+
+sensors:
+  goes:
+    inputs: /data/nlahaye/remoteSensing/GOES_TEMPO/new_data     # CHECK: July 2026 GOES-18 16-band GeoTIFFs
+    pattern: "OR_ABI-L1b-RadC-M6C01_G18_s*.tif"
+    # every_minutes: 60                 # keep unset: every 5-min scene (60 would give hourly products)
+    bbox_filter: false                  # CONUS scenes always cover the bbox
+    heads_from:                         # same-encoder head outputs to link instead of exporting (recursive, tag-checked)
+      - /data/nlahaye/output/Learnergy/PRODUCTION_2026_07/heads                   # smoke quick test (hourly scenes)
+      - /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_FIRE/heads              # fire 0726 production (same scenes)
+      - /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_FIRE_TS/heads    # fire TS 0726 production
+      - /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED                         # smoke / fire evaluation heads
+
+pipelines:
+  goes_smoke:
+    sensor: goes
+    uq_config: goes18/g18_uq_config_smoke_recal.yaml     # recalibrated GOES smoke (output_dir .../UQ_SMOKE_RECAL)
+    export_config: goes18/g18_export_smoke.yaml          # GOES encoder (goes_tempo_test_3), shared with fire
+    models: [hist_gradient_boosting]
+
+fusion:                                 # 5-min fused smoke: frozen weights from the 5-min evaluation fit
+  smoke:
+    config: configs/fusion_config.smoke_5min.yaml        # goes frames 5 min, match window 2 min
+    models_from: /data/nlahaye/output/Learnergy/FUSION/UQ_SMOKE_RECAL_5MIN   # fusion_models.pkl (fusion smoke_5min of the plan)
+    pipelines:
+      goes: goes_smoke                                   # this run: every 5-min scene
+      tempo: {geo_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07/tempo_smoke/geo}   # CHECK: quick-test TEMPO smoke (hourly scans, 25-31 July)
+    shards: 4
+    cpus: 2

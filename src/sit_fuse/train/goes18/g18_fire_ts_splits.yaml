@@ -1,0 +1,35 @@
+# GOES-18 fire partitions aligned with the TEMPO fire run (pin_matchup_splits.py). Run from src/sit_fuse/train:
+#   python pin_matchup_splits.py goes18/g18_fire_ts_splits.yaml --check-only   # inventory of the current matchups
+#   python pin_matchup_splits.py goes18/g18_fire_ts_splits.yaml                # write the pinned matchups + check
+# The matchups, attached references and head outputs are reused as they are (no regeneration). The check fails
+# (exit 1, so the launcher stops before training) when an event has no calibration or holdout scenes with head
+# outputs on disk, or when fewer than three events are present (e.g. Oregon dropped by encoder-split tracing).
+
+input: ./goes18/g18_output_fdcc_hms_firms.yaml          # attach_references.py output (CHECK: data.matchup_file of
+                                                        # goes18/g18_uq_config_fire.yaml)
+output: ./goes18/g18_output_fdcc_hms_firms_ts.yaml      # data.matchup_file of goes18/g18_uq_config_fire_ts.yaml
+split_csv: ./goes18/g18_fire_ts_splits.csv
+summary_json: ./goes18/g18_fire_ts_splits_summary.json
+
+# Observing days (day_start_utc_hour 6), as split_group in the matchups.
+assign_groups:
+  # TEMPO fire holdout days. Park 2024-07-26 is a GOES encoder-training day, so Park uses 07-27 (nearest eligible).
+  holdout: ["2024-07-27",
+            "2025-01-10", "2025-01-11",
+            "2026-07-03", "2026-07-05", "2026-07-09", "2026-07-17", "2026-07-21"]
+  # One calibration day per event, a day apart from its holdout days. Oregon is chosen by calibration_auto.
+  calibration: ["2024-07-29", "2025-01-08"]
+  dev: []
+
+calibration_auto:                 # events without a listed calibration day (Oregon)
+  per_event: 1
+  min_gap_days: 1                 # not adjacent to a holdout day of the same event
+  exclude: ["2026-07-26"]         # keep the production / animation day out of calibration
+
+others: dev                       # all other groups -> dev (as the TEMPO run: dev = training + CV)
+
+check:
+  min_events: 3                   # park_fire_2024, la_fires_2025, the Oregon 2026 event
+  min_holdout_scenes: 1
+  min_calibration_scenes: 1
+  require_head_outputs: true      # count only scenes whose head_outputs file exists

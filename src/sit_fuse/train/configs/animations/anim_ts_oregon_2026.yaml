@@ -1,0 +1,67 @@
+# SIT-FUSE evaluation-period animation: TEMPO + GOES-18 smoke and fire, plus fused smoke and fire, from the
+# full all-scene run (uq_parallel.full_2026.yaml); GOES fire and fused fire from the TEMPO-style GOES fire run
+# (uq_parallel.goes_fire_ts_2026.yaml: UQ_FIRE_TS2026, FUSION/UQ_FIRE_TS) and fused smoke from the 5-min smoke
+# fusion (FUSION/UQ_SMOKE_RECAL_5MIN); one frame per 5-min GOES scene. Run from SIT_FUSE/src/sit_fuse/train:
+#   python make_overlay_animations.py -c configs/animations/anim_ts_oregon_2026.yaml --dry-run      # frame tables only
+#   python make_overlay_animations.py -c configs/animations/anim_ts_oregon_2026.yaml --workers 8 [--shard i/N]
+name: ts_oregon_2026
+output_dir: /data/nlahaye/output/Learnergy/ANIMATIONS/FULL_2026_TS/oregon_2026
+cache_dir: /data/nlahaye/output/Learnergy/ANIMATIONS/FULL_2026_TS/_cache
+time_range: [2026-07-01T00:00:00Z, 2026-07-23T00:00:00Z]
+bbox: [-122.0, -115.9, 41.65, 45.8]
+resolution: 0.01
+split_by: day
+title: "Oregon fires 2026: SIT-FUSE smoke and fire, TEMPO + GOES-18"
+frames:
+  base: goes                     # one frame per 5-min GOES scene: the TEMPO-style GOES fire run covers Oregon
+  goes_window_minutes: 3         # (pin_splits checks it); TEMPO held causally between its hourly scans
+  tempo_causal: true
+  tempo_max_age_minutes: 60
+  tempo_hold: product
+  require: [goes_fire]           # GOES smoke has no Oregon matchups: frames follow the GOES fire scenes
+  tempo_day_shift_hours: -6
+
+observations:
+  tempo_rgb:    {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .RGB.tif}
+  tempo_uv_rgb: {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .UV_RGB.tif}
+  goes:
+    dir: [/data/nlahaye/remoteSensing/GOES_TEMPO/new_data, /data/nlahaye/remoteSensing/GOES_TEMPO/new_data_2026_07]   # CHECK
+    pattern: "OR_ABI-L1b-RadC-M6C01_G18_s*.tif"
+    bands: {blue: 1, red: 2, veggie: 3, ir: 13}
+    gamma: 2.2
+    night: ir
+
+products:                        # geo_export.output_dir of each pipeline in uq_parallel.full_2026.yaml (CHECK
+                                 # against the "output_dir" lines of plan_uq_jobs.py's report)
+  tempo_smoke: {geo_dir: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ/geo,                 manifest: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ/geo/geo_products_manifest.json,                 model: hist_gradient_boosting, product: smoke, sensor: tempo}
+  goes_smoke:  {geo_dir: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/UQ_SMOKE_RECAL/geo, manifest: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/UQ_SMOKE_RECAL/geo/geo_products_manifest.json, model: hist_gradient_boosting, product: smoke, sensor: goes}
+  tempo_fire:  {geo_dir: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ_FIRE/geo,            manifest: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ_FIRE/geo/geo_products_manifest.json,            model: hist_gradient_boosting, product: fire, sensor: tempo}
+  goes_fire:   {geo_dir: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/UQ_FIRE_TS2026/geo, manifest: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/UQ_FIRE_TS2026/geo/geo_products_manifest.json, model: hist_gradient_boosting, product: fire, sensor: goes}
+  fused_smoke: {geo_dir: /data/nlahaye/output/Learnergy/FUSION/UQ_SMOKE_RECAL_5MIN/fine, model: fused, product: smoke, sensor: fused}   # 5-min fusion output_dir/<grid>
+  fused_fire:  {geo_dir: /data/nlahaye/output/Learnergy/FUSION/UQ_FIRE_TS/fine,        model: fused, product: fire,  sensor: fused}
+
+# 3 x 3: plain observations | smoke | fire (TEMPO, GOES, fused). A product with no scene in the frame is listed
+# as "<name>: none" in the panel footer, so missing coverage is visible rather than silently dropped.
+ncols: 3
+panels:
+  - {title: TEMPO RGB, obs: tempo_rgb, overlays: []}
+  - {title: TEMPO UV RGB, obs: tempo_uv_rgb, overlays: []}
+  - {title: GOES ABI true colour, obs: goes, overlays: []}
+  - {title: TEMPO smoke, obs: tempo_rgb, overlays: [tempo_smoke]}
+  - {title: GOES smoke, obs: goes, overlays: [goes_smoke]}
+  - {title: Fused smoke (GOES grid), obs: goes, overlays: [fused_smoke]}
+  - {title: TEMPO fire, obs: tempo_rgb, overlays: [tempo_fire]}
+  - {title: GOES fire, obs: goes, overlays: [goes_fire]}
+  - {title: Fused fire (GOES grid), obs: goes, overlays: [fused_fire]}
+
+style:
+  smoke: {cmap: cool, alpha_max: 0.65, p_min: 0.15, p_max: 0.9, contour: true}
+  # fire cutoffs are far below 0.05 (holdout HGB: GOES 0.006, TEMPO 0.024), so ramp fire in log10(p)
+  fire:  {cmap: autumn_r, alpha_max: 0.9, scale: log, p_min: 0.002, p_max: 0.3, alpha_gamma: 0.7, points: true, point_size: 3}
+rgb_enhance: {method: hist, strength: 0.5, sharpen: 0.5, sample_frames: 12}
+rgb_interpolation: antialiased
+fps: 4
+dpi: 120
+formats: [mp4, gif]
+keep_frames: false
+basemap: {enabled: true}

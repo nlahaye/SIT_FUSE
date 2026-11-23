@@ -1,0 +1,16 @@
+# =============================================================================
+# GOES-18: georeferenced SIT-FUSE cluster rasters (.clust.data_<N>clusters.zarr.full_geo.tif) for the fire matchups
+#   python make_full_geo.py goes18/g18_full_geo_2026.yaml --list        # counts
+#   python make_full_geo.py goes18/g18_full_geo_2026.yaml --shard 0/8   # one of 8 parts (launcher job full_geo)
+# Scenes whose full_geo already exists are skipped, so Park / LA (done earlier) cost only a file check.
+# =============================================================================
+sit_fuse_yamls:
+  - /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/goes_tempo_test_3.yaml        # Park / LA (+ encoder training)
+  - /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/goes_tempo_test_3_LA.yaml
+  - /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/goes_tempo_test_3_2026.yaml   # Oregon 2026 inference
+input_lists: [files_test, files_train]
+out_dir: null                   # output.out_dir of each YAML (GOES_TEMPO_UPDATED)
+include_regex: null             # e.g. "_s2026" for 2026 only
+exclude_tokens: [proba, no_heir]
+skip_existing: true
+clust_reader_type: zarr_to_numpy
