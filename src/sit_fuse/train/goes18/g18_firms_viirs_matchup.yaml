@@ -5,7 +5,7 @@
 # =============================================================================
 time_range:
   start: "2024-07-20T00:00:00Z"
-  end: "2025-01-15T23:59:59Z"
+  end: "2026-09-15T23:59:59Z"
 
 sit_fuse:
   # GOES-18 SIT-FUSE outputs: basename(input) + ".clust.data_<N>clusters.zarr.full_geo.tif"
