@@ -1,0 +1,70 @@
+# SIT-FUSE Big Grass Fire, 26 July 2026 (every 5-min GOES scene): TEMPO + GOES-18 smoke and fire, fused smoke and fire.
+# Run from SIT_FUSE/src/sit_fuse/train (after the 5-min productions of uq_parallel.goes_fire_ts_2026.yaml):
+#   python make_overlay_animations.py -c configs/animations/anim_ts_big_grass_0726.yaml --dry-run      # frame tables only
+#   python make_overlay_animations.py -c configs/animations/anim_ts_big_grass_0726.yaml --workers 8 [--shard i/N]
+# 5-min frames: one per GOES scene. GOES smoke / fire and fused smoke / fire: the 26 July production runs of that plan
+# (every 5-min GOES scene; fusion at 5-min frames, TEMPO carried forward). TEMPO smoke: the smoke quick-test production
+# (PRODUCTION_2026_07, hourly TEMPO scans; CHECK it finished). TEMPO fire: the evaluation run, which holds 26 July only
+# when that day is in the Oregon TEMPO fire matchups (fused fire is then GOES-driven). A product without files for
+# the day is skipped with a warning and shown as "<name>: no products" in its panel.
+name: ts_big_grass_0726
+output_dir: /data/nlahaye/output/Learnergy/ANIMATIONS/FULL_2026_TS/big_grass_0726
+cache_dir: /data/nlahaye/output/Learnergy/ANIMATIONS/FULL_2026_TS/_cache
+time_range: [2026-07-26T12:00:00Z, 2026-07-27T06:00:00Z]
+bbox: [-118.7, -115.1, 41.4, 43.6]   # Big Grass, expanded (was [-117.65, -116.1, 41.85, 43.1]; as anim30_big_grass_0726.yaml)
+resolution: 0.005
+split_by: none
+title: "Big Grass Fire, 26 July 2026: SIT-FUSE smoke and fire, TEMPO + GOES-18"
+frames:
+  base: goes                     # one frame per GOES scene with a product; TEMPO held causally
+  goes_window_minutes: 3
+  tempo_causal: true
+  tempo_max_age_minutes: 60
+  tempo_hold: product
+  require: [goes]
+  tempo_day_shift_hours: -6
+
+observations:
+  tempo_rgb:    {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .RGB.tif}
+  tempo_uv_rgb: {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .UV_RGB.tif}
+  goes:
+    dir: [/data/nlahaye/remoteSensing/GOES_TEMPO/new_data, /data/nlahaye/remoteSensing/GOES_TEMPO/new_data_2026_07]   # CHECK
+    pattern: "OR_ABI-L1b-RadC-M6C01_G18_s*.tif"
+    bands: {blue: 1, red: 2, veggie: 3, ir: 13}
+    gamma: 2.2
+    night: ir
+
+products:
+  tempo_smoke: {geo_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07/tempo_smoke/geo, manifest: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07/tempo_smoke/geo/geo_products_manifest.json, model: hist_gradient_boosting, product: smoke, sensor: tempo}   # CHECK
+  goes_smoke:  {geo_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_SMOKE/goes_smoke/geo, manifest: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_SMOKE/goes_smoke/geo/geo_products_manifest.json, model: hist_gradient_boosting, product: smoke, sensor: goes}
+  tempo_fire:  {geo_dir: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ_FIRE/geo, manifest: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ_FIRE/geo/geo_products_manifest.json, model: hist_gradient_boosting, product: fire, sensor: tempo}
+  goes_fire:   {geo_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_FIRE_TS/goes_fire/geo, manifest: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_FIRE_TS/goes_fire/geo/geo_products_manifest.json, model: hist_gradient_boosting, product: fire, sensor: goes}
+  fused_smoke: {geo_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_SMOKE/fusion_smoke/fine, model: fused, product: smoke, sensor: fused}     # 5-min
+  fused_fire:  {geo_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_FIRE_TS/fusion_fire_ts/fine, model: fused, product: fire, sensor: fused}  # 5-min
+
+ncols: 4                         # rows: TEMPO | GOES | fused (+ TEMPO UV); last column: smoke + fire
+panels:
+  - {title: TEMPO RGB, obs: tempo_rgb, overlays: []}
+  - {title: TEMPO smoke, obs: tempo_rgb, overlays: [tempo_smoke]}
+  - {title: TEMPO fire, obs: tempo_rgb, overlays: [tempo_fire]}
+  - {title: TEMPO smoke + fire, obs: tempo_rgb, overlays: [tempo_smoke, tempo_fire]}
+  - {title: GOES ABI true colour, obs: goes, overlays: []}
+  - {title: GOES smoke, obs: goes, overlays: [goes_smoke]}
+  - {title: GOES fire, obs: goes, overlays: [goes_fire]}
+  - {title: GOES smoke + fire, obs: goes, overlays: [goes_smoke, goes_fire]}
+  - {title: TEMPO UV RGB, obs: tempo_uv_rgb, overlays: []}
+  - {title: Fused smoke (GOES grid), obs: goes, overlays: [fused_smoke]}
+  - {title: Fused fire (GOES grid), obs: goes, overlays: [fused_fire]}
+  - {title: Fused smoke + fire (GOES grid), obs: goes, overlays: [fused_smoke, fused_fire]}
+
+style:
+  smoke: {cmap: cool, alpha_max: 0.65, p_min: 0.15, p_max: 0.9, contour: true}
+  # fire cutoffs are far below 0.05 (holdout HGB: GOES 0.006, TEMPO 0.024), so ramp fire in log10(p)
+  fire:  {cmap: autumn_r, alpha_max: 0.9, scale: log, p_min: 0.002, p_max: 0.3, alpha_gamma: 0.7, points: true, point_size: 3}
+rgb_enhance: {method: hist, strength: 0.5, sharpen: 0.5, sample_frames: 12}
+rgb_interpolation: antialiased
+fps: 8
+dpi: 120
+formats: [mp4, gif]
+keep_frames: false
+basemap: {enabled: true}

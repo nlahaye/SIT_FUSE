@@ -1,0 +1,69 @@
+# Smoke-aware cloud screening of TEMPO L3 NO2 for the Oregon / Big Grass case study, 26 July 2026, with the fused
+# smoke of the 26 July smoke production (5-min fused frames, fine grid). Feeds the NO2 case-study animations
+# (configs/animations/anim30_no2_*_0726.yaml). Run from SIT_FUSE/src/sit_fuse/train (EARTHDATA_TOKEN or ~/.netrc
+# for the pull, as for the TEMPO RAD pull):
+#   python no2_smoke_cloud_mask.py -c no2_smoke_mask.oregon_0726.yaml --stage pull
+#   python no2_smoke_cloud_mask.py -c no2_smoke_mask.oregon_0726.yaml --stage mask -n 8
+#   python no2_smoke_cloud_mask.py -c no2_smoke_mask.oregon_0726.yaml --stage compare      # coverage tables + figures
+# Rasters: <output_dir>/rasters/oregon_0726/<no2 stem>_oregon_0726.tif (bands no2_cloud_mask_only,
+# no2_smoke_aware_mask, mask_class, near_fire, fire_distance_km, ...; tag scan_start). Fire products only mark
+# cells near fire (near_fire band, coverage columns, figure outlines); they never change the mask. Existing scans are skipped unless --overwrite.
+output_dir: /data/nlahaye/output/Learnergy/FUSION/NO2_SMOKE_MASK_OR0726
+workers: 8
+
+no2:
+  dir: /data/nlahaye/remoteSensing/NO2_L3            # CHECK: pull target (full files and/or *_subset.nc)
+  glob: "TEMPO_NO2_L3_*.nc"
+  versions: [V04, V03]
+  qa_max: 0
+  cloud_threshold: auto                              # support_data/eff_cloud_fraction; auto: V04 0.1, V03 0.2
+  cloud_threshold_sweep: [0.1, 0.2, 0.3]
+  sza_max: null
+
+fused:
+  dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_SMOKE/fusion_smoke   # <dir>/fine/fused/rasters/fused_smoke_*.tif
+  grid: fine
+  glob: "fused_smoke_*.tif"
+  splits: null                                       # production frames (split "production")
+  window_minutes: 45
+  scan_time_tolerance_minutes: 5
+  max_dt_minutes: 45
+
+smoke_variants:
+  - {name: fused_p,   band: p_1,             threshold: tag}
+  - {name: fused_q05, band: ensemble_p1_q05, threshold: tag}
+
+fire:                                                # marks NO2 cells near SIT-FUSE fire; the mask is NOT changed
+  enabled: true
+  buffer_km: 10                                      # near_fire = within this distance of a fire cell
+  window_minutes: 30                                 # fire scenes in [scan start - w, scan end + w] (union)
+  max_distance_km: 200                               # fire_distance_km is capped here
+  sources:                                           # export_geo_products.py rasters (<geo_dir>/<model>/rasters); missing ones are skipped
+    - {name: goes_fire_rf30, geo_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_FIRE_TS_RF30/goes_fire/geo, model: random_forest}
+    - {name: tempo_fire, geo_dir: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ_FIRE/geo, model: hist_gradient_boosting}   # only where 26 July is in the TEMPO fire run
+    # 5-min regeneration: replace goes_fire_rf30 with
+    # - {name: goes_fire, geo_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_FIRE_TS/goes_fire/geo, model: hist_gradient_boosting}
+    # - {name: fused_fire, geo_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_FIRE_TS/fusion_fire_ts/fine, model: fused}
+    # (then rerun --stage mask --overwrite and --stage compare)
+
+recovery:
+  max_cloud_fraction: [null, 0.5]
+  min_cloud_pressure_hpa: null
+
+cases:                                               # inside the production fused grid [-125, -110, 40, 49]
+  oregon_0726:
+    bbox: [-124.6, -113.6, 40.6, 47.4]               # expanded Oregon box; contains the Big Grass box [-118.7, -115.1, 41.4, 43.6]
+    start: "2026-07-26T12:00:00"                     # UTC (no Z: case_list adds tz=UTC)
+    end: "2026-07-27T06:00:00"
+
+pull:
+  enabled: true
+  threads: 8
+  access: https
+  subset: true
+  delete_full: true                                  # disk: keep only the case-box subsets
+  dry_run: false
+
+figures:
+  enabled: true
+  maps_per_case: 3

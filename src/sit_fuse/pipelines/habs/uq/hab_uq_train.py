@@ -93,8 +93,8 @@ def hab_feature_columns(df: pd.DataFrame, features_cfg: dict[str, Any],
     cols += sorted(c for c in df.columns if c.startswith(ANCILLARY_PREFIXES) and keep_column(c, features_cfg))
     if spatial_on:       # spatial_tier group: sp_tier_c, sp_tier_mass (encoder tier 2)
         cols += sorted(c for c in df.columns if c.startswith("sp_tier_") and c not in cols)
-    if sensors and len(sensors) > 1:
-        cols += [f"sensor_is_{s}" for s in sensors]
+    if sensors and len(sensors) > 1 and features_cfg.get("use_sensor_columns", True):
+        cols += [f"sensor_is_{s}" for s in sensors]     # features.use_sensor_columns: false drops them
     if features_cfg.get("use_day_offset", False):
         cols.append("abs_day_offset")
     return list(dict.fromkeys(cols))     # unique, order kept (sklearn rejects duplicate names)

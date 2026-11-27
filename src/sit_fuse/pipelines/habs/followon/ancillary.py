@@ -230,18 +230,43 @@ def sst_features(cfg, day: pd.Timestamp, lat, lon) -> dict[str, np.ndarray]:
 
 
 # ----------------------------------------------------------------------------- upwelling indices
+def _erddap_time_end(base: str) -> pd.Timestamp | None:
+    """Last time step of an ERDDAP griddap dataset (info page), None if unavailable."""
+    try:
+        info = pd.read_csv(io.BytesIO(_get(base.replace("/griddap/", "/info/") + "/index.csv", retries=2)))
+        row = info[(info["Variable Name"] == "NC_GLOBAL") & (info["Attribute Name"] == "time_coverage_end")]
+        return pd.Timestamp(row["Value"].iloc[0]).tz_localize(None).normalize() if len(row) else None
+    except Exception as e:  # pragma: no cover - network
+        LOG.warning("ERDDAP info failed for %s: %s", base, e)
+        return None
+
+
 def pull_upwelling(cfg, start: pd.Timestamp, end: pd.Timestamp) -> Path:
+    """CUTI / BEUTI daily (31-47 N) from the climatology start through min(end, dataset end).
+
+    ERDDAP returns 404 when a request runs past the last time step, and CUTI / BEUTI lag real time by
+    weeks to months, so the request end is clamped to the datasets' time_coverage_end. Days after it get
+    NaN upwelling features (Upwelling.features), and a rerun extends the cache once ERDDAP updates.
+    """
     out = Path(cfg["cache_dir"]) / "upwelling" / "cuti_beuti_daily.csv"
     uc = cfg.get("upwelling") or {}
     c0 = int((uc.get("climatology_years") or [1988, 2022])[0])
     t0 = min(pd.Timestamp(f"{c0}-01-01"), start - pd.Timedelta(days=30))
+    end = pd.Timestamp(end).normalize()
+    names = ("CUTI", "BEUTI")
+    avail = [_erddap_time_end(ERDDAP_UPW.format(name=n)) for n in names]
+    t1 = min([end] + [a for a in avail if a is not None])
+    if t1 < end:
+        LOG.warning("upwelling: CUTI/BEUTI end %s, before requested end %s; later days will be NaN",
+                    f"{t1:%Y-%m-%d}", f"{end:%Y-%m-%d}")
     if out.exists():
         have = pd.read_csv(out, parse_dates=["time"])
-        if have["time"].min() <= t0 and have["time"].max() >= end:
+        if have["time"].min() <= t0 and have["time"].max() >= t1:
             return out
     frames = []
-    for name in ("CUTI", "BEUTI"):
-        q = f"{name}[({t0:%Y-%m-%d}T12:00:00Z):1:({end:%Y-%m-%d}T12:00:00Z)][(31.0):1:(47.0)]"
+    for name in names:
+        # dataset time stamps are 00:00Z; ERDDAP snaps to the nearest step
+        q = f"{name}[({t0:%Y-%m-%d}T00:00:00Z):1:({t1:%Y-%m-%d}T00:00:00Z)][(31.0):1:(47.0)]"
         raw = _get(f"{ERDDAP_UPW.format(name=name)}.csv?{urllib.parse.quote(q, safe='[]():,')}")
         df = pd.read_csv(io.BytesIO(raw), skiprows=[1])
         df["time"] = pd.to_datetime(df["time"]).dt.tz_localize(None).dt.normalize()

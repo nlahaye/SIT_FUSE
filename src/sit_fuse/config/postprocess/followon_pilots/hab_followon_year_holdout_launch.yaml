@@ -1,0 +1,189 @@
+# Local-launcher plan: held-out-year and no-day-gap checks on the follow-on 1 results
+# (production heads and in-situ table of uq_full_2023_2026_ifcb, combined_augmented). No encoder retraining, no GPU.
+#
+#   A. Day gap alone (production split): prod_nogap_interleaved vs production, paired on the same test samples;
+#      grouped importance of the no-gap heads (what replaces the day gap for P. delicatissima).
+#   B. Leave-one-year-out (2023, 2024, 2025, 2026 Jan-Sep): every day of the held-out year is test, a +-14-day
+#      buffer is excluded, other days keep their production roles (production test days become train).
+#      6 variants x 4 folds x 4 targets; each variant's folds are pooled so every sample is scored once by the
+#      model that never saw its year, then all variants are compared with paired block bootstraps
+#      (overall and by year = by fold; 2023 is also encoder-unseen).
+#        prod                 production features, day gap on       (reference for B)
+#        prod_nogap           production features, day gap off
+#        anc_sst_nogap        + MUR SST
+#        anc_phys_nogap       + SST, upwelling, indices, discharge, standard L3m products
+#        phys_nogap           environmental + standard products only, sensor columns kept
+#        phys_nogap_nosensor  as phys_nogap without sensor indicator columns
+#
+#   C. Rebuild followon/next_steps/prev_median (deleted): prior-median calibration on the production matchup frame
+#      (uq.reuse_frame_from, same seeds), 5 targets, then a check that total PN reproduces RPSS +4.8% vs production.
+#
+#   roles x yr ─► variants ─┬─► train_eval x v x yr x sp ─► pool x v ─► compare_holdout x sp
+#                           └─► train_nogap x sp ─┬─► compare_nogap x sp
+#                                                 └─► importance_nogap x sp
+#   prev_median_yaml ─► prev_median x sp ─► check_prev_median
+#
+# Ancillary inputs come from the follow-on 1 cache (/mnt/data1/HAB_ANCILLARY, /mnt/data1/OC_PRODUCTS); no pulls.
+#
+#   python -m sit_fuse.local_launcher list   hab_followon_year_holdout_launch.yaml
+#   python -m sit_fuse.local_launcher run    hab_followon_year_holdout_launch.yaml --dry-run
+#   systemd-run --user --scope -p MemoryMax=108G -p MemoryHigh=100G -p MemorySwapMax=0 \
+#     python -m sit_fuse.local_launcher run hab_followon_year_holdout_launch.yaml
+#   python -m sit_fuse.local_launcher status hab_followon_year_holdout_launch.yaml
+# Resume: rerun the same command. Failed jobs: --rerun-failed. Part A only: --only 'roles*' 'variants*' '*nogap.*'.
+# Part C only: --only 'prev_median*' 'check_prev_median*'.
+#
+# Size: 100 UQ trainings (4 + 96) plus 5 calibration refits for prev_median (minutes each), about 3x the follow-on 1 additional-inputs stage. Priorities run part A and the
+# prod / prod_nogap / phys_nogap folds first, so the key comparisons can be read from a partial run
+# (pool --allow-missing is not used: a variant is pooled only when all four folds finished).
+# Resource budget (16 cores, 2 GPUs, 181 GB): 9 cores (60 %), ~108 GB (60 %, enforced by the scope), no GPU.
+launcher:
+  state_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/launch/followon_year_holdout
+  gpus: []
+  cpus: 9
+  pin_cpus: true
+  max_parallel: null
+  retries: 0
+  nice: 10
+
+vars:
+  py: python
+  cfg: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/postprocess/followon_pilots
+  root: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526
+  uq: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/uq_full_2023_2026_ifcb       # production uq.out_dir
+  roles_src: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/uq_full_2023_2026/date_roles.csv   # production roles
+  yh: "{root}/followon/year_holdout"
+  ns: "{root}/followon/next_steps"                    # next-steps variant out_root (prev_median)
+  ns_cfg: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/postprocess   # holds next_steps_variants.yaml
+  mod: sit_fuse.pipelines.habs.uq
+  fo: sit_fuse.pipelines.habs.followon
+
+jobs:
+  - name: roles
+    cmd: >-
+      {py} -m {fo}.year_holdout roles --src {roles_src} --year {yr} --buffer-days 14
+      --out {yh}/roles/roles_y{yr}.csv
+    grid:
+      yr: [2023, 2024, 2025, 2026]
+    cpus: 1
+    gpu: 0
+    priority: 5
+    provides: ["{yh}/roles/roles_y{yr}.csv"]
+
+  # 25 HAB YAMLs: prod_nogap_interleaved and <variant>_y<YEAR> (year_holdout_variants.yaml)
+  - name: variants
+    cmd: "{py} -m {fo}.variants hab -s {cfg}/year_holdout_variants.yaml"
+    cpus: 1
+    gpu: 0
+    priority: 5
+    after: [{name: roles, "on": []}]
+
+  # ---------------------------------------------------------------- A. day gap alone (production split)
+  - name: train_nogap
+    cmd: >-
+      {py} -m {mod}.hab_uq_pipeline -y {yh}/prod_nogap_interleaved/hab_prod_nogap_interleaved.yaml
+      --stages train,evaluate --species {sp} -n 4
+    grid:
+      sp: &species [Pseudo_nitzschia_seriata_group, Pseudo_nitzschia_delicatissima_group, Pseudo_nitzschia_total, pDA]
+    cpus: 4
+    gpu: 0
+    priority: 4
+    after: [{name: variants, "on": []}]
+
+  - name: compare_nogap
+    cmd: >-
+      {py} -m {fo}.variant_compare --variant production={uq}
+      --variant prod_nogap={yh}/prod_nogap_interleaved/uq
+      --baseline production --token {tok} --out {yh}/compare_nogap --n-boot 500 --by-site
+    cases: &tokens
+      - {sp: Pseudo_nitzschia_seriata_group,       tok: pseudo_nitzschia_seriata_bloom}
+      - {sp: Pseudo_nitzschia_delicatissima_group, tok: pseudo_nitzschia_delicatissima_bloom}
+      - {sp: Pseudo_nitzschia_total,               tok: pseudo_nitzschia_total_bloom}
+      - {sp: pDA,                                  tok: particulate_domoic_acid}
+    id_keys: [tok]
+    cpus: 2
+    gpu: 0
+    priority: 4
+    after: [{name: train_nogap, "on": [sp]}]
+
+  - name: importance_nogap
+    cmd: >-
+      {py} -m {fo}.interpret importance -y {yh}/prod_nogap_interleaved/hab_prod_nogap_interleaved.yaml
+      --species {sp} --out {yh}/interpret_nogap --split test --n-repeats 5 --n-boot 500 --shap 2000
+    grid:
+      sp: *species
+    cpus: 3
+    gpu: 0
+    priority: 0
+    after: [{name: train_nogap, "on": [sp]}]
+
+  # ---------------------------------------------------------------- B. leave-one-year-out
+  - name: train_eval
+    cmd: "{py} -m {mod}.hab_uq_pipeline -y {yh}/{v}_y{yr}/hab_{v}_y{yr}.yaml --stages train,evaluate --species {sp} -n 4"
+    cases:
+      - {v: prod}
+      - {v: prod_nogap}
+      - {v: phys_nogap}
+      - {v: anc_phys_nogap}
+      - {v: anc_sst_nogap}
+      - {v: phys_nogap_nosensor}
+    grid:
+      yr: [2023, 2024, 2025, 2026]
+      sp: *species
+    id_keys: [v, yr, sp]
+    cpus: 4
+    gpu: 0
+    priority: 2
+    after: [{name: variants, "on": []}]
+
+  # concatenate the four folds' test predictions per variant (every sample predicted once, by its out-of-year model)
+  - name: pool
+    cmd: "{py} -m {fo}.year_holdout pool --fold 2023={yh}/{v}_y2023/uq --fold 2024={yh}/{v}_y2024/uq --fold 2025={yh}/{v}_y2025/uq --fold 2026={yh}/{v}_y2026/uq --out {yh}/pooled/{v}/uq"
+    grid:
+      v: ['prod', 'prod_nogap', 'anc_sst_nogap', 'anc_phys_nogap', 'phys_nogap', 'phys_nogap_nosensor']
+    cpus: 1
+    gpu: 0
+    priority: 2
+    after: [{name: train_eval, "on": [v]}]
+
+  - name: compare_holdout
+    cmd: >-
+      {py} -m {fo}.variant_compare --variant prod={yh}/pooled/prod/uq --variant prod_nogap={yh}/pooled/prod_nogap/uq --variant anc_sst_nogap={yh}/pooled/anc_sst_nogap/uq --variant anc_phys_nogap={yh}/pooled/anc_phys_nogap/uq --variant phys_nogap={yh}/pooled/phys_nogap/uq --variant phys_nogap_nosensor={yh}/pooled/phys_nogap_nosensor/uq
+      --baseline prod --token {tok} --out {yh}/compare_holdout --n-boot 500 --by-site
+    cases: *tokens
+    id_keys: [tok]
+    cpus: 2
+    gpu: 0
+    priority: 2
+    after: [{name: pool, "on": []}]
+
+  # ---------------------------------------------------------------- C. rebuild prev_median (next-steps calibration)
+  # Writes only {ns}/prev_median/hab_prev_median.yaml (other next-steps variants are left untouched).
+  - name: prev_median_yaml
+    cmd: "{py} -m {fo}.variants hab -s {ns_cfg}/next_steps_variants.yaml --only prev_median"
+    cpus: 1
+    gpu: 0
+    priority: 6
+    provides: ["{ns}/prev_median/hab_prev_median.yaml"]
+
+  # calibration refit on the reused production frame and encoders (same command as the next-steps sweep)
+  - name: prev_median
+    cmd: "{py} -m {mod}.hab_uq_pipeline -y {ns}/prev_median/hab_prev_median.yaml --stages train,evaluate --species {sp} -n 2"
+    grid:
+      sp: [Pseudo_nitzschia_total, Pseudo_nitzschia_seriata_group, Pseudo_nitzschia_delicatissima_group,
+           pDA, Total_Phytoplankton]
+    cpus: 2
+    gpu: 0
+    priority: 6
+    after: [{name: prev_median_yaml, "on": []}]
+
+  # reproduction check: total PN should match the next-steps result (RPSS +4.8 %, p = 0.036 vs production)
+  - name: check_prev_median
+    cmd: >-
+      {py} -m {fo}.variant_compare --variant production={uq} --variant prev_median={ns}/prev_median/uq
+      --baseline production --token pseudo_nitzschia_total_bloom --out {yh}/check_prev_median --n-boot 500
+    cpus: 1
+    gpu: 0
+    priority: 6
+    after: [{name: prev_median, "on": []}]
+
