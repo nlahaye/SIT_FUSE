@@ -26,7 +26,8 @@
 #   prod_heads_0726 (shared GOES head export, starts right away) ──────────────┼────────┴─> prod_goes_fire_ts_0726 ──┤
 #   fusion smoke_5min fit (starts right away) ─┬─> apply/merge ────────────────┼─────────────────────────────────────┤
 #                                              └───────────────────────────────┴──> prod_goes_smoke_0726 ────────────┤
-#   anim_dry / anim (Park, LA, Oregon)    no2_mask_ts -> no2_compare_ts; anim_dry_0726 -> anim_0726 (4 anim30) <───┘
+#   anim_dry / anim (Park, LA, Oregon); 26 July: anim_dry_0726 -> anim_0726 (4 anim30 configs) <─────────────────────┘
+#   no2_pull -> no2_mask_ts (after both productions) -> no2_compare_ts; the 2 NO2 anim30 cases wait for no2_mask_ts
 #   prune_30min (first) ─> goes_fire_ts infer / evaluate / geo, prod_heads_0726 (and so both productions)
 #
 # full_geo: the matchup generators read the georeferenced SIT-FUSE cluster rasters (<input>.clust.data_<N>clusters
@@ -217,11 +218,18 @@ extra_jobs:
     grid: {case: [park_2024, la_2025, oregon_2026], shard: "range(4)"}
     cpus: 4
     after: [{name: anim_dry, "on": [case]}]
-  - name: no2_mask_ts           # near-fire marks from the TS GOES fire + fused fire (mask unchanged); redo all scans
-    cmd: "cd {train} && {py} no2_smoke_cloud_mask.py -c no2_smoke_mask.oregon_0726.yaml --stage mask -n 8 --overwrite"
+  # 26 July: same jobs / settings as plan_anim30_0726.yaml, with the TS fire products (hist_gradient_boosting + fused
+  # fire) in place of the interim random_forest production (prod_fire_rf30 -> prod_goes_fire_ts_0726)
+  - name: no2_pull              # existing NO2 granules are kept (only missing files are pulled)
+    cmd: "cd {train} && {py} no2_smoke_cloud_mask.py -c no2_smoke_mask.oregon_0726.yaml --stage pull"
     cases: [{src: no2}]
     id_keys: []
-    after: [{name: prod_goes_smoke_0726, "on": []}, {name: prod_goes_fire_ts_0726, "on": []}]
+    cpus: 4
+  - name: no2_mask_ts           # near-fire marks from the TS GOES fire + fused fire (mask unchanged); --overwrite
+    cmd: "cd {train} && {py} no2_smoke_cloud_mask.py -c no2_smoke_mask.oregon_0726.yaml --stage mask -n 8 --overwrite"
+    cases: [{src: no2}]         #   because the existing rows were marked from the interim RF fire
+    id_keys: []
+    after: [no2_pull, {name: prod_goes_fire_ts_0726, "on": []}, {name: prod_goes_smoke_0726, "on": []}]
     cpus: 8
   - name: no2_compare_ts
     cmd: "cd {train} && {py} no2_smoke_cloud_mask.py -c no2_smoke_mask.oregon_0726.yaml --stage compare"
@@ -229,12 +237,18 @@ extra_jobs:
     id_keys: []
     after: [no2_mask_ts]
     cpus: 2
-  - name: anim_dry_0726         # anim30_* configs: GOES fire = TS hist_gradient_boosting, fused fire = TS fusion
+  - name: anim_dry_0726         # fire cases wait for the productions only; NO2 cases for the NO2 mask
     cmd: "cd {train} && {py} make_overlay_animations.py -c configs/animations/anim30_{case}.yaml --dry-run"
-    cases: [{case: oregon_0726}, {case: big_grass_0726}, {case: no2_oregon_0726}, {case: no2_big_grass_0726}]
-    after: [{name: no2_mask_ts, "on": []}]   # after both productions
-  - name: anim_0726             # ~36 frames each: one job, 8 workers
+    cases: [{case: oregon_0726, src: fire}, {case: big_grass_0726, src: fire},
+            {case: no2_oregon_0726, src: no2}, {case: no2_big_grass_0726, src: no2}]
+    id_keys: [case]
+    after: [{name: prod_goes_fire_ts_0726, "on": []}, {name: prod_goes_smoke_0726, "on": []},
+            {name: no2_mask_ts, "on": [src]}]
+    cpus: 1
+  - name: anim_0726             # ~36 frames each: one job per case, 8 workers; after all four dry runs
     cmd: "cd {train} && {py} make_overlay_animations.py -c configs/animations/anim30_{case}.yaml --workers 8"
-    cases: [{case: oregon_0726}, {case: big_grass_0726}, {case: no2_oregon_0726}, {case: no2_big_grass_0726}]
+    cases: [{case: oregon_0726, src: fire}, {case: big_grass_0726, src: fire},
+            {case: no2_oregon_0726, src: no2}, {case: no2_big_grass_0726, src: no2}]
+    id_keys: [case]
+    after: [{name: anim_dry_0726, "on": []}]
     cpus: 8
-    after: [{name: anim_dry_0726, "on": [case]}]
