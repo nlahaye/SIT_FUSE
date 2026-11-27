@@ -13,7 +13,8 @@ Each source keeps its own calibration; fusion operates on calibrated probabiliti
 
 Steps
  1. Index each source (uq_viz.data.GeoProductIndex) and group granules into frames (TEMPO: one E-W scan;
-    GOES: one ABI scene / time bin).
+    GOES: one ABI scene / time bin). sources.<s>.every_minutes (+ offset_minutes) first keeps only the first scene
+    (by scene time) of each UTC bin, e.g. 30-min fusion from a 5-min geo export.
  2. Common grids: `fine` (default: GOES grid) and `coarse` (default: TEMPO grid); outputs on either or both.
  3. Change of support, per source and grid, in logit space with a per-pixel logit-normal (m, s):
       s from the ensemble interval, s = (logit q95 - logit q05) / (2 * 1.645), else `default_logit_sd`.
@@ -176,6 +177,15 @@ class Source:
         self.model = cfg.get("model", "hist_gradient_boosting")
         self.idx = D.GeoProductIndex(cfg["geo_dir"], product, [self.model], cfg.get("manifest"))
         sc = self.idx.scenes(self.model)
+        every = cfg.get("every_minutes")            # e.g. 30: first scene (scene time) of each UTC bin only
+        if every and len(sc) and sc["scene_time"].notna().any():
+            off = pd.Timedelta(minutes=float(cfg.get("offset_minutes", 0) or 0))
+            sc = sc.sort_values(["scene_time", "pair_id"])
+            timed = sc[sc.scene_time.notna()]
+            key = (timed.scene_time - off).dt.floor(f"{int(every)}min")
+            n0 = len(sc)
+            sc = pd.concat([timed[~key.duplicated()], sc[sc.scene_time.isna()]])
+            LOG.info("%s: every_minutes=%s keeps %d of %d scenes", name, every, len(sc), n0)
         fr = cfg.get("frames", {})
         default_mode = "scan" if name == "tempo" else "time"
         self.frames = D.assign_frames(sc, fr.get("mode", default_mode), int(fr.get("minutes", 10)))

@@ -1,0 +1,55 @@
+# Storage cleanup for the move from 5-min to 30-min GOES (uq_parallel.goes_fire_ts_2026.yaml, job prune_30min).
+# Deletes the per-scene outputs (head export onwards) of the GOES scenes the 30-min cadence no longer uses:
+#   cd SIT_FUSE/src/sit_fuse/train
+#   python prune_off_cadence.py prune_off_cadence_30min.yaml              # dry run: per-target counts / GB + CSV
+#   python prune_off_cadence.py prune_off_cadence_30min.yaml --apply      # or let the plan's prune_30min job do it
+# Kept scenes = the scenes the 30-min run uses: load_matchups(every_minutes=30) for the UQ run (as
+# classifier_inference_uq.py), build_production_run's input selection with every_minutes 30 for the productions,
+# first fused frame per 30-min bin for the evaluation-period smoke fusion. Not touched: encoder outputs
+# (GOES_TEMPO_UPDATED SIT-FUSE zarr / full_geo), inputs, feature tables, models, evaluation tables, vectors (one file
+# per model), TEMPO products, and the head outputs of dev / calibration scenes (protect:) so features and training can
+# be rebuilt. Stop the 5-min launcher before --apply (see the plan header).
+name: goes_30min
+every_minutes: 30
+offset_minutes: 0
+tolerance_seconds: 60
+report_dir: /data/nlahaye/output/Learnergy/launch_goes_fire_ts_2026/prune
+exclude: ["*TEMPO*", "*.json", "*.csv", "*.yaml", "*.yml", "*.log", "*.txt", "*.md", "*.parquet", "*.gpkg",
+          "*.mp4", "*.gif", "*.done", "*.failed"]
+
+protect:                                   # head outputs of these splits are never deleted (link and target)
+  matchups: [goes18/g18_output_fdcc_hms_firms_ts.yaml]
+  splits: [dev, calibration]
+
+targets:
+  # TEMPO-style GOES fire UQ run: inference layers + scene_results checkpoints of all six models (holdout / dev /
+  # calibration scenes dropped at 30 min), and its geo rasters if any were written at 5 min
+  - name: fire_ts_inference
+    dirs: [/data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/UQ_FIRE_TS2026/inference]
+    keep: {matchups: {file: goes18/g18_output_fdcc_hms_firms_ts.yaml}}
+  - name: fire_ts_geo
+    dirs: [/data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/UQ_FIRE_TS2026/geo]
+    keep: {matchups: {file: goes18/g18_output_fdcc_hms_firms_ts.yaml}}
+
+  # 26 July 2026 productions: heads/, <pipe>/inference, <pipe>/geo, fusion_<name>/ (configs/, launch/ hold no
+  # scene-timed files)
+  - name: smoke_0726
+    dirs: [/data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_SMOKE]
+    keep: {production: {config: production_2026_goes_smoke_0726.yaml, sensor: goes}}
+  - name: fire_ts_0726                     # not run yet at 5 min in most cases: then nothing to delete
+    dirs: [/data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_FIRE_TS]
+    keep: {production: {config: production_2026_goes_fire_ts_0726.yaml, sensor: goes}}
+
+  # 5-min smoke fusion of the evaluation periods (Park, LA, Oregon): fused fine / coarse rasters
+  - name: smoke_fusion_5min
+    dirs: [/data/nlahaye/output/Learnergy/FUSION/UQ_SMOKE_RECAL_5MIN]
+    keep: self
+
+  # Optional (enabled: false): the finished full-cadence GOES smoke evaluation run. Its metrics are computed; its
+  # 5-min inference layers and geo rasters feed only the evaluation-period animations and the smoke fusion fit.
+  # CHECK the matchup file (data.matchup_file of goes18/g18_uq_config_smoke_recal.yaml) before enabling.
+  - name: smoke_recal_eval
+    enabled: false
+    dirs: [/data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/UQ_SMOKE_RECAL/inference,
+           /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/UQ_SMOKE_RECAL/geo]
+    keep: {matchups: {file: goes18/g18_adp_multi_ref.yaml}}        # CHECK (as goes18/g18_uq_config_smoke.yaml)

@@ -1,6 +1,6 @@
 # SIT-FUSE case-study animation, 30-min frames
 # Run from SIT_FUSE/src/sit_fuse/train (after no2_smoke_cloud_mask.py -c no2_smoke_mask.oregon_0726.yaml
-# --stage pull, then --stage mask; plan_anim30_0726.yaml):
+# --stage pull, then --stage mask; jobs anim_dry_0726 / anim_0726 of uq_parallel.goes_fire_ts_2026.yaml):
 #   python make_overlay_animations.py -c configs/animations/anim30_no2_oregon_0726.yaml --dry-run
 #   python make_overlay_animations.py -c configs/animations/anim30_no2_oregon_0726.yaml --workers 8
 # NO2 rasters: one per TEMPO NO2 L3 scan (case oregon_0726, which also covers the Big Grass box), held causally
@@ -8,8 +8,8 @@
 # smoke-aware: + cloud-screened cells under fused smoke (class 3, white outline). Orange outline: cells within
 # fire.buffer_km of SIT-FUSE fire (near_fire band; marks only, the mask is unchanged). TEMPO RGBs: the held scan.
 name: no2_or0726_30min
-output_dir: /data/nlahaye/output/Learnergy/ANIMATIONS/OR0726_30MIN/no2_or0726_30min
-cache_dir: /data/nlahaye/output/Learnergy/ANIMATIONS/OR0726_30MIN/_cache
+output_dir: /data/nlahaye/output/Learnergy/ANIMATIONS/OR0726_30MIN_TS/no2_or0726_30min
+cache_dir: /data/nlahaye/output/Learnergy/ANIMATIONS/OR0726_30MIN_TS/_cache
 time_range: [2026-07-26T12:00:00Z, 2026-07-27T06:00:00Z]
 bbox: [-124.6, -113.6, 40.6, 47.4]   # expanded (was [-122.0, -115.9, 41.65, 45.8]): all of Oregon, S Washington, W Idaho, N Nevada / California
 resolution: 0.015
@@ -17,7 +17,7 @@ split_by: none
 title: "Oregon fires, 26 July 2026 (30 min): TEMPO NO2 with standard and smoke-aware cloud masks"
 frames:
   base: goes                     # one frame per 30-min UTC bin (first GOES scene in the bin); TEMPO held causally
-  goes_every_minutes: 30         # 5-min regeneration: remove (every GOES scene)
+  goes_every_minutes: 30         # 30-min case study (storage: no 5-min run)
   goes_window_minutes: 3
   tempo_causal: true
   tempo_max_age_minutes: 60
@@ -42,8 +42,8 @@ fields:                           # no2_smoke_cloud_mask.py rasters (no2_smoke_m
   no2_fire:   {dir: /data/nlahaye/output/Learnergy/FUSION/NO2_SMOKE_MASK_OR0726/rasters/oregon_0726, glob: "TEMPO_NO2_L3_*.tif", band: vertical_column_troposphere, mask_band: near_fire, mask_values: [1], style: no2_fire}   # near-fire marks (mask unchanged)
 products:
   fused_smoke: {geo_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_SMOKE/fusion_smoke/fine, model: fused, product: smoke, sensor: fused}
-  # interim random_forest 30-min GOES fire (5-min regeneration: PRODUCTION_2026_07_OR0726_FIRE_TS, hist_gradient_boosting)
-  goes_fire:   {geo_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_FIRE_TS_RF30/goes_fire/geo, manifest: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_FIRE_TS_RF30/goes_fire/geo/geo_products_manifest.json, model: random_forest, product: fire, sensor: goes}
+  # TEMPO-style GOES fire (UQ_FIRE_TS2026 model), 30-min production (interim RF30 output: ANIMATIONS/OR0726_30MIN)
+  goes_fire:   {geo_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_FIRE_TS/goes_fire/geo, manifest: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_FIRE_TS/goes_fire/geo/geo_products_manifest.json, model: hist_gradient_boosting, product: fire, sensor: goes}
 
 ncols: 3
 panels:
@@ -63,7 +63,7 @@ style:
   fire:  {cmap: autumn_r, alpha_max: 0.9, scale: log, p_min: 0.002, p_max: 0.3, alpha_gamma: 0.7, points: true, point_size: 3}
 rgb_enhance: {method: hist, strength: 0.5, sharpen: 0.5, sample_frames: 12}
 rgb_interpolation: antialiased
-fps: 4                           # 5-min regeneration: 8
+fps: 4
 dpi: 120
 formats: [mp4, gif]
 keep_frames: false

@@ -39,12 +39,11 @@ fire:                                                # marks NO2 cells near SIT-
   window_minutes: 30                                 # fire scenes in [scan start - w, scan end + w] (union)
   max_distance_km: 200                               # fire_distance_km is capped here
   sources:                                           # export_geo_products.py rasters (<geo_dir>/<model>/rasters); missing ones are skipped
-    - {name: goes_fire_rf30, geo_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_FIRE_TS_RF30/goes_fire/geo, model: random_forest}
+    # 30-MIN TS products (job no2_mask_ts of uq_parallel.goes_fire_ts_2026.yaml reruns --stage mask --overwrite):
+    - {name: goes_fire, geo_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_FIRE_TS/goes_fire/geo, model: hist_gradient_boosting}
+    - {name: fused_fire, geo_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_FIRE_TS/fusion_fire_ts/fine, model: fused}
     - {name: tempo_fire, geo_dir: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ_FIRE/geo, model: hist_gradient_boosting}   # only where 26 July is in the TEMPO fire run
-    # 5-min regeneration: replace goes_fire_rf30 with
-    # - {name: goes_fire, geo_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_FIRE_TS/goes_fire/geo, model: hist_gradient_boosting}
-    # - {name: fused_fire, geo_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_FIRE_TS/fusion_fire_ts/fine, model: fused}
-    # (then rerun --stage mask --overwrite and --stage compare)
+    # interim (plan_anim30_0726.yaml): {name: goes_fire_rf30, geo_dir: .../PRODUCTION_2026_07_OR0726_FIRE_TS_RF30/goes_fire/geo, model: random_forest}
 
 recovery:
   max_cloud_fraction: [null, 0.5]

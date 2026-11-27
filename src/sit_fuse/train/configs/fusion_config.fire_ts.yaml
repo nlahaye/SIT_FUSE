@@ -1,7 +1,8 @@
 # GOES-18 + TEMPO fire fusion with the TEMPO-style GOES fire run (goes18/g18_uq_config_fire_ts.yaml).
 # Same as configs/fusion_config.fire.yaml except the GOES source (UQ_FIRE_TS2026), output_dir (FUSION/UQ_FIRE_TS)
-# and the 5-min cadence: sources.goes.frames.minutes 5 and temporal.match_window_minutes 2, so every GOES scene
-# gets its own fused frame (fusion_config.fire.yaml bins two 5-min scenes into one 10-min frame).
+# and the cadence: 30-MIN, sources.goes.every_minutes 30 (first GOES scene per 30-min UTC bin; the UQ_FIRE_TS2026 geo
+# export is already at 30 min, so this only guards against a full-cadence geo dir) with 5-min frames and
+# temporal.match_window_minutes 2, so each kept GOES scene gets its own fused frame (no pooling of neighbours).
 # Used by uq_parallel.goes_fire_ts_2026.yaml:
 #   python fuse_multiscale_products.py -c configs/fusion_config.fire_ts.yaml --stage all -n 8
 # Fit only after both fire geo exports exist (the launcher plan waits for them).
@@ -22,7 +23,8 @@ sources:
     geo_dir: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/UQ_FIRE_TS2026/geo   # geo_export.output_dir of goes18/g18_uq_config_fire_ts.yaml
     manifest: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/UQ_FIRE_TS2026/geo/geo_products_manifest.json
     model: hist_gradient_boosting
-    frames: {mode: time, minutes: 5}     # one frame per 5-min ABI CONUS scene (fit and apply)
+    every_minutes: 30                    # 30-MIN: first scene per 30-min UTC bin (fit and apply)
+    frames: {mode: time, minutes: 5}     # one frame per kept ABI CONUS scene
     default_logit_sd: 1.0
 
 grids:

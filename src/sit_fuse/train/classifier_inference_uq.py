@@ -189,7 +189,9 @@ def _context(cfg, model_name, threads=None, x=None):
     return _CTX[key]
 
 
-_NON_PRODUCT_KEYS = ("resume", "n_jobs", "num_threads", "num_workers", "chunk_size")
+# settings that do not change a scene's products: checkpoints made under other values stay valid (the scene cadence,
+# every_minutes / offset_minutes, only selects which scenes run, so a 5-min checkpoint of a scene kept at 30 min is reused)
+_NON_PRODUCT_KEYS = ("resume", "n_jobs", "num_threads", "num_workers", "chunk_size", "every_minutes", "offset_minutes")
 
 
 def _checkpoint(x, rec):

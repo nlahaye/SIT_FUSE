@@ -35,6 +35,9 @@ re-planned; its finished scenes are reused from the per-scene checkpoints (scene
 Resume also re-plans features / inference / geo made at another scene cadence than the config asks for
 (data.every_minutes, inference.every_minutes, geo_every_minutes), and training whose model files are missing.
 A per-pipeline `rerun_from: features|train|infer|evaluate|geo` re-plans that stage and everything after it.
+An explicit inference.every_minutes / geo_export.every_minutes in a UQ config is appended to the infer, evaluate and
+geo commands as a shell comment (`# every 30 min`), so changing the cadence also reruns jobs the launcher marked done
+at the old cadence in the same state_dir (inference reuses the scene checkpoints of the kept scenes).
 --no-resume plans everything (the scripts still reuse matching scene checkpoints; add --overwrite to the inference
 commands to recompute them).
 
@@ -300,8 +303,17 @@ def build_plan(cfg, base_dir, resume=None):
         c = {"pipe": name, "uq": uq, "geo_extra": (f"--every-minutes {ge:g}" + (
             f" --offset-minutes {float(sp['geo_offset_minutes']):g}" if sp.get("geo_offset_minutes") else ""))
             if ge else ""}
-        pc.append(c)
         uq_cfg = _read(uq)
+        # explicit scene cadence of the UQ config -> a shell comment on the infer / evaluate / geo commands, so a
+        # cadence change gives new commands and the launcher reruns jobs it marked done at the old cadence (the
+        # inference reuses its scene checkpoints). Unset cadence: commands unchanged.
+        ie = _cad((uq_cfg.get("inference") or {}).get("every_minutes"))
+        gev = _cad(ge if ge else (uq_cfg.get("geo_export") or {}).get("every_minutes"))
+        c["inf_cad"] = f" # every {ie:g} min" if ie else ""
+        c["geo_cad"] = " # " + ", ".join(x for x in (f"geo every {gev:g} min" if gev and not ge else "",
+                                                      f"inference every {ie:g} min" if ie else "") if x) \
+            if (gev and not ge) or ie else ""
+        pc.append(c)
         models = _models(sp, uq_cfg)
         if resume:
             f = finished(uq_cfg, models, geo_every=ge, rerun_from=sp.get("rerun_from"))
@@ -351,17 +363,17 @@ def build_plan(cfg, base_dir, resume=None):
     for c in inf_cases:
         ni[(c["pipe"], c["model"])] = ni.get((c["pipe"], c["model"]), 0) + 1
     job("infer", "infer", [dict(c, ni=ni[(c["pipe"], c["model"])]) for c in inf_cases],
-        cmd("classifier_inference_uq.py", "{uq}", "--model {model} --shard {shard}/{ni}", "-n {cpus}"),
+        cmd("classifier_inference_uq.py", "{uq}", "--model {model} --shard {shard}/{ni}", "-n {cpus}{inf_cad}"),
         after=["train"], id_keys=("pipe", "model", "shard"))
     job("infer_merge", "infer", [dict(c, ni=ni[(c["pipe"], c["model"])]) for c in model_cases],
-        cmd("classifier_inference_uq.py", "{uq}", "--model {model} --merge --n-shards {ni}", "-n {cpus}"),
+        cmd("classifier_inference_uq.py", "{uq}", "--model {model} --merge --n-shards {ni}", "-n {cpus}{inf_cad}"),
         after=["infer"], id_keys=("pipe", "model"))
-    job("evaluate", "evaluate", model_cases, cmd("evaluate_uq.py", "{uq}", "--models {model}", "-n {cpus}"),
+    job("evaluate", "evaluate", model_cases, cmd("evaluate_uq.py", "{uq}", "--models {model}", "-n {cpus}{inf_cad}"),
         after=["infer_merge"], id_keys=("pipe", "model"))
-    job("compare", "evaluate", pc, cmd("evaluate_uq.py", "{uq}", "--compare-only", "-n {cpus}"),
+    job("compare", "evaluate", pc, cmd("evaluate_uq.py", "{uq}", "--compare-only", "-n {cpus}{inf_cad}"),
         after=["evaluate"])
     job("geo", "geo", model_cases,
-        cmd("export_geo_products.py", "{uq}", "--models {model} --update-manifest {geo_extra}", "-n {cpus}"),
+        cmd("export_geo_products.py", "{uq}", "--models {model} --update-manifest {geo_extra}", "-n {cpus}{geo_cad}"),
         after=["evaluate"], id_keys=("pipe", "model"), provides=[tok("geo", "{pipe}")])
     job("visuals", "visuals", vis_cases, cmd("make_uq_visuals.py", "-c {vis}", "{products}"),
         after=["geo", "compare"], provides=[tok("visuals", "all")])
