@@ -494,6 +494,8 @@ def main(yml_fpath):
     datasets = SFDataModuleMulti(confs, batch_size, num_loader_workers, val_percent=val_percent)
 
     if "encoder_type" in yml_conf:
+        if yml_conf["encoder_type"] == "rtdbn":
+            raise NotImplementedError("late fusion is not implemented for rtdbn")
         if "dbn" in yml_conf["encoder_type"]:
             pretrain_late_fusion_DBN(yml_conf, datasets) 
 

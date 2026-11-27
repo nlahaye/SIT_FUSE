@@ -1,0 +1,625 @@
+# HAB variant spec: encoder sweep, VIIRS (SNPP + JPSS1 + JPSS2) UQ heads, day gap off, leave-one-year-out.
+#   python -m sit_fuse.pipelines.habs.followon.variants hab -s encoder_sweep_variants.yaml
+# Writes <out_root>/<name>/hab_<name>.yaml, uq.out_dir = <out_root>/<name>/uq.
+#   <arm>_rep_y<YEAR>   SIT-FUSE head features of the arm's encoder only (representation)
+#   <arm>_env_y<YEAR>   + SST, upwelling, climate indices, discharge, standard L3m products
+#   phys_y<YEAR>        environmental + standard products only (physics-only reference, VIIRS sensors)
+# Arms: dbn_prod (production weights and heads, no retrain), dbn_seed1, pca, conv_dbn, byol, ijepa, mae, rtdbn.
+# Folds: 2023 and 2025, both outside the encoder training window (2024-03-05..2024-10-23); every day of the year is
+# test, +-14-day buffer excluded (roles from year_holdout roles on the production date_roles.csv).
+# In-situ reference: production combined_augmented table (base YAML).
+base_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/postprocess/hab_reflectance_geotiff_gen_s_ca_2023_2026_full_CA.yaml
+out_root: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep
+common:
+  species_run:
+  - Pseudo_nitzschia_seriata_group
+  - Pseudo_nitzschia_delicatissima_group
+  - Pseudo_nitzschia_total
+  - pDA
+variants:
+  dbn_prod_rep_y2023:
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    set:
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2023.csv
+      uq.features.use_day_offset: false
+  dbn_prod_env_y2023:
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    features_add:
+    - ancillary
+    - physical
+    set:
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2023.csv
+      uq.features.use_day_offset: false
+  dbn_prod_rep_y2025:
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    set:
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2025.csv
+      uq.features.use_day_offset: false
+  dbn_prod_env_y2025:
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    features_add:
+    - ancillary
+    - physical
+    set:
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2025.csv
+      uq.features.use_day_offset: false
+  dbn_seed1_rep_y2023:
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    set:
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2023.csv
+      uq.features.use_day_offset: false
+    overrides:
+      instruments:
+        viirs:
+          no_trop:
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/dbn_seed1/products/VIIRS_no_trop/
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/DBN_SEED1/VIIRS_no_trop/
+      inference:
+        model_configs:
+          viirs:
+            no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/dbn_seed1/config/model/train_model_VIIRS.yaml
+  dbn_seed1_env_y2023:
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    features_add:
+    - ancillary
+    - physical
+    set:
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2023.csv
+      uq.features.use_day_offset: false
+    overrides:
+      instruments:
+        viirs:
+          no_trop:
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/dbn_seed1/products/VIIRS_no_trop/
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/DBN_SEED1/VIIRS_no_trop/
+      inference:
+        model_configs:
+          viirs:
+            no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/dbn_seed1/config/model/train_model_VIIRS.yaml
+  dbn_seed1_rep_y2025:
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    set:
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2025.csv
+      uq.features.use_day_offset: false
+    overrides:
+      instruments:
+        viirs:
+          no_trop:
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/dbn_seed1/products/VIIRS_no_trop/
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/DBN_SEED1/VIIRS_no_trop/
+      inference:
+        model_configs:
+          viirs:
+            no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/dbn_seed1/config/model/train_model_VIIRS.yaml
+  dbn_seed1_env_y2025:
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    features_add:
+    - ancillary
+    - physical
+    set:
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2025.csv
+      uq.features.use_day_offset: false
+    overrides:
+      instruments:
+        viirs:
+          no_trop:
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/dbn_seed1/products/VIIRS_no_trop/
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/DBN_SEED1/VIIRS_no_trop/
+      inference:
+        model_configs:
+          viirs:
+            no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/dbn_seed1/config/model/train_model_VIIRS.yaml
+  pca_rep_y2023:
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    set:
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2023.csv
+      uq.features.use_day_offset: false
+    overrides:
+      instruments:
+        viirs:
+          no_trop:
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/pca/products/VIIRS_no_trop/
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/PCA/VIIRS_no_trop/
+      inference:
+        model_configs:
+          viirs:
+            no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/pca/config/model/train_model_VIIRS.yaml
+  pca_env_y2023:
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    features_add:
+    - ancillary
+    - physical
+    set:
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2023.csv
+      uq.features.use_day_offset: false
+    overrides:
+      instruments:
+        viirs:
+          no_trop:
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/pca/products/VIIRS_no_trop/
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/PCA/VIIRS_no_trop/
+      inference:
+        model_configs:
+          viirs:
+            no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/pca/config/model/train_model_VIIRS.yaml
+  pca_rep_y2025:
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    set:
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2025.csv
+      uq.features.use_day_offset: false
+    overrides:
+      instruments:
+        viirs:
+          no_trop:
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/pca/products/VIIRS_no_trop/
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/PCA/VIIRS_no_trop/
+      inference:
+        model_configs:
+          viirs:
+            no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/pca/config/model/train_model_VIIRS.yaml
+  pca_env_y2025:
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    features_add:
+    - ancillary
+    - physical
+    set:
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2025.csv
+      uq.features.use_day_offset: false
+    overrides:
+      instruments:
+        viirs:
+          no_trop:
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/pca/products/VIIRS_no_trop/
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/PCA/VIIRS_no_trop/
+      inference:
+        model_configs:
+          viirs:
+            no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/pca/config/model/train_model_VIIRS.yaml
+  conv_dbn_rep_y2023:
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    set:
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2023.csv
+      uq.features.use_day_offset: false
+    overrides:
+      instruments:
+        viirs:
+          no_trop:
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/conv_dbn/products/VIIRS_no_trop/
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/CONV_DBN/VIIRS_no_trop/
+      inference:
+        model_configs:
+          viirs:
+            no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/conv_dbn/config/model/train_model_VIIRS.yaml
+  conv_dbn_env_y2023:
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    features_add:
+    - ancillary
+    - physical
+    set:
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2023.csv
+      uq.features.use_day_offset: false
+    overrides:
+      instruments:
+        viirs:
+          no_trop:
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/conv_dbn/products/VIIRS_no_trop/
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/CONV_DBN/VIIRS_no_trop/
+      inference:
+        model_configs:
+          viirs:
+            no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/conv_dbn/config/model/train_model_VIIRS.yaml
+  conv_dbn_rep_y2025:
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    set:
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2025.csv
+      uq.features.use_day_offset: false
+    overrides:
+      instruments:
+        viirs:
+          no_trop:
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/conv_dbn/products/VIIRS_no_trop/
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/CONV_DBN/VIIRS_no_trop/
+      inference:
+        model_configs:
+          viirs:
+            no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/conv_dbn/config/model/train_model_VIIRS.yaml
+  conv_dbn_env_y2025:
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    features_add:
+    - ancillary
+    - physical
+    set:
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2025.csv
+      uq.features.use_day_offset: false
+    overrides:
+      instruments:
+        viirs:
+          no_trop:
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/conv_dbn/products/VIIRS_no_trop/
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/CONV_DBN/VIIRS_no_trop/
+      inference:
+        model_configs:
+          viirs:
+            no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/conv_dbn/config/model/train_model_VIIRS.yaml
+  byol_rep_y2023:
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    set:
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2023.csv
+      uq.features.use_day_offset: false
+    overrides:
+      instruments:
+        viirs:
+          no_trop:
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/byol/products/VIIRS_no_trop/
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/BYOL/VIIRS_no_trop/
+      inference:
+        model_configs:
+          viirs:
+            no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/byol/config/model/train_model_VIIRS.yaml
+  byol_env_y2023:
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    features_add:
+    - ancillary
+    - physical
+    set:
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2023.csv
+      uq.features.use_day_offset: false
+    overrides:
+      instruments:
+        viirs:
+          no_trop:
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/byol/products/VIIRS_no_trop/
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/BYOL/VIIRS_no_trop/
+      inference:
+        model_configs:
+          viirs:
+            no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/byol/config/model/train_model_VIIRS.yaml
+  byol_rep_y2025:
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    set:
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2025.csv
+      uq.features.use_day_offset: false
+    overrides:
+      instruments:
+        viirs:
+          no_trop:
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/byol/products/VIIRS_no_trop/
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/BYOL/VIIRS_no_trop/
+      inference:
+        model_configs:
+          viirs:
+            no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/byol/config/model/train_model_VIIRS.yaml
+  byol_env_y2025:
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    features_add:
+    - ancillary
+    - physical
+    set:
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2025.csv
+      uq.features.use_day_offset: false
+    overrides:
+      instruments:
+        viirs:
+          no_trop:
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/byol/products/VIIRS_no_trop/
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/BYOL/VIIRS_no_trop/
+      inference:
+        model_configs:
+          viirs:
+            no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/byol/config/model/train_model_VIIRS.yaml
+  ijepa_rep_y2023:
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    set:
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2023.csv
+      uq.features.use_day_offset: false
+    overrides:
+      instruments:
+        viirs:
+          no_trop:
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/ijepa/products/VIIRS_no_trop/
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/IJEPA/VIIRS_no_trop/
+      inference:
+        model_configs:
+          viirs:
+            no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/ijepa/config/model/train_model_VIIRS.yaml
+  ijepa_env_y2023:
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    features_add:
+    - ancillary
+    - physical
+    set:
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2023.csv
+      uq.features.use_day_offset: false
+    overrides:
+      instruments:
+        viirs:
+          no_trop:
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/ijepa/products/VIIRS_no_trop/
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/IJEPA/VIIRS_no_trop/
+      inference:
+        model_configs:
+          viirs:
+            no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/ijepa/config/model/train_model_VIIRS.yaml
+  ijepa_rep_y2025:
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    set:
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2025.csv
+      uq.features.use_day_offset: false
+    overrides:
+      instruments:
+        viirs:
+          no_trop:
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/ijepa/products/VIIRS_no_trop/
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/IJEPA/VIIRS_no_trop/
+      inference:
+        model_configs:
+          viirs:
+            no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/ijepa/config/model/train_model_VIIRS.yaml
+  ijepa_env_y2025:
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    features_add:
+    - ancillary
+    - physical
+    set:
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2025.csv
+      uq.features.use_day_offset: false
+    overrides:
+      instruments:
+        viirs:
+          no_trop:
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/ijepa/products/VIIRS_no_trop/
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/IJEPA/VIIRS_no_trop/
+      inference:
+        model_configs:
+          viirs:
+            no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/ijepa/config/model/train_model_VIIRS.yaml
+  phys_y2023:
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    features_set:
+    - physical
+    - ancillary
+    set:
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2023.csv
+      uq.features.use_day_offset: false
+  phys_y2025:
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    features_set:
+    - physical
+    - ancillary
+    set:
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2025.csv
+      uq.features.use_day_offset: false
+  mae_rep_y2023:
+    overrides:
+      inference:
+        model_configs:
+          viirs:
+            no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/mae/config/model/train_model_VIIRS.yaml
+      instruments:
+        viirs:
+          no_trop:
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/MAE/VIIRS_no_trop/
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/mae/products/VIIRS_no_trop/
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    set:
+      uq.features.use_day_offset: false
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2023.csv
+  mae_rep_y2025:
+    overrides:
+      inference:
+        model_configs:
+          viirs:
+            no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/mae/config/model/train_model_VIIRS.yaml
+      instruments:
+        viirs:
+          no_trop:
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/MAE/VIIRS_no_trop/
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/mae/products/VIIRS_no_trop/
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    set:
+      uq.features.use_day_offset: false
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2025.csv
+  mae_env_y2023:
+    features_add:
+    - ancillary
+    - physical
+    overrides:
+      inference:
+        model_configs:
+          viirs:
+            no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/mae/config/model/train_model_VIIRS.yaml
+      instruments:
+        viirs:
+          no_trop:
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/MAE/VIIRS_no_trop/
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/mae/products/VIIRS_no_trop/
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    set:
+      uq.features.use_day_offset: false
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2023.csv
+  mae_env_y2025:
+    features_add:
+    - ancillary
+    - physical
+    overrides:
+      inference:
+        model_configs:
+          viirs:
+            no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/mae/config/model/train_model_VIIRS.yaml
+      instruments:
+        viirs:
+          no_trop:
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/MAE/VIIRS_no_trop/
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/mae/products/VIIRS_no_trop/
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    set:
+      uq.features.use_day_offset: false
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2025.csv
+  rtdbn_rep_y2023:
+    overrides:
+      inference:
+        model_configs:
+          viirs:
+            no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/rtdbn/config/model/train_model_VIIRS.yaml
+      instruments:
+        viirs:
+          no_trop:
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/RTDBN/VIIRS_no_trop/
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/rtdbn/products/VIIRS_no_trop/
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    set:
+      uq.features.use_day_offset: false
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2023.csv
+  rtdbn_rep_y2025:
+    overrides:
+      inference:
+        model_configs:
+          viirs:
+            no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/rtdbn/config/model/train_model_VIIRS.yaml
+      instruments:
+        viirs:
+          no_trop:
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/RTDBN/VIIRS_no_trop/
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/rtdbn/products/VIIRS_no_trop/
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    set:
+      uq.features.use_day_offset: false
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2025.csv
+  rtdbn_env_y2023:
+    features_add:
+    - ancillary
+    - physical
+    overrides:
+      inference:
+        model_configs:
+          viirs:
+            no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/rtdbn/config/model/train_model_VIIRS.yaml
+      instruments:
+        viirs:
+          no_trop:
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/RTDBN/VIIRS_no_trop/
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/rtdbn/products/VIIRS_no_trop/
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    set:
+      uq.features.use_day_offset: false
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2023.csv
+  rtdbn_env_y2025:
+    features_add:
+    - ancillary
+    - physical
+    overrides:
+      inference:
+        model_configs:
+          viirs:
+            no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/rtdbn/config/model/train_model_VIIRS.yaml
+      instruments:
+        viirs:
+          no_trop:
+            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/RTDBN/VIIRS_no_trop/
+            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/rtdbn/products/VIIRS_no_trop/
+    sensors:
+    - snpp
+    - jpss1
+    - jpss2
+    set:
+      uq.features.use_day_offset: false
+      uq.splits.date_roles_file: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/roles/roles_y2025.csv

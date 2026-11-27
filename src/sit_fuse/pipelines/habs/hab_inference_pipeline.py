@@ -308,10 +308,10 @@ def iter_batches(data, tiled, batch=None):
         yield xb[0] if isinstance(xb, (list, tuple)) else xb
 
 
-def scene_head_stack(model, data, ex_cfg, sigma=None, emb_stats=None, tiled=False):
+def scene_head_stack(model, data, ex_cfg, sigma=None, emb_stats=None, tiled=False, sf_yaml=None):
     """(n_bands, H, W) no-geo head stack, placed like generate_output.plot_clusters."""
     import torch
-    from sit_fuse.train.export_head_outputs import assemble_scene
+    from sit_fuse.train.export_head_outputs import assemble_scene, tile_margin, _valid_tiles, _scene_hw
     dev = _device(model)
     chunks, tile_hw = [], None
     for xb in iter_batches(data, tiled, ex_cfg.get("batch_size")):
@@ -323,7 +323,10 @@ def scene_head_stack(model, data, ex_cfg, sigma=None, emb_stats=None, tiled=Fals
             tile_hw = (x.shape[2], x.shape[3])
         chunks.append(rows)
     rows = np.concatenate(chunks, axis=0)
-    return assemble_scene(np.asarray(data.targets_full), rows, tile_hw)
+    # overlapping tiles (data.tile_center_crop): each pixel from the tile where it is most central
+    margin = tile_margin(sf_yaml, tile_hw) if sf_yaml is not None else 0
+    return assemble_scene(np.asarray(data.targets_full), rows, tile_hw, margin=margin,
+                          valid=_valid_tiles(data, tile_hw), scene_hw=_scene_hw(data, tile_hw))
 
 
 def georeference_like_cf_gtiffs(stack, geo_zarr, work_zarr, out_tif, fusion=None) -> tuple[np.ndarray, dict]:
@@ -572,7 +575,7 @@ def run_instrument(yml_conf, instrument, key, stages, model=None, load_dataset=N
         if need_heads:   # before cluster inference: run_inference pads data_full in place
             if sigma is None and int((ex.get("mc") or {}).get("samples", 0)) > 0:
                 sigma = input_noise_sigma(ex, sf_yaml, int(np.asarray(data.data_full).shape[1]))
-            stack = scene_head_stack(model, data, ex, sigma=sigma, emb_stats=stats, tiled=tiled)
+            stack = scene_head_stack(model, data, ex, sigma=sigma, emb_stats=stats, tiled=tiled, sf_yaml=sf_yaml)
             if geo is not None:
                 work = os.path.join(out_dir, base + ".clust.head_outputs.zarr")
                 gopt = ex.get("georef") or {}

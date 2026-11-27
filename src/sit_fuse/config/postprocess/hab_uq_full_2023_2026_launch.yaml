@@ -61,21 +61,21 @@ jobs:
 
   # 0b) Satellite inputs: daily L3m Rrs for 2023-01..2026-09 per instrument (the collection the model
   #     YAML lists use: OLCI = S3A, VIIRS = SNPP). I/O bound: 1 core, 4 download threads each.
-  - name: rrs_sync
-    cmd: >-
-      {py} -m sit_fuse.preprocessing.data_pull.sync_l3m_rrs --start 2023-01-01 --end 2026-09-30
-      --dir {key}={reflectances}/{subdir} --res 4km --layout flat --threads 4
-      --nrt-archive-dir {reflectances}/nrt_archive/{subdir}
-      --report {root}/launch/uq_full_2023_2026/rrs_sync_{inst}.csv
-    cases:
-      - {inst: olci,  key: S3A_OLCI,   subdir: S3A_OLCI}
-      - {inst: viirs, key: NPP_VIIRS,  subdir: SNPP_VIIRS}
-      - {inst: pace,  key: PACE_OCI,   subdir: PACE_OCI}      # check dir
-      - {inst: modis, key: AQUA_MODIS, subdir: AQUA_MODIS}    # check dir
-    id_keys: [inst]
-    cpus: 1
-    gpu: 0
-    priority: 2
+  #- name: rrs_sync
+  #  cmd: >-
+  #    {py} -m sit_fuse.preprocessing.data_pull.sync_l3m_rrs --start 2023-01-01 --end 2026-09-30
+  #    --dir {key}={reflectances}/{subdir} --res 4km --layout flat --threads 4
+  #    --nrt-archive-dir {reflectances}/nrt_archive/{subdir}
+  #    --report {root}/launch/uq_full_2023_2026/rrs_sync_{inst}.csv
+  #  cases:
+  #    - {inst: olci,  key: S3A_OLCI,   subdir: S3A_OLCI}
+  #    - {inst: viirs, key: NPP_VIIRS,  subdir: SNPP_VIIRS}
+  #    - {inst: pace,  key: PACE_OCI,   subdir: PACE_OCI}      # check dir
+  #    - {inst: modis, key: AQUA_MODIS, subdir: AQUA_MODIS}    # check dir
+  #  id_keys: [inst]
+  #  cpus: 1
+  #  gpu: 0
+  #  priority: 2
 
   # 1) Day roles for 2023-01..2026-09 (seed search spreads alert events over calibration / test).
   - name: roles
@@ -95,7 +95,7 @@ jobs:
     cpus: 4               # was 6; two heads jobs share GPU 0 (gpu 0.5) on 8 of the 9 cores
     gpu: 0.5
     priority: 1
-    after: [{name: rrs_sync, on: [inst]}]   # that instrument's inputs first
+    after: [{name: insitu, on: [inst]}]   # that instrument's inputs first
 
   # 3) Train (model x class weighting x prior strength search, decision rule, interval calibration)
   #    and evaluate, one job per species, after the roles file and ALL head jobs.

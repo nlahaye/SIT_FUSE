@@ -65,33 +65,21 @@ instruments:
       input_clip_re: "RRS.*nc"
       input_oc_dir: "/mnt/data1/REFLECTANCES/PACE_OCI/"
       input_oc_re: '(PACE_OCI\.(\d{8})\.L3m\.DAY\.)AOP.*\.4km.*nc' #PACE_OCI.20241111.L3m.DAY.AOP.V3_2.4km.nc
- JPSS1_VIIRS:
+
+
+ # SNPP + JPSS1 + JPSS2 VIIRS: one model, 5 channels. SNPP 410/443/486/551/671 nm and
+ # NOAA-20/21 411/445/489/556/667 nm share channel positions (offsets <= 5 nm).
+ VIIRS:
   no_trop:
-      run_preprocess_and_scale: False
-      input_dir: "/mnt/data1/REFLECTANCES/JPSS1_VIIRS/"
-      output_dir: "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
-      input_pattern: "JPSS1_VIIRS*nc"
-      input_clip_re: "RRS.*nc"
-      input_oc_dir: "/mnt/data1/REFLECTANCES/JPSS1_VIIRS/"
-      input_oc_re: '(JPSS1_VIIRS\.(\d{8})\.L3m\.DAY\.)RRS.*\.4km.*nc'
- JPSS2_VIIRS:
-  no_trop:
-      run_preprocess_and_scale: False
-      input_dir: "/mnt/data1/REFLECTANCES/JPSS2_VIIRS/"
-      output_dir: "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
-      input_pattern: "JPSS2_VIIRS*nc"
-      input_clip_re: "RRS.*nc"
-      input_oc_dir: "/mnt/data1/REFLECTANCES/JPSS2_VIIRS/"
-      input_oc_re: '(JPSS2_VIIRS\.(\d{8})\.L3m\.DAY\.)RRS.*\.4km.*nc'
- SNPP_VIIRS:
-  no_trop:
-      run_preprocess_and_scale: False
-      input_dir: "/mnt/data1/REFLECTANCES/SNPP_VIIRS/"
-      output_dir: "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
-      input_pattern: "SNPP_VIIRS*nc"
-      input_clip_re: "RRS.*nc"
-      input_oc_dir: "/mnt/data1/REFLECTANCES/SNPP_VIIRS/"
-      input_oc_re: '(SNPP_VIIRS\.(\d{8})\.L3m\.DAY\.)RRS.*\.4km.*nc'
+   input_oc_dir: ["/mnt/data1/REFLECTANCES/SNPP_VIIRS/", "/mnt/data1/REFLECTANCES/JPSS1_VIIRS/", "/mnt/data1/REFLECTANCES/JPSS2_VIIRS/"]
+   input_dir: ["/mnt/data1/REFLECTANCES/SNPP_VIIRS/", "/mnt/data1/REFLECTANCES/JPSS1_VIIRS/", "/mnt/data1/REFLECTANCES/JPSS2_VIIRS/"]
+   input_oc_re:  '((?:SNPP|JPSS1|JPSS2)_VIIRS\.(\d{8})\.L3m\.DAY\.)RRS.*\.4km.*nc'
+   # a list of regexes, one per directory, is also accepted
+   run_preprocess_and_scale: False
+   output_dir: "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
+   input_pattern: "VIIRS*nc"
+   input_clip_re: "RRS.*nc"
+
  AQUA_MODIS:
   no_trop:
       run_preprocess_and_scale: False
@@ -101,24 +89,17 @@ instruments:
       input_clip_re: "RRS.*nc"
       input_oc_dir: "/mnt/data1/REFLECTANCES/AQUA_MODIS/"
       input_oc_re: '(AQUA_MODIS\.(\d{8})\.L3m\.DAY\.)RRS.*\.4km.*nc'
- S3A_OLCI:
+
+ # S3A + S3B OLCI: one model, one scaler, 11 channels (identical band sets)
+ OLCI:
   no_trop:
-      run_preprocess_and_scale: False
-      input_dir: "/mnt/data1/REFLECTANCES/S3A_OLCI/"
-      output_dir: "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
-      input_pattern: "S3A_OLCI*nc"
-      input_clip_re: "RRS.*nc"
-      input_oc_dir: "/mnt/data1/REFLECTANCES/S3A_OLCI/"
-      input_oc_re: '(S3A_OLCI_ERRNT\.(\d{8})\.L3m\.DAY\.)RRS.*\.4km.*nc'
- S3B_OLCI:
-  no_trop:
-      run_preprocess_and_scale: False
-      input_dir: "/mnt/data1/REFLECTANCES/S3B_OLCI/"
-      output_dir: "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
-      input_pattern: "S3B_OLCI*nc"
-      input_clip_re: "RRS.*nc"
-      input_oc_dir: "/mnt/data1/REFLECTANCES/S3B_OLCI/"
-      input_oc_re: '(S3B_OLCI_ERRNT\.(\d{8})\.L3m\.DAY\.)RRS.*\.4km.*nc'
+   input_oc_dir: ["/mnt/data1/REFLECTANCES/S3A_OLCI/", "/mnt/data1/REFLECTANCES/S3B_OLCI/"]
+   input_oc_re:  '((?:S3A|S3B)_OLCI_ERRNT\.(\d{8})\.L3m\.DAY\.)RRS.*\.4km.*nc'
+   input_dir: ["/mnt/data1/REFLECTANCES/S3A_OLCI/", "/mnt/data1/REFLECTANCES/S3B_OLCI/"]
+   run_preprocess_and_scale: False
+   output_dir: "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/"
+   input_pattern: "S3*_OLCI*nc"
+   input_clip_re: "RRS.*nc"
 
 
 

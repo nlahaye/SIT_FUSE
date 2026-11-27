@@ -1,0 +1,53 @@
+# Encoder sweep arm rtdbn: Recurrent temporal DBN on the DBN input (pixel + 3x3 neighbourhood) over the current day
+# and the 7 previous days of the same platform. RT-DBN architecture defaults (myosuite_reach_rtdbn_plos.yaml): one
+# variance-gaussian RT-RBM layer, 64 hidden, 1 Gibbs step, lr 1e-3, sigma warm-up 15 epochs, 30 epochs.
+#   python -m sit_fuse.pipelines.habs.followon.variants train -s train_VIIRS_rtdbn.yaml
+#   python -m sit_fuse.pipelines.habs.hab_training_pipeline -y /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/rtdbn/train_rtdbn.yaml -n 6
+# Same as the production VIIRS encoder (SNPP + JPSS1 + JPSS2, 5 bands, training window and preprocessing of the
+# base YAML) except instruments.VIIRS.no_trop.model_overrides. Cluster heads unchanged: 800 parent -> 100 child.
+# Weights: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/RTDBN/VIIRS_no_trop/   model YAML: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/rtdbn/config/model/train_model_VIIRS.yaml
+# Input per day: 5 bands + days-since-observation, 3x3 window -> 54 visible units; sequence length 8.
+# Missing days are carried forward from the last valid day; pixels without a current-day observation or with
+# < 3 valid days are fill (the current-day valid support, as for the DBN). Embedding = mean over the 8 hidden states
+# (64-d). Batch 1024 instead of 32 for the number of HAB pixels; precision 32 for the variance-gaussian energy.
+# Inputs: data.reader_type temporal_stack wraps the production reader (base_reader viirs_oc); set base_reader to the
+# production model YAML's data.reader_type if it differs.
+base_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/piplines/habs/hab_reflectance_model_train_ca_coast_2025_sensor_groups.yaml
+out: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/rtdbn/train_rtdbn.yaml
+output: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/RTDBN/
+config_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/rtdbn/config/
+instruments: [VIIRS]
+overrides:
+  geo_zarr: {oc_geo_fpattern: /mnt/data1/cal_coast_geo.zarr, out_dir: /mnt/data1/, out_uid: cal_coast_geo}
+  instruments:
+    VIIRS:
+      no_trop:
+        input_oc_dir: [/mnt/data1/REFLECTANCES/SNPP_VIIRS/, /mnt/data1/REFLECTANCES/JPSS1_VIIRS/, /mnt/data1/REFLECTANCES/JPSS2_VIIRS/]
+        input_oc_re: ((?:SNPP|JPSS1|JPSS2)_VIIRS\.(\d{8})\.L3m\.DAY\.)RRS.*\.4km.*nc
+        run_preprocess_and_scale: true
+        model_overrides:
+          encoder_type: rtdbn
+          data:
+            tile: false
+            pixel_padding: 1
+            reader_type: temporal_stack
+            reader_kwargs: {base_reader: viirs_oc, temporal_days: 8, min_valid_days: 3, require_current: true, add_age: true}
+          rtdbn:
+            model_type: [variance_gaussian]
+            n_hidden: [64]
+            gibbs_steps: [1]
+            temp: [1.0]
+            n_visible: 54
+            seq_len: 8
+            embedding: mean
+            warmup_epochs: 15
+          encoder:
+            tiled: false
+            training:
+              learning_rate: [0.001]
+              momentum: [0.0]
+              weight_decay: [0.0]
+              nesterov_accel: [false]
+              batch_size: 1024
+              epochs: [30]
+              precision: '32'

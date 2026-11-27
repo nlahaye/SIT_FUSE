@@ -439,7 +439,10 @@ def run_pretraining(yml_conf):
     dataset = SFDataModule(yml_conf, batch_size, num_loader_workers, val_percent=val_percent)
 
     if "encoder_type" in yml_conf:
-        if "dbn" in yml_conf["encoder_type"]:
+        if yml_conf["encoder_type"] == "rtdbn":
+            from sit_fuse.models.encoders.rtdbn_seq_encoder import pretrain_RTDBN
+            pretrain_RTDBN(yml_conf, dataset)
+        elif "dbn" in yml_conf["encoder_type"]:
             pretrain_DBN(yml_conf, dataset, ("conv" in yml_conf["encoder_type"]))
         elif yml_conf["encoder_type"] == "ijepa":
             pretrain_IJEPA(yml_conf, dataset)

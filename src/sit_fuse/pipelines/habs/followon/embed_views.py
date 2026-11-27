@@ -11,6 +11,9 @@ block bootstrap) runs in Rep_Taxonomy: reptaxonomy.intercompare.paired_views.
           Pixels: every --stride-th row and column of the valid pixels (deterministic, so the
           same pixels are selected for every encoder / platform on the shared L3m grid),
           capped at --max-per-scene. Resumable: finished scenes are skipped.
+          Tiled encoders (conv_dbn, ijepa, mae, byol): per-pixel embeddings from the tile that
+          owns each pixel in the scene assembly (center crop with data.tile_center_crop), fill
+          pixels dropped, so tiled and pixel encoders are compared on the same pixels.
           Pixel lat/lon come from the geo_zarr (loc[row, col] = (lat, lon)), so rows are
           keyed by date and grid location and align across platforms and instruments on
           the same 4 km L3m grid.
@@ -53,6 +56,69 @@ def select_pixels(coord: np.ndarray, stride: int, max_n: int, seed: int = 0) -> 
     if max_n and ix.size > max_n:
         ix = np.sort(np.random.default_rng(seed).choice(ix, max_n, replace=False))
     return ix
+
+
+def select_tile_pixels(coord: np.ndarray, tile_hw, stride: int, max_n: int, seed: int = 0,
+                       margin: int = 0, valid=None, scene_hw=None):
+    """
+    Tiled datasets: per-pixel rows on the same stride lattice, each pixel taken from the tile
+    that owns it in the scene assembly (center crop for overlapping tiles), fill pixels dropped.
+    Returns (flat row index into the (tile, y, x) pixel order, row, col).
+    """
+    from sit_fuse.train.export_head_outputs import tile_owned
+    li, si = (1, 2) if coord.shape[1] > 2 else (0, 1)
+    th, tw = tile_hw
+    rr, cc = coord[:, li].astype(int), coord[:, si].astype(int)
+    rmin, rmax, cmin, cmax = rr.min(), rr.max(), cc.min(), cc.max()
+    H, W = scene_hw if scene_hw is not None else (rmax + th, cmax + tw)
+    fi, R, C = [], [], []
+    yy, xx = np.mgrid[0:th, 0:tw]
+    for i in range(coord.shape[0]):
+        a0, a1, b0, b1 = tile_owned(rr[i], cc[i], th, tw, rmin, rmax, cmin, cmax, margin)
+        r, c = rr[i] + yy, cc[i] + xx
+        m = (yy >= a0) & (yy < a1) & (xx >= b0) & (xx < b1) & (r < H) & (c < W) & (r % stride == 0) & (c % stride == 0)
+        if valid is not None:
+            m &= valid[i]
+        k = np.flatnonzero(m.ravel())
+        fi.append(i * th * tw + k)
+        R.append(r.ravel()[k])
+        C.append(c.ravel()[k])
+    fi, R, C = np.concatenate(fi), np.concatenate(R), np.concatenate(C)
+    if max_n and fi.size > max_n:
+        s = np.sort(np.random.default_rng(seed).choice(fi.size, max_n, replace=False))
+        fi, R, C = fi[s], R[s], C[s]
+    return fi, R, C
+
+
+def embed_scene_tiled(model, data, flat_idx: np.ndarray, tile_hw, batch=None):
+    """(E, parent, maxprob) at per-pixel rows flat_idx of a tiled dataset (tile, y, x order)."""
+    import torch
+    from sit_fuse.pipelines.habs.hab_inference_pipeline import _device, iter_batches
+    from sit_fuse.pipelines.habs.uq.hab_head_export import _embed, _root_probs
+    dev = _device(model)
+    per = int(tile_hw[0]) * int(tile_hw[1])
+    order = np.argsort(flat_idx, kind="stable")
+    want = flat_idx[order]
+    E, P, start, j = [], [], 0, 0
+    with torch.no_grad():
+        for xb in iter_batches(data, True, batch):
+            n = xb.shape[0] * per
+            k = np.searchsorted(want, start + n) - j
+            if k > 0:
+                loc = want[j:j + k] - start
+                x = xb.to(device=dev, dtype=torch.float32)
+                e = _embed(model, x).detach().float().cpu().numpy()
+                p = _root_probs(model, x).detach().float().cpu().numpy()
+                E.append(e[loc])
+                P.append(p[loc])
+                j += k
+            start += n
+    E = np.concatenate(E)
+    P = np.concatenate(P)
+    inv = np.empty_like(order)
+    inv[order] = np.arange(order.size)
+    E, P = E[inv], P[inv]
+    return E, P.argmax(1).astype(np.int32), P.max(1).astype(np.float32)
 
 
 def load_geo(yml) -> np.ndarray | None:
@@ -147,12 +213,23 @@ def cmd_export(a):
             model = prep_model(sf_yaml)
             model.eval()
         coord = np.asarray(data.targets_full)
-        idx = select_pixels(coord, a.stride, a.max_per_scene, a.seed)
-        if idx.size == 0:
-            continue
-        E, lab, mp = embed_scene(model, data, idx, tiled, a.batch_size)
-        li, si = (1, 2) if coord.shape[1] > 2 else (0, 1)
-        r, c = coord[idx, li].astype(int), coord[idx, si].astype(int)
+        if tiled:
+            # per-pixel embeddings from the tiles, with the same ownership as the scene products
+            from sit_fuse.train.export_head_outputs import tile_margin, _valid_tiles, _scene_hw
+            thw = tuple(int(v) for v in data.data_full.shape[2:4])
+            fi, r, c = select_tile_pixels(coord, thw, a.stride, a.max_per_scene, a.seed,
+                                          margin=tile_margin(sf_yaml, thw), valid=_valid_tiles(data, thw),
+                                          scene_hw=_scene_hw(data, thw))
+            if fi.size == 0:
+                continue
+            E, lab, mp = embed_scene_tiled(model, data, fi, thw, a.batch_size)
+        else:
+            idx = select_pixels(coord, a.stride, a.max_per_scene, a.seed)
+            if idx.size == 0:
+                continue
+            E, lab, mp = embed_scene(model, data, idx, tiled, a.batch_size)
+            li, si = (1, 2) if coord.shape[1] > 2 else (0, 1)
+            r, c = coord[idx, li].astype(int), coord[idx, si].astype(int)
         ok = (r < geo.shape[0]) & (c < geo.shape[1])
         lat = np.where(ok, geo[np.minimum(r, geo.shape[0] - 1), np.minimum(c, geo.shape[1] - 1), 0], np.nan)
         lon = np.where(ok, geo[np.minimum(r, geo.shape[0] - 1), np.minimum(c, geo.shape[1] - 1), 1], np.nan)
