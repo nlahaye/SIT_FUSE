@@ -1,0 +1,54 @@
+# Encoder sweep arm conv_dbn: Convolutional DBN, architecture defaults of chesapeake_conv_dbn.yaml: two gaussian
+# conv-RBM layers, 50 / 100 filters, 3x3 kernels, 1 Gibbs step; FPN fusion 4*50 + 2*100 = 400 -> 900 channels.
+#   python -m sit_fuse.pipelines.habs.followon.variants train -s train_VIIRS_conv_dbn.yaml
+#   python -m sit_fuse.pipelines.habs.hab_training_pipeline -y /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/conv_dbn/train_conv_dbn.yaml -n 6
+# Same as the production VIIRS encoder (SNPP + JPSS1 + JPSS2, 5 bands, training window and preprocessing of the
+# base YAML) except instruments.VIIRS.no_trop.model_overrides. Cluster heads unchanged: 800 parent -> 100 child.
+# Weights: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/CONV_DBN/VIIRS_no_trop/   model YAML: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/conv_dbn/config/model/train_model_VIIRS.yaml
+# Tiles: 16x16, step 8; inference keeps the central 8x8 of each tile (data.tile_center_crop), training drops tiles
+# with < 50% valid pixels (data.min_valid_fraction). tile_size[2] = number of VIIRS channels (5).
+base_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/piplines/habs/hab_reflectance_model_train_ca_coast_2025_sensor_groups.yaml
+out: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/conv_dbn/train_conv_dbn.yaml
+output: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/CONV_DBN/
+config_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/conv_dbn/config/
+instruments: [VIIRS]
+overrides:
+  geo_zarr: {oc_geo_fpattern: /mnt/data1/cal_coast_geo.zarr, out_dir: /mnt/data1/, out_uid: cal_coast_geo}
+  instruments:
+    VIIRS:
+      no_trop:
+        input_oc_dir: [/mnt/data1/REFLECTANCES/SNPP_VIIRS/, /mnt/data1/REFLECTANCES/JPSS1_VIIRS/, /mnt/data1/REFLECTANCES/JPSS2_VIIRS/]
+        input_oc_re: ((?:SNPP|JPSS1|JPSS2)_VIIRS\.(\d{8})\.L3m\.DAY\.)RRS.*\.4km.*nc
+        run_preprocess_and_scale: true
+        model_overrides:
+          encoder_type: conv_dbn
+          data:
+            tile: true
+            tile_size: [16, 16, 5]
+            tile_step: [8, 8, 5]
+            tile_center_crop: true
+            min_valid_fraction: 0.5
+          dbn:
+            model_type: gaussian
+            dbn_arch:
+            - [50, 100]
+            - - [3, 3]
+              - [3, 3]
+            gibbs_steps: [1, 1]
+            temp: [1.0, 1.0]
+            normalize_learnergy: [true, true]
+            batch_normalize: [true, true]
+            stride: [1, 1]
+            padding: [1, 1]
+          encoder:
+            tiled: true
+            subset_training: 200000
+            training:
+              learning_rate: [5.0e-05, 5.0e-05]
+              momentum: [0.95, 0.95]
+              weight_decay: [0.0001, 0.0001]
+              nesterov_accel: [true, true]
+              batch_size: 128
+              epochs: 30
+              stratify_data: {kmeans: false}
+          cluster: {fusion_dim: 900}

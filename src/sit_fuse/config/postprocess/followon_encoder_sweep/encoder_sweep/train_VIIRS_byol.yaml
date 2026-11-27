@@ -1,0 +1,72 @@
+# Encoder sweep arm byol: pixel-level BYOL (PixPro-style learner, use_pixpro false) with the GCN backbone on 16x16
+# tiles (step 8), per-pixel embeddings from the deconvolution decoder (same backbone / tile size as
+# mados_10m_small_tile_byol.yaml and emas_fire_byol_pl.yaml; chesapeake_small_tile_byol.yaml hyperparameters).
+#   python -m sit_fuse.pipelines.habs.followon.variants train -s train_VIIRS_byol.yaml
+#   python -m sit_fuse.pipelines.habs.hab_training_pipeline -y /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/byol/train_byol.yaml -n 6
+# Same as the production VIIRS encoder (SNPP + JPSS1 + JPSS2, 5 bands, training window and preprocessing of the
+# base YAML) except instruments.VIIRS.no_trop.model_overrides. Cluster heads unchanged: 800 parent -> 100 child.
+# Weights: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/BYOL/VIIRS_no_trop/   model YAML: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/byol/config/model/train_model_VIIRS.yaml
+# Tiles: data.tile_size[2] = number of VIIRS channels (5); change if the production model YAML has a different
+# data.number_channels.
+base_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/piplines/habs/hab_reflectance_model_train_ca_coast_2025_sensor_groups.yaml
+out: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/byol/train_byol.yaml
+output: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/BYOL/
+config_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/byol/config/
+instruments:
+- VIIRS
+overrides:
+  geo_zarr:
+    oc_geo_fpattern: /mnt/data1/cal_coast_geo.zarr
+    out_dir: /mnt/data1/
+    out_uid: cal_coast_geo
+  instruments:
+    VIIRS:
+      no_trop:
+        input_oc_dir:
+        - /mnt/data1/REFLECTANCES/SNPP_VIIRS/
+        - /mnt/data1/REFLECTANCES/JPSS1_VIIRS/
+        - /mnt/data1/REFLECTANCES/JPSS2_VIIRS/
+        input_oc_re: ((?:SNPP|JPSS1|JPSS2)_VIIRS\.(\d{8})\.L3m\.DAY\.)RRS.*\.4km.*nc
+        run_preprocess_and_scale: true
+        model_overrides:
+          encoder_type: byol
+          data:
+            tile: true
+            tile_size:
+            - 16
+            - 16
+            - 5
+            tile_step:
+            - 8
+            - 8
+            - 5
+          byol:
+            model_type: GCN
+            hidden_layer: layer4
+            hidden_layer_instance: layer4
+            projection_size: 512
+            projection_hidden_size: 1024
+            moving_average_decay: 0.99
+            ppm_num_layers: 1
+            ppm_gamma: 2
+            distance_thres: 0.7
+            similarity_temperature: 0.3
+            alpha: 1.0
+            use_pixpro: false
+            cutout_ratio_range:
+            - 0.6
+            - 0.8
+          encoder:
+            tiled: true
+            subset_training: 100000
+            training:
+              weight_decay: 0.05
+              momentum: 0.996
+              momentum_start_end:
+              - 0.996
+              - 1.0
+              stratify_data:
+                kmeans: false
+              learning_rate: 0.001
+              batch_size: 64
+              epochs: 20

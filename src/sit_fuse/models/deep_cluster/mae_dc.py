@@ -18,7 +18,7 @@ import numpy as np
 
 class MAE_DC(pl.LightningModule):
     #take pretrained model path, number of classes, learning rate, weight decay, and drop path as input
-    def __init__(self, pretrained_model_path, num_classes, lr=1e-3, weight_decay=0, drop_path=0.1, number_heads=1):
+    def __init__(self, pretrained_model_path, num_classes, lr=1e-3, weight_decay=0, drop_path=0.1, number_heads=1, feature_maps=None):
 
         super().__init__()
         self.save_hyperparameters()
@@ -34,7 +34,8 @@ class MAE_DC(pl.LightningModule):
         self.pretrained_model = MAE_PL.load_from_checkpoint(pretrained_model_path)
         self.pretrained_model.vit.layer_dropout = 0.0
   
-        feature_maps = [1,3,5,7]
+        # encoder layers tapped for the FPN (cluster.feature_maps); default [1,3,5,7]
+        feature_maps = list(feature_maps) if feature_maps is not None else [1,3,5,7]
         self.segmentor = MAESegmentor(num_classes, feature_maps, self.pretrained_model.vit)
         self.mlp_head = self.segmentor.seg_head
   
@@ -77,22 +78,18 @@ class MAE_DC(pl.LightningModule):
             y2[i] = y2[i] + torch.from_numpy(self.rng.normal(0.0, 0.01, \
                                 (y[i].shape))).type(y[i].dtype).to(y[i].device)
 
-            print("INITIAL SIZES", y[i].shape, y2[i].shape, i)
             y[i] = self.segmentor.upsamples[i](y[i])
             y2[i] = self.segmentor.upsamples[i](y2[i])
 
-            print("UPSAMPLE SIZES", y[i].shape, y2[i].shape, i)
 
 
         y = torch.cat(y, dim=1)
         y2 = torch.cat(y2, dim=1)
 
-        print(y2.shape)
 
         y = self.segmentor.fusion(y)
         y2 = self.segmentor.fusion(y2)
 
-        print(y2.shape)
 
         y = F.interpolate(
             y,
@@ -109,21 +106,16 @@ class MAE_DC(pl.LightningModule):
         )  # Resize to match labels size
 
 
-        print(y2.shape)
 
         y = F.softmax(self.segmentor.seg_head(y), dim=1)
         y2 = F.softmax(self.segmentor.seg_head(y2), dim=1)
 
-        print(y2.shape)
 
-        print(torch.unique(torch.argmax(y, dim=1)), "Y labels")
-        print(torch.unique(torch.argmax(y2, dim=1)), "Y2 labels")
 
         y = torch.flatten(y.permute(0,2,3,1), start_dim=0, end_dim=2)
         y2 = torch.flatten(y2.permute(0,2,3,1), start_dim=0, end_dim=2) 
 
 
-        print(y2.shape)
 
         loss = 0
         for i in range(0, y.shape[0], 100):
@@ -151,11 +143,9 @@ class MAE_DC(pl.LightningModule):
             y2[i] = y2[i] + torch.from_numpy(self.rng.normal(0.0, 0.01, \
                                 (y[i].shape))).type(y[i].dtype).to(y[i].device)
 
-            print("INITIAL SIZES", y[i].shape, y2[i].shape, i)
             y[i] = self.segmentor.upsamples[i](y[i])
             y2[i] = self.segmentor.upsamples[i](y2[i])
 
-            print("UPSAMPLE SIZES", y[i].shape, y2[i].shape, i)
 
 
         y = torch.cat(y, dim=1)
@@ -181,8 +171,6 @@ class MAE_DC(pl.LightningModule):
         y = F.softmax(self.segmentor.seg_head(y), dim=1)
         y2 = F.softmax(self.segmentor.seg_head(y2), dim=1)
 
-        print(torch.unique(torch.argmax(y, dim=1)), "Y labels")
-        print(torch.unique(torch.argmax(y2, dim=1)), "Y2 labels")
 
         y = torch.flatten(y.permute(0,2,3,1), start_dim=0, end_dim=2)
         y2 = torch.flatten(y2.permute(0,2,3,1), start_dim=0, end_dim=2)

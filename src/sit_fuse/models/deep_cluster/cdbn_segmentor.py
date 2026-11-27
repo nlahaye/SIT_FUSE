@@ -88,10 +88,9 @@ class CDBNSegmentEncoder(nn.Module):
                 features.append(tmp_cube)
                 if tmp_cube.ndim == 3:
                     tmp_cube = torch.unsqueeze(tmp_cube,0)
-                print("HERE TILING ISSUE", tmp_cube.shape)
                 mx_tile = max(tmp_cube.shape[tile_d2], mx_tile)
 
-        for i in range(len(self.cdbn_encoder.models)):
+        for i in range(len(features)):
             if features[i].shape[tile_d1] != mx_tile or features[i].shape[tile_d2] != mx_tile:
                 features[i] = F.interpolate(
                     features[i],
@@ -104,7 +103,6 @@ class CDBNSegmentEncoder(nn.Module):
         ops = [self.fpn1, self.fpn2, self.fpn3, self.fpn4, self.fpn5]
         for i in range(len(features)):
             features[i] = ops[i](features[i])
-            print("FINAL ENCODER FEATURES", features[i].shape)
 
         return features
 
@@ -119,19 +117,28 @@ class CDBNSegmentor(nn.Module):
         feature_maps (list): Indices of layers to be used for generating feature maps.
     """
 
-    def __init__(self, num_classes, feature_maps, cdbn_encoder):
+    # channel multiplier of each FPN op (fpn1: x4, fpn2: x2, fpn3-5: x1)
+    FPN_CHAN_MULT = (4, 2, 1, 1, 1)
+
+    def __init__(self, num_classes, feature_maps, cdbn_encoder, fusion_dim=900):
         super().__init__()
         self.encoder = CDBNSegmentEncoder(
             cdbn_encoder,
             feature_maps=feature_maps,
         )
-        self.upsamples = [nn.Upsample(scale_factor=2**i) for i in range(3)] #+ [
+        n_layers = len(cdbn_encoder.models) if hasattr(cdbn_encoder, "models") else len(cdbn_encoder.n_filters)
+        layers = [i for i in range(n_layers) if i in feature_maps]
+        filters = list(cdbn_encoder.n_filters)
+        self.fusion_in = int(sum(self.FPN_CHAN_MULT[k] * filters[l] for k, l in enumerate(layers)))
+        self.fusion_dim = int(fusion_dim)
+        self.upsamples = [nn.Upsample(scale_factor=2**i) for i in range(max(3, len(layers)))] #+ [
             #nn.Upsample(scale_factor=4),
         #]
 
 
-        self.fusion = nn.Conv2d(400,900, kernel_size=1)
-        self.seg_head = nn.Conv2d(900, num_classes, kernel_size=1)
+        # was Conv2d(400, 900): only valid for n_filters [50, 100]
+        self.fusion = nn.Conv2d(self.fusion_in, self.fusion_dim, kernel_size=1)
+        self.seg_head = nn.Conv2d(self.fusion_dim, num_classes, kernel_size=1)
 
     def forward(self, datacube):
         """
@@ -147,7 +154,6 @@ class CDBNSegmentor(nn.Module):
         features = self.encoder(datacube)
         for i in range(len(features)):
             features[i] = self.upsamples[i](features[i])
-            print(features[i].shape)
 
         fused = torch.cat(features, dim=1)
         fused = self.fusion(fused)

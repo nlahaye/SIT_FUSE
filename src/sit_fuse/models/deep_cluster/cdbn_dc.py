@@ -19,7 +19,7 @@ import numpy as np
 
 class CDBN_DC(pl.LightningModule):
     #take pretrained model path, number of classes, learning rate, weight decay, and drop path as input
-    def __init__(self, pretrained_model, num_classes, lr=1e-3, weight_decay=0, drop_path=0.1, number_heads=1):
+    def __init__(self, pretrained_model, num_classes, lr=1e-3, weight_decay=0, drop_path=0.1, number_heads=1, fusion_dim=900):
 
         super().__init__()
         self.save_hyperparameters()
@@ -35,7 +35,7 @@ class CDBN_DC(pl.LightningModule):
         self.pretrained_model = pretrained_model
 
         feature_maps = [i for i in range(len(pretrained_model.n_filters)+ 1)]
-        self.segmentor = CDBNSegmentor(num_classes, feature_maps, self.pretrained_model)
+        self.segmentor = CDBNSegmentor(num_classes, feature_maps, self.pretrained_model, fusion_dim=fusion_dim)
         self.mlp_head = self.segmentor.seg_head
   
         #self.average_pool = nn.AvgPool1d((self.pretrained_model.embed_dim), stride=1)

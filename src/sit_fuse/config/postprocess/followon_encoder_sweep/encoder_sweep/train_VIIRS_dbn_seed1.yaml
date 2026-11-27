@@ -1,0 +1,29 @@
+# Encoder sweep arm dbn_seed1: Production pixel DBN (gaussian_selu x2, DBN_ARCH_MAP DEFAULT [2000, 1000], 3x3 window), retrained with
+# a different seed: the retraining-noise floor for every other arm.
+#   python -m sit_fuse.pipelines.habs.followon.variants train -s train_VIIRS_dbn_seed1.yaml
+#   python -m sit_fuse.pipelines.habs.hab_training_pipeline -y /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/dbn_seed1/train_dbn_seed1.yaml -n 6
+# Same as the production VIIRS encoder (SNPP + JPSS1 + JPSS2, 5 bands, training window and preprocessing of the
+# base YAML) except instruments.VIIRS.no_trop.model_overrides. Cluster heads unchanged: 800 parent -> 100 child.
+# Weights: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/DBN_SEED1/VIIRS_no_trop/   model YAML: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/dbn_seed1/config/model/train_model_VIIRS.yaml
+base_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/piplines/habs/hab_reflectance_model_train_ca_coast_2025_sensor_groups.yaml
+out: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/dbn_seed1/train_dbn_seed1.yaml
+output: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/DBN_SEED1/
+config_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/dbn_seed1/config/
+instruments:
+- VIIRS
+overrides:
+  geo_zarr:
+    oc_geo_fpattern: /mnt/data1/cal_coast_geo.zarr
+    out_dir: /mnt/data1/
+    out_uid: cal_coast_geo
+  instruments:
+    VIIRS:
+      no_trop:
+        input_oc_dir:
+        - /mnt/data1/REFLECTANCES/SNPP_VIIRS/
+        - /mnt/data1/REFLECTANCES/JPSS1_VIIRS/
+        - /mnt/data1/REFLECTANCES/JPSS2_VIIRS/
+        input_oc_re: ((?:SNPP|JPSS1|JPSS2)_VIIRS\.(\d{8})\.L3m\.DAY\.)RRS.*\.4km.*nc
+        run_preprocess_and_scale: true
+        model_overrides:
+          seed: 1
