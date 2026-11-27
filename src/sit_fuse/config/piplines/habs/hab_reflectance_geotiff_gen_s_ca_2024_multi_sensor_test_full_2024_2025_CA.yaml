@@ -12,12 +12,12 @@ insitu_file: "/mnt/data1/habs/insitu_augmented/combined_augmented_strict.csv" #/
 #/mnt/data1/habs/insitu_augmented_v2/combined_augmented_strict.csv 
 insitu_matchup_circle_max_radius: [0.09]
 start_date: "2024-03-01" #"2024-07-01" #"2018-10-01"
-end_date: "2025-02-28" #"2025-12-31" #"2025-07-01" #"2025-12-31"
+end_date: "2025-12-01" #"2025-12-31" #"2025-07-01" #"2025-12-31"
 clusters: 120000
 
 roi: "california"
 
-final_product_dir: "/mnt/data1/HAB_COMBINED_2024_2025_SPLIT/MERGED_TEST_FULL_2/"
+final_product_dir: "/mnt/data1/HAB_COMBINED_2024_2025_SPLIT/MERGED_TEST_1115_26/"
 
 # Spatio-temporally stratified day split (sit_fuse.datasets.scene_split via
 # pipelines/habs/hab_scene_split.py), shared by all sensors. Context assignment
@@ -29,7 +29,7 @@ scene_split:
   manifest: "/mnt/data1/HAB_COMBINED_2024_2025_SPLIT/scene_split/hab_ca_2024_2025_scene_split.csv"
   regenerate: false
   dates_from: auto           # inputs (input_oc_dir) when present, else inference out_dir
-  date_range: ["2024-01-01", "2025-04-01"]   # covers uq start/end; context/validation also clip to start_date/end_date
+  date_range: ["2024-01-01", "2026-10-01"]   # covers uq start/end; context/validation also clip to start_date/end_date
   strata:
     time_bins: [season_year]
   split:
@@ -52,57 +52,58 @@ scene_split:
     spatial_block: 32
     spatial_balance: 0.5
     seed: 0
+
+
  
 instruments: 
  pace:
    no_trop: 
-      "out_dir": "/mnt/data1/HAB_COMBINED_2024_2025_SPLIT/PACE_OCI_no_trop/"
- s3a: 
+      "out_dir": "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025//PACE_OCI_no_trop/"
+ olci: 
   no_trop:  
-      "out_dir": "/mnt/data1/HAB_COMBINED_2024_2025_SPLIT/S3A_OLCI_no_trop/"
- s3b:
+      "out_dir": "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025//OLCI_no_trop/"
+ viirs:
   no_trop:  
-      "out_dir": "/mnt/data1/HAB_COMBINED_2024_2025_SPLIT/S3B_OLCI_no_trop/"
- jpss1:
-  no_trop:  
-      "out_dir": "/mnt/data1/HAB_COMBINED_2024_2025_SPLIT/JPSS1_VIIRS_no_trop/"
- jpss2:
-  no_trop:  
-      "out_dir": "/mnt/data1/HAB_COMBINED_2024_2025_SPLIT/JPSS2_VIIRS_no_trop/"
+      "out_dir": "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025//VIIRS_no_trop/"
  modis:
   no_trop:  
-      "out_dir": "/mnt/data1/HAB_COMBINED_2024_2025_SPLIT/AQUA_MODIS_no_trop/"
- snpp:
-  no_trop:  
-      "out_dir": "/mnt/data1/HAB_COMBINED_2024_2025_SPLIT/SNPP_VIIRS_no_trop/"
+      "out_dir": "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025//AQUA_MODIS_no_trop/"
  #troposif: No SIF data for 2024-2025 cases
  #goes18:  
  # no_trop: 
  #'     "out_dir": "/data1/nlahaye/output/Learnergy/GOES18_ABI_ONLY_S_CA/"
 
 
-run_resample: False 
+run_resample: True
 
 validation_only: False
 
 uq:
-  out_dir: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_062526/uq/"
+  input_mode: head_outputs 
+  out_dir: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/uq/"
   # augmented in-situ table written by sit_fuse.pipelines.habs.insitu.pull_insitu_hab
-  insitu_file: "/mnt/data1/la_hab_data/combined_full_augmented.csv"
+  insitu_file: "/mnt/data1/habs/insitu_augmented/combined_augmented_strict.csv" #"/mnt/data1/la_hab_data/combined_full_augmented.csv"
   start_date: "2024-01-01"
-  end_date: "2025-04-01"
+  end_date: "2025-12-01"
   max_depth_m: 1.0
   num_child: 100             # model YAML cluster.heir.num_classes (joint = child + num_child*parent)
-  input_mode: auto           # auto | head_outputs | label_only
+  #input_mode: auto           # auto | head_outputs | label_only
   label_level: heir          # heir | no_heir (label_only mode)
   no_heir_value: parent
   use_proba: true
   radius_degrees: 0.09       # production SoCal radius
+  radius_km: 10              # great-circle radius; overrides radius_degrees
+  nearest_fallback:          # samples with no valid pixel within radius_km (coastal mask, piers)
+    enabled: true
+    max_km: 20               # search limit for the nearest valid pixels
+    k: 3                     # number of nearest valid pixels used
+    decay_km: 5              # sample weight *= exp(-(d_nearest - radius_km) / decay_km)
+    use_in_encoder: false    # keep fallback rows out of the cluster->class lookup counts
   max_day_offset: 1          # 0 = production same-day; 1 adds +/-1 d rows with temporal weights
   encoder_use_offset_days: false
   temporal_weighting: {tau_days: 1.5, sigma_hours: 6.0}
   count_mode: unique_per_sample
-  sensors: [pace, s3a, s3b, jpss1, jpss2, modis, snpp]
+  sensors: [pace, s3a, s3b, jpss1, jpss2, modis, snpp] #[pace, olci, viirs, modis]
   model_scope: pooled        # pooled (sensor one-hot, class-space features) | per_sensor
   seed: 42
 
@@ -131,17 +132,19 @@ uq:
   target:
     mode: blended_ensemble   # reference | cluster_agreement | assignment_ensemble | blended | blended_ensemble
     reference: measurement   # measurement (log-normal soft labels) | onehot
-    blend_lambda: 0.3
+    blend_lambda: 0.1        # was 0.3; less pull toward the majority-bin cluster lookup
 
   classifier:
     model: auto              # auto | encoder_only | hist_gradient_boosting | random_forest (auto = lowest calibration-set RPS)
-    candidates: [encoder_only, hist_gradient_boosting, random_forest]
+    candidates: [hist_gradient_boosting, random_forest]   # was [encoder_only, ...]; encoder_only cannot use class weights
+    class_weighting: {mode: sqrt_inverse, max_weight: 10}  # none | sqrt_inverse | inverse
     random_forest: {n_estimators: 300, max_depth: 8, min_samples_leaf: 5, min_samples_split: 10,
-                    class_weight: balanced_subsample, max_samples: 0.7}
+                    class_weight: null, max_samples: 0.7}   # was balanced_subsample; class_weighting replaces it
     n_bootstrap_members: 0   # >0: group-bootstrap refits (use for non-forest models)
   max_members: 100
 
-  calibration: {method: temperature, prior_correction: true, min_samples: 30}
+  calibration: {method: temperature, prior_correction: true, prior_correction_strength: 0.5,
+                min_samples: 30}     # strength 1 = full undo of class weighting (previous behaviour), 0 = none
   selective: {target_coverage: 0.8, bin_tolerance: 0}
 
   species:                   # optional overrides of hab_uq_common.DEFAULT_SPECIES
@@ -164,4 +167,36 @@ compute:
   num_loader_workers: 10     # optional; HAB training template default is 10
   nice: 10
   use_gpu: True
+
+
+
+run_head_export: true
+
+inference:
+  stages: [heads]
+  input_lists: [files_test, files_train]
+  start_date: "2024-01-01"        # match uq.start_date / end_date
+  end_date: "2025-12-01"
+  overwrite: false                # existing *.head_outputs.tif are skipped
+  model_configs:                  # required: see note below
+    pace:  {no_trop: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/train_model_PACE_OCI.yaml"}
+    olci:  {no_trop: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/train_model_OLCI.yaml"}
+    viirs: {no_trop: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/train_model_VIIRS.yaml"}
+    modis: {no_trop: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/train_model_AQUA_MODIS.yaml"}
+
+# Same-day composite order inside a group's daily product (first valid pixel wins;
+# later platforms fill gaps). Default: s3a, s3b and snpp, jpss1, jpss2.
+platform_priority:
+  olci: [s3a, s3b]
+  viirs: [jpss2, jpss1, snpp]
+
+
+head_export:
+  top_k_parent: 5                 # parent_top1..5_prob
+  top_k_child: 3                  # child top1..3 under each parent rank
+  n_parent_ranks: 2               # r1_* and r2_* child distributions
+  mc:  {samples: 0}               # optional, see below
+  ood: {enabled: false}           # optional, see below
+  validate: true
+  min_joint_agreement: 0.99
 

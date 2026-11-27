@@ -148,7 +148,10 @@ class Heir_DC(pl.LightningModule):
         elif clust_tree_ckpt is not None:
             
             encoder_output_size = None
-            if self.encoder_type is None:
+            n_visible = None    # load_model reads the width from each saved head; values below are fallbacks
+            if self.encoder_type == "rtdbn":
+                n_visible = int(getattr(self.encoder, "out_dim", 0) or self.encoder.models[-1].n_hidden)
+            elif self.encoder_type is None:
                 n_visible = yml_conf["data"]["tile_size"][0]*yml_conf["data"]["tile_size"][1]*yml_conf["data"]["tile_size"][2]
             elif self.encoder_type == "ijepa":
                 #TODO encoder_output_size = get_output_shape(self.encoder, (1, yml_conf["data"]["tile_size"][2],self.pretrained_model.pretrained_model.img_size,self.pretrained_model.pretrained_model.img_size))
@@ -693,7 +696,13 @@ def load_model(clust_tree, n_visible, model, state_dict, device, ijepa=False, nu
                     #if ijepa:
                     #    clust_tree[lab1][lab2] = JEPA_Seg(num_classes)	
                     #else:
-                    clust_tree[lab1][lab2] = MultiPrototypes(n_visible, model.num_classes, model.number_heads).to(device)
+                    # head input width from the saved head itself (MultiPrototypes LayerNorm), so the
+                    # encoder-type constants in __init__ can't mismatch the checkpoint
+                    n_vis = n_visible
+                    w = state_dict[lab1][lab2]["model"].get("batch_norm0.weight")
+                    if w is not None:
+                        n_vis = int(w.shape[0])
+                    clust_tree[lab1][lab2] = MultiPrototypes(n_vis, model.num_classes, model.number_heads).to(device)
                     clust_tree[lab1][lab2].load_state_dict(state_dict[lab1][lab2]["model"])
                     tmp_params = tmp_params + sum(p.numel() for p in clust_tree[lab1][lab2].parameters())
         pytorch_total_params = pytorch_total_params + sum(p.numel() for p in model.parameters())

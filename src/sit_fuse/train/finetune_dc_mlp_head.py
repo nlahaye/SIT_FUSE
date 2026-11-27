@@ -184,6 +184,12 @@ def dc_PCA(yml_conf, dataset, conv=False):
 def dc_DBN(yml_conf, dataset, conv=False):
 
     dataset.setup()
+    rtdbn = yml_conf.get("encoder_type") == "rtdbn"
+    if rtdbn:
+        # same DBN_DC head / training loop; the encoder is the frozen RT-DBN sequence encoder
+        yml_conf = dict(yml_conf)
+        yml_conf.setdefault("dbn", {"dbn_arch": [], "gibbs_steps": [], "normalize_learnergy": [],
+                                    "batch_normalize": [], "temp": [], "model_type": []})
 
     dbn_arch = tuple(yml_conf["dbn"]["dbn_arch"])
     gibbs_steps = tuple(yml_conf["dbn"]["gibbs_steps"])
@@ -220,7 +226,11 @@ def dc_DBN(yml_conf, dataset, conv=False):
 
     ckpt_path = os.path.join(encoder_dir, "dbn.ckpt")
 
-    if not conv:
+    if rtdbn:
+        from sit_fuse.models.encoders.rtdbn_seq_encoder import load_rtdbn_encoder
+        model_type = "rtdbn"
+        dbn = load_rtdbn_encoder(yml_conf, int(dataset.n_visible), encoder_dir)
+    elif not conv:
         model_type = tuple(yml_conf["dbn"]["model_type"])
         dbn = DBN(model=model_type, n_visible=dataset.n_visible, n_hidden=dbn_arch, steps=gibbs_steps,
              learning_rate=learning_rate, momentum=momentum, decay=decay, temperature=temp, use_gpu=accelerator_uses_gpu(accelerator))
@@ -235,7 +245,8 @@ def dc_DBN(yml_conf, dataset, conv=False):
             decay=decay, use_gpu=accelerator_uses_gpu(accelerator), maxpooling=[False]*len(gibbs_steps)) #, maxpooling=mp)
 
     print(ckpt_path, conv, model_type)
-    dbn.load_state_dict(torch.load(ckpt_path, map_location="cpu"))
+    if not rtdbn:
+        dbn.load_state_dict(torch.load(ckpt_path, map_location="cpu"))
 
     for param in dbn.parameters():
         param.requires_grad = False
@@ -245,11 +256,14 @@ def dc_DBN(yml_conf, dataset, conv=False):
     dbn.eval() 
     dbn.models.eval()
 
-    if not conv:
+    if rtdbn:
+        model = DBN_DC(dbn, num_classes=num_classes, conv=False)
+    elif not conv:
         model = DBN_DC(dbn, num_classes=num_classes, conv=conv)
     else:
         lr = yml_conf["cluster"]["training"]["learning_rate"]
-        model = CDBN_DC(dbn, num_classes=num_classes, weight_decay=0.95, lr = lr)
+        fusion_dim = int((yml_conf.get("cluster", {}) or {}).get("fusion_dim", 900))
+        model = CDBN_DC(dbn, num_classes=num_classes, weight_decay=0.95, lr = lr, fusion_dim=fusion_dim)
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
@@ -398,7 +412,8 @@ def dc_MAE(yml_conf, dataset):
     ckpt_path = os.path.join(encoder_dir, "encoder.ckpt")
     lr = yml_conf["cluster"]["training"]["learning_rate"]
 
-    model = MAE_DC(ckpt_path, num_classes, weight_decay=0.95, lr = lr)
+    model = MAE_DC(ckpt_path, num_classes, weight_decay=0.95, lr = lr,
+                   feature_maps=(yml_conf.get("cluster", {}) or {}).get("feature_maps"))
     for param in model.pretrained_model.parameters():
         param.requires_grad = finetune_encoder
     for param in model.mlp_head.parameters():
@@ -477,7 +492,8 @@ def dc_IJEPA(yml_conf, dataset):
     ckpt_path = os.path.join(encoder_dir, "encoder.ckpt")
     lr = yml_conf["cluster"]["training"]["learning_rate"]
 
-    model = IJEPA_DC(ckpt_path, num_classes, weight_decay=0.95, lr = lr)
+    model = IJEPA_DC(ckpt_path, num_classes, weight_decay=0.95, lr = lr,
+                     feature_maps=(yml_conf.get("cluster", {}) or {}).get("feature_maps"))
     for param in model.pretrained_model.parameters():
         param.requires_grad = finetune_encoder
     for param in model.mlp_head.parameters():

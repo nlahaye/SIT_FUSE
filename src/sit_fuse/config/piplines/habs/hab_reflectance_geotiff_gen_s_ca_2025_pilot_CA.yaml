@@ -87,8 +87,8 @@ uq:
   out_dir: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/uq_pilot/"   # separate from the full run
   # augmented in-situ table written by sit_fuse.pipelines.habs.insitu.pull_insitu_hab
   insitu_file: "/mnt/data1/habs/insitu_augmented/combined_augmented_strict.csv" #"/mnt/data1/la_hab_data/combined_full_augmented.csv"
-  start_date: "2025-01-15"   # PILOT window: replace with the planner's chosen window
-  end_date: "2025-06-15"
+  start_date: '2024-12-16' #"2025-01-15"   # PILOT window: replace with the planner's chosen window
+  end_date: '2025-05-15' #"2025-06-15"
   species_run: [Pseudo_nitzschia_seriata_group, Pseudo_nitzschia_delicatissima_group, pDA]
   max_depth_m: 1.0
   num_child: 100             # model YAML cluster.heir.num_classes (joint = child + num_child*parent)

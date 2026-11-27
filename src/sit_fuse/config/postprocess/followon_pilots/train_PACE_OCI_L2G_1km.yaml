@@ -2,7 +2,7 @@
 # PACE_OCI.YYYYMMDD.L3m.DAY.AOP.V3_2.1km.nc (read by read_pace_oc with pace_product AOP.V3_2, pace_res 1km).
 #   python -m sit_fuse.pipelines.habs.followon.pace_l2 geo --out /mnt/data1/pace_l2g_1km_geo.zarr
 #   python -m sit_fuse.pipelines.habs.hab_training_pipeline -y train_PACE_OCI_L2G_1km.yaml -n 6
-# Same architecture (DBN_ARCH_MAP PACE_OCI) and window as the production 4 km PACE encoder.
+# Same architecture (DBN_ARCH_MAP PACE_OCI) as the production 4 km PACE encoder; trained on the pilot window.
 start_lon: -128.00
 end_lon: -116.00
 start_lat: 30.00
@@ -15,8 +15,8 @@ geo_zarr:
  reader_kwargs: {pace_product: AOP.V3_2, pace_res: 1km}
 
 sif_dir: "/mnt/data1/TROPOSIF/"
-train_min_date: "20240305"
-train_max_date: "20241023"
+train_min_date: "20250201"      # pilot window (heads and UQ use the same days)
+train_max_date: "20250531"
 
 roi: "ca"
 output: "/mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/PACE_OCI_1KM/"     # weights: <output>/PACE_OCI_no_trop/

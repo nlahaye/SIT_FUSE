@@ -1,9 +1,15 @@
-# HAB variant spec: GOES-18 (4a) and native-resolution PACE (4b) pilots.
+# HAB variant spec: GOES-18 (4a) and native-resolution PACE (4b) pilots, window 2025-02-01..2025-05-31.
 #   python -m sit_fuse.pipelines.habs.followon.variants hab -s pilot_variants.yaml
-# All variants: same splits (date_roles_file), same species, spatial_tier off (its pixel counts / priors are tuned
-# for the 4 km grid; pace_l3m_4km also has it off so the PACE resolution comparison changes only the input grid).
-# features.window_radii are in pixels: x2 at 0.02 deg (GOES), x4 at 0.01 deg (PACE 1 km), i.e. the same ground
-# footprint as [1, 2, 4] at 4 km.
+# All variants: same splits (date_roles_file) restricted to the pilot window (uq.date_windows), same species,
+# spatial_tier off (its pixel counts / priors are tuned for the 4 km grid; pace_l3m_4km also has it off so the
+# PACE resolution comparison changes only the input grid).
+# GOES and PACE 1 km variants share the 0.01 deg grid (same bbox, 1200 x 894). features.window_radii are in
+# pixels: x4 at 0.01 deg, i.e. the same ground footprint as [1, 2, 4] at 4 km.
+# GOES: one encoder trained on all hourly composites (train_GOES18_ABI.yaml); heads per input cadence:
+#   goes18_daily  daily median of all clear scans 16-23 UTC
+#   goes18_hHH    hourly composite of hour HH UTC (median of that hour's clear 5-min scans)
+#   Model YAMLs <out_root>/<variant>/model/train_model_GOES18_ABI.yaml are written by the launcher jobs
+#   goes_models / goes_model_daily (file lists filtered to one hour directory / rewritten to the daily one).
 base_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/postprocess/hab_reflectance_geotiff_gen_s_ca_2023_2026_full_CA.yaml
 out_root: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots
 
@@ -12,26 +18,85 @@ common:
   features_drop: [spatial_tier]
   set:
     uq.context_encoder.spatial_tier.enabled: false
+    uq.date_windows: [["2025-02-01", "2025-05-31"]]
+    uq.start_date: "2025-02-01"
+    uq.end_date: "2025-05-31"
+    inference.date_windows: [["2025-02-01", "2025-05-31"]]
+    inference.start_date: "2025-02-01"
+    inference.end_date: "2025-05-31"
+
+_goes: &goes
+  sensors: [goes18]
+  set:                                  # merged with common.set (pilot window)
+    uq.context_encoder.spatial_tier.enabled: false
+    inference.extend_input_lists: true
+    uq.features.window_radii: [4, 8, 16]
+    geo_zarr: /mnt/data1/goes18_geo_1km.zarr
 
 variants:
-  # GOES-18 ABI daily composite heads (encoder: train_GOES18_ABI.yaml)
-  goes18:
-    sensors: [goes18]
-    set:
-      uq.context_encoder.spatial_tier.enabled: false
-      uq.features.window_radii: [2, 4, 8]
-      geo_zarr: /mnt/data1/goes18_geo.zarr
+  goes18_daily:
+    <<: *goes
     overrides:
-      instruments:
-        goes18:
-          no_trop:
-            out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots/goes18/products/GOES18_ABI_no_trop/
-            model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/GOES18_ABI/GOES18_ABI_no_trop/
-      inference:
-        model_configs:
-          goes18: {no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots/goes18/train_config/model/train_model_GOES18_ABI.yaml}
-      head_export:
-        georef: {final_resolution: 0.02, resample_radius: 3000}
+      instruments: {goes18: {no_trop: {out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots/goes18_daily/products/GOES18_ABI_no_trop/,
+                                       model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/GOES18_ABI_1KM_HOURLY/GOES18_ABI_no_trop/}}}
+      inference: {model_configs: {goes18: {no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots/goes18_daily/model/train_model_GOES18_ABI.yaml}}}
+      head_export: {georef: {final_resolution: 0.01, resample_radius: 1500}}
+  goes18_h16:
+    <<: *goes
+    overrides:
+      instruments: {goes18: {no_trop: {out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots/goes18_h16/products/GOES18_ABI_no_trop/,
+                                       model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/GOES18_ABI_1KM_HOURLY/GOES18_ABI_no_trop/}}}
+      inference: {model_configs: {goes18: {no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots/goes18_h16/model/train_model_GOES18_ABI.yaml}}}
+      head_export: {georef: {final_resolution: 0.01, resample_radius: 1500}}
+  goes18_h17:
+    <<: *goes
+    overrides:
+      instruments: {goes18: {no_trop: {out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots/goes18_h17/products/GOES18_ABI_no_trop/,
+                                       model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/GOES18_ABI_1KM_HOURLY/GOES18_ABI_no_trop/}}}
+      inference: {model_configs: {goes18: {no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots/goes18_h17/model/train_model_GOES18_ABI.yaml}}}
+      head_export: {georef: {final_resolution: 0.01, resample_radius: 1500}}
+  goes18_h18:
+    <<: *goes
+    overrides:
+      instruments: {goes18: {no_trop: {out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots/goes18_h18/products/GOES18_ABI_no_trop/,
+                                       model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/GOES18_ABI_1KM_HOURLY/GOES18_ABI_no_trop/}}}
+      inference: {model_configs: {goes18: {no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots/goes18_h18/model/train_model_GOES18_ABI.yaml}}}
+      head_export: {georef: {final_resolution: 0.01, resample_radius: 1500}}
+  goes18_h19:
+    <<: *goes
+    overrides:
+      instruments: {goes18: {no_trop: {out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots/goes18_h19/products/GOES18_ABI_no_trop/,
+                                       model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/GOES18_ABI_1KM_HOURLY/GOES18_ABI_no_trop/}}}
+      inference: {model_configs: {goes18: {no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots/goes18_h19/model/train_model_GOES18_ABI.yaml}}}
+      head_export: {georef: {final_resolution: 0.01, resample_radius: 1500}}
+  goes18_h20:
+    <<: *goes
+    overrides:
+      instruments: {goes18: {no_trop: {out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots/goes18_h20/products/GOES18_ABI_no_trop/,
+                                       model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/GOES18_ABI_1KM_HOURLY/GOES18_ABI_no_trop/}}}
+      inference: {model_configs: {goes18: {no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots/goes18_h20/model/train_model_GOES18_ABI.yaml}}}
+      head_export: {georef: {final_resolution: 0.01, resample_radius: 1500}}
+  goes18_h21:
+    <<: *goes
+    overrides:
+      instruments: {goes18: {no_trop: {out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots/goes18_h21/products/GOES18_ABI_no_trop/,
+                                       model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/GOES18_ABI_1KM_HOURLY/GOES18_ABI_no_trop/}}}
+      inference: {model_configs: {goes18: {no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots/goes18_h21/model/train_model_GOES18_ABI.yaml}}}
+      head_export: {georef: {final_resolution: 0.01, resample_radius: 1500}}
+  goes18_h22:
+    <<: *goes
+    overrides:
+      instruments: {goes18: {no_trop: {out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots/goes18_h22/products/GOES18_ABI_no_trop/,
+                                       model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/GOES18_ABI_1KM_HOURLY/GOES18_ABI_no_trop/}}}
+      inference: {model_configs: {goes18: {no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots/goes18_h22/model/train_model_GOES18_ABI.yaml}}}
+      head_export: {georef: {final_resolution: 0.01, resample_radius: 1500}}
+  goes18_h23:
+    <<: *goes
+    overrides:
+      instruments: {goes18: {no_trop: {out_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots/goes18_h23/products/GOES18_ABI_no_trop/,
+                                       model_dir: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/GOES18_ABI_1KM_HOURLY/GOES18_ABI_no_trop/}}}
+      inference: {model_configs: {goes18: {no_trop: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/pilots/goes18_h23/model/train_model_GOES18_ABI.yaml}}}
+      head_export: {georef: {final_resolution: 0.01, resample_radius: 1500}}
 
   # PACE baseline: production 4 km L3m heads, PACE-only UQ heads
   pace_l3m_4km:

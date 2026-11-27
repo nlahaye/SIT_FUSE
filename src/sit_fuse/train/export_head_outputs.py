@@ -24,16 +24,6 @@ Notes on the existing SIT-FUSE outputs
 
 Usage:
     python export_head_outputs.py export_config.yaml
-
-Reusing head outputs that already exist (optional config keys)
----------------------------------------------------------------
-  skip_existing: true   inputs whose <output_dir>/<input>.head_outputs.tif exists with the same encoder and head
-                        settings (tags sit_fuse_yaml, top_k_parent, top_k_child, n_parent_ranks) are not exported.
-  heads_from: [dirs]    inputs missing in output_dir are symlinked from the first dir holding a same-encoder head
-                        output of that input (searched recursively; e.g. the smoke heads for a fire export). Heads
-                        of another encoder are skipped and exported here. Implies skip_existing.
-A file in output_dir with another encoder's tags, or a link to one, is replaced; a new export never writes through
-a link, so linked files of another run are not modified.
 """
 
 from __future__ import annotations
@@ -51,12 +41,20 @@ from sit_fuse.datasets.dataset_utils import get_prediction_dataset
 from sit_fuse.inference.generate_output import prep_model
 from sit_fuse.utils import get_read_func, read_yaml
 
-from sf_uq_utils import (
-    FORMAT_VERSION,
-    HEAD_NODATA,
-    head_band_names,
-    write_band_stack,
-)
+try:  # package import (pipelines); bare import kept for script use from train/
+    from sit_fuse.train.sf_uq_utils import (
+        FORMAT_VERSION,
+        HEAD_NODATA,
+        head_band_names,
+        write_band_stack,
+    )
+except ImportError:  # pragma: no cover
+    from sf_uq_utils import (
+        FORMAT_VERSION,
+        HEAD_NODATA,
+        head_band_names,
+        write_band_stack,
+    )
 
 LOG = logging.getLogger("export-head-outputs")
 
@@ -114,9 +112,12 @@ def _summaries(P: torch.Tensor, k: int):
 
 
 @torch.no_grad()
-def head_distributions(model, x: torch.Tensor, cfg: dict) -> np.ndarray | None:
+def head_distributions(model, x: torch.Tensor, cfg: dict, return_aux: bool = False):
     """
     Returns (N_pixels, n_bands) float32 in head_band_names() order.
+    return_aux=True also returns the full root-head probabilities P (N, n_parent)
+    and encoder embeddings E (N, D) as torch tensors, so callers (e.g. the HAB
+    inference pipeline: MC input noise, embedding OOD) need no second forward.
     """
     Kp = int(cfg.get("top_k_parent", 5))
     Kc = int(cfg.get("top_k_child", 3))
@@ -183,14 +184,61 @@ def head_distributions(model, x: torch.Tensor, cfg: dict) -> np.ndarray | None:
             cols += [child_ids[r, :, j].float(), child_ps[r, :, j]]
         cols += [child_mass[r]]
     cols += [c_max, c_margin, c_ent, joint_prob]
-    return torch.stack(cols, dim=1).cpu().numpy().astype(np.float32)
+    rows = torch.stack(cols, dim=1).cpu().numpy().astype(np.float32)
+    if return_aux:
+        return rows, P, E
+    return rows
 
 
 # ---------------------------------------------------------------------------
 # Scene assembly (mirrors generate_output.plot_clusters placement)
 # ---------------------------------------------------------------------------
 
-def assemble_scene(coord: np.ndarray, rows: np.ndarray, tile_hw, pixel_padding=1):
+def tile_margin(sf_yaml, tile_hw=None) -> int:
+    """Center-crop margin for overlapping tiles: (tile - step) // 2 when data.tile_center_crop."""
+    d = (sf_yaml or {}).get("data", {}) or {}
+    if not d.get("tile") or not d.get("tile_center_crop", False):
+        return 0
+    ts, st = d.get("tile_size") or [0], d.get("tile_step") or [0]
+    t = int(tile_hw[0]) if tile_hw else int(ts[0])
+    return max(0, (t - int(st[0])) // 2)
+
+
+def tile_owned(r0, c0, th, tw, rmin, rmax, cmin, cmax, margin):
+    """Rows / cols of a tile written to the scene: the central (th - 2m) x (tw - 2m) block,
+    extended to the tile edge on the scene border so the scene stays fully covered."""
+    a0 = 0 if r0 <= rmin else margin
+    a1 = th if r0 >= rmax else th - margin
+    b0 = 0 if c0 <= cmin else margin
+    b1 = tw if c0 >= cmax else tw - margin
+    return a0, a1, b0, b1
+
+
+def _valid_tiles(data, tile_hw):
+    """SFDatasetConv per-pixel validity (N, th, tw), or None (pixel datasets / older datasets)."""
+    v = getattr(data, "valid_full", None)
+    if tile_hw is None or v is None:
+        return None
+    v = v.cpu().numpy() if hasattr(v, "cpu") else np.asarray(v)
+    return v if v.ndim == 3 else None
+
+
+def _scene_hw(data, tile_hw):
+    """Scene (rows, cols) of a single-scene tiled prediction dataset, or None."""
+    s = getattr(data, "init_data_shape", None)
+    if tile_hw is None or s is None or len(s) < 3:
+        return None
+    return int(s[1]), int(s[2])
+
+
+def assemble_scene(coord: np.ndarray, rows: np.ndarray, tile_hw, pixel_padding=1, margin=0, valid=None,
+                   scene_hw=None):
+    """
+    Place per-pixel rows on the scene grid. Tiles: with margin > 0 (overlapping tiles,
+    step = tile - 2 * margin) each pixel comes from the tile in which it is most central,
+    instead of the last tile written. valid (N, th, tw) bool: pixels set to HEAD_NODATA.
+    scene_hw: full scene size for tiles (tile corners + 1 + padding cut the last tile row / col).
+    """
     line_ind, samp_ind = (1, 2) if coord.shape[1] > 2 else (0, 1)
     H = int(coord[:, line_ind].max()) + 1 + pixel_padding
     W = int(coord[:, samp_ind].max()) + 1 + pixel_padding
@@ -201,11 +249,24 @@ def assemble_scene(coord: np.ndarray, rows: np.ndarray, tile_hw, pixel_padding=1
         out[:, coord[:, line_ind].astype(int), coord[:, samp_ind].astype(int)] = rows.T
     else:
         th, tw = tile_hw
+        if scene_hw is not None:
+            H, W = int(scene_hw[0]), int(scene_hw[1])
+            out = np.full((nb, H, W), HEAD_NODATA, dtype=np.float32)
         tiles = rows.reshape(coord.shape[0], th, tw, nb)
+        if valid is not None:
+            valid = np.asarray(valid).reshape(coord.shape[0], th, tw).astype(bool)
+        rr, cc = coord[:, line_ind].astype(int), coord[:, samp_ind].astype(int)
+        rmin, rmax, cmin, cmax = rr.min(), rr.max(), cc.min(), cc.max()
         for i in range(coord.shape[0]):
-            r0, c0 = int(coord[i, line_ind]), int(coord[i, samp_ind])
-            r1, c1 = min(H, r0 + th), min(W, c0 + tw)
-            out[:, r0:r1, c0:c1] = np.moveaxis(tiles[i, :r1 - r0, :c1 - c0], -1, 0)
+            r0, c0 = int(rr[i]), int(cc[i])
+            a0, a1, b0, b1 = tile_owned(r0, c0, th, tw, rmin, rmax, cmin, cmax, int(margin))
+            a1, b1 = min(a1, H - r0), min(b1, W - c0)          # same clipping to H, W as before
+            if a1 <= a0 or b1 <= b0:
+                continue
+            blk = tiles[i, a0:a1, b0:b1]
+            if valid is not None:
+                blk = np.where(valid[i, a0:a1, b0:b1, None], blk, HEAD_NODATA)
+            out[:, r0 + a0:r0 + a1, c0 + b0:c0 + b1] = np.moveaxis(blk, -1, 0)
     return out
 
 
@@ -403,65 +464,15 @@ def select_input_files(cfg: dict, sf_yaml: dict) -> list:
     return files
 
 
-def reuse_existing(cfg: dict, files, refs, subsets, out_dir: Path):
-    """skip_existing / heads_from (see module docstring). Returns the (files, refs, subsets) still to export.
-    The encoder check and directory index are build_production_run._same_encoder / _head_index."""
-    if not (cfg.get("skip_existing") or cfg.get("heads_from")):
-        return files, refs, subsets
-    import rasterio
-    from build_production_run import _head_index, _same_encoder
-    settings = {"sit_fuse_yaml": cfg["sit_fuse_yaml"], "head_export": cfg.get("head_export") or {}}
-    srcs = []
-    for d in cfg.get("heads_from") or []:
-        if Path(d).is_dir():
-            srcs.append(str(d))
-        else:
-            LOG.warning("heads_from %s not found", d)
-    ok = {}
-
-    def good(p) -> bool:
-        p = os.path.realpath(p)
-        if p not in ok:
-            try:
-                with rasterio.open(p) as r:
-                    ok[p] = _same_encoder(r.tags(), settings)
-            except Exception:  # noqa: BLE001  (unreadable / truncated: export again)
-                ok[p] = False
-        return ok[p]
-
-    todo, n_have, n_link, n_other = [], 0, {}, 0
-    for f, ref, sub in zip(files, refs, subsets):
-        name = f"{os.path.basename(f[0] if isinstance(f, list) else f)}.head_outputs.tif"
-        dst = out_dir / name
-        if dst.exists() and good(dst):
-            n_have += 1
-            continue
-        hit = None
-        for d in srcs:
-            p = _head_index(d).get(name)
-            if not p or os.path.realpath(p) == os.path.realpath(dst):
-                continue
-            if good(p):
-                hit = d, p
-                break
-            n_other += 1
-        if dst.is_symlink() or dst.exists():
-            dst.unlink()                # other encoder / unreadable / dangling link: never written through
-        if hit:
-            os.symlink(os.path.realpath(hit[1]), dst)
-            n_link[hit[0]] = n_link.get(hit[0], 0) + 1
-            continue
-        todo.append((f, ref, sub))
-    LOG.info("head outputs: %d already in %s, %s linked, %d candidates of another encoder skipped, %d to export",
-             n_have, out_dir, n_link or 0, n_other, len(todo))
-    return [t[0] for t in todo], [t[1] for t in todo], [t[2] for t in todo]
-
-
 def run(cfg: dict) -> None:
     sf_yaml = read_yaml(cfg["sit_fuse_yaml"])
     ex = cfg.get("head_export", {})
     out_dir = Path(cfg["output_dir"])
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    model = prep_model(sf_yaml)
+    model.eval()
+    device = next(model.pretrained_model.parameters()).device
 
     files = select_input_files(cfg, sf_yaml)
     georef_cfg = cfg.get("georef", {}) or {}
@@ -470,14 +481,6 @@ def run(cfg: dict) -> None:
     use_inputs = georef_cfg.get("use_input_files", "auto")
     if not (len(files) == len(refs) == len(subsets)):
         raise ValueError("files, georef.reference_geotiffs and georef.subset_inds must align.")
-    files, refs, subsets = reuse_existing(cfg, files, refs, subsets, out_dir)
-    if not files:
-        LOG.info("nothing to export")
-        return
-
-    model = prep_model(sf_yaml)
-    model.eval()
-    device = next(model.pretrained_model.parameters()).device
 
     tiled = bool(sf_yaml["data"].get("tile", False))
     batch = int(ex.get("batch_size", 5 if tiled else 10000))
@@ -504,7 +507,8 @@ def run(cfg: dict) -> None:
         rows = np.concatenate(chunks, axis=0)
 
         coord = np.asarray(data.targets_full)
-        stack = assemble_scene(coord, rows, tile_hw)
+        stack = assemble_scene(coord, rows, tile_hw, margin=tile_margin(sf_yaml, tile_hw),
+                               valid=_valid_tiles(data, tile_hw), scene_hw=_scene_hw(data, tile_hw))
         geo_src, grid = resolve_georef_source(fname, ref_tif, use_inputs, sf_yaml, georef_cfg)
         stack, profile = georeference(stack, grid, sub, base)
         LOG.info("%s: georeference source = %s", base, geo_src or "none (no-geo)")

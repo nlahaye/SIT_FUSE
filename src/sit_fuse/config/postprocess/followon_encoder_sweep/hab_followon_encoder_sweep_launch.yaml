@@ -1,0 +1,364 @@
+# Local-launcher plan: small encoder sweep for the SIT-FUSE HAB products (VIIRS SNPP + JPSS1 + JPSS2).
+# Question: does a different representation change what the satellite features add beyond physics?
+# Only the encoder changes; inputs, training window, preprocessing, cluster heads (800 -> 100), head export, UQ
+# heads and the in-situ table (combined_augmented) match production.
+#
+#   Arms (encoder_sweep/train_VIIRS_<arm>.yaml)
+#     dbn_prod    production pixel DBN (3x3 window), existing weights and heads, no retrain   (reference)
+#     dbn_seed1   same DBN retrained with seed 1                                              (retraining noise floor)
+#     pca         PCA on the same 3x3 windows, 99 % variance                                  (linear control)
+#     conv_dbn    conv DBN, 16x16 tiles, 50 / 100 filters 3x3 (SIT-FUSE defaults)            (spatial context, same family)
+#     byol        pixel BYOL, GCN backbone, 16x16 tiles                                       (contrastive, spatial)
+#     ijepa       I-JEPA ViT, 16x16 tiles, patch 1, embed 512, depth 6 (SIT-FUSE defaults)    (masked prediction)
+#     mae         MAE ViT, 16x16 tiles, patch 1, embed 1024, depth 8, mask 0.5 (defaults)     (masked reconstruction)
+#     rtdbn       recurrent-temporal DBN, same 3x3 pixel window as the DBN, 8-day sequence    (temporal context)
+#                 (temporal_stack reader: days t-7..t, gaps forward-filled, + data-age channel)
+#   Not included: Clay (land GFM, out of distribution for 4 km Rrs).
+#   Tiled arms (conv_dbn, ijepa, mae, byol): 16x16 tiles, step 8, centre 8x8 of each tile kept in scene products;
+#   tiles with < 50 % valid pixels are dropped from training only.
+#
+#   Scoring (encoder_sweep_variants.yaml): VIIRS-only UQ heads, day gap off, leave-one-year-out with folds 2023 and
+#   2025 (both outside the 2024 encoder training window), 4 targets, pooled over the two folds, paired bootstraps.
+#     compare_rep  <arm>_rep  (SIT-FUSE features of each encoder) and phys, baseline dbn_prod_rep
+#     compare_env  <arm>_env  (+ environmental + standard products), baseline phys: does each representation add
+#                  skill beyond physics; dbn_seed1 - dbn_prod gives the size of a difference that is only retraining
+#     composites   cluster -> environment signatures per arm (share of clusters with |AUC - 0.5| >= 0.2, q < 0.05)
+#
+#   roles x yr ─► variants ─┬─► train_eval_ref x v x yr x sp ────────────────────────────┐
+#                           │                                                             ├─► pool x v ─► compare_{rep,env} x sp
+#   train_spec x arm ─► train x arm (GPU, serial) ─► smoke x arm ─► heads x arm x win ─┬─► train_eval x arm x fs x yr x sp
+#                                                                                      └─► composites x arm
+#   composites_prod (production heads, starts immediately)
+#
+#   Representation comparison (Rep_Taxonomy paired views, 2025 scenes, outside the encoder training window):
+#   heads x arm ─► export x arm x platform ─► pair ─► rep_taxonomy   (CKA / kNN / Procrustes vs dbn_prod, with
+#   dbn_seed1 vs dbn_prod as the retraining floor; cross-platform same-day consistency; SST / CHL linear probes).
+#   Config: {rt}/reptaxonomy/config/sample/paired_views_hab_encoder_sweep.yaml. pair reads the MUR SST / L3m CHL
+#   caches of the ancillary plan ({anc}/anc_all/hab_anc_all.yaml); run its sst_pull first if 2025 is not cached.
+#
+#   Resources (Rep_Taxonomy run_ledger; CodeCarbon offline, USA / california): every train job is wrapped;
+#   bench x arm (fixed week 2025-07-01..07, all VIIRS platforms, every valid pixel, whole machine) and
+#   flops x arm run after everything else; resources_summary joins energy / CO2e / water / time / memory with
+#   FLOPs, parameters and pooled skill (skill per kWh). Water = kWh x EWIF (3.14 L/kWh; range 0.9-5.0), on-site
+#   cooling water 0 (air-cooled workstation). Train GPU energy is attributable (whole GPU 0 held); train CPU / RAM
+#   energy is machine level and includes concurrent CPU jobs (upper bound); bench is exclusive.
+#
+#   python -m sit_fuse.local_launcher list   hab_followon_encoder_sweep_launch.yaml
+#   python -m sit_fuse.local_launcher run    hab_followon_encoder_sweep_launch.yaml --dry-run
+#   systemd-run --user --scope -p MemoryMax=108G -p MemoryHigh=100G -p MemorySwapMax=0 \
+#     python -m sit_fuse.local_launcher run hab_followon_encoder_sweep_launch.yaml
+#   python -m sit_fuse.local_launcher status hab_followon_encoder_sweep_launch.yaml
+# Resume: rerun the same command (checkpoints and finished head scenes are skipped). Failed jobs: --rerun-failed.
+# One arm: --only '*conv_dbn*' 'roles*' 'variants*'.
+#
+# smoke runs the arm's head export on one week (2025-07-01..07) before the full 2023-2026 export, so a tiled
+# encoder that fails in head export / OOD statistics stops early. Before the full export finishes, compare one
+# smoke scene against the production VIIRS head output for the same day (valid-pixel coverage near the coast:
+# tiles that touch land are mean-imputed inside the tile, so coastal pixels should be kept, but check).
+#
+# Size: 7 encoder trainings (GPU, one at a time; PCA minutes, the others hours), 7 x 4 head-export windows,
+# 136 VIIRS-only UQ fits (about half the matchups of a pooled fit), 17 pools, 8 compares, 8 composites, 24 embedding
+# exports, 1 bundle, 1 Rep_Taxonomy run, 8 benches, 8 FLOPs counts.
+# Storage: each new arm writes a VIIRS head-output set the size of production pilot_coast_products/VIIRS_no_trop
+# (check with du -sh before starting; 7 arms = 7x that); embeddings (stride 4, float16) a few GB per arm plus its weights. Fold uq/models can be deleted after pool.
+# Resource budget (16 cores, 2 GPUs, 181 GB): 1 GPU (id 0), 9 cores (60 %), ~108 GB (60 %, enforced by the scope).
+# Running with the held-out-year plan (CPU only): GPU use does not overlap, but the two plans together must stay
+# within 9 cores, e.g. launcher.cpus 5 here and 4 there. Do not run with another plan that uses GPU 0.
+launcher:
+  state_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/launch/followon_encoder_sweep
+  gpus: [0]
+  cpus: 9
+  pin_cpus: true
+  max_parallel: null
+  retries: 0
+  nice: 10
+
+vars:
+  py: python
+  cfg: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/postprocess/followon_encoder_sweep
+  root: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526
+  roles_src: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/uq_full_2023_2026/date_roles.csv   # production roles
+  sw: "{root}/followon/encoder_sweep"
+  mod: sit_fuse.pipelines.habs.uq
+  habs: sit_fuse.pipelines.habs
+  fo: sit_fuse.pipelines.habs.followon
+  rt: /home/nlahaye/Rep_Taxonomy                                       # Rep_Taxonomy checkout (run_ledger, paired_views)
+  prodyaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/postprocess/hab_reflectance_geotiff_gen_s_ca_2023_2026_full_CA.yaml
+  prodcfg: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model           # production model YAMLs (scene lists)
+  anc: "{root}/followon/ancillary"                                    # SST / CHL target caches (ancillary plan)
+  ledger: "{sw}/resources/ledger"
+  meter: >-
+    PYTHONPATH={rt}:$PYTHONPATH {py} -m reptaxonomy.resources.run_ledger run --out {sw}/resources/ledger
+    --country USA --region california --ewif 3.14 --wue-site 0 --pue 1.0
+
+jobs:
+  # ---------------------------------------------------------------- splits and HAB YAMLs
+  - name: roles
+    cmd: >-
+      {py} -m {fo}.year_holdout roles --src {roles_src} --year {yr} --buffer-days 14
+      --out {sw}/roles/roles_y{yr}.csv
+    grid:
+      yr: [2023, 2025]
+    cpus: 1
+    gpu: 0
+    priority: 5
+    provides: ["{sw}/roles/roles_y{yr}.csv"]
+
+  # 34 HAB YAMLs: <arm>_{rep,env}_y<YEAR>, phys_y<YEAR>
+  - name: variants
+    cmd: "{py} -m {fo}.variants hab -s {cfg}/encoder_sweep_variants.yaml"
+    cpus: 1
+    gpu: 0
+    priority: 5
+    after: [{name: roles, "on": []}]
+
+  # ---------------------------------------------------------------- encoders
+  - name: train_spec
+    cmd: "{py} -m {fo}.variants train -s {cfg}/encoder_sweep/train_VIIRS_{arm}.yaml"
+    grid:
+      arm: &arms [pca, conv_dbn, ijepa, byol, dbn_seed1, mae, rtdbn]
+    cpus: 1
+    gpu: 0
+    priority: 5
+
+  # encoder pretraining + 800 / 100 cluster heads; whole GPU, one arm at a time, in the listed order;
+  # metered (a finished ledger record is kept, so a resumed train is not remeasured: delete it to remeasure)
+  - name: train
+    cmd: >-
+      mkdir -p {sw}/{arm}/config/model &&
+      {meter} --arm {arm} --stage train --gpus 0 --
+      {py} -m {habs}.hab_training_pipeline -y {sw}/{arm}/train_{arm}.yaml -n 6
+    cases:
+      - {arm: pca}
+      - {arm: conv_dbn}
+      - {arm: ijepa}
+      - {arm: byol}
+      - {arm: dbn_seed1}
+      - {arm: mae}
+      - {arm: rtdbn}
+    id_keys: [arm]
+    cpus: 6
+    gpu: 1
+    priority: 2
+    after: [{name: train_spec, "on": [arm]}]
+
+  - name: smoke
+    cmd: >-
+      {py} -m {habs}.hab_inference_pipeline -y {sw}/{arm}_rep_y2023/hab_{arm}_rep_y2023.yaml --stages heads
+      --instruments viirs --window 2025-07-01:2025-07-07 -n 4
+    grid:
+      arm: *arms
+    cpus: 4
+    gpu: 0.5
+    priority: 4
+    after: [{name: train, "on": [arm]}, {name: variants, "on": []}]
+
+  # head outputs 2023-2026 (same windows as production); resumable, the smoke week is skipped
+  - name: heads
+    cmd: >-
+      {py} -m {habs}.hab_inference_pipeline -y {sw}/{arm}_rep_y2023/hab_{arm}_rep_y2023.yaml --stages heads
+      --instruments viirs --window {win} -n 4
+    grid:
+      arm: *arms
+      win: ["2023-01-01:2023-12-31", "2024-01-01:2024-12-31", "2025-01-01:2025-12-31", "2026-01-01:2026-09-30"]
+    cpus: 4
+    gpu: 0.5
+    priority: 3
+    after: [{name: smoke, "on": [arm]}]
+
+  # ---------------------------------------------------------------- UQ heads
+  - name: train_eval_ref
+    cmd: "{py} -m {mod}.hab_uq_pipeline -y {sw}/{v}_y{yr}/hab_{v}_y{yr}.yaml --stages train,evaluate --species {sp} -n 4"
+    grid:
+      v: [dbn_prod_rep, dbn_prod_env, phys]
+      yr: [2023, 2025]
+      sp: &species [Pseudo_nitzschia_seriata_group, Pseudo_nitzschia_delicatissima_group, Pseudo_nitzschia_total, pDA]
+    cpus: 4
+    gpu: 0
+    priority: 2
+    after: [{name: variants, "on": []}]
+
+  - name: train_eval
+    cmd: "{py} -m {mod}.hab_uq_pipeline -y {sw}/{arm}_{fs}_y{yr}/hab_{arm}_{fs}_y{yr}.yaml --stages train,evaluate --species {sp} -n 4"
+    grid:
+      arm: *arms
+      fs: [rep, env]
+      yr: [2023, 2025]
+      sp: *species
+    cpus: 4
+    gpu: 0
+    priority: 1
+    after: [{name: heads, "on": [arm]}]
+
+  # every sample scored once, by the model that never saw its year
+  - name: pool
+    cmd: >-
+      {py} -m {fo}.year_holdout pool --fold 2023={sw}/{v}_y2023/uq --fold 2025={sw}/{v}_y2025/uq
+      --out {sw}/pooled/{v}/uq
+    grid:
+      v: [dbn_prod_rep, dbn_prod_env, phys,
+          pca_rep, pca_env, conv_dbn_rep, conv_dbn_env, ijepa_rep, ijepa_env, byol_rep, byol_env,
+          dbn_seed1_rep, dbn_seed1_env, mae_rep, mae_env, rtdbn_rep, rtdbn_env]
+    cpus: 1
+    gpu: 0
+    priority: 1
+    after: [{name: train_eval_ref, "on": []}, {name: train_eval, "on": []}]
+
+  # ---------------------------------------------------------------- comparisons
+  - name: compare_rep
+    cmd: >-
+      {py} -m {fo}.variant_compare --variant dbn_prod_rep={sw}/pooled/dbn_prod_rep/uq
+      --variant dbn_seed1_rep={sw}/pooled/dbn_seed1_rep/uq --variant pca_rep={sw}/pooled/pca_rep/uq
+      --variant conv_dbn_rep={sw}/pooled/conv_dbn_rep/uq --variant byol_rep={sw}/pooled/byol_rep/uq
+      --variant ijepa_rep={sw}/pooled/ijepa_rep/uq --variant mae_rep={sw}/pooled/mae_rep/uq
+      --variant rtdbn_rep={sw}/pooled/rtdbn_rep/uq --variant phys={sw}/pooled/phys/uq
+      --baseline dbn_prod_rep --token {tok} --out {sw}/compare_rep --n-boot 500 --by-site
+    cases: &tokens
+      - {sp: Pseudo_nitzschia_seriata_group,       tok: pseudo_nitzschia_seriata_bloom}
+      - {sp: Pseudo_nitzschia_delicatissima_group, tok: pseudo_nitzschia_delicatissima_bloom}
+      - {sp: Pseudo_nitzschia_total,               tok: pseudo_nitzschia_total_bloom}
+      - {sp: pDA,                                  tok: particulate_domoic_acid}
+    id_keys: [tok]
+    cpus: 2
+    gpu: 0
+    priority: 1
+    after: [{name: pool, "on": []}]
+
+  - name: compare_env
+    cmd: >-
+      {py} -m {fo}.variant_compare --variant phys={sw}/pooled/phys/uq
+      --variant dbn_prod_env={sw}/pooled/dbn_prod_env/uq --variant dbn_seed1_env={sw}/pooled/dbn_seed1_env/uq
+      --variant pca_env={sw}/pooled/pca_env/uq --variant conv_dbn_env={sw}/pooled/conv_dbn_env/uq
+      --variant byol_env={sw}/pooled/byol_env/uq --variant ijepa_env={sw}/pooled/ijepa_env/uq
+      --variant mae_env={sw}/pooled/mae_env/uq --variant rtdbn_env={sw}/pooled/rtdbn_env/uq
+      --baseline phys --token {tok} --out {sw}/compare_env --n-boot 500 --by-site
+    cases: *tokens
+    id_keys: [tok]
+    cpus: 2
+    gpu: 0
+    priority: 1
+    after: [{name: pool, "on": []}]
+
+  # cluster -> environment signatures (SST, anomaly, gradient, upwelling, L3m products), from the follow-on caches
+  - name: composites_prod
+    cmd: >-
+      {py} -m {fo}.interpret composites -y {sw}/dbn_prod_env_y2023/hab_dbn_prod_env_y2023.yaml
+      --sensors snpp,jpss1,jpss2 --start 2023-01-01 --end 2026-09-30
+      --every 5 --pixels-per-scene 4000 --out {sw}/composites/dbn_prod
+    cpus: 3
+    gpu: 0
+    priority: 2
+    after: [{name: variants, "on": []}]
+
+  - name: composites
+    cmd: >-
+      {py} -m {fo}.interpret composites -y {sw}/{arm}_env_y2023/hab_{arm}_env_y2023.yaml
+      --sensors snpp,jpss1,jpss2 --start 2023-01-01 --end 2026-09-30
+      --every 5 --pixels-per-scene 4000 --out {sw}/composites/{arm}
+    grid:
+      arm: *arms
+    cpus: 3
+    gpu: 0
+    priority: 1
+    after: [{name: heads, "on": [arm]}]
+
+  # ---------------------------------------------------------------- representation comparison (Rep_Taxonomy)
+  # embeddings at the same 4 km cells (every 4th row / column of valid pixels, no cap), 2025 scenes (every 2nd day),
+  # one export per arm x VIIRS platform; dbn_prod uses the production model and weights
+  - name: export
+    cmd: >-
+      {py} -m {fo}.embed_views export -y {prodyaml} --instrument viirs --key no_trop
+      --model-config {mcfg} --model-dir {mdir}
+      --entries-from {prodcfg}/train_model_VIIRS.yaml --platform-re '(?i)^{p}'
+      --name {arm}_{p} --out {sw}/embeds/{arm}_{p} --start 2025-01-01 --end 2025-12-31 --every 2
+      --stride 4 --max-per-scene 0 --batch-size 20000
+    grid:
+      p: [snpp, jpss1, jpss2]
+    cases: &arm_models
+      - {arm: dbn_prod, mcfg: "/home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/train_model_VIIRS.yaml", mdir: "/mnt/data1/HAB_MODEL_WEIGHTS/OC_SIF_HABs_2025/VIIRS_no_trop/"}
+      - {arm: pca, mcfg: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/pca/config/model/train_model_VIIRS.yaml", mdir: "/mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/PCA/VIIRS_no_trop/"}
+      - {arm: conv_dbn, mcfg: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/conv_dbn/config/model/train_model_VIIRS.yaml", mdir: "/mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/CONV_DBN/VIIRS_no_trop/"}
+      - {arm: ijepa, mcfg: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/ijepa/config/model/train_model_VIIRS.yaml", mdir: "/mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/IJEPA/VIIRS_no_trop/"}
+      - {arm: byol, mcfg: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/byol/config/model/train_model_VIIRS.yaml", mdir: "/mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/BYOL/VIIRS_no_trop/"}
+      - {arm: dbn_seed1, mcfg: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/dbn_seed1/config/model/train_model_VIIRS.yaml", mdir: "/mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/DBN_SEED1/VIIRS_no_trop/"}
+      - {arm: mae, mcfg: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/mae/config/model/train_model_VIIRS.yaml", mdir: "/mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/MAE/VIIRS_no_trop/"}
+      - {arm: rtdbn, mcfg: "/mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/rtdbn/config/model/train_model_VIIRS.yaml", mdir: "/mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/RTDBN/VIIRS_no_trop/"}
+    id_keys: [arm, p]
+    cpus: 3
+    gpu: 0.5
+    priority: 1
+    after: [{name: smoke, "on": [arm]}]
+
+  # one bundle: all 24 views at rows (date, cell) seen by every view, + MUR SST / anomaly and L3m CHL targets
+  # (caches from the ancillary plan; JPSS1 CHL)
+  - name: pair
+    cmd: >-
+      {py} -m {fo}.embed_views pair -y {anc}/anc_all/hab_anc_all.yaml
+      --targets sst,sst_anom,phys_chlor_a --sensor jpss1 --block-days 14 --tile-deg 1.334
+      --out {sw}/bundles/bundle_viirs.npz --rep-taxonomy {rt}
+      --view dbn_prod_snpp={sw}/embeds/dbn_prod_snpp --view dbn_prod_jpss1={sw}/embeds/dbn_prod_jpss1 --view dbn_prod_jpss2={sw}/embeds/dbn_prod_jpss2
+      --view pca_snpp={sw}/embeds/pca_snpp --view pca_jpss1={sw}/embeds/pca_jpss1 --view pca_jpss2={sw}/embeds/pca_jpss2
+      --view conv_dbn_snpp={sw}/embeds/conv_dbn_snpp --view conv_dbn_jpss1={sw}/embeds/conv_dbn_jpss1 --view conv_dbn_jpss2={sw}/embeds/conv_dbn_jpss2
+      --view ijepa_snpp={sw}/embeds/ijepa_snpp --view ijepa_jpss1={sw}/embeds/ijepa_jpss1 --view ijepa_jpss2={sw}/embeds/ijepa_jpss2
+      --view byol_snpp={sw}/embeds/byol_snpp --view byol_jpss1={sw}/embeds/byol_jpss1 --view byol_jpss2={sw}/embeds/byol_jpss2
+      --view dbn_seed1_snpp={sw}/embeds/dbn_seed1_snpp --view dbn_seed1_jpss1={sw}/embeds/dbn_seed1_jpss1 --view dbn_seed1_jpss2={sw}/embeds/dbn_seed1_jpss2
+      --view mae_snpp={sw}/embeds/mae_snpp --view mae_jpss1={sw}/embeds/mae_jpss1 --view mae_jpss2={sw}/embeds/mae_jpss2
+      --view rtdbn_snpp={sw}/embeds/rtdbn_snpp --view rtdbn_jpss1={sw}/embeds/rtdbn_jpss1 --view rtdbn_jpss2={sw}/embeds/rtdbn_jpss2
+    cpus: 2
+    gpu: 0
+    priority: 1
+    after: [{name: export, "on": []}]
+
+  - name: rep_taxonomy
+    cmd: >-
+      PYTHONPATH={rt}:$PYTHONPATH {py} -m reptaxonomy.intercompare.paired_views
+      -y {rt}/reptaxonomy/config/sample/paired_views_hab_encoder_sweep.yaml
+    cpus: 6
+    gpu: 0
+    priority: 1
+    after: [{name: pair, "on": []}]
+
+  # ---------------------------------------------------------------- resources
+  # parameters and FLOPs per pixel (one prediction batch, calflops); dbn_prod for reference
+  - name: flops
+    cmd: >-
+      {py} -m {fo}.encoder_cost -y {prodyaml} --instrument viirs --model-config {mcfg} --model-dir {mdir}
+      --entries-from {prodcfg}/train_model_VIIRS.yaml --name {arm} --start 2025-07-01 --end 2025-07-07
+      --out {sw}/resources/flops
+    cases: *arm_models
+    id_keys: [arm]
+    cpus: 2
+    gpu: 0.5
+    priority: 0
+    after: [{name: smoke, "on": []}]
+
+  # fixed inference benchmark: one week, all VIIRS platforms, every valid pixel; whole budget (exclusive), so it
+  # runs once the other jobs have drained; embeddings are deleted afterwards
+  - name: bench
+    cmd: >-
+      {meter} --arm {arm} --stage inference --tag wk20250701 --gpus 0 --exclusive --
+      {py} -m {fo}.embed_views export -y {prodyaml} --instrument viirs --key no_trop
+      --model-config {mcfg} --model-dir {mdir} --entries-from {prodcfg}/train_model_VIIRS.yaml
+      --name {arm} --out {sw}/resources/bench_tmp/{arm} --start 2025-07-01 --end 2025-07-07
+      --stride 1 --max-per-scene 0 --batch-size 20000 --overwrite
+      && rm -rf {sw}/resources/bench_tmp/{arm}
+    cases: *arm_models
+    id_keys: [arm]
+    cpus: 9
+    gpu: 1
+    priority: -1
+    after: [{name: rep_taxonomy, "on": []}, {name: compare_env, "on": []}, {name: compare_rep, "on": []},
+            {name: composites, "on": []}, {name: flops, "on": []}]
+
+  # per arm / stage totals (energy, CO2e, water, wall / CPU hours, peak memory) + FLOPs / parameters + skill
+  # (mean RPSS vs phys over the 4 targets, compare_env, overall stratum) and skill per kWh
+  - name: resources_summary
+    cmd: >-
+      PYTHONPATH={rt}:$PYTHONPATH {py} -m reptaxonomy.resources.run_ledger summary --ledger {ledger}
+      --flops-dir {sw}/resources/flops --skill-csv '{sw}/compare_env/variant_compare_*.csv'
+      --skill-arm-col variant --skill-col rpss_vs_baseline --skill-filter stratum=overall --skill-arm-suffix _env
+      --out {sw}/resources/resources_summary.csv
+    cpus: 1
+    gpu: 0
+    priority: -1
+    after: [{name: bench, "on": []}]

@@ -65,8 +65,12 @@ class SFDatasetConv(SFDataset):
                                  fill_value=-999999, chan_dim=0, transform_chans=[], transform_values=[],
                                  transform=None, tile=False, tile_size=None, tile_step=None, subset_training=-1,
                                  stratify_data=None, data_fraction=1, data_fraction_index=1, basic_preprocess=False,
-                                 do_shuffle=True):
+                                 do_shuffle=True, min_valid_fraction=None):
         #Scaler info isnt used here, but keeping same interface as SFDataset
+        # min_valid_fraction (training only): drop tiles whose fraction of valid pixels (all
+        # channels valid) is below this value. None (prediction) keeps every tile so the
+        # scene can be reassembled; fill pixels are then imputed and flagged in valid_full.
+        self.min_valid_fraction = min_valid_fraction
 
         #TODO Employ stratification
         self.train_indices = None
@@ -209,17 +213,21 @@ class SFDatasetConv(SFDataset):
                 print("TESTING INDS", tmp.shape, tgts2.shape)
 
                 delete_inds = []
-                for tle in range(tmp.shape[0]):
-                    if np.max(tmp[tle]) <= -9999:
-                        delete_inds.append(tle)
-                        count = count + 1
-                    elif abs(np.std(tmp[tle])) < 0.0000001:
-                        delete_inds.append(tle)
-                        count = count + 1
+                if self.min_valid_fraction is not None:
+                    # tile layout (N, C, th, tw): fraction of pixels valid in every channel
+                    valid_frac = np.all(tmp > -999999, axis=1).reshape(tmp.shape[0], -1).mean(axis=1)
+                    for tle in range(tmp.shape[0]):
+                        if valid_frac[tle] < self.min_valid_fraction or np.max(tmp[tle]) <= -9999:
+                            delete_inds.append(tle)
+                            count = count + 1
+                        elif abs(np.std(tmp[tle])) < 0.0000001:
+                            delete_inds.append(tle)
+                            count = count + 1
 
                 if len(delete_inds) > 0:
-                    np.delete(tmp, delete_inds, axis=0)
-                    np.delete(tgts2, delete_inds, axis=0)
+                    # np.delete returns a copy; the result used to be discarded (no tile was dropped)
+                    tmp = np.delete(tmp, delete_inds, axis=0)
+                    tgts2 = np.delete(tgts2, delete_inds, axis=0)
 
                     #TODO - 0 imputation - fix with mean later
                 #data_local[r][np.where(data_local[r] <= -999999)] = 0.0
@@ -286,6 +294,22 @@ class SFDatasetConv(SFDataset):
         self.chan_dim = 1
         self.mean_per_channel = []
         self.std_per_channel = []
+        # per-pixel validity before imputation (all channels valid), used to mask outputs
+        self.valid_full = torch.all(self.data_full > -999999, dim=1)
+        if self.transform is not None:
+            # prediction: impute fill with the training channel means (as in training), so fill
+            # pixels map to 0 after Normalize instead of entering the encoder at about -1e6 / std
+            mean = None
+            for m in (self.transform.modules() if hasattr(self.transform, "modules") else []):
+                if hasattr(m, "mean") and m.mean is not None:
+                    mean = m.mean
+                    break
+            if mean is not None:
+                mean = torch.as_tensor(mean, dtype=self.data_full.dtype).reshape(-1)
+                for chan in range(min(len(mean), self.data_full.shape[self.chan_dim])):
+                    subd = self.data_full[:, chan, :, :]
+                    subd[subd <= -999999] = mean[chan]
+                    self.data_full[:, chan, :, :] = subd
         if self.transform == None:
             mean_per_channel = []
             std_per_channel = []

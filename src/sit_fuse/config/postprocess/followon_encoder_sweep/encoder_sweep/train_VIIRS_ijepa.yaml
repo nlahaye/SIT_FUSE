@@ -1,0 +1,54 @@
+# Encoder sweep arm ijepa: I-JEPA ViT, architecture defaults of emas_fire_ijepa_v5.yaml (16x16 tiles): patch 1 (one
+# token per 4 km pixel), embed 512, depth 6, 3 heads, predictor depth 5, 6 target blocks; FPN on layers 0, 1, 2 -> 512 channels.
+#   python -m sit_fuse.pipelines.habs.followon.variants train -s train_VIIRS_ijepa.yaml
+#   python -m sit_fuse.pipelines.habs.hab_training_pipeline -y /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/ijepa/train_ijepa.yaml -n 6
+# Same as the production VIIRS encoder (SNPP + JPSS1 + JPSS2, 5 bands, training window and preprocessing of the
+# base YAML) except instruments.VIIRS.no_trop.model_overrides. Cluster heads unchanged: 800 parent -> 100 child.
+# Weights: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/IJEPA/VIIRS_no_trop/   model YAML: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/ijepa/config/model/train_model_VIIRS.yaml
+# Tiles: 16x16, step 8; inference keeps the central 8x8 of each tile (data.tile_center_crop), training drops tiles
+# with < 50% valid pixels (data.min_valid_fraction). tile_size[2] = number of VIIRS channels (5).
+base_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/piplines/habs/hab_reflectance_model_train_ca_coast_2025_sensor_groups.yaml
+out: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/ijepa/train_ijepa.yaml
+output: /mnt/data1/HAB_MODEL_WEIGHTS/FOLLOWON/ENC_SWEEP/IJEPA/
+config_dir: /mnt/data1/HAB_COMBINED_RUNS/MERGED_TEST_111526/followon/encoder_sweep/ijepa/config/
+instruments: [VIIRS]
+overrides:
+  geo_zarr: {oc_geo_fpattern: /mnt/data1/cal_coast_geo.zarr, out_dir: /mnt/data1/, out_uid: cal_coast_geo}
+  instruments:
+    VIIRS:
+      no_trop:
+        input_oc_dir: [/mnt/data1/REFLECTANCES/SNPP_VIIRS/, /mnt/data1/REFLECTANCES/JPSS1_VIIRS/, /mnt/data1/REFLECTANCES/JPSS2_VIIRS/]
+        input_oc_re: ((?:SNPP|JPSS1|JPSS2)_VIIRS\.(\d{8})\.L3m\.DAY\.)RRS.*\.4km.*nc
+        run_preprocess_and_scale: true
+        model_overrides:
+          encoder_type: ijepa
+          data:
+            tile: true
+            tile_size: [16, 16, 5]
+            tile_step: [8, 8, 5]
+            tile_center_crop: true
+            min_valid_fraction: 0.5
+          ijepa:
+            patch_size: 1
+            embed_dim: 512
+            encoder_heads: 3
+            encoder_depth: 6
+            decoder_depth: 5
+            target_aspect_ratio: [0.75, 1.5]
+            target_scale: [0.15, 0.2]
+            context_aspect_ratio: 1
+            context_scale: [0.85, 1.0]
+            number_target_blocks: 6
+          encoder:
+            tiled: true
+            subset_training: 100000
+            training:
+              weight_decay: 0.05
+              momentum: 0.996
+              momentum_start_end: [0.996, 1.0]
+              stratify_data: {kmeans: false}
+              learning_rate: 0.0001
+              batch_size: 100
+              epochs: 20
+          cluster:
+            feature_maps: [0, 1, 2]

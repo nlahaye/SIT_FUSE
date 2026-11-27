@@ -70,7 +70,7 @@ YAML_TEMPLATE_HAB_TRAIN = {
   "weight_decay" : [0.0001, 0.0001],
   "nesterov_accel" : [True, True],
   "batch_size" : 128,
-  "epochs" : 30,
+  "epochs" : [75, 30],
   "accelerator" : "gpu",
   "devices" : 1,
   "gradient_clip_val" : 0.1,

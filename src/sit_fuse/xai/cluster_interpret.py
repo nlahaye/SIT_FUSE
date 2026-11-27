@@ -11,6 +11,8 @@ Products (all under <out_dir>/xai/interpret/):
   surrogate_tree_rules.txt      rules of a shallow tree fitted to all scenes
   external_enrichment.csv       per-cluster enrichment of SST fronts, Okubo-Weiss eddy cores and optional masks
   external_association.csv      NMI / Cramer's V between cluster labels and each external feature
+  external_feature_thresholds.csv   resolved thresholds of the rule features (pooled and per-scene percentiles)
+  external_feature_prevalence.csv   share of valid labelled pixels with each external feature, per scene
   reference_<name>_agreement.csv    NMI, ARI, homogeneity, completeness, V-measure, Cramer's V and coverage between
                                     the cluster labels and a categorical reference map (e.g. MBON Seascapes)
   reference_<name>_contingency.csv  cluster x reference class pixel counts
@@ -44,6 +46,15 @@ YAML (xai.interpret block, in the SIT-FUSE config):
     ow_threshold: 0.2           eddy core where W < -ow_threshold * std(W)
     pixel_km: null              grid spacing in km (null: per-pixel units)
     masks: {upwelling: [...]}   optional binary rasters, one per scene
+    rules: {name: rule}         optional rule features from named channels (sit_fuse.xai.feature_rules), e.g.
+                                upwelling: {all: [{var: ekman_pumping, op: ">", value: 0},
+                                                  {var: sst_anom30d, op: "<", value: 0}]}
+                                conditions take value or percentile (pooled over scenes, or scope: scene), minus,
+                                abs, missing, among. CLI --rules_yaml <file with rules:> adds / overrides rules;
+                                --thresholds_csv reuses the pooled cuts of an earlier run (same masks at every
+                                level / label set). Rule values are restricted to labelled pixels.
+    rules_max_pixels_per_scene: 200000   subsample per scene for the pooled percentiles
+    builtin: true               false skips sst_front / eddy_core (rules / masks only)
   reference:                    optional categorical maps on the label grid, one per scene
     seascapes:
       pattern: ".../seascape_sharks_t{t}.tif"   {t} = scene index from t_regex on the data file name; also {name},
@@ -54,6 +65,9 @@ YAML (xai.interpret block, in the SIT-FUSE config):
   Pattern placeholders for --label_pattern are the same, so class rasters can be profiled as labels
   (--label_pattern <seascape pattern> --label_scale 1 --out_subdir interpret_seascape).
   --reference_only skips the profiles, surrogates and external features (agreement tables only, every level).
+  --external_only writes only the external_* tables (no profiles, surrogates or occurrence maps), so a feature
+  run can go to its own --out_subdir next to an existing interpret folder. --n_top_clusters 0 tests every
+  cluster with >= min_cluster_pixels pixels (default 30 most frequent).
 """
 import argparse
 import os
@@ -369,31 +383,49 @@ def surrogate_models(Xp, y, groups, names, clusters, depths=(3, 4, 6), n_splits=
     return pd.DataFrame(rows), pd.DataFrame(per_cluster), rules
 
 
-def external_analysis(scenes, labels, names, clusters, ext, masks=None):
+def external_analysis(scenes, labels, names, clusters, ext, masks=None, seed=0):
     import pandas as pd
     from sklearn.metrics import normalized_mutual_info_score
+    from sit_fuse.xai.feature_rules import evaluate_all
     feats = {}
     sst, u, v = ext.get("sst"), ext.get("u"), ext.get("v")
     pk = ext.get("pixel_km")
-    if sst is not None:
+    builtin = bool(ext.get("builtin", True))
+    if builtin and sst is not None:
         j = names.index(sst)
         feats["sst_front"] = [front_mask(s[j], float(ext.get("front_percentile", 90)), pk)[0] for s in scenes]
-    if u is not None and v is not None:
+    if builtin and u is not None and v is not None:
         ju, jv = names.index(u), names.index(v)
         feats["eddy_core"] = [eddy_mask(s[ju], s[jv], float(ext.get("ow_threshold", 0.2)), pk)[0] for s in scenes]
     for mname, files in (masks or {}).items():
         feats[mname] = [read_label_raster(f) > 0 for f in files]
-    enr, assoc = [], []
+    thr_rows = []
+    rules = ext.get("rules") or {}
+    if rules:
+        idx = {n: i for i, n in enumerate(names)}
+        # values outside the labelled (valid) pixels are NaN, so pooled percentiles ignore land / filled cells
+        blocks = [(lambda c, s=s, ok=np.isfinite(l): np.where(ok, s[idx[c]], np.nan)) for s, l in zip(scenes, labels)]
+        res, thr_rows = evaluate_all(rules, blocks, ext.get("rules_fixed_thresholds"),
+                                     int(ext.get("rules_max_pixels_per_scene", 200000)), seed, set(names))
+        for rname, mv in res.items():
+            feats[rname] = [np.where(vv, m.astype(float), np.nan) for m, vv in mv]
+    enr, assoc, prev = [], [], []
     lab_all = np.concatenate([l.reshape(-1) for l in labels])
     for fname, fl in feats.items():
-        f_all = np.concatenate([m.reshape(-1) for m in fl]).astype(float)
-        ok = np.isfinite(lab_all)
+        f_all = np.concatenate([np.asarray(m, dtype=float).reshape(-1) for m in fl])
+        ok = np.isfinite(lab_all) & np.isfinite(f_all)
         enr += enrichment_table(lab_all, f_all, clusters, fname)
         a, b = lab_all[ok].astype(np.int64), f_all[ok].astype(np.int64)
-        assoc.append(dict(feature=fname, prevalence=float(b.mean()), nmi=normalized_mutual_info_score(a, b),
-                          cramers_v=cramers_v(a, b), n=int(ok.sum())))
-    return pd.DataFrame(enr), pd.DataFrame(assoc), feats
-
+        assoc.append(dict(feature=fname, prevalence=float(b.mean()) if b.size else np.nan,
+                          nmi=normalized_mutual_info_score(a, b) if b.size else np.nan,
+                          cramers_v=cramers_v(a, b) if b.size else np.nan, n=int(ok.sum()),
+                          n_scenes_present=int(sum(np.nansum(np.asarray(m, dtype=float)) > 0 for m in fl))))
+        for i, (m, l) in enumerate(zip(fl, labels)):
+            mf = np.asarray(m, dtype=float)
+            okk = np.isfinite(l) & np.isfinite(mf)
+            prev.append(dict(feature=fname, scene=i, n=int(okk.sum()),
+                             prevalence=float(mf[okk].mean()) if okk.any() else np.nan))
+    return pd.DataFrame(enr), pd.DataFrame(assoc), feats, pd.DataFrame(thr_rows), pd.DataFrame(prev)
 
 
 # ============================== REFERENCE MAPS ===============================
@@ -592,7 +624,8 @@ def run_references(labels, references, out_dir, scale=1):
     return rows
 
 
-def run(scenes, labels, names, conf, out_dir, dates=None, references=None, reference_only=False):
+def run(scenes, labels, names, conf, out_dir, dates=None, references=None, reference_only=False,
+        external_only=False):
     os.makedirs(out_dir, exist_ok=True)
     assert len(labels) > 0
     labels = [level_labels(clean_labels(l, conf["label_fill"]), conf) for l in labels]
@@ -607,7 +640,12 @@ def run(scenes, labels, names, conf, out_dir, dates=None, references=None, refer
         raise ValueError("no valid pixels")
     uniq, cnt = np.unique(y, return_counts=True)
     order = uniq[np.argsort(-cnt)]
-    clusters = [int(c) for c in order[:conf["n_top_clusters"]] if cnt[uniq == c][0] >= conf["min_cluster_pixels"]]
+    n_top = int(conf["n_top_clusters"])
+    top = order if n_top <= 0 else order[:n_top]
+    clusters = [int(c) for c in top if cnt[uniq == c][0] >= conf["min_cluster_pixels"]]
+    if external_only:
+        return dict(clusters=clusters, reference=ref_rows, **_write_external(scenes, labels, names, clusters,
+                                                                               conf, out_dir))
     long_df, wide_df = cluster_profiles(Xp, y, names, order)
     _id_columns(long_df, sc).to_csv(os.path.join(out_dir, "cluster_profiles_long.csv"), index=False)
     _id_columns(wide_df, sc).to_csv(os.path.join(out_dir, "cluster_profiles_wide.csv"), index=False)
@@ -630,17 +668,27 @@ def run(scenes, labels, names, conf, out_dir, dates=None, references=None, refer
         out["surrogate"] = m
     else:
         warnings.warn("surrogate models skipped: need >= 2 scenes for scene-grouped CV")
-    ext = conf.get("external") or {}
-    if ext:
-        enr, assoc, _ = external_analysis(scenes, labels, names, clusters, ext, ext.get("masks"))
-        enr.to_csv(os.path.join(out_dir, "external_enrichment.csv"), index=False)
-        assoc.to_csv(os.path.join(out_dir, "external_association.csv"), index=False)
-        out["enrichment"], out["association"] = enr, assoc
+    out.update(_write_external(scenes, labels, names, clusters, conf, out_dir))
     return out
 
 
+def _write_external(scenes, labels, names, clusters, conf, out_dir):
+    ext = conf.get("external") or {}
+    if not ext:
+        return {}
+    enr, assoc, _, thr, prev = external_analysis(scenes, labels, names, clusters, ext, ext.get("masks"),
+                                                 int(conf.get("seed", 0)))
+    enr.to_csv(os.path.join(out_dir, "external_enrichment.csv"), index=False)
+    assoc.to_csv(os.path.join(out_dir, "external_association.csv"), index=False)
+    if len(thr):
+        thr.to_csv(os.path.join(out_dir, "external_feature_thresholds.csv"), index=False)
+    prev.to_csv(os.path.join(out_dir, "external_feature_prevalence.csv"), index=False)
+    return dict(enrichment=enr, association=assoc, thresholds=thr)
+
+
 def main(yaml_path, level=None, k=None, hierarchy_json=None, label_input=None, out_subdir=None, label_pattern=None,
-         label_scale=None, reference_only=False, no_reference=False):
+         label_scale=None, reference_only=False, no_reference=False, rules_yaml=None, external_only=False,
+         n_top_clusters=None, no_builtin=False, thresholds_csv=None):
     from sit_fuse.utils import read_yaml
     yml_conf = read_yaml(yaml_path)
     conf = interpret_config(yml_conf)
@@ -651,6 +699,21 @@ def main(yaml_path, level=None, k=None, hierarchy_json=None, label_input=None, o
         conf["label_files"] = [expand_pattern(label_pattern, f, sf_out) for f in conf["data_files"]]
     if label_scale is not None:
         conf["label_scale"] = float(label_scale)
+    if n_top_clusters is not None:
+        conf["n_top_clusters"] = int(n_top_clusters)
+    if rules_yaml or no_builtin or thresholds_csv:
+        from sit_fuse.xai.feature_rules import load_rules
+        ext = dict(conf.get("external") or {})
+        if rules_yaml:
+            ext["rules"] = {**(ext.get("rules") or {}), **load_rules(rules_yaml)}
+        if no_builtin:
+            ext["builtin"] = False
+        if thresholds_csv:                    # pooled cuts of an earlier run (e.g. the fine level): identical masks
+            from sit_fuse.xai.feature_rules import thresholds_from_csv
+            ext["rules_fixed_thresholds"] = thresholds_from_csv(thresholds_csv)
+        conf["external"] = ext
+    if external_only and not conf.get("external"):
+        raise ValueError("--external_only needs xai.interpret.external or --rules_yaml")
     if level:
         lv = dict(conf.get("level") or {})
         lv["level"] = level
@@ -682,7 +745,7 @@ def main(yaml_path, level=None, k=None, hierarchy_json=None, label_input=None, o
         raise ValueError("--reference_only needs an xai.interpret.reference block")
     scenes = None if reference_only else [read_raw_scene(yml_conf, f) for f in conf["data_files"]]
     out_dir = os.path.join(sf_out, "xai", out_subdir)
-    run(scenes, labels, list(names), conf, out_dir, conf.get("dates"), references, reference_only)
+    run(scenes, labels, list(names), conf, out_dir, conf.get("dates"), references, reference_only, external_only)
 
 
 if __name__ == "__main__":
@@ -698,6 +761,15 @@ if __name__ == "__main__":
     p.add_argument("--label_scale", type=float, default=None, help="overrides xai.interpret.label_scale")
     p.add_argument("--reference_only", action="store_true", help="agreement tables only (no raw scenes)")
     p.add_argument("--no_reference", action="store_true", help="skip the xai.interpret.reference maps")
+    p.add_argument("--rules_yaml", default=None, help="YAML with rules: {name: rule} (sit_fuse.xai.feature_rules)")
+    p.add_argument("--external_only", action="store_true", help="external_* tables only (use with --out_subdir)")
+    p.add_argument("--n_top_clusters", type=int, default=None, help="0 = every cluster (default from YAML, 30)")
+    p.add_argument("--thresholds_csv", default=None,
+                   help="external_feature_thresholds.csv of an earlier run: reuse its pooled rule thresholds")
+    p.add_argument("--no_builtin", action="store_true", help="skip sst_front / eddy_core (rules and masks only)")
     a = p.parse_args()
+    if a.external_only and not a.out_subdir:
+        p.error("--external_only needs --out_subdir (keeps the existing interpret folder unchanged)")
     main(a.yaml, a.level, a.k, a.hierarchy_json, a.label_input, a.out_subdir, a.label_pattern, a.label_scale,
-         a.reference_only, a.no_reference)
+         a.reference_only, a.no_reference, a.rules_yaml, a.external_only, a.n_top_clusters, a.no_builtin,
+         a.thresholds_csv)

@@ -82,7 +82,10 @@ def load_frozen_encoder(yml_conf, dataset, accelerator):
         encoder_dir = os.path.join(model_save_dir(yml_conf), "encoder")
 
         encoder.pca = joblib.load(os.path.join(encoder_dir, "pca.pkl"))
-    if encoder_type is not None and  "dbn" in encoder_type:
+    if encoder_type == "rtdbn":
+        from sit_fuse.models.encoders.rtdbn_seq_encoder import load_rtdbn_encoder, encoder_dir as _rt_dir
+        encoder = load_rtdbn_encoder(yml_conf, int(dataset.data_full.shape[1]), _rt_dir(yml_conf))
+    elif encoder_type is not None and  "dbn" in encoder_type:
         model_type = tuple(yml_conf["dbn"]["model_type"])
         dbn_arch = tuple(yml_conf["dbn"]["dbn_arch"])
         gibbs_steps = tuple(yml_conf["dbn"]["gibbs_steps"])
@@ -170,6 +173,23 @@ def load_frozen_encoder(yml_conf, dataset, accelerator):
     return encoder, encoder_type, in_chans, tile_size
 
 
+def _module_width(model):
+    pm = getattr(model, "pretrained_model", None)
+    if pm is None:
+        return None
+    seg = getattr(pm, "segmentor", None)
+    if seg is not None and hasattr(seg, "fusion"):
+        return int(seg.fusion.out_channels)
+    enc = getattr(pm, "pretrained_model", None)
+    if enc is not None and hasattr(getattr(enc, "fusion", None), "out_channels"):     # clay Segmentor
+        return int(enc.fusion.out_channels)
+    if enc is not None and getattr(enc, "out_dim", None):
+        return int(enc.out_dim)
+    if enc is not None and hasattr(enc, "models") and hasattr(enc.models[-1], "n_hidden"):
+        return int(enc.models[-1].n_hidden)
+    return None
+
+
 def head_input_size(yml_conf, model, encoder):
     """Input size of every child head (same for every parent key)."""
     # Head input size is the same for every key: compute it (and run get_output_shape) once.
@@ -177,6 +197,10 @@ def head_input_size(yml_conf, model, encoder):
     n_visible = 0
     if "encoder_type" not in yml_conf.keys():
         n_visible = yml_conf["data"]["tile_size"][2] * yml_conf["data"]["tile_size"][0] * yml_conf["data"]["tile_size"][1]
+    elif _module_width(model) is not None:
+        # width of the embedding the heads see, read from the built model (segmentor fusion
+        # channels, DBN / RT-DBN output); the constants below are fallbacks only
+        n_visible = _module_width(model)
     elif yml_conf["encoder_type"] == "ijepa":
         #TODO encoder_output_size = get_output_shape(model.pretrained_model.pretrained_model.model, (2, in_chans,model.pretrained_model.pretrained_model.img_size,model.pretrained_model.pretrained_model.img_size))
         #n_visible = encoder_output_size[2] #[1]*encoder_output_size[2]
@@ -201,7 +225,6 @@ def head_input_size(yml_conf, model, encoder):
     elif yml_conf["encoder_type"] == "pca":
         encoder_output_size = (1, model.pretrained_model.pretrained_model.pca.components_.shape[0])
         n_visible = encoder_output_size[1]
-    print("HERE ENCODER SHAPE", encoder_output_size)
     return n_visible
 
 

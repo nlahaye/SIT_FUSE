@@ -90,7 +90,6 @@ class JEPASegmentEncoder(nn.Module):
         _, _cube = self.vit_encoder.student_encoder.forward(x, return_hiddens=True)
         _cube = _cube.layer_hiddens 
 
-        print(len(_cube)) 
         for idx in range(len(_cube)):
             if idx in self.feature_maps:
                 tmp_cube = rearrange(
@@ -128,7 +127,8 @@ class JEPASegmentor(nn.Module):
             nn.Upsample(scale_factor=4),
         ]
 
-        chan_mult = len(feature_maps)  + 6 #7
+        # channels per FPN op: fpn1 4D, fpn2 4D, fpn3-5 D (was len(feature_maps) + 6, valid for 3 maps only)
+        chan_mult = sum((4, 4, 1, 1, 1)[k] for k in range(len(feature_maps)))
 
         self.fusion = nn.Conv2d(self.encoder.vit_encoder.student_encoder.dim *chan_mult, self.encoder.vit_encoder.student_encoder.dim, kernel_size=1)
         self.seg_head = nn.Conv2d(self.encoder.vit_encoder.student_encoder.dim, num_classes, kernel_size=1)

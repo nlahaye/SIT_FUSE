@@ -500,6 +500,21 @@ def get_model(yml_conf, n_visible):
 
         encoder.eval()
 
+    elif encoder_type == "rtdbn":
+        from sit_fuse.models.encoders.rtdbn_seq_encoder import load_rtdbn_encoder, seq_len_from_conf
+        n_feat = n_visible
+        if not n_feat:
+            v = (yml_conf.get("rtdbn", {}) or {}).get("n_visible")
+            try:
+                state = torch.load(os.path.join(_encoder_dir(yml_conf), "rtdbn.ckpt"), map_location="cpu")
+                w = state.get("models.0.W")
+                if w is not None:
+                    v = int(w.shape[0])
+            except Exception:
+                pass
+            n_feat = int(v) * seq_len_from_conf(yml_conf)
+        encoder = load_rtdbn_encoder(yml_conf, int(n_feat), _encoder_dir(yml_conf))
+
     elif encoder_type is not None and encoder_type == "byol":
         save_dir_byol = yml_conf["output"]["out_dir"]
 

@@ -14,6 +14,19 @@ from einops import rearrange, repeat
 from torch import nn
 
 
+def _patch_hw(vit):
+    """Patch height/width of a vit_pytorch ViT (from its patch-embedding Rearrange)."""
+    for m in vit.to_patch_embedding.modules():
+        lens = getattr(m, "axes_lengths", None)
+        if lens:
+            d = dict(lens)
+            if "p1" in d and "p2" in d:
+                return int(d["p1"]), int(d["p2"])
+    ps = getattr(vit, "patch_size", 1)
+    ps = ps if isinstance(ps, (tuple, list)) else (ps, ps)
+    return int(ps[0]), int(ps[1])
+
+
 class MAESegmentEncoder(nn.Module):
     """
     Encoder class for segmentation tasks, incorporating a feature pyramid
@@ -74,13 +87,14 @@ class MAESegmentEncoder(nn.Module):
         cube = torch.squeeze(cube)
         B, C, H, W = cube.shape
 
-      
-        print(cube.shape)
- 
+        ph, pw = _patch_hw(self.vit_encoder)
         x = self.vit_encoder.to_patch_embedding(cube)
         b, n, _ = x.shape
 
-        x += self.vit_encoder.pos_embedding[:, :n] #(n + 1)]
+        # vit_pytorch MAE adds pos_embedding[:, 1:n+1] during pretraining (slot 0 is the cls token)
+        pe = self.vit_encoder.pos_embedding
+        off = 1 if pe.shape[1] == n + 1 else 0
+        x = x + pe[:, off:off + n].to(dtype=x.dtype)
 
         features = []
         idx = 0
@@ -90,11 +104,10 @@ class MAESegmentEncoder(nn.Module):
             if idx in self.feature_maps:
                 _cube = x.clone()
                 tmp_cube = rearrange(
-                    _cube, "B (H W) D -> B D H W", H=H // 1, W=W // 1
+                    _cube, "B (H W) D -> B D H W", H=H // ph, W=W // pw
                 )
                 features.append(tmp_cube)
             idx = idx + 1
-            print("HERE idx", idx, self.feature_maps, len(features))
 
         # Apply FPN layers
         ops = [self.fpn1, self.fpn2, self.fpn3, self.fpn4, self.fpn5]

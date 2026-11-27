@@ -2988,6 +2988,9 @@ def read_annotation(ann_file):
 
 
 def get_read_func(data_reader):
+    if data_reader == "temporal_stack":
+        from sit_fuse.datasets.temporal_stack import read_temporal_stack
+        return read_temporal_stack
     if data_reader == "emit":
         return read_emit
     if data_reader == "emit_l2":

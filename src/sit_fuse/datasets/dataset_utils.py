@@ -148,7 +148,7 @@ def get_train_dataset_sf(yml_conf):
             data.read_and_preprocess_data(data_train, read_func, data_reader_kwargs, delete_chans=delete_chans, \
                  valid_min=valid_min, valid_max=valid_max, fill_value =fill, chan_dim = chan_dim, transform_chans=transform_chans, \
                  transform_values=transform_values, transform=None, tile=tiled, tile_size=tile_size, tile_step=tile_step,
-                 subset_training = subset_training)
+                 subset_training = subset_training, min_valid_fraction=yml_conf["data"].get("min_valid_fraction", 0.5))
         else:
            transform = None
            if os.path.exists(os.path.join(out_dir, "encoder_data_transform.ckpt")):
