@@ -1,0 +1,41 @@
+# 26 July 2026 case-study animations at 30-min frames (Oregon fires and Big Grass Fire; smoke + fire, and TEMPO NO2
+# with the standard and smoke-aware cloud masks), run alongside the main GOES fire plan with its own state_dir:
+#   cd SIT_FUSE/src/sit_fuse/train
+#   python -m sit_fuse.local_launcher list plan_anim30_0726.yaml
+#   python -m sit_fuse.local_launcher run  plan_anim30_0726.yaml [--only 'no2_*' 'anim_*no2*' ...]
+# Jobs: random_forest GOES fire production at 30 min (heads linked from the smoke 0726 production), NO2 pull + mask
+# (needs the smoke 0726 fused rasters), then the dry runs (frame tables) and the renders. Separate launchers do not
+# share a CPU budget: cpus below is what this plan uses on top of the main plan.
+launcher:
+  state_dir: /data/nlahaye/output/Learnergy/launch_anim30_0726
+  gpus: 0
+  cpus: 16
+vars:
+  py: python
+  train: /home/nlahaye/SIT_FUSE/src/sit_fuse/train
+jobs:
+  - name: prod_fire_rf30
+    cmd: "cd {train} && {py} build_production_run.py production_2026_goes_fire_rf30_0726.yaml --run"
+    cases: [{src: fire}]
+    cpus: 12
+  - name: no2_pull
+    cmd: "cd {train} && {py} no2_smoke_cloud_mask.py -c no2_smoke_mask.oregon_0726.yaml --stage pull"
+    cases: [{src: no2}]
+    cpus: 4
+  - name: no2_mask
+    cmd: "cd {train} && {py} no2_smoke_cloud_mask.py -c no2_smoke_mask.oregon_0726.yaml --stage mask -n 8"
+    cases: [{src: no2}]
+    after: [no2_pull]
+    cpus: 8
+  - name: anim_dry
+    cmd: "cd {train} && {py} make_overlay_animations.py -c configs/animations/anim30_{case}.yaml --dry-run"
+    cases: [{case: oregon_0726, src: fire}, {case: big_grass_0726, src: fire},
+            {case: no2_oregon_0726, src: no2}, {case: no2_big_grass_0726, src: no2}]
+    after: [{name: prod_fire_rf30, "on": [src]}, {name: no2_mask, "on": [src]}]
+    cpus: 1
+  - name: anim
+    cmd: "cd {train} && {py} make_overlay_animations.py -c configs/animations/anim30_{case}.yaml --workers 8"
+    cases: [{case: oregon_0726, src: fire}, {case: big_grass_0726, src: fire},
+            {case: no2_oregon_0726, src: no2}, {case: no2_big_grass_0726, src: no2}]
+    after: [anim_dry]
+    cpus: 8
