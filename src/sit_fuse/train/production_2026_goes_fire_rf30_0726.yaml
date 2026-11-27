@@ -1,0 +1,44 @@
+# GOES-18 fire production for the Oregon fires on 26 July 2026, TEMPO-style GOES fire model (UQ_FIRE_TS2026),
+# random_forest only, first ABI scene per 30-min UTC bin. Interim run for the 30-min case-study animations while the
+# other models of uq_parallel.goes_fire_ts_2026.yaml are still in inference; the 5-min hist_gradient_boosting run
+# (production_2026_goes_fire_ts_0726.yaml, with fused fire) replaces it later. Independent of the main plan
+# (own output_root and launcher state_dir), so it can run while that plan is running:
+#   python build_production_run.py production_2026_goes_fire_rf30_0726.yaml --run
+# Needs: UQ_FIRE_TS2026/training (random_forest model, calibrators, thresholds; written before inference) and the
+# head outputs of the smoke 0726 production (linked via heads_from; nothing is exported when all exist).
+# No fusion: the 5-min fire_ts fusion weights are not fitted yet. Geo export warns (does not fail) while the
+# evaluation's area_interval_calibration.json is missing.
+
+output_root: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_FIRE_TS_RF30
+start: 2026-07-26T12:00:00Z
+end: 2026-07-27T06:00:00Z
+bbox: [-125.0, -110.0, 40.0, 49.0]
+python: python
+resume: true
+launcher:
+  cpus: 12                             # the main plan's launcher has its own 48-core budget: keep this small
+  gpus: [1]                            # only used if a head output is missing (export); smoke heads cover 0726
+  state_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_FIRE_TS_RF30/launch
+resources: {infer: 4, infer_merge: 2, geo: 4}
+shards: {inference: 3}
+export: {shards: 1, cpus: 4, gpu: 1}
+
+sensors:
+  goes:
+    inputs: /data/nlahaye/remoteSensing/GOES_TEMPO/new_data_2026_07     # CHECK (or the .RGB.tif stand-ins; see below)
+    pattern: "OR_ABI-L1b-RadC-M6C01_G18_s*.tif"
+    every_minutes: 30                   # first input per 30-min UTC bin (same bins as frames.goes_every_minutes: 30)
+    bbox_filter: false
+    # stand_in_suffix: .RGB.tif         # set if the full GOES GeoTIFFs were replaced by 4-band RGB copies
+    heads_from:                         # same-encoder head outputs to link instead of exporting (recursive, tag-checked)
+      - /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_SMOKE/heads      # smoke 0726 production (all 5-min scenes)
+      - /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_FIRE_TS/heads    # 5-min fire TS production, if started
+      - /data/nlahaye/output/Learnergy/PRODUCTION_2026_07/heads                   # smoke quick test (hourly scenes)
+      - /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED                         # smoke / fire evaluation heads
+
+pipelines:
+  goes_fire:
+    sensor: goes
+    uq_config: goes18/g18_uq_config_fire_ts.yaml         # TEMPO-style GOES fire run (UQ_FIRE_TS2026)
+    export_config: goes18/g18_export_fire.yaml           # GOES encoder (goes_tempo_test_3, GOES_TEMPO_UPDATED)
+    models: [random_forest]

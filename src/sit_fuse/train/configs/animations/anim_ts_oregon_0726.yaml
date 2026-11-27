@@ -11,8 +11,8 @@ name: ts_oregon_0726
 output_dir: /data/nlahaye/output/Learnergy/ANIMATIONS/FULL_2026_TS/oregon_0726
 cache_dir: /data/nlahaye/output/Learnergy/ANIMATIONS/FULL_2026_TS/_cache
 time_range: [2026-07-26T12:00:00Z, 2026-07-27T06:00:00Z]
-bbox: [-122.0, -115.9, 41.65, 45.8]   # the six Oregon fires (as oregon_fire_0726 of the fire production)
-resolution: 0.01
+bbox: [-124.6, -113.6, 40.6, 47.4]   # expanded (was [-122.0, -115.9, 41.65, 45.8]; same box as anim30_oregon_0726.yaml)
+resolution: 0.015
 split_by: none
 title: "Oregon fires, 26 July 2026: SIT-FUSE smoke and fire, TEMPO + GOES-18"
 frames:
@@ -42,17 +42,20 @@ products:
   fused_smoke: {geo_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_SMOKE/fusion_smoke/fine, model: fused, product: smoke, sensor: fused}     # 5-min
   fused_fire:  {geo_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_FIRE_TS/fusion_fire_ts/fine, model: fused, product: fire, sensor: fused}  # 5-min
 
-ncols: 3
+ncols: 4                         # rows: TEMPO | GOES | fused (+ TEMPO UV); last column: smoke + fire
 panels:
   - {title: TEMPO RGB, obs: tempo_rgb, overlays: []}
-  - {title: TEMPO UV RGB, obs: tempo_uv_rgb, overlays: []}
-  - {title: GOES ABI true colour, obs: goes, overlays: []}
   - {title: TEMPO smoke, obs: tempo_rgb, overlays: [tempo_smoke]}
-  - {title: GOES smoke, obs: goes, overlays: [goes_smoke]}
-  - {title: Fused smoke (GOES grid), obs: goes, overlays: [fused_smoke]}
   - {title: TEMPO fire, obs: tempo_rgb, overlays: [tempo_fire]}
+  - {title: TEMPO smoke + fire, obs: tempo_rgb, overlays: [tempo_smoke, tempo_fire]}
+  - {title: GOES ABI true colour, obs: goes, overlays: []}
+  - {title: GOES smoke, obs: goes, overlays: [goes_smoke]}
   - {title: GOES fire, obs: goes, overlays: [goes_fire]}
+  - {title: GOES smoke + fire, obs: goes, overlays: [goes_smoke, goes_fire]}
+  - {title: TEMPO UV RGB, obs: tempo_uv_rgb, overlays: []}
+  - {title: Fused smoke (GOES grid), obs: goes, overlays: [fused_smoke]}
   - {title: Fused fire (GOES grid), obs: goes, overlays: [fused_fire]}
+  - {title: Fused smoke + fire (GOES grid), obs: goes, overlays: [fused_smoke, fused_fire]}
 
 style:
   smoke: {cmap: cool, alpha_max: 0.65, p_min: 0.15, p_max: 0.9, contour: true}

@@ -12,6 +12,8 @@ Contrast      enhance_rgb: after the fixed stretch, the luminance is histogram-e
               sampled across the whole animation (stable, no flicker), blended with the stretched luminance
               (strength), optionally unsharp-masked, and RGB rescaled by the luminance ratio (hue preserved).
               method clahe (local, per frame, scikit-image) and linear (stretch only) are alternatives.
+Fields        continuous rasters (FieldSource, e.g. TEMPO NO2 with the smoke-aware cloud mask) drawn with a value
+              colormap; a class band can be outlined (e.g. smoke-recovered cells).
 Products      export_geo_products.py rasters (uq_viz.data.GeoProductIndex), probability band drawn with an alpha
               ramp (transparent at low probability) and the decision mask as a contour (and points for fire).
 Everything is warped onto one display grid (EPSG:4326, bbox, resolution). The frame plan holds only paths and
@@ -491,6 +493,67 @@ class ProductSource:
         return self._spec(self.df.iloc[[i]])
 
 
+class FieldSource:
+    """A continuous geophysical field (e.g. TEMPO L3 NO2 from no2_smoke_cloud_mask.py) drawn with a value colormap
+    instead of a probability ramp. One file per scan; a band selected by its description, an optional class band
+    whose `mask_values` are outlined (e.g. mask_class 3 = smoke-recovered cells). Scan time from the `time_tag`
+    tag (default scan_start), else from the file name. Held causally under GOES frames like TEMPO products
+    (latest scan at or before the frame, up to max_age_minutes)."""
+
+    def __init__(self, name: str, cfg: dict, t0, t1, grid: Grid):
+        self.name, self.cfg = name, cfg
+        self.sensor = "field"                                   # own timing (never a TEMPO / GOES frame source)
+        self.product = self.style = cfg.get("style", name)
+        self.band = cfg["band"]
+        self.mask_band = cfg.get("mask_band")
+        self.mask_values = [float(v) for v in (cfg.get("mask_values") or [])]
+        self.max_age = cfg.get("max_age_minutes")
+        dirs = cfg["dir"] if isinstance(cfg["dir"], (list, tuple)) else [cfg["dir"]]
+        rows = []
+        for d in dirs:
+            for f in _list(d, cfg.get("glob", "*.tif"), recursive=bool(cfg.get("recursive", True))):
+                try:
+                    with rasterio.open(f) as s:
+                        desc = list(s.descriptions)
+                        tag = s.tags().get(cfg.get("time_tag", "scan_start"))
+                except Exception as e:  # noqa: BLE001  (unreadable file: skipped)
+                    LOG.warning("field %s: %s unreadable (%s); skipped", name, f, _root_error(e)[:120])
+                    continue
+                if self.band not in desc:
+                    continue
+                t = utc(tag) if tag else time_from_name(Path(f).name)
+                if t is None:
+                    continue
+                rows.append({"path": str(f), "time": t, "bands": desc})
+        if not rows:
+            raise FileNotFoundError(f"field {name}: no rasters with band {self.band!r} under {dirs}")
+        df = pd.DataFrame(rows)
+        df = df[(df.time >= t0) & (df.time < t1)]
+        keep = [intersects(file_bounds_4326(p), grid) for p in df.path]
+        df = df[np.asarray(keep, bool)] if len(df) else df
+        self.df = df.sort_values("time").reset_index(drop=True)
+        LOG.info("field %s (band %s): %d scans in range and box", name, self.band, len(self.df))
+
+    def _spec(self, r):
+        b = list(r.bands)
+        return {"kind": "field", "name": self.name, "product": self.style, "paths": [r.path], "time": r.time,
+                "band": b.index(self.band) + 1,
+                "mask_band": b.index(self.mask_band) + 1 if self.mask_band in b else None,
+                "mask_values": self.mask_values, "threshold": None,
+                "resampling": self.cfg.get("resampling", "nearest")}
+
+    def nearest(self, t, window_minutes, causal=True, max_age_minutes=None):
+        if self.df.empty:
+            return None
+        lim = pd.Timedelta(minutes=float(self.max_age if self.max_age is not None else
+                                         max_age_minutes if max_age_minutes is not None else window_minutes))
+        dt = (t - self.df.time) if causal else (self.df.time - t).abs()
+        ok = (dt >= pd.Timedelta(0)) & (dt <= lim)
+        if not ok.any():
+            return None
+        return self._spec(self.df.loc[dt[ok].idxmin()])
+
+
 # ---------------------------------------------------------------------------
 # rendering
 # ---------------------------------------------------------------------------
@@ -502,6 +565,14 @@ DEFAULT_STYLE = {
              "contour": True, "contour_color": "#ff2a00", "points": True, "point_color": "#ff2a00",
              "label": "P(fire)"},
 }
+# field styles (kind: field; FieldSource layers such as NO2): cmap, vmin, vmax, scale (linear | log), alpha_max
+# (constant where the field is finite), only_mask (draw only the outlined cells), contour, contour_color, label,
+# outline_label, outline_only (draw only the mask contour, no colour layer and no colourbar of its own, e.g.
+# near-fire cells over an NO2 panel); the "no2" entry is the default for TEMPO NO2 vertical columns (molecules cm-2)
+DEFAULT_STYLE["no2"] = {"kind": "field", "cmap": "viridis", "vmin": 1e15, "vmax": 2e16, "scale": "log",
+                        "alpha_max": 0.8, "contour": True, "contour_color": "#ffffff", "contour_width": 0.6,
+                        "points": False, "only_mask": False, "label": "TEMPO tropospheric NO2 (molecules cm$^{-2}$)",
+                        "outline_label": "outline = smoke-recovered cells"}
 # style keys: cmap, alpha_max, p_min, p_max, alpha_gamma, scale (linear | log: ramp in log10 p, for rare classes
 # whose decision cutoffs are far below 0.05, e.g. GOES/TEMPO fire), contour, contour_color, contour_width, points,
 # point_color, point_size, label
@@ -636,6 +707,13 @@ def product_layers(spec: dict, grid: Grid):
     """Probability and decision mask of a product spec on the display grid."""
     if spec is None:
         return None, None
+    if spec.get("kind") == "field":                  # value field + class band outlined where in mask_values
+        p = mosaic(spec["paths"], [spec["band"]], grid, spec.get("resampling", "nearest"))[0]
+        m = None
+        if spec.get("mask_band"):
+            c = mosaic(spec["paths"], [spec["mask_band"]], grid, "nearest")[0]
+            m = np.where(np.isfinite(c), np.isin(c, spec.get("mask_values") or [1.0]).astype(np.float32), np.nan)
+        return p, m
     p = mosaic(spec["paths"], [spec["band"]], grid, "bilinear")[0]
     m = mosaic(spec["paths"], [spec["mask_band"]], grid, "nearest")[0] if spec.get("mask_band") else None
     if m is None and spec.get("threshold") is not None:
@@ -647,6 +725,8 @@ def overlay_rgba(p: np.ndarray, st: dict):
     """See-through overlay: colour from the colormap, alpha rising from 0 at p_min to alpha_max at p_max."""
     import matplotlib
     cmap = matplotlib.colormaps[st["cmap"]]
+    if st.get("kind") == "field":                    # value colormap, constant alpha where finite
+        return field_rgba(p, st, cmap)
     lo, hi = float(st["p_min"]), float(st["p_max"])
     x = np.nan_to_num(p, nan=0.0)
     if st.get("scale", "linear") == "log":         # rare-class products (fire): ramp in log10(p)
@@ -657,6 +737,21 @@ def overlay_rgba(p: np.ndarray, st: dict):
         q = np.clip((x - lo) / max(hi - lo, 1e-6), 0, 1)
     rgba = cmap(q)
     rgba[..., 3] = float(st["alpha_max"]) * q ** float(st.get("alpha_gamma", 1.0)) * (np.nan_to_num(p) >= lo)
+    return rgba
+
+
+def field_norm(st):
+    from matplotlib.colors import LogNorm, Normalize
+    lo, hi = float(st["vmin"]), float(st["vmax"])
+    return LogNorm(max(lo, 1e-30), hi) if st.get("scale", "linear") == "log" else Normalize(lo, hi)
+
+
+def field_rgba(p, st, cmap, m=None):
+    norm = field_norm(st)
+    ok = np.isfinite(p) & ((p > 0) if st.get("scale", "linear") == "log" else True)
+    q = np.clip(np.ma.filled(norm(np.where(ok, p, float(st["vmax"]))), 0.0), 0, 1)
+    rgba = cmap(q)
+    rgba[..., 3] = float(st.get("alpha_max", 0.8)) * ok
     return rgba
 
 
@@ -684,6 +779,28 @@ def render_frame(fr: dict, static: dict, out_png: str) -> str:
     aspect = (ext[3] - ext[2]) / np.cos(np.deg2rad(0.5 * (ext[2] + ext[3]))) / (ext[1] - ext[0])
     pw = float(static.get("panel_width", 3.6))
     kinds = sorted({o["product"] for pn in panels for o in (pn or {}).get("overlays", []) if o}, key=lambda k: (k != "smoke", k != "fire", k))
+    seen, kk = {}, []                                    # one colourbar per distinct field colour scale
+    extra = [styles[k]["outline_label"] for k in kinds
+             if styles[k].get("outline_only") and styles[k].get("outline_label")]
+    kinds = [k for k in kinds if not styles[k].get("outline_only")]
+    for k in kinds:
+        st = styles[k]
+        if st.get("kind") == "field":
+            key = (st["cmap"], float(st["vmin"]), float(st["vmax"]), st.get("scale", "linear"))
+            if key in seen:
+                notes_ = seen[key].setdefault("_outlines", [])
+                if st.get("outline_label") and st["outline_label"] not in notes_:
+                    notes_.append(st["outline_label"])
+                continue
+            seen[key] = dict(st, _outlines=[st["outline_label"]] if st.get("outline_label") else [])
+            styles = dict(styles, **{f"_cb_{k}": seen[key]})
+            kk.append(f"_cb_{k}")
+        else:
+            kk.append(k)
+    kinds = kk
+    fb = [k for k in kinds if styles[k].get("kind") == "field"]
+    if extra and fb:                                     # outline-only notes go on the first field colourbar
+        styles[fb[0]] = dict(styles[fb[0]], _outlines=list(styles[fb[0]].get("_outlines") or []) + extra)
     cb_h = 0.55 if kinds else 0.0
     aw = 0.86 * pw                                       # drawn map width (panel width less margins and spacing)
     row_h = aw * aspect + 0.45
@@ -725,7 +842,10 @@ def render_frame(fr: dict, static: dict, out_png: str) -> str:
             p, m = product_layers(o, grid)
             if p is None:
                 continue
-            ax.imshow(overlay_rgba(p, st), extent=ext, origin="upper", interpolation="nearest", zorder=3)
+            if st.get("kind") == "field" and st.get("only_mask"):       # e.g. only the smoke-recovered NO2 cells
+                p = np.where(np.nan_to_num(m) >= 1, p, np.nan) if m is not None else np.full_like(p, np.nan)
+            if not st.get("outline_only"):                  # outline_only: just the mask contour (e.g. near fire)
+                ax.imshow(overlay_rgba(p, st), extent=ext, origin="upper", interpolation="nearest", zorder=3)
             if m is not None and np.nanmax(np.nan_to_num(m)) >= 1:
                 x = grid.west + (np.arange(grid.width) + 0.5) * grid.res
                 y = grid.north - (np.arange(grid.height) + 0.5) * grid.res
@@ -749,16 +869,29 @@ def render_frame(fr: dict, static: dict, out_png: str) -> str:
     if kinds:
         holder = fig.add_subplot(gs[nrow, :])
         holder.axis("off")
+        import textwrap
+        wfrac = 0.9 / len(kinds) - 0.08
+        # colourbar labels wrapped to the bar width (~0.55 em per character at 7 pt) so neighbours do not overlap
+        wrap = lambda t: "\n".join(textwrap.wrap(t, max(28, int(fig.get_figwidth() * 72 * 0.9 * wfrac / (7 * 0.55)))))  # noqa: E731
         for i, k in enumerate(kinds):
             st = styles[k]
-            cax = holder.inset_axes([0.06 + i * (0.9 / len(kinds)), 0.62, 0.9 / len(kinds) - 0.08, 0.28])
+            cax = holder.inset_axes([0.06 + i * (0.9 / len(kinds)), 0.62, wfrac, 0.28])
             log = st.get("scale", "linear") == "log"
+            if st.get("kind") == "field":
+                cb = fig.colorbar(ScalarMappable(norm=field_norm(st), cmap=st["cmap"]), cax=cax,
+                                  orientation="horizontal")
+                outl = st.get("_outlines") or ([st["outline_label"]] if st.get("outline_label") else [])
+                cb.set_label(wrap(f"{st['label']}" + (f"  ({'; '.join(outl)})" if outl else "")), fontsize=7)
+                from matplotlib.ticker import NullFormatter
+                cb.ax.xaxis.set_minor_formatter(NullFormatter())
+                cb.ax.tick_params(labelsize=6.5)
+                continue
             lo = max(float(st["p_min"]), 1e-6) if log else float(st["p_min"])
             norm = LogNorm(lo, max(float(st["p_max"]), 2 * lo)) if log else Normalize(lo, float(st["p_max"]))
             sm = ScalarMappable(norm=norm, cmap=st["cmap"])
             cb = fig.colorbar(sm, cax=cax, orientation="horizontal")
-            cb.set_label(f"{st['label']}{' (log scale)' if log else ''}  (transparent below {lo:g}; "
-                         f"outline = decision mask)",
+            cb.set_label(wrap(f"{st['label']}{' (log scale)' if log else ''}  (transparent below {lo:g}; "
+                              f"outline = decision mask)"),
                          fontsize=7)
             cb.ax.tick_params(labelsize=6.5)
     fig.suptitle(f"{static.get('title') or 'SIT-FUSE probabilistic products'}  |  {fr['time']:%Y-%m-%d %H:%M} UTC",

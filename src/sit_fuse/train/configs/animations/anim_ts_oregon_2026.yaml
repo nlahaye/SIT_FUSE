@@ -1,7 +1,8 @@
 # SIT-FUSE evaluation-period animation: TEMPO + GOES-18 smoke and fire, plus fused smoke and fire, from the
 # full all-scene run (uq_parallel.full_2026.yaml); GOES fire and fused fire from the TEMPO-style GOES fire run
 # (uq_parallel.goes_fire_ts_2026.yaml: UQ_FIRE_TS2026, FUSION/UQ_FIRE_TS) and fused smoke from the 5-min smoke
-# fusion (FUSION/UQ_SMOKE_RECAL_5MIN); one frame per 5-min GOES scene. Run from SIT_FUSE/src/sit_fuse/train:
+# fusion (FUSION/UQ_SMOKE_RECAL_5MIN); one frame per 30-min UTC bin (30-MIN; was every 5-min GOES scene).
+# Run from SIT_FUSE/src/sit_fuse/train:
 #   python make_overlay_animations.py -c configs/animations/anim_ts_oregon_2026.yaml --dry-run      # frame tables only
 #   python make_overlay_animations.py -c configs/animations/anim_ts_oregon_2026.yaml --workers 8 [--shard i/N]
 name: ts_oregon_2026
@@ -13,7 +14,8 @@ resolution: 0.01
 split_by: day
 title: "Oregon fires 2026: SIT-FUSE smoke and fire, TEMPO + GOES-18"
 frames:
-  base: goes                     # one frame per 5-min GOES scene: the TEMPO-style GOES fire run covers Oregon
+  goes_every_minutes: 30         # 30-MIN: first GOES scene per 30-min UTC bin (GOES fire / fusion at 30 min)
+  base: goes                     # one frame per 30-min bin: the TEMPO-style GOES fire run covers Oregon
   goes_window_minutes: 3         # (pin_splits checks it); TEMPO held causally between its hourly scans
   tempo_causal: true
   tempo_max_age_minutes: 60

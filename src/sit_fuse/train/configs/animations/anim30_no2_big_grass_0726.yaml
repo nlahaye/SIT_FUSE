@@ -1,0 +1,70 @@
+# SIT-FUSE case-study animation, 30-min frames
+# Run from SIT_FUSE/src/sit_fuse/train (after no2_smoke_cloud_mask.py -c no2_smoke_mask.oregon_0726.yaml
+# --stage pull, then --stage mask; jobs anim_dry_0726 / anim_0726 of uq_parallel.goes_fire_ts_2026.yaml):
+#   python make_overlay_animations.py -c configs/animations/anim30_no2_big_grass_0726.yaml --dry-run
+#   python make_overlay_animations.py -c configs/animations/anim30_no2_big_grass_0726.yaml --workers 8
+# NO2 rasters: one per TEMPO NO2 L3 scan (case oregon_0726, which also covers the Big Grass box), held causally
+# up to 60 min under the 30-min GOES frames. Standard mask: QA = 0 and eff_cloud_fraction < 0.1 (V04);
+# smoke-aware: + cloud-screened cells under fused smoke (class 3, white outline). Orange outline: cells within
+# fire.buffer_km of SIT-FUSE fire (near_fire band; marks only, the mask is unchanged). TEMPO RGBs: the held scan.
+name: no2_big_grass0726_30min
+output_dir: /data/nlahaye/output/Learnergy/ANIMATIONS/OR0726_30MIN_TS/no2_big_grass0726_30min
+cache_dir: /data/nlahaye/output/Learnergy/ANIMATIONS/OR0726_30MIN_TS/_cache
+time_range: [2026-07-26T12:00:00Z, 2026-07-27T06:00:00Z]
+bbox: [-118.7, -115.1, 41.4, 43.6]   # expanded (was [-117.65, -116.1, 41.85, 43.1]); Big Grass perimeter ~[-117.42, -116.33, 42.05, 42.92]
+resolution: 0.01
+split_by: none
+title: "Big Grass Fire, 26 July 2026 (30 min): TEMPO NO2 with standard and smoke-aware cloud masks"
+frames:
+  base: goes                     # one frame per 30-min UTC bin (first GOES scene in the bin); TEMPO held causally
+  goes_every_minutes: 30         # 30-min case study (storage: no 5-min run)
+  goes_window_minutes: 3
+  tempo_causal: true
+  tempo_max_age_minutes: 60
+  tempo_hold: product
+  require: [no2_smoke]            # frames with a TEMPO NO2 scan (daytime); GOES-only frames dropped
+  tempo_day_shift_hours: -6
+
+observations:
+  tempo_rgb:    {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .RGB.tif}
+  tempo_uv_rgb: {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .UV_RGB.tif}
+  goes:
+    dir: [/data/nlahaye/remoteSensing/GOES_TEMPO/new_data, /data/nlahaye/remoteSensing/GOES_TEMPO/new_data_2026_07]   # CHECK
+    pattern: "OR_ABI-L1b-RadC-M6C01_G18_s*.tif"   # 4-band stand-ins: "OR_ABI-L1b-RadC-M6C01_G18_s*.RGB.tif"
+    bands: {blue: 1, red: 2, veggie: 3, ir: 13}   # 4-band stand-ins: {blue: 1, red: 2, veggie: 3, ir: 4}
+    gamma: 2.2
+    night: ir
+
+fields:                           # no2_smoke_cloud_mask.py rasters (no2_smoke_mask.oregon_0726.yaml)
+  no2_cloud:  {dir: /data/nlahaye/output/Learnergy/FUSION/NO2_SMOKE_MASK_OR0726/rasters/oregon_0726, glob: "TEMPO_NO2_L3_*.tif", band: no2_cloud_mask_only, style: no2_plain}
+  no2_smoke:  {dir: /data/nlahaye/output/Learnergy/FUSION/NO2_SMOKE_MASK_OR0726/rasters/oregon_0726, glob: "TEMPO_NO2_L3_*.tif", band: no2_smoke_aware_mask, mask_band: mask_class, mask_values: [3], style: no2}
+  no2_added:  {dir: /data/nlahaye/output/Learnergy/FUSION/NO2_SMOKE_MASK_OR0726/rasters/oregon_0726, glob: "TEMPO_NO2_L3_*.tif", band: vertical_column_troposphere, mask_band: mask_class, mask_values: [3], style: no2_recovered}
+  no2_fire:   {dir: /data/nlahaye/output/Learnergy/FUSION/NO2_SMOKE_MASK_OR0726/rasters/oregon_0726, glob: "TEMPO_NO2_L3_*.tif", band: vertical_column_troposphere, mask_band: near_fire, mask_values: [1], style: no2_fire}   # near-fire marks (mask unchanged)
+products:
+  fused_smoke: {geo_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_SMOKE/fusion_smoke/fine, model: fused, product: smoke, sensor: fused}
+  # TEMPO-style GOES fire (UQ_FIRE_TS2026 model), 30-min production (interim RF30 output: ANIMATIONS/OR0726_30MIN)
+  goes_fire:   {geo_dir: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_FIRE_TS/goes_fire/geo, manifest: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_FIRE_TS/goes_fire/geo/geo_products_manifest.json, model: hist_gradient_boosting, product: fire, sensor: goes}
+
+ncols: 3
+panels:
+  - {title: TEMPO RGB, obs: tempo_rgb, overlays: []}
+  - {title: TEMPO UV RGB, obs: tempo_uv_rgb, overlays: []}
+  - {title: GOES ABI + fused smoke + GOES fire, obs: goes, overlays: [fused_smoke, goes_fire]}
+  - {title: "NO2, standard cloud mask (ECF)", obs: tempo_rgb, overlays: [no2_cloud, no2_fire]}
+  - {title: "NO2, smoke-aware cloud mask", obs: tempo_rgb, overlays: [no2_smoke, no2_fire]}
+  - {title: NO2 recovered under smoke only, obs: tempo_rgb, overlays: [no2_added, no2_fire]}
+
+style:
+  smoke: {cmap: cool, alpha_max: 0.65, p_min: 0.15, p_max: 0.9, contour: true}
+  no2:   {cmap: viridis, vmin: 1.0e+15, vmax: 2.0e+16, scale: log, alpha_max: 0.85, contour: true, contour_color: "#ffffff"}
+  no2_plain: {base: no2, contour: false, outline_label: null}
+  no2_recovered: {base: no2, only_mask: true, contour: true}            # same colour scale: shares the NO2 colourbar
+  no2_fire:  {base: no2, outline_only: true, contour: true, contour_color: "#ff8c00", contour_width: 0.9, outline_label: "orange outline = within 10 km of SIT-FUSE fire"}
+  fire:  {cmap: autumn_r, alpha_max: 0.9, scale: log, p_min: 0.002, p_max: 0.3, alpha_gamma: 0.7, points: true, point_size: 3}
+rgb_enhance: {method: hist, strength: 0.5, sharpen: 0.5, sample_frames: 12}
+rgb_interpolation: antialiased
+fps: 4
+dpi: 120
+formats: [mp4, gif]
+keep_frames: false
+basemap: {enabled: true}
