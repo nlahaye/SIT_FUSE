@@ -11,8 +11,8 @@ name: ts_oregon_0726
 output_dir: /data/nlahaye/output/Learnergy/ANIMATIONS/FULL_2026_TS/oregon_0726
 cache_dir: /data/nlahaye/output/Learnergy/ANIMATIONS/FULL_2026_TS/_cache
 time_range: [2026-07-26T12:00:00Z, 2026-07-27T06:00:00Z]
-bbox: [-122.0, -115.9, 41.65, 45.8]   # the six Oregon fires (as oregon_fire_0726 of the fire production)
-resolution: 0.01
+bbox: [-124.6, -113.6, 40.6, 47.4]   # expanded (was [-122.0, -115.9, 41.65, 45.8]; same box as anim30_oregon_0726.yaml)
+resolution: 0.015
 split_by: none
 title: "Oregon fires, 26 July 2026: SIT-FUSE smoke and fire, TEMPO + GOES-18"
 frames:

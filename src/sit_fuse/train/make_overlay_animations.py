@@ -18,6 +18,10 @@ Inputs (YAML; see overlay_animation.example.yaml)
             like GOES (nearest scene within frames.goes_window_minutes)
             a product whose geo_dir has no rasters is skipped with a warning (its panels show the observation and
             "<name>: no products"; it is dropped from frames.require), so one missing stage does not stop the run
+  fields: {<name>: {dir, glob, band, mask_band, mask_values, time_tag (scan_start), style, max_age_minutes}}
+            continuous rasters drawn with a value colormap (style kind: field, e.g. the built-in no2 style), e.g.
+            TEMPO NO2 from no2_smoke_cloud_mask.py (band no2_cloud_mask_only / no2_smoke_aware_mask, mask_band
+            mask_class, mask_values [3] outlines smoke-recovered cells); latest scan at or before each frame
   panels: [{title, obs, overlays: [...]}]   default: one panel per observation, overlaid with that sensor's
           products (smoke, then fire when configured), plus one panel of fused products over GOES true colour;
           a null / {blank: true} entry leaves an empty cell
@@ -130,6 +134,15 @@ def build(cfg: dict, base: Path, sample_enhance: bool = False, cache_dir=None):
             if o.enhance["method"] == "hist" and not o.enhance.get("lut"):
                 o.enhance["lut"] = enhance_lut(k, o, grid, cache_dir)
     prods, unavailable = {}, set()
+    for k, v in (cfg.get("fields") or {}).items():      # continuous fields (e.g. NO2), held like TEMPO products
+        if v and v.get("dir") and v.get("enabled", True):
+            v = dict(v, dir=_resolve(base, v["dir"]))
+            v.setdefault("max_age_minutes", fc.get("tempo_max_age_minutes", 60))
+            try:
+                prods[k] = O.FieldSource(k, v, t0, t1, grid)
+            except FileNotFoundError as e:
+                LOG.warning("field %s not available (%s); its panels show the observation only", k, e)
+                unavailable.add(k)
     for k, v in (cfg.get("products") or {}).items():
         if v and v.get("geo_dir") and v.get("enabled", True):
             v = dict(v, geo_dir=_resolve(base, v["geo_dir"]), manifest=_resolve(base, v.get("manifest")))
@@ -245,7 +258,9 @@ def build(cfg: dict, base: Path, sample_enhance: bool = False, cache_dir=None):
             ovs, missing = [], []
             for k in pn.get("overlays", []):
                 p = prods[k]
-                if p.sensor == "tempo":
+                if isinstance(p, O.FieldSource):           # latest scan at or before the frame (max_age)
+                    s = p.nearest(t, tmax, causal=causal)
+                elif p.sensor == "tempo":
                     s = p.for_tempo_frame(fid) if base_kind == "tempo" else \
                         ((p.for_tempo_frame(held) if held is not None else None)
                          or p.nearest(t, tmax, causal=causal, max_age_minutes=tmax))
@@ -267,6 +282,12 @@ def build(cfg: dict, base: Path, sample_enhance: bool = False, cache_dir=None):
     if req:
         LOG.info("frames.require %s: kept %d frames, dropped %d without all of them", sorted(req), len(plan), n_req)
     styles = {k: dict(v, **((cfg.get("style") or {}).get(k) or {})) for k, v in O.DEFAULT_STYLE.items()}
+    for k, v in (cfg.get("style") or {}).items():       # extra named styles (e.g. no2_recovered); `base` copies one
+        if k not in styles and v:
+            styles[k] = dict(O.DEFAULT_STYLE.get(v.get("base", ""), {}), **{a: b for a, b in v.items() if a != "base"})
+    for p in prods.values():
+        if p.style not in styles:
+            raise KeyError(f"product / field {p.name}: style {p.style!r} not in DEFAULT_STYLE or style:")
     return grid, plan, styles, ncols
 
 
