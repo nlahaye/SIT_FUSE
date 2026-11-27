@@ -48,12 +48,12 @@ pipelines:
     export_config: goes18/g18_export_fire.yaml           # GOES encoder (goes_tempo_test_3), shared with smoke
     models: [hist_gradient_boosting]
 
-fusion:                                 # 5-min fused fire: frozen weights from the 5-min evaluation fit
+fusion:                                 # 30-min fused fire: frozen weights from the fire_ts evaluation fit
   fire_ts:
     config: configs/fusion_config.fire_ts.yaml           # goes frames 5 min, match window 2 min
     models_from: /data/nlahaye/output/Learnergy/FUSION/UQ_FIRE_TS            # fusion_models.pkl (fusion fire_ts of the plan)
     pipelines:
-      goes: goes_fire                                    # this run: every 5-min scene
+      goes: goes_fire                                    # this run: the 30-min scenes
       tempo: {geo_dir: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ_FIRE/geo}   # TEMPO fire evaluation geo (all scenes); GOES-only frames where 26 July is absent
     shards: 4
     cpus: 2
