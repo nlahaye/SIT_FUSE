@@ -3,9 +3,10 @@
 #   cd SIT_FUSE/src/sit_fuse/train
 #   python -m sit_fuse.local_launcher list plan_anim30_0726.yaml
 #   python -m sit_fuse.local_launcher run  plan_anim30_0726.yaml [--only 'no2_*' 'anim_*no2*' ...]
-# Jobs: random_forest GOES fire production at 30 min (heads linked from the smoke 0726 production), NO2 pull + mask
-# (needs the smoke 0726 fused rasters), then the dry runs (frame tables) and the renders. Separate launchers do not
-# share a CPU budget: cpus below is what this plan uses on top of the main plan.
+# Jobs: random_forest GOES fire production at 30 min (heads linked from the smoke 0726 production), NO2 pull, mask
+# (needs the smoke 0726 fused rasters and the fire production for the near-fire marks) and coverage figures, then
+# the dry runs (frame tables) and the renders. Separate launchers do not share a CPU budget: cpus below is what
+# this plan uses on top of the main plan.
 launcher:
   state_dir: /data/nlahaye/output/Learnergy/launch_anim30_0726
   gpus: 0
@@ -25,8 +26,13 @@ jobs:
   - name: no2_mask
     cmd: "cd {train} && {py} no2_smoke_cloud_mask.py -c no2_smoke_mask.oregon_0726.yaml --stage mask -n 8"
     cases: [{src: no2}]
-    after: [no2_pull]
+    after: [no2_pull, {name: prod_fire_rf30, "on": []}]   # fire products mark near-fire NO2 cells
     cpus: 8
+  - name: no2_compare
+    cmd: "cd {train} && {py} no2_smoke_cloud_mask.py -c no2_smoke_mask.oregon_0726.yaml --stage compare"
+    cases: [{src: no2}]
+    after: [no2_mask]
+    cpus: 2
   - name: anim_dry
     cmd: "cd {train} && {py} make_overlay_animations.py -c configs/animations/anim30_{case}.yaml --dry-run"
     cases: [{case: oregon_0726, src: fire}, {case: big_grass_0726, src: fire},

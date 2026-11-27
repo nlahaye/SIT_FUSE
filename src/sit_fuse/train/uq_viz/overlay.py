@@ -567,7 +567,8 @@ DEFAULT_STYLE = {
 }
 # field styles (kind: field; FieldSource layers such as NO2): cmap, vmin, vmax, scale (linear | log), alpha_max
 # (constant where the field is finite), only_mask (draw only the outlined cells), contour, contour_color, label,
-# outline_label; the "no2" entry is the default for TEMPO NO2 vertical columns (molecules cm-2)
+# outline_label, outline_only (draw only the mask contour, no colour layer and no colourbar of its own, e.g.
+# near-fire cells over an NO2 panel); the "no2" entry is the default for TEMPO NO2 vertical columns (molecules cm-2)
 DEFAULT_STYLE["no2"] = {"kind": "field", "cmap": "viridis", "vmin": 1e15, "vmax": 2e16, "scale": "log",
                         "alpha_max": 0.8, "contour": True, "contour_color": "#ffffff", "contour_width": 0.6,
                         "points": False, "only_mask": False, "label": "TEMPO tropospheric NO2 (molecules cm$^{-2}$)",
@@ -779,6 +780,9 @@ def render_frame(fr: dict, static: dict, out_png: str) -> str:
     pw = float(static.get("panel_width", 3.6))
     kinds = sorted({o["product"] for pn in panels for o in (pn or {}).get("overlays", []) if o}, key=lambda k: (k != "smoke", k != "fire", k))
     seen, kk = {}, []                                    # one colourbar per distinct field colour scale
+    extra = [styles[k]["outline_label"] for k in kinds
+             if styles[k].get("outline_only") and styles[k].get("outline_label")]
+    kinds = [k for k in kinds if not styles[k].get("outline_only")]
     for k in kinds:
         st = styles[k]
         if st.get("kind") == "field":
@@ -794,6 +798,9 @@ def render_frame(fr: dict, static: dict, out_png: str) -> str:
         else:
             kk.append(k)
     kinds = kk
+    fb = [k for k in kinds if styles[k].get("kind") == "field"]
+    if extra and fb:                                     # outline-only notes go on the first field colourbar
+        styles[fb[0]] = dict(styles[fb[0]], _outlines=list(styles[fb[0]].get("_outlines") or []) + extra)
     cb_h = 0.55 if kinds else 0.0
     aw = 0.86 * pw                                       # drawn map width (panel width less margins and spacing)
     row_h = aw * aspect + 0.45
@@ -837,7 +844,8 @@ def render_frame(fr: dict, static: dict, out_png: str) -> str:
                 continue
             if st.get("kind") == "field" and st.get("only_mask"):       # e.g. only the smoke-recovered NO2 cells
                 p = np.where(np.nan_to_num(m) >= 1, p, np.nan) if m is not None else np.full_like(p, np.nan)
-            ax.imshow(overlay_rgba(p, st), extent=ext, origin="upper", interpolation="nearest", zorder=3)
+            if not st.get("outline_only"):                  # outline_only: just the mask contour (e.g. near fire)
+                ax.imshow(overlay_rgba(p, st), extent=ext, origin="upper", interpolation="nearest", zorder=3)
             if m is not None and np.nanmax(np.nan_to_num(m)) >= 1:
                 x = grid.west + (np.arange(grid.width) + 0.5) * grid.res
                 y = grid.north - (np.arange(grid.height) + 0.5) * grid.res
@@ -861,15 +869,19 @@ def render_frame(fr: dict, static: dict, out_png: str) -> str:
     if kinds:
         holder = fig.add_subplot(gs[nrow, :])
         holder.axis("off")
+        import textwrap
+        wfrac = 0.9 / len(kinds) - 0.08
+        # colourbar labels wrapped to the bar width (~0.55 em per character at 7 pt) so neighbours do not overlap
+        wrap = lambda t: "\n".join(textwrap.wrap(t, max(28, int(fig.get_figwidth() * 72 * 0.9 * wfrac / (7 * 0.55)))))  # noqa: E731
         for i, k in enumerate(kinds):
             st = styles[k]
-            cax = holder.inset_axes([0.06 + i * (0.9 / len(kinds)), 0.62, 0.9 / len(kinds) - 0.08, 0.28])
+            cax = holder.inset_axes([0.06 + i * (0.9 / len(kinds)), 0.62, wfrac, 0.28])
             log = st.get("scale", "linear") == "log"
             if st.get("kind") == "field":
                 cb = fig.colorbar(ScalarMappable(norm=field_norm(st), cmap=st["cmap"]), cax=cax,
                                   orientation="horizontal")
                 outl = st.get("_outlines") or ([st["outline_label"]] if st.get("outline_label") else [])
-                cb.set_label(f"{st['label']}" + (f"  ({'; '.join(outl)})" if outl else ""), fontsize=7)
+                cb.set_label(wrap(f"{st['label']}" + (f"  ({'; '.join(outl)})" if outl else "")), fontsize=7)
                 from matplotlib.ticker import NullFormatter
                 cb.ax.xaxis.set_minor_formatter(NullFormatter())
                 cb.ax.tick_params(labelsize=6.5)
@@ -878,8 +890,8 @@ def render_frame(fr: dict, static: dict, out_png: str) -> str:
             norm = LogNorm(lo, max(float(st["p_max"]), 2 * lo)) if log else Normalize(lo, float(st["p_max"]))
             sm = ScalarMappable(norm=norm, cmap=st["cmap"])
             cb = fig.colorbar(sm, cax=cax, orientation="horizontal")
-            cb.set_label(f"{st['label']}{' (log scale)' if log else ''}  (transparent below {lo:g}; "
-                         f"outline = decision mask)",
+            cb.set_label(wrap(f"{st['label']}{' (log scale)' if log else ''}  (transparent below {lo:g}; "
+                              f"outline = decision mask)"),
                          fontsize=7)
             cb.ax.tick_params(labelsize=6.5)
     fig.suptitle(f"{static.get('title') or 'SIT-FUSE probabilistic products'}  |  {fr['time']:%Y-%m-%d %H:%M} UTC",
