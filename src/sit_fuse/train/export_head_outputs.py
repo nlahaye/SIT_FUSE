@@ -51,7 +51,7 @@ from sit_fuse.datasets.dataset_utils import get_prediction_dataset
 from sit_fuse.inference.generate_output import prep_model
 from sit_fuse.utils import get_read_func, read_yaml
 
-from sf_uq_utils import (
+from sit_fuse.train.sf_uq_utils import (
     FORMAT_VERSION,
     HEAD_NODATA,
     head_band_names,
