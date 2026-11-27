@@ -61,6 +61,13 @@ def cmd_roles(a) -> None:
     print(json.dumps({"year": a.year, "out": a.out, "days": n}))
 
 
+def _no_test_matchups(json_path: Path) -> bool:
+    try:
+        return json.loads(json_path.read_text()).get("error") == "no test matchups"
+    except (OSError, ValueError, AttributeError):
+        return False
+
+
 def cmd_pool(a) -> None:
     folds = dict(f.split("=", 1) for f in a.fold)
     out = Path(a.out) / "evaluation"
@@ -69,11 +76,16 @@ def cmd_pool(a) -> None:
                      for d in folds.values() for p in (Path(d) / "evaluation").glob("hab_uq_test_predictions_*.csv")})
     summary = {}
     for tok in tokens:
-        parts, missing = [], []
+        parts, missing, empty = [], [], []
         for yr, d in folds.items():
             p = Path(d) / "evaluation" / f"hab_uq_test_predictions_{tok}.csv"
             if not p.exists():
-                missing.append(yr)
+                # a finished fold with no reference samples in its year (e.g. pDA / cDA / Alexandrium in 2026,
+                # where the only 2026 rows are IFCB) writes the evaluation JSON with an error and no CSV
+                if _no_test_matchups(Path(d) / "evaluation" / f"hab_uq_evaluation_{tok}.json"):
+                    empty.append(yr)
+                else:
+                    missing.append(yr)
                 continue
             df = pd.read_csv(p)
             df["holdout_year"] = int(yr)
@@ -81,7 +93,13 @@ def cmd_pool(a) -> None:
                 df = df[pd.to_datetime(df["date"]).dt.year == int(yr)]
             parts.append(df)
         if missing and not a.allow_missing:
-            raise FileNotFoundError(f"{tok}: no test predictions for folds {missing}")
+            raise FileNotFoundError(f"{tok}: no test predictions for folds {missing} (fold not evaluated: rerun "
+                                    f"its train_eval; folds with no test matchups are skipped automatically)")
+        if empty:
+            LOG.info("%s: no test matchups in folds %s (skipped)", tok, empty)
+        if not parts:
+            LOG.warning("%s: no fold has test predictions; not pooled", tok)
+            continue
         df = pd.concat(parts, ignore_index=True)
         dup = df.duplicated(["sample_uid", "sensor"]).sum() if "sensor" in df else df.duplicated("sample_uid").sum()
         if dup:
@@ -89,7 +107,8 @@ def cmd_pool(a) -> None:
         p = out / f"hab_uq_test_predictions_{tok}.csv"
         df.to_csv(str(p) + ".tmp", index=False)
         Path(str(p) + ".tmp").replace(p)
-        summary[tok] = {"n": len(df), "by_year": df["holdout_year"].value_counts().sort_index().to_dict()}
+        summary[tok] = {"n": len(df), "by_year": df["holdout_year"].value_counts().sort_index().to_dict(),
+                        "folds_without_test_matchups": empty, "folds_missing": missing}
     (Path(a.out) / "pool_summary.json").write_text(json.dumps(summary, indent=1, default=str))
     print(json.dumps(summary, default=str))
 

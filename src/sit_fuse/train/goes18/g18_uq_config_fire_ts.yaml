@@ -9,8 +9,10 @@
 output_dir: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/UQ_FIRE_TS2026      # GOES
 random_state: 42
 
-# Cadence: no data.every_minutes / inference.every_minutes / geo_export.every_minutes -> features, inference and
-# geo products at every 5-min GOES scene (keep them unset; plan_uq_jobs re-plans stages made at another cadence).
+# Cadence (30-MIN): features and training stay at every 5-min GOES scene (data.every_minutes unset, so the finished
+# feature table and models are kept); inference, evaluation and geo products use the first scene of each 30-min UTC
+# bin per event (inference.every_minutes / geo_export.every_minutes 30). Scenes finished at 5 min are reused from
+# their checkpoints; prune_off_cadence_30min.yaml deletes the outputs of the other scenes.
 data:
   # Classifier YAML written by the HMS / ADP / FDCC matchup generator with the
   # split section enabled (adds scene_id, head_outputs, split_group,
@@ -180,6 +182,7 @@ inference:
   # scene_file defaults to data.matchup_file; splits filters classifier_split
   # (null = all scenes, e.g. for unlabeled production runs via a separate scene_file)
   splits: null                         # null = all matched scenes (dev scenes enable shift tests)
+  every_minutes: 30                    # 30-MIN: first scene per 30-min UTC bin and event (load_matchups)
   chunk_size: 200000
   ensemble_quantiles: [0.05, 0.95]     # ensemble_p<c>_q05 / _q95 interval layers + area intervals
   reference_mask_areas: true           # also report areas over reference-valid pixels
@@ -217,6 +220,7 @@ evaluation:
 
 geo_export:
   models: [hist_gradient_boosting, hard_assignment]
+  every_minutes: 30                # 30-MIN: same scenes as the inference
   area_intervals: conformal        # new; analytic | all | none
   area_calibration: null
   vectors: {mask_layer: pred_label}

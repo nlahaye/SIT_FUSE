@@ -1,10 +1,19 @@
 # One launcher plan: GOES-18 fire run in the same fashion as the TEMPO fire run, GOES-18 smoke and fire for the
 # Oregon fires on 26 July 2026, the fire and smoke fusions, then the animations.
-# Cadence: everything GOES is every 5-min ABI CONUS scene. The UQ configs set no every_minutes (features, inference,
-# geo at every scene); the two 26 July productions set no sensors.goes.every_minutes; both fusions use 5-min GOES
-# frames with a 2-min match window (one fused frame per GOES scene; the earlier fusion configs pooled two scenes into
-# 10-min frames), so the smoke fusion is refit at 5 min (smoke_5min -> FUSION/UQ_SMOKE_RECAL_5MIN). TEMPO stays at its
-# own hourly scans, carried forward causally to each GOES time.
+# Cadence (30-MIN, storage): GOES inference, evaluation, geo, fusion, productions and animations continue at the first
+# ABI scene of each 30-min UTC bin; features and training stay at 5 min (finished, kept). Changed for this:
+#   goes18/g18_uq_config_fire_ts.yaml    inference.every_minutes / geo_export.every_minutes 30 (cadence comment on the
+#                                        infer / evaluate / geo commands -> the launcher reruns them; inference
+#                                        reuses the 5-min scene checkpoints of the kept scenes, so finished models
+#                                        such as random_forest only reload them)
+#   configs/fusion_config.{fire_ts,smoke_5min}.yaml  sources.goes.every_minutes 30
+#   production_2026_goes_{smoke,fire_ts}_0726.yaml   sensors.goes.every_minutes 30
+#   animations                           goes_every_minutes 30; 26 July: anim30_* configs with the TS products
+# prune_30min (prune_off_cadence.py prune_off_cadence_30min.yaml --apply) first deletes the per-scene outputs of the
+# dropped scenes (heads of production runs, inference layers / checkpoints, geo and fused rasters; dev / calibration
+# heads protected). Run it as a dry run by hand first and read the CSV. Finished jobs keep their launcher markers
+# (same state_dir): the prep jobs, a finished smoke_5min fusion and a finished smoke 0726 production are not rerun.
+# TEMPO stays at its own hourly scans, carried forward causally to each GOES time.
 #
 #   full_geo (8 shards: SIT-FUSE .full_geo.tif cluster rasters) ───────────────────────────────────────────┐
 #   firms_pull (fronts, VIIRS fire mask) ─> fire_rasters (FDCC, HMS, FIRMS VIIRS-observed, FIRMS positives) ─┐
@@ -17,7 +26,8 @@
 #   prod_heads_0726 (shared GOES head export, starts right away) ──────────────┼────────┴─> prod_goes_fire_ts_0726 ──┤
 #   fusion smoke_5min fit (starts right away) ─┬─> apply/merge ────────────────┼─────────────────────────────────────┤
 #                                              └───────────────────────────────┴──> prod_goes_smoke_0726 ────────────┤
-#                                                      anim_dry (4 cases) ─> anim (Park, LA, Oregon) + anim_0726 <───┘
+#   anim_dry / anim (Park, LA, Oregon)    no2_mask_ts -> no2_compare_ts; anim_dry_0726 -> anim_0726 (4 anim30) <───┘
+#   prune_30min (first) ─> goes_fire_ts infer / evaluate / geo, prod_heads_0726 (and so both productions)
 #
 # full_geo: the matchup generators read the georeferenced SIT-FUSE cluster rasters (<input>.clust.data_<N>clusters
 # .zarr.full_geo.tif) as their scenes; make_full_geo.py writes the missing ones with SIT-FUSE's geotiff writer
@@ -42,15 +52,19 @@
 # Both productions then link their heads from there (the fire run lists the smoke run's heads first), so the
 # fire production exports nothing and no scene is exported twice.
 #
-# Each production: every 5-min GOES scene -> HGB inference -> geo -> its own 5-min GOES + TEMPO fusion (frozen weights
+# Each production: one GOES scene per 30 min -> HGB inference -> geo -> its own GOES + TEMPO fusion (frozen weights
 # of the matching fit above) -> PRODUCTION_2026_07_OR0726_{SMOKE,FIRE_TS}/{goes_*,fusion_*}.
 #
 #   cd SIT_FUSE/src/sit_fuse/train
-#   python pin_matchup_splits.py goes18/g18_fire_ts_splits.yaml --check-only     # 1. after fire_attach: inventory
-#   python plan_uq_jobs.py uq_parallel.goes_fire_ts_2026.yaml                    # 2. report + plan file
-#   python plan_uq_jobs.py uq_parallel.goes_fire_ts_2026.yaml --run -- --dry-run # 3. check the commands
-#   (set -m; nohup python plan_uq_jobs.py uq_parallel.goes_fire_ts_2026.yaml --run > goes_fire_ts_2026.log 2>&1 &)
 #   python -m sit_fuse.local_launcher status /data/nlahaye/output/Learnergy/launch_goes_fire_ts_2026/uq_plan.yaml
+#   pkill -TERM -f 'local_launcher run /data/nlahaye/output/Learnergy/launch_goes_fire_ts_2026/uq_plan.yaml'
+#        # 0. stop the 5-min run: running jobs (and nested production launchers) are terminated, their claims released,
+#        # nothing marked done. Check `pgrep -af 'classifier_inference_uq|build_production_run'` is empty.
+#   python prune_off_cadence.py prune_off_cadence_30min.yaml                     # 1. dry run: CSV + GB per target
+#   python plan_uq_jobs.py uq_parallel.goes_fire_ts_2026.yaml                    # 2. report + plan file
+#   python plan_uq_jobs.py uq_parallel.goes_fire_ts_2026.yaml --run -- --dry-run # 3. check: infer / evaluate / geo of
+#        # goes_fire_ts, prune_30min and the jobs after it pending; prep jobs done
+#   (set -m; nohup python plan_uq_jobs.py uq_parallel.goes_fire_ts_2026.yaml --run > goes_fire_ts_30min.log 2>&1 &)
 #
 # pin_splits fails (and nothing downstream of it starts) when an event lacks calibration / holdout scenes with head
 # outputs or an event is missing from the regenerated GOES fire matchups (check the FDCC matchup config: event_windows,
@@ -97,12 +111,18 @@ pipelines:
     uq_config: uq_config.example.fire.yaml            # SF_TEMPO_V04/UQ_FIRE: finished in the full run, so resume
                                                       # leaves it out; listed as the fusion's TEMPO source
 
-fusion:                         # both at the 5-min GOES cadence (frames 5 min, match window 2 min)
+fusion:                         # 30-MIN: GOES thinned to 30 min (sources.goes.every_minutes), one scene per frame
   fire_ts: {config: configs/fusion_config.fire_ts.yaml, after: [tempo_fire, goes_fire_ts]}   # FUSION/UQ_FIRE_TS
-  smoke_5min: {config: configs/fusion_config.smoke_5min.yaml}   # FUSION/UQ_SMOKE_RECAL_5MIN; full-run smoke geo
-                                                                # (TEMPO UQ, GOES UQ_SMOKE_RECAL) exists: no wait
+  smoke_5min: {config: configs/fusion_config.smoke_5min.yaml}   # FUSION/UQ_SMOKE_RECAL_5MIN (name kept); full-run
+                                                                # smoke geo exists: no wait; done -> not rerun
 
 extra_jobs:
+  # --- 30-MIN: delete the outputs of the scenes the 30-min cadence drops (review the dry run first) -----------
+  - name: prune_30min
+    cmd: "cd {train} && {py} prune_off_cadence.py prune_off_cadence_30min.yaml --apply"
+    before: [goes_fire_ts]      # inference / evaluation / geo of goes_fire_ts wait; the productions too (after:)
+    cpus: 2
+
   # --- GOES fire: TEMPO-aligned partitions + coverage gate (features of goes_fire_ts wait for it) ---------------
   # Native fire reference rasters (run in preprocessing/data_pull; outputs are the inputs of the matchup configs)
   - name: firms_pull            # FIRMS detections (local CSVs) and the VIIRS fire mask (observed negatives)
@@ -165,10 +185,11 @@ extra_jobs:
     cmd: "cd {train} && {py} build_production_run.py production_2026_goes_smoke_0726.yaml --run -- --only 'heads_*'"
     cases: [{case: oregon_0726}]
     id_keys: []
+    after: [{name: prune_30min, "on": []}]
     cpus: 16
 
   # --- GOES smoke, Oregon, 26 July 2026 (every scene) ---------------------------------------------------------
-  - name: prod_goes_smoke_0726  # every 5-min scene + 5-min fused smoke (weights of the smoke_5min fit)
+  - name: prod_goes_smoke_0726  # 30-min scenes + fused smoke (weights of the smoke_5min fit)
     cmd: "cd {train} && {py} build_production_run.py production_2026_goes_smoke_0726.yaml --run"
     cases: [{case: oregon_0726}]
     id_keys: []
@@ -180,25 +201,40 @@ extra_jobs:
     cmd: "cd {train} && {py} build_production_run.py production_2026_goes_fire_ts_0726.yaml --run"
     cases: [{case: oregon_0726}]
     id_keys: []
-    after: [prod_heads_0726, fusion_fit_fire_ts]   # every 5-min scene + 5-min fused fire (weights of the fire_ts fit)
+    after: [prod_heads_0726, fusion_fit_fire_ts]   # 30-min scenes + fused fire (weights of the fire_ts fit)
     after_geo: [goes_fire_ts]   # trained TEMPO-style model, calibrators, cutoffs and area calibration in place
     cpus: 16
 
-  # --- animations: every case waits for the new GOES fire geo products and the refit fire fusion; the 26 July
-  #     case also waits for both production runs (joined on `case`, so Park / LA / Oregon do not) ---------------
+  # --- animations (30-min frames): the evaluation periods wait for the GOES fire geo and both fusions; 26 July waits
+  #     for both productions and the NO2 mask with near-fire marks from the TS fire products ------------------------
   - name: anim_dry              # frame tables only (seconds): a wrong path fails here
     cmd: "cd {train} && {py} make_overlay_animations.py -c configs/animations/anim_ts_{case}.yaml --dry-run"
-    grid: {case: [park_2024, la_2025, oregon_2026, oregon_0726]}
+    grid: {case: [park_2024, la_2025, oregon_2026]}
     after_geo: [goes_fire_ts]
-    after_fusion: [fire_ts, smoke_5min]   # 5-min fused fire / smoke of Park, LA, Oregon (evaluation periods)
-    after: [{name: prod_goes_smoke_0726, "on": [case]}, {name: prod_goes_fire_ts_0726, "on": [case]}]
+    after_fusion: [fire_ts, smoke_5min]   # fused fire / smoke of Park, LA, Oregon (evaluation periods)
   - name: anim                  # split by day; days dealt to 4 shards x 4 workers per case
     cmd: "cd {train} && {py} make_overlay_animations.py -c configs/animations/anim_ts_{case}.yaml --workers 4 --shard {shard}/4"
     grid: {case: [park_2024, la_2025, oregon_2026], shard: "range(4)"}
     cpus: 4
     after: [{name: anim_dry, "on": [case]}]
-  - name: anim_0726             # one segment (split_by: none, ~216 frames): one job, 16 workers
-    cmd: "cd {train} && {py} make_overlay_animations.py -c configs/animations/anim_ts_{case}.yaml --workers 16"
-    cases: [{case: oregon_0726}]
-    cpus: 16
-    after: [{name: anim_dry, "on": [case]}]
+  - name: no2_mask_ts           # near-fire marks from the TS GOES fire + fused fire (mask unchanged); redo all scans
+    cmd: "cd {train} && {py} no2_smoke_cloud_mask.py -c no2_smoke_mask.oregon_0726.yaml --stage mask -n 8 --overwrite"
+    cases: [{src: no2}]
+    id_keys: []
+    after: [{name: prod_goes_smoke_0726, "on": []}, {name: prod_goes_fire_ts_0726, "on": []}]
+    cpus: 8
+  - name: no2_compare_ts
+    cmd: "cd {train} && {py} no2_smoke_cloud_mask.py -c no2_smoke_mask.oregon_0726.yaml --stage compare"
+    cases: [{src: no2}]
+    id_keys: []
+    after: [no2_mask_ts]
+    cpus: 2
+  - name: anim_dry_0726         # anim30_* configs: GOES fire = TS hist_gradient_boosting, fused fire = TS fusion
+    cmd: "cd {train} && {py} make_overlay_animations.py -c configs/animations/anim30_{case}.yaml --dry-run"
+    cases: [{case: oregon_0726}, {case: big_grass_0726}, {case: no2_oregon_0726}, {case: no2_big_grass_0726}]
+    after: [{name: no2_mask_ts, "on": []}]   # after both productions
+  - name: anim_0726             # ~36 frames each: one job, 8 workers
+    cmd: "cd {train} && {py} make_overlay_animations.py -c configs/animations/anim30_{case}.yaml --workers 8"
+    cases: [{case: oregon_0726}, {case: big_grass_0726}, {case: no2_oregon_0726}, {case: no2_big_grass_0726}]
+    cpus: 8
+    after: [{name: anim_dry_0726, "on": [case]}]

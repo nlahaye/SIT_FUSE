@@ -6,6 +6,10 @@
 # Fitted by uq_parallel.goes_fire_ts_2026.yaml (fusion smoke_5min); production_2026_goes_smoke_0726.yaml applies its
 # weights (models_from FUSION/UQ_SMOKE_RECAL_5MIN). If your fusion_config.smoke.yaml has changed since, apply the three
 # 5-MIN edits to a copy of it instead.
+# 30-MIN: sources.goes.every_minutes 30 thins the full-cadence GOES geo to the first scene per 30-min UTC bin. A fit /
+# apply already marked done in launch_goes_fire_ts_2026 is not rerun (same command): its 5-min weights stay valid for
+# 30-min frames (one GOES scene per frame either way); prune_off_cadence_30min.yaml thins its 5-min fused rasters.
+# Unfinished stages now run at 30 min. Output dir name kept so the productions' models_from stays valid.
 product: smoke
 output_dir: /data/nlahaye/output/Learnergy/FUSION/UQ_SMOKE_RECAL_5MIN   # 5-MIN: new dir (10-min fit kept in UQ_SMOKE_RECAL)
 
@@ -21,7 +25,8 @@ sources:
     geo_dir: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/UQ_SMOKE_RECAL/geo   # geo_export.output_dir of g18_uq_config_smoke_recal.yaml
     manifest: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/UQ_SMOKE_RECAL/geo/geo_products_manifest.json
     model: hist_gradient_boosting
-    frames: {mode: time, minutes: 5}     # 5-MIN: one frame per 5-min ABI CONUS scene
+    every_minutes: 30                    # 30-MIN: first scene per 30-min UTC bin
+    frames: {mode: time, minutes: 5}     # 5-MIN: one frame per kept ABI CONUS scene
     default_logit_sd: 1.0
 
 grids:

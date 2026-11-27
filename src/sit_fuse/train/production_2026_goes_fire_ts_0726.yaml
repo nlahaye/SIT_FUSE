@@ -11,6 +11,10 @@
 # from heads_from (per file, tag-checked): the smoke 0726 production's heads (same 5-min scenes, exported first in the
 # plan by prod_heads_0726), then the other GOES productions and evaluation dirs. Nothing is exported when all exist.
 
+# 30-MIN (storage): sensors.goes.every_minutes 30 -> one scene per 30-min UTC bin (heads, inference, geo, fusion).
+# A finished 5-min run is not rerun by the plan (same command); prune_off_cadence_30min.yaml thins its outputs to
+# these scenes. An unfinished one continues at 30 min (new scenes.yaml -> new nested commands; inference reuses
+# the scene checkpoints, the geo export skips existing rasters). The 5-min fusion weights apply unchanged.
 output_root: /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_FIRE_TS
 start: 2026-07-26T12:00:00Z
 end: 2026-07-27T06:00:00Z
@@ -27,9 +31,9 @@ export: {shards: 4, cpus: 4, gpu: 1}
 
 sensors:
   goes:
-    inputs: /data/nlahaye/remoteSensing/GOES_TEMPO/new_data     # CHECK
+    inputs: /data/nlahaye/remoteSensing/GOES_TEMPO/new_data_2026_07     # CHECK
     pattern: "OR_ABI-L1b-RadC-M6C01_G18_s*.tif"
-    # every_minutes: 60                 # keep unset: every 5-min scene
+    every_minutes: 30                   # 30-MIN: first input per 30-min UTC bin (~36 scenes; was every 5-min scene)
     bbox_filter: false
     heads_from:                         # same-encoder head outputs to link instead of exporting (recursive, tag-checked)
       - /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_SMOKE/heads      # smoke 0726 production (same scenes)
