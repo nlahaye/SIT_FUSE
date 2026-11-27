@@ -26,8 +26,9 @@ sensors:
   tempo:
     inputs: /data/nlahaye/remoteSensing/RAD_L1_V04                      # CHECK: July 2026 TEMPO V04 radiance GeoTIFFs
     pattern: "TEMPO_RAD_L1_V04_*.tif"                                   # .RGB.tif / .UV_RGB.tif / head outputs are excluded
+    #stand_in_suffix: .RGB.tif   
   goes:
-    inputs: /data/nlahaye/remoteSensing/GOES_TEMPO/new_data_2026_07     # CHECK: July 2026 GOES-18 16-band GeoTIFFs (fuse_goes_tempo_3.yaml output)
+    inputs: /data/nlahaye/remoteSensing/GOES_TEMPO/new_data/     # CHECK: July 2026 GOES-18 16-band GeoTIFFs (fuse_goes_tempo_3.yaml output)
     pattern: "OR_ABI-L1b-RadC-M6C01_G18_s*.tif"
     every_minutes: 60                   # hourly GOES products: first scene of each UTC hour; remove for every 5-min scene
     # offset_minutes: 0                 # shift the hourly bins (e.g. 30 -> first scene at/after HH:30)
@@ -46,8 +47,8 @@ pipelines:                              # evaluated configs; trained models, cal
 
 fusion:                                 # frozen evaluation-period fusion (weights, recalibration, cutoffs)
   smoke:
-    config: configs/fusion_config.smoke.yaml             # CHECK: the fitted evaluation fusion config
-    models_from: /data/nlahaye/output/Learnergy/FUSION/UQ_SMOKE   # must contain fusion_models.pkl
+    config: configs/fusion_config.smoke.yaml             # evaluation fusion config (fit it first)
+    models_from: /data/nlahaye/output/Learnergy/FUSION/UQ_SMOKE_RECAL   # must contain fusion_models.pkl
     pipelines: {tempo: tempo_smoke, goes: goes_smoke}
     shards: 6
     cpus: 2
@@ -71,4 +72,4 @@ animation:
     tempo_rgb: {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .RGB.tif}         # CHECK
     tempo_uv_rgb: {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .UV_RGB.tif}   # CHECK
     goes:
-      kappa0_from: /data/nlahaye/remoteSensing/GOES_TEMPO/new_data_2026_07   # L1b NetCDFs (reflectance scaling); drop for display-only scaling
+      kappa0_from: /data/nlahaye/remoteSensing/GOES_TEMPO/new_data   # L1b NetCDFs (reflectance scaling); drop for display-only scaling

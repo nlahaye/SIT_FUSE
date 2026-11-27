@@ -25,7 +25,7 @@ export: {shards: 8, cpus: 6, gpu: 1}   # ~216 five-minute CONUS scenes in 18 h; 
 
 sensors:
   goes:
-    inputs: /data/nlahaye/remoteSensing/GOES_TEMPO/new_data_2026_07     # CHECK: July 2026 GOES-18 16-band GeoTIFFs
+    inputs: /data/nlahaye/remoteSensing/GOES_TEMPO/new_data    # CHECK: July 2026 GOES-18 16-band GeoTIFFs
     pattern: "OR_ABI-L1b-RadC-M6C01_G18_s*.tif"
     # every_minutes: 60                 # not set: every scene
     bbox_filter: false                  # CONUS scenes always cover the bbox
@@ -57,7 +57,7 @@ animation:
   observations:
     tempo_rgb: {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .RGB.tif}         # CHECK (context only)
     goes:
-      kappa0_from: /data/nlahaye/remoteSensing/GOES_TEMPO/new_data_2026_07
+      kappa0_from: /data/nlahaye/remoteSensing/GOES_TEMPO/new_data
   sets:
     oregon_fire_0726:                   # all six Oregon fires (bboxes as in production_2026_smoke_qt.yaml)
       bbox: [-122.0, -115.9, 41.65, 45.8]

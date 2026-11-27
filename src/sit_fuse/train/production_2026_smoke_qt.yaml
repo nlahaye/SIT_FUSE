@@ -31,9 +31,10 @@ export: {shards: 4, cpus: 6, gpu: 1}   # head export jobs per encoder (one GPU e
 sensors:
   tempo:
     inputs: /data/nlahaye/remoteSensing/RAD_L1_V04                      # CHECK: July 2026 TEMPO V04 radiance GeoTIFFs
-    pattern: "TEMPO_RAD_L1_V04_*.tif"                                   # .RGB.tif / .UV_RGB.tif / head outputs are excluded
+    pattern: "TEMPO_RAD_L1_V04_*.UV_RGB.tif"                                   # .RGB.tif / .UV_RGB.tif / head outputs are excluded
+    stand_in_suffix: .UV_RGB.tif  
   goes:
-    inputs: /data/nlahaye/remoteSensing/GOES_TEMPO/new_data_2026_07     # CHECK: July 2026 GOES-18 16-band GeoTIFFs (fuse_goes_tempo_3.yaml output)
+    inputs: /data/nlahaye/remoteSensing/GOES_TEMPO/new_data     # CHECK: July 2026 GOES-18 16-band GeoTIFFs (fuse_goes_tempo_3.yaml output)
     pattern: "OR_ABI-L1b-RadC-M6C01_G18_s*.tif"
     every_minutes: 60                   # hourly GOES products: first scene of each UTC hour; remove for every 5-min scene
     # offset_minutes: 0                 # shift the hourly bins (e.g. 30 -> first scene at/after HH:30)
@@ -81,10 +82,10 @@ animation:                              # defaults for every set below
   formats: [mp4, gif]
   basemap: {enabled: true}
   observations:
-    tempo_rgb: {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .RGB.tif}         # CHECK
-    tempo_uv_rgb: {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .UV_RGB.tif}   # CHECK
+    tempo_rgb: {dir: /data/nlahaye/remoteSensing/RAD_L1_V04, suffix: .RGB.tif}         # CHECK
+    tempo_uv_rgb: {dir: /data/nlahaye/remoteSensing/RAD_L1_V04, suffix: .UV_RGB.tif}   # CHECK
     goes:
-      kappa0_from: /data/nlahaye/remoteSensing/GOES_TEMPO/new_data_2026_07   # L1b NetCDFs (reflectance scaling); drop for display-only scaling
+      kappa0_from: /data/nlahaye/remoteSensing/GOES_TEMPO/new_data   # L1b NetCDFs (reflectance scaling); drop for display-only scaling
   # bboxes [W, E, S, N] from the NIFC WFIGS 2026 final perimeters plus a margin for the smoke:
   #   Big Grass -117.42..-116.33, 42.05..42.92 | Rowe Creek Cx -120.91..-119.84, 44.34..44.95
   #   Grasshopper -121.60..-121.20, 45.24..45.40 | Coleman Creek -118.42..-117.48, 43.39..43.80
@@ -117,15 +118,15 @@ animation:                              # defaults for every set below
       cpus: 4
       frames: {base: tempo, goes_window_minutes: 10, tempo_max_age_minutes: 60}   # evaluation GOES are not thinned
       products: &eval_products
-        tempo_smoke: {geo_dir: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ/geo, model: hist_gradient_boosting,
-                      manifest: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ/geo/geo_products_manifest.json, sensor: tempo}
+        tempo_smoke: {geo_dir: /data/nlahaye/output/Learnergy/INITIAL_TEMPO_GOES_UQ/TEMPO/UQ/geo, model: hist_gradient_boosting,
+                      manifest: /data/nlahaye/output/Learnergy/INITIAL_TEMPO_GOES_UQ/TEMPO/UQ/geo/geo_products_manifest.json, sensor: tempo}
         goes_smoke: {geo_dir: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/UQ_SMOKE_RECAL/geo, model: hist_gradient_boosting,
                      manifest: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/UQ_SMOKE_RECAL/geo/geo_products_manifest.json,
                      sensor: goes}
       include: [fused_smoke_events]
       observations: &eval_obs
-        tempo_rgb: {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .RGB.tif}         # CHECK
-        tempo_uv_rgb: {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .UV_RGB.tif}   # CHECK
+        tempo_rgb: {dir: /data/nlahaye/remoteSensing/RAD_L1_V04, suffix: .RGB.tif}         # CHECK
+        tempo_uv_rgb: {dir: /data/nlahaye/remoteSensing/RAD_L1_V04, suffix: .UV_RGB.tif}   # CHECK
         goes:
           dir: /data/nlahaye/remoteSensing/GOES_TEMPO/new_data          # evaluation GOES-18 16-band GeoTIFFs
           pattern: "OR_ABI-L1b-RadC-M6C01_G18_s*.tif"

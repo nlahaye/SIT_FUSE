@@ -29,10 +29,10 @@ sit_fuse:
   daily_time_policy: "start_of_day"
 
 hms:
-  directory: "/home/nlahaye/SIT_FUSE/src/sit_fuse/preprocessing/data_pull/hms_out/rasters/"
+  directory: "/home/nlahaye/SIT_FUSE/src/sit_fuse/preprocessing/data_pull/hms_out/rasters/smoke/"
   patterns:
     smoke:
-      - "(?i)hms_smoke"
+      - "(?i)smoke"
     fire:
       - "__never_matches__"
     interval_timestamp_patterns: []

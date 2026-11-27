@@ -10,11 +10,11 @@
 # =============================================================================
 
 time_range:
-  start: "2025-01-07T00:00:00Z"
-  end: "2025-01-31T23:59:59Z"
+  start: "2024-07-25T00:00:00Z"
+  end: "2026-08-01T23:59:59Z"
 
 sit_fuse:                    # same block as adp_matchup.yaml
-  directory: /data/nlahaye/output/Learnergy/SF_TEMPO_LA/
+  directory: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/
   patterns:
     timestamp_patterns:
       - "(?i)(\\d{8}T\\d{6}Z)"
@@ -30,10 +30,10 @@ sit_fuse:                    # same block as adp_matchup.yaml
       - "(?i)fire"
 
 fire_fronts:
-  index_csv: /home/nlahaye/SIT_FUSE/src/sit_fuse/preprocessing/data_pull/firms_fire_fronts_out/rasters/fire_front_index.csv
-  sources: [feds, firms]     # filter on the index `source` column
-  tags: null                 # e.g. [FEDS-PM] to use only daytime FEDS steps
-  require_front: true        # skip fire-front rasters without any front cell
+  index_csv: /home/nlahaye/SIT_FUSE/src/sit_fuse/preprocessing/data_pull/firms_fire_fronts_out/rasters_viirs/fire_front_index.csv
+  sources: [firms]     # filter on the index `source` column
+  tags: [N, N20, N21]                 # e.g. [FEDS-PM] to use only daytime FEDS steps
+  require_front: false        # skip fire-front rasters without any front cell
   search_pad_seconds: 86400
   classes: {front: 1, interior: 2, negative: 0}   # as raster.classes in the pull config
   fill_value: 255
@@ -41,24 +41,23 @@ fire_fronts:
 matching:
   # previous - latest front at or before the scene (causal; default)
   # nearest  - closest in time either side;  next - first front after the scene
-  policy: previous
+  policy: nearest #previous
   # FEDS steps are 12 h apart and FIRMS VIIRS overpasses ~2 per day per
   # satellite, so daytime TEMPO scenes are typically 0-12 h after the front.
   # Record-level offsets are kept (time_offset_seconds, signed_offset_seconds)
   # for later filtering.
-  max_time_difference_seconds: 43200
-  prefer_source: [firms, feds]   # when both have a candidate in the window
+  max_time_difference_seconds: 3600
   # pair_id grouping: front_timestamp (all scenes sharing one front raster) |
   # front_day | sit_fuse_timestamp | sit_fuse_day
   group_by: front_timestamp
 
 scene_grid:
-  truth_dir: /data/nlahaye/output/sitfuse_uq/fire_front_truth
+  truth_dir: /home/nlahaye/SIT_FUSE/src/sit_fuse/preprocessing/data_pull/firms_fire_fronts_out/rasters_truth/
   front_min_fraction: 0.0    # front if more than this fraction of the scene pixel is front
   interior_min_fraction: 0.0
-  min_valid_fraction: 0.5    # below this the pixel is NoData (unless it holds front)
+  min_valid_fraction: 0.0    # below this the pixel is NoData (unless it holds front)
   drop_scenes_without_front: false
-  overwrite: false
+  overwrite: true
 
 classifier_config:
   base_yaml: ./basic_clssifier.yaml
@@ -72,7 +71,7 @@ output:
 # --- encoder / classifier splits (matchup_splits.py), as in adp_matchup.yaml ---
 encoder_split:
   enabled: true
-  sit_fuse_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/tempo_park_st_bb.yaml
+  sit_fuse_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/tempo_v04_st_bb_2.yaml
   key_patterns:
     - "(\\d{8}T\\d{6}Z_S\\d{3}G\\d{2})"
   date_pattern: "(\\d{8})T\\d{6}Z"
@@ -102,17 +101,18 @@ classifier_split:
     event_windows:
       - {name: park_fire_2024, start: "2024-07-20", end: "2024-08-15"}
       - {name: la_fires_2025,  start: "2025-01-06", end: "2025-01-31"}
+      - {name: oregon_fires_2026,  start: "2026-07-01", end: "2026-08-01"}
     by_product: false
     positive_fraction:
       enabled: true
-      positive_values: [1]          # front only
-      nodata_values: [255]
+      positive_values: [1,2]          # front only
+      nodata_values: [255,-1]
       label_values: [0, 1, 2]
       raster_nodata: auto
       n_bins: 2
 
 head_outputs:
-  directory: /data/nlahaye/output/sitfuse_uq/head_outputs
+  directory: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ_FIRE/
   suffix: .head_outputs.tif
 
 # invalid_clusters: same block as adp_matchup.yaml (optional)

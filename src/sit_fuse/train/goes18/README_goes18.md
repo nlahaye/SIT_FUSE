@@ -15,12 +15,27 @@ Run from `src/sit_fuse/train`: `bash goes18/run_goes18.sh fire|smoke|all`.
 
 `config/model/goes_la_fire_infer.yaml`: the Park-trained fire encoder applied to the 237 unique LA scenes (inference only). Run it before the fire matchups if the LA fire outputs do not exist yet.
 
+`config/model/goes_oregon_fire_infer.yaml` (name assumed; edit `encoder_split.inference_yamls` if yours differs): the same encoder applied to the Oregon 2026 scenes, the third fire validation case (fire only; no ADP smoke for Oregon).
+
 ## Splits
-Encoder-training days are 2024-07-26 and 07-30 for both GOES encoders, so 07-26 cannot be holdout. Pinned: holdout 2024-07-27, 2025-01-11, 2025-01-12; calibration 2024-07-29, 2025-01-09; all other eligible days dev.
+Encoder-training days are 2024-07-26 and 07-30 for both GOES encoders, so 07-26 cannot be holdout. Pinned: holdout 2024-07-27, 2025-01-11, 2025-01-12; calibration 2024-07-29, 2025-01-09; all other Park/LA days dev. Oregon 2026 (`oregon_2026`, 2026-07-01 to 08-01) is not pinned and gets the stratified random allocation, as in the TEMPO fire run; pin the TEMPO Oregon days in `assign_groups` if the GOES and TEMPO splits must line up for fusion.
 
 ## Check before running
 - SIT-FUSE output names: `ls <out_dir> | grep full_geo | head` should show `OR_ABI-L1b-RadC-M6C01_G18_s<13+1 digits>_e...full_geo.tif`.
 - FIRMS `tag` values: `tag.value_counts()` of each `fire_front_index.csv`; edit `tags` if the labels differ.
 - `invalid_clusters.joint` is empty in both UQ configs; add GOES artifact clusters after inspecting the outputs.
 - FDCC and the FIRMS rasters were built for TEMPO (0.05 deg FDCC; FIRMS grid as configured). For ~2 km GOES pixels, re-pull FDCC at 0.01 deg and rasterize FIRMS at <= 0.01 deg.
+- Oregon: FDCC, FIRMS (`fire_front_index.csv`) and HMS rasters must include July 2026 at the GOES grid, with bboxes covering Oregon. Adding Oregon changes the matchups, splits and features, so rerun the full fire pipeline from step 1.
 - FDCC is derived from the same ABI scans, and TEMPO ADP partly uses ABI; FIRMS VIIRS, VIIRS aerosol type and HMS are the independent references.
+
+## Fire with the parallel launcher (Park + LA + Oregon)
+```bash
+cd SIT_FUSE/src/sit_fuse/train
+export PYTHONPATH=$(realpath ../..):$PWD
+python -m sit_fuse.local_launcher run goes18/g18_fire_prep_plan.yaml --dry-run   # check
+python -m sit_fuse.local_launcher run goes18/g18_fire_prep_plan.yaml             # inference, matchups, attach, head export
+python plan_uq_jobs.py goes18/uq_parallel.goes_fire.yaml                          # all stages should show run
+python plan_uq_jobs.py goes18/uq_parallel.goes_fire.yaml --run                    # features -> train -> infer -> evaluate -> geo
+python -m sit_fuse.local_launcher status /data/nlahaye/launch/goes18_fire/uq_plan.yaml
+```
+Or `bash goes18/run_goes18.sh fire_parallel`. UQ outputs go to `UQ_FIRE_OR2026`; head outputs stay in `UQ_FIRE`.

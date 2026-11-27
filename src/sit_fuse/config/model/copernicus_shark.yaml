@@ -5,7 +5,7 @@ data:
  val_percent: 0.1
  scale_data: True
  pixel_padding: 1
- number_channels: 6
+ number_channels: 29
  fill_value: -999999.0
  valid_min:  -8000.0
  valid_max: 100000000

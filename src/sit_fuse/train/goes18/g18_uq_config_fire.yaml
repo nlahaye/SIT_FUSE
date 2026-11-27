@@ -1,8 +1,12 @@
 # SIT-FUSE hierarchical-head UQ workflow, GOES-18 fire (goes_tempo_test_3_fire
-# encoder; Park 2024 + LA 2025). Based on uq_config.example.fire.yaml (TEMPO).
+# encoder; Park 2024 + LA 2025 + Oregon 2026). Based on uq_config.example.fire.yaml (TEMPO).
 # Changes vs TEMPO: paths, invalid_clusters reset, consensus name firms_viirs,
 # evaluation references for the attached products, log threshold grid.
-output_dir: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED_FIRE/UQ_FIRE
+# NEW: separate output dir for the Park + LA + Oregon run. Keeps the earlier
+# Park + LA results, and stops the parallel planner's resume check from
+# treating the old feature table / models in UQ_FIRE as finished. Head outputs
+# stay in UQ_FIRE (head_outputs.directory in g18_fdcc_matchup.yaml).
+output_dir: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/UQ_FIRE_OR2026
 random_state: 42
 
 data:
@@ -189,7 +193,7 @@ evaluation:
   models: [random_forest, logistic_regression, hist_gradient_boosting,
            hard_assignment, soft_assignment, assignment_ensemble]
   splits: [holdout]          # evaluate only scenes unseen by encoder, classifier and calibrator
-  inference_dir_template: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED_FIRE/UQ_FIRE/inference/{model}
+  inference_dir_template: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/UQ_FIRE_OR2026/inference/{model}
   max_pixels_per_scene: 300000  # subsample with compensating weights; null = all
   max_excluded_reference_fraction: 0.02   # warn if excluded clusters hold > 2% of reference target pixels
   reference_model: hard_assignment   # paired bootstrap differences vs this model
@@ -212,6 +216,13 @@ evaluation:
     - {name: encoder_seen_vs_unseen, column: encoder_split, in: [encoder_train], out: [encoder_test]}
     - {name: classifier_seen_vs_unseen, column: classifier_split, in: [dev], out: [holdout]}
     - {name: summer_vs_winter, column: split_stratum, in: ["park_fire_2024|pos_q1"], out: ["la_fires_2025|pos_q1"]}
+    # NEW: Oregon 2026 (both positive-fraction bins; either may be empty)
+    - {name: park_vs_oregon, column: split_stratum,
+       in: ["park_fire_2024|pos_q0", "park_fire_2024|pos_q1"],
+       out: ["oregon_2026|pos_q0", "oregon_2026|pos_q1"]}
+    - {name: winter_vs_oregon, column: split_stratum,
+       in: ["la_fires_2025|pos_q0", "la_fires_2025|pos_q1"],
+       out: ["oregon_2026|pos_q0", "oregon_2026|pos_q1"]}
   shift_splits: null                 # scenes used for shift tests (null = all inferred)
   shift_pixels_per_scene: 5000
 

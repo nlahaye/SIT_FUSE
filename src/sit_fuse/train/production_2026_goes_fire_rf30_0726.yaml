@@ -25,11 +25,13 @@ export: {shards: 1, cpus: 4, gpu: 1}
 
 sensors:
   goes:
-    inputs: /data/nlahaye/remoteSensing/GOES_TEMPO/new_data_2026_07     # CHECK (or the .RGB.tif stand-ins; see below)
-    pattern: "OR_ABI-L1b-RadC-M6C01_G18_s*.tif"
+    inputs: /data/nlahaye/remoteSensing/GOES_TEMPO/new_data     # CHECK (or the .RGB.tif stand-ins; see below)
+    pattern: "OR_ABI-L1b-RadC-M6C01_G18_s*.RGB.tif"
+
+    #pattern: "OR_ABI-L1b-RadC-M6C01_G18_s*.tif"
     every_minutes: 30                   # first input per 30-min UTC bin (same bins as frames.goes_every_minutes: 30)
     bbox_filter: false
-    # stand_in_suffix: .RGB.tif         # set if the full GOES GeoTIFFs were replaced by 4-band RGB copies
+    stand_in_suffix: .RGB.tif         # set if the full GOES GeoTIFFs were replaced by 4-band RGB copies
     heads_from:                         # same-encoder head outputs to link instead of exporting (recursive, tag-checked)
       - /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_SMOKE/heads      # smoke 0726 production (all 5-min scenes)
       - /data/nlahaye/output/Learnergy/PRODUCTION_2026_07_OR0726_FIRE_TS/heads    # 5-min fire TS production, if started

@@ -162,7 +162,7 @@ classifier_split:
   holdout_fraction: 0.25            # of eligible (encoder_test, unbuffered) groups
   calibration_fraction: 0.2
   min_holdout_groups_per_stratum: 1      # strata with >= 2 eligible groups
-  min_calibration_groups_per_stratum: 1  # strata with >= 3 eligible groups
+  min_calibration_groups_per_stratum: 10  # strata with >= 3 eligible groups
   random_state: 42
   stratify:
     # Strata = event window (else year-month) [x product] [x positive-fraction bin]
@@ -178,7 +178,7 @@ classifier_split:
 
 # Expected export_head_outputs.py rasters (same directory as its output_dir)
 head_outputs:
-  directory: /data/nlahaye/output/sitfuse_uq/head_outputs
+  directory: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ/
   suffix: .head_outputs.tif
 
 # Add to the existing `output:` block:

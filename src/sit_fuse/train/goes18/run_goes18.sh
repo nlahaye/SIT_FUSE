@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 # GOES-18 smoke and fire UQ, matchups onward. Run from src/sit_fuse/train in
-# the SIT-FUSE environment:   bash goes18/run_goes18.sh fire|smoke|all
+# the SIT-FUSE environment:   bash goes18/run_goes18.sh fire|fire_parallel|smoke|all
 # Generated matchup YAMLs / audits go to ./goes18/.
 # =============================================================================
 set -euo pipefail
@@ -12,7 +12,8 @@ G=goes18
 run_fire() {
   # 0. (once) LA scenes through the Park-trained fire encoder, if not done:
   #    python ../inference/generate_output.py -y ../config/model/goes_la_fire_infer.yaml
-  #    ls /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED_FIRE/ | grep full_geo | head   # check names
+  #    python ../inference/generate_output.py -y ../config/model/goes_oregon_fire_infer.yaml   # Oregon 2026
+  #    ls /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/ | grep full_geo | head   # check names
 
   # 1. Matchups: FDCC primary (with splits), then the attached references
   python build_fdcc_matchups.py                $G/g18_fdcc_matchup.yaml
@@ -26,7 +27,7 @@ run_fire() {
       --add firms_modis_landsat=$G/g18_firms_modis_landsat_classifier_matchups.yaml \
       --add hms_fire=$G/g18_hms_fire_classifier_matchups.yaml
 
-  # 3. Head outputs for every matched scene (Park + LA)
+  # 3. Head outputs for every matched scene (Park + LA + Oregon)
   python export_head_outputs.py $G/g18_export_fire.yaml
 
   # 4-7. Features, training + calibration, inference, evaluation
@@ -65,9 +66,19 @@ run_smoke() {
   python export_geo_products.py $G/g18_uq_config_smoke.yaml
 }
 
+# Fire with sit_fuse.local_launcher: prep plan (Oregon inference, matchups,
+# attach, head export), then the UQ planner (features -> geo). Rerunning
+# either command skips finished jobs; add --rerun-failed after a failure.
+run_fire_parallel() {
+  export PYTHONPATH=$(realpath ../..):$PWD
+  python -m sit_fuse.local_launcher run $G/g18_fire_prep_plan.yaml "$@"
+  python plan_uq_jobs.py $G/uq_parallel.goes_fire.yaml --run -- "$@"
+}
+
 case "$WHAT" in
   fire)  run_fire ;;
+  fire_parallel) shift; run_fire_parallel "$@" ;;
   smoke) run_smoke ;;
   all)   run_fire; run_smoke ;;
-  *) echo "usage: $0 fire|smoke|all"; exit 1 ;;
+  *) echo "usage: $0 fire|fire_parallel|smoke|all"; exit 1 ;;
 esac

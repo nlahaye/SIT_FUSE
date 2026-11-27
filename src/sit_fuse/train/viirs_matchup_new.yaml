@@ -119,7 +119,7 @@ classifier_split:
   holdout_fraction: 0.25            # of eligible (encoder_test, unbuffered) groups
   calibration_fraction: 0.2
   min_holdout_groups_per_stratum: 1      # strata with >= 2 eligible groups
-  min_calibration_groups_per_stratum: 1  # strata with >= 3 eligible groups
+  min_calibration_groups_per_stratum: 10  # strata with >= 3 eligible groups
   random_state: 42
   stratify:
     # Strata = event window (else year-month) [x product] [x positive-fraction bin]

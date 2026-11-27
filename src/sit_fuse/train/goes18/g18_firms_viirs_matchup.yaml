@@ -5,12 +5,12 @@
 # =============================================================================
 time_range:
   start: "2024-07-20T00:00:00Z"
-  end: "2025-01-15T23:59:59Z"
+  end: "2026-09-15T23:59:59Z"   # covers Oregon 2026 (was 2025-01-15)
 
 sit_fuse:
   # GOES-18 SIT-FUSE outputs: basename(input) + ".clust.data_<N>clusters.zarr.full_geo.tif"
-  # Check with: ls /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED_FIRE/ | grep full_geo | head
-  directory: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED_FIRE/
+  # Check with: ls /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/ | grep full_geo | head
+  directory: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/
   patterns:
     timestamp_patterns:
       - "(?i)_s(\\d{13})\\d_e"     # ABI scan start _sYYYYJJJHHMMSSt_e -> UTC

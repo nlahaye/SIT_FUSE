@@ -125,7 +125,7 @@ calibration:
   # Option A: label level of the calibration rows (also used for thresholds
   # and selective cutoffs). primary = all primary labels (A1); consensus =
   # negatives only where the consensus references confirm them (A2).
-  label_level: primary
+  label_level: consensus #primary
   # Option C: correct for primary-label noise. T[k][j] = P(primary label j |
   # true class k). 'estimate' compares primary labels with the consensus
   # references on the calibration rows; or give a fixed CxC matrix. Needs
@@ -139,11 +139,11 @@ calibration:
   # Decision threshold for pred_label, chosen on the calibration rows:
   #   iou / f1    maximize class-1 IoU / F1 (tends to over-call smoke; area biased high)
   #   prevalence  match the weighted reference prevalence (area-unbiased masks)
-  threshold_metric: prevalence
+  threshold_metric: iou #prevalence
   # Per-model override of threshold_metric (model or baseline name -> iou | f1 | prevalence)
-  threshold_metric_overrides:
-    hard_assignment: iou
-
+  #threshold_metric_overrides:
+  #  hard_assignment: iou
+ 
 # Selective discrete product: uncertainty threshold chosen on the calibration
 # rows so that retained pixels have error <= target_error (or a fixed coverage)
 selective:
@@ -156,7 +156,7 @@ selective:
 
 bootstrap_ensemble:
   enabled: true
-  models: [logistic_regression]        # add hist_gradient_boosting for ensemble_* layers on the primary model
+  models: [logistic_regression, hist_gradient_boosting]        # add hist_gradient_boosting for ensemble_* layers on the primary model
   n_models: 10
 
 inference:
@@ -197,6 +197,7 @@ evaluation:
     - {name: encoder_seen_vs_unseen, column: encoder_split, in: [encoder_train], out: [encoder_test]}
     - {name: classifier_seen_vs_unseen, column: classifier_split, in: [dev], out: [holdout]}
     - {name: summer_vs_winter, column: split_stratum, in: ["park_fire_2024|pos_q1"], out: ["la_fires_2025|pos_q1"]}
+    - {name: winter_vs_summer, column: split_stratum, in: ["la_fires_2025|pos_q1"], out: ["park_fire_2024|pos_q1"]}
   shift_splits: null                 # scenes used for shift tests (null = all inferred)
   shift_pixels_per_scene: 5000
 

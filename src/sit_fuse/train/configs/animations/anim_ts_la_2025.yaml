@@ -25,9 +25,11 @@ observations:
   tempo_rgb:    {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .RGB.tif}
   tempo_uv_rgb: {dir: /data/nlahaye/remoteSensing/RAD_L1_V04_RGB, suffix: .UV_RGB.tif}
   goes:
-    dir: [/data/nlahaye/remoteSensing/GOES_TEMPO/new_data, /data/nlahaye/remoteSensing/GOES_TEMPO/new_data_2026_07]   # CHECK
-    pattern: "OR_ABI-L1b-RadC-M6C01_G18_s*.tif"
-    bands: {blue: 1, red: 2, veggie: 3, ir: 13}
+    pattern: "OR_ABI-L1b-RadC-M6C01_G18_s*.RGB.tif"
+    bands: {blue: 1, red: 2, veggie: 3, ir: 4}
+    dir: [/data/nlahaye/remoteSensing/GOES_TEMPO/new_data, /data/nlahaye/remoteSensing/GOES_TEMPO/new_data]   # CHECK
+    #pattern: "OR_ABI-L1b-RadC-M6C01_G18_s*.tif"
+    #bands: {blue: 1, red: 2, veggie: 3, ir: 13}
     gamma: 2.2
     night: ir
 

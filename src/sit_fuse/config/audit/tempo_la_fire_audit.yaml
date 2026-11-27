@@ -1,13 +1,13 @@
 # TEMPO L1 radiance granules (GeoTIFF) for the LA fires.
 #   python -m sit_fuse.datasets.data_audit -y config/audit/tempo_la_fire_audit.yaml [--split]
-product: tempo_la_fire
+product: tempo_rep
 inputs:
-  roots: [/data/nlahaye/remoteSensing/TEMPO_LA/]
+  roots: [/data/nlahaye/remoteSensing/RAD_L1_V04/]
   recursive: false
-  time_window: ["2025-01-05", "2025-01-13"]
+  time_window: ["2024-01-05", "2026-10-01"]
 members:
   tempo:
-    regex: 'TEMPO_RAD_L1_V03_(?P<time>\d{8}T\d{6})Z_S(?P<scan>\d{3})G(?P<space>\d{2})\.tif$'
+    regex: 'TEMPO_RAD_L1_V04_(?P<time>\d{8}T\d{6})Z_S(?P<scan>\d{3})G(?P<space>\d{2})\.tif$'
     time_format: "%Y%m%dT%H%M%S"
     anchor: true
     count: 1
@@ -29,26 +29,31 @@ space: {group: space, split: false}   # granule kept in the index; units are who
 entry: {type: anchor}          # {type: list, members: [tempo, abi]} for paired entries
 checks: {open: none}
 strata:
-  time_bins: [none]
+  time_bins: [season_year]
 split:
-  block_days: 1
-  test_fraction: 0.0          # held-out days come from pin only
-  buffer_days: 0
+  block_days: 7
+  test_fraction: 0.3          # held-out days come from pin only
+  buffer_days: 1
   min_units_for_test: 2
   pin:                         # same held-out days as the GOES audit
-    test: ["2025-01-11", "2025-01-12"]
+    test: ["2025-01-11", "2025-01-12", "2024-07-26"]
     val: ["2025-01-09"]
+
+
   seed: 0
 output:
-  dir: /data/nlahaye/output/Learnergy/TEMPO_LA_FIRE/audit/
-  tag: tempo_la_fire
-  base_config: config/model/tempo_la_fire.yaml
-  derived_config: config/model/tempo_la_fire_split.yaml
-  files_test: all
-  set_groups: true
+  dir: /data/nlahaye/output/Learnergy/SF_TEMPO_V04_V2/
+  tag: tempo_rep
+  base_config: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/tempo_park_st_bb.yaml 
+  derived_config: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/tempo_park_st_bb_strat.yaml
+  set_groups: 0.4
   sampling:
     spatial_block: 32
     spatial_balance: 0.5
     seed: 0
-  train_dir: /data/nlahaye/output/Learnergy/TEMPO_LA_FIRE/
-run_split: false
+    files_test: all             # or holdout
+    set_groups: true
+    sampling: {spatial_block: 32, spatial_balance: 0.5, seed: 0}
+
+  train_dir: /data/nlahaye/output/Learnergy/SF_TEMPO_V04_V2/
+run_split: true

@@ -7,12 +7,12 @@
 # =============================================================================
 time_range:
   start: "2024-07-20T00:00:00Z"
-  end: "2025-01-15T23:59:59Z"
+  end: "2026-09-15T23:59:59Z"
 
 sit_fuse:
   # GOES-18 SIT-FUSE outputs: basename(input) + ".clust.data_<N>clusters.zarr.full_geo.tif"
-  # Check with: ls /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED_FIRE/ | grep full_geo | head
-  directory: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED_FIRE/
+  # Check with: ls /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/ | grep full_geo | head
+  directory: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/
   patterns:
     timestamp_patterns:
       - "(?i)_s(\\d{13})\\d_e"     # ABI scan start _sYYYYJJJHHMMSSt_e -> UTC
@@ -27,6 +27,11 @@ sit_fuse:
       - "(?i)merged"
       - "(?i)fire"
       - "(?i)head_outputs"
+      # NEW: one context-free output per scene. Without these, the
+      # .clust.data_proba / .no_heir.* rasters also matched and each LA scene
+      # appeared up to 4x (scene_id suffixes _02.._04) with the same head outputs.
+      - "(?i)data_proba"
+      - "(?i)no_heir"
 
 fdcc_fire:
   directory: /home/nlahaye/SIT_FUSE/src/sit_fuse/preprocessing/data_pull/goes_fdcc_fire/rasters/
@@ -73,12 +78,17 @@ output:
 encoder_split:
   enabled: true
   # Encoder + cluster training YAML (data.files_train = encoder_train)
-  sit_fuse_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/goes_tempo_test_3_fire.yaml
+  sit_fuse_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/goes_tempo_test_3.yaml
   # NEW: inference-only YAMLs that applied the same trained model to more
   # inputs (same out_dir, overwrite_model: False). Every input they list is
   # encoder_test unless the training YAML lists it in files_train.
   inference_yamls:
-    - /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/goes_la_fire_infer.yaml
+    - /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/goes_tempo_test_3.yaml
+    # NEW: Oregon 2026 scenes through the same Park-trained fire encoder.
+    # Rename to your Oregon inference YAML. If it is missing, the Oregon
+    # outputs are untraceable and unmatched_policy: drop removes them.
+    - /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/goes_tempo_test_3_2026.yaml #/home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/goes_oregon_fire_infer.yaml
+    - /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/goes_tempo_test_3_LA.yaml
   # Outputs are basename(input) + suffix, so prefix matching normally wins.
   # Fallback key: the ABI scan-start token.
   key_patterns:
@@ -93,7 +103,8 @@ classifier_split:
   group_by: date
   block_days: 3
   buffer_days: 0
-  # GOES-18 CONUS scenes here run ~14Z-01Z; 06Z falls in the nightly gap.
+  # GOES-18 CONUS scenes here run ~14Z-01Z; 06Z falls in the nightly gap
+  # (also true for Oregon, UTC-7 in July).
   observing_day:
     time_pattern: '_s(\d{13})\d_'    # YYYYJJJHHMMSS
     day_start_utc_hour: 6
@@ -114,6 +125,11 @@ classifier_split:
   # pooled-fallback conformal group seen in the TEMPO fire run. Delete the
   # block to use the stratified random allocation. Groups not listed keep
   # the random allocation, so the remaining eligible days are pinned to dev.
+  # Oregon 2026 days are not listed: they get the stratified random
+  # allocation (>= 1 holdout and >= 1 calibration day per oregon_2026 stratum),
+  # as in the TEMPO fire run. For TEMPO/GOES fusion, pin them to the TEMPO
+  # Oregon days instead, e.g. add "2026-07-21" to holdout and the TEMPO
+  # Oregon calibration days to calibration.
   assign_groups:
     holdout: ["2024-07-27", "2025-01-11", "2025-01-12"]
     calibration: ["2024-07-29", "2025-01-09"]
@@ -125,6 +141,9 @@ classifier_split:
       - {name: park_fire_2024, start: "2024-07-20", end: "2024-08-15"}
       # starts 01-05: the 00-01Z scans of 01-06 belong to observing day 01-05
       - {name: la_fires_2025,  start: "2025-01-05", end: "2025-01-31"}
+      # NEW: third validation case. Name matches the TEMPO stratum; dates
+      # follow the Oregon FDCC pull (abi_fdcc.yaml 2026-07-01 to 08-01).
+      - {name: oregon_2026,    start: "2026-07-01", end: "2026-08-01"}
     by_product: false
     positive_fraction:
       enabled: true
@@ -148,5 +167,5 @@ invalid_clusters:
   geotiff_scale: 1000
 
 head_outputs:
-  directory: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED_FIRE/UQ_FIRE/
+  directory: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/UQ_FIRE/
   suffix: .head_outputs.tif

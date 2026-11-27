@@ -4,10 +4,10 @@
 # =============================================================================
 time_range:
   start: "2024-07-20T00:00:00Z"
-  end: "2025-01-15T23:59:59Z"
+  end: "2026-09-15T23:59:59Z"   # covers Oregon 2026 (was 2025-01-15)
 
 sit_fuse:
-  directory: "/data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED_FIRE/"
+  directory: "/data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/"
   context_free_filters:
     include_patterns:
       - "(?i)full_geo\\.tif$"
@@ -32,7 +32,7 @@ hms:
   directory: "/home/nlahaye/SIT_FUSE/src/sit_fuse/preprocessing/data_pull/hms_out/rasters/"
   patterns:
     fire:
-      - "(?i)hms_fire"
+      - "(?i)_fire"
     smoke:
       - "__never_matches__"
     interval_timestamp_patterns: []

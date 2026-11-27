@@ -1,13 +1,18 @@
 # =============================================================================
 # GOES-18 fire: hierarchical-head export for the matched scenes
 #   python export_head_outputs.py goes18/g18_export_fire.yaml
-# One run covers Park and LA scenes: the input path of every matched scene
-# comes from the matchup file (sit_fuse_input), so the LA scenes listed only
-# in goes_la_fire_infer.yaml are exported with the same model.
+# One run covers Park, LA and Oregon 2026 scenes: the input path of every
+# matched scene comes from the matchup file (sit_fuse_input), so the scenes
+# listed only in goes_la_fire_infer.yaml / goes_oregon_fire_infer.yaml are
+# exported with the same model.
 # =============================================================================
-sit_fuse_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/goes_tempo_test_3_fire.yaml      # trained encoder + clustering (model files in its out_dir)
-output_dir: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED_FIRE/UQ_FIRE/                 # = head_outputs.directory in the matchup config
+sit_fuse_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/goes_tempo_test_3.yaml      # trained encoder + clustering (model files in its out_dir)
+output_dir: /data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/UQ_FIRE/                 # = head_outputs.directory in the matchup config
 files: null
+
+skip_existing: true
+heads_from: [/data/nlahaye/output/Learnergy/GOES_TEMPO_UPDATED/UQ_SMOKE/]
+
 matchup_file: ./goes18/g18_fdcc_fire_classifier_matchups.yaml
 matchup_splits: [dev, calibration, holdout]
 input_lists: [files_test]

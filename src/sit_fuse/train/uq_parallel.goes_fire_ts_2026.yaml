@@ -115,10 +115,10 @@ extra_jobs:
   - name: fire_rasters          # FDCC + HMS: download and rasterize; FIRMS: two rasterize runs on the pulled vectors
     cmd: "cd {train}/../preprocessing/data_pull && {py} {tool} {rcfg}"
     cases:                      # rcfg = CHECK: your 2026 pull / rasterize configs
-      - {ref: fdcc, src: fdcc, tool: pull_goes_abi_fdcc.py, rcfg: abi_fdcc.yaml}
-      - {ref: hms_fire, src: hms, tool: pull_hms_smoke_fire.py, rcfg: hms_pull.yaml}
-      - {ref: firms_viirs, src: firms, tool: rasterize_fire_fronts.py, rcfg: firms_fronts_viirs_obs.yaml}       # -> rasters_viirs (negative_zone: observed)
-      - {ref: firms_modis_landsat, src: firms, tool: rasterize_fire_fronts.py, rcfg: firms_fronts_pos.yaml}     # -> rasters_pos (negative_zone: none)
+      - {ref: fdcc, src: fdcc, tool: pull_goes_abi_fdcc.py, rcfg: abi_fdcc_2.yaml}
+      - {ref: hms_fire, src: hms, tool: pull_hms_smoke_fire.py, rcfg: hms_example_fire.yaml}
+      - {ref: firms_viirs, src: firms, tool: rasterize_fire_fronts.py, rcfg: firms_fire_fronts.example.local.yaml}       # -> rasters_viirs (negative_zone: observed)
+      - {ref: firms_modis_landsat, src: firms, tool: rasterize_fire_fronts.py, rcfg: firms_fire_fronts.example.local.not_viirs.yaml}     # -> rasters_pos (negative_zone: none)
     id_keys: [ref]
     after: [{name: firms_pull, "on": [src]}]   # FIRMS rasters wait for both pulls; FDCC / HMS start right away
     cpus: 4

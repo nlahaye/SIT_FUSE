@@ -10,8 +10,8 @@ output_dir: /data/nlahaye/output/Learnergy/FUSION/UQ_SMOKE_RECAL   # new dir: we
 
 sources:
   tempo:
-    geo_dir: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ/geo   # CHECK: TEMPO geo_export.output_dir
-    manifest: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ/geo/geo_products_manifest.json
+    geo_dir:  /data/nlahaye/output/Learnergy/INITIAL_TEMPO_GOES_UQ/TEMPO//UQ/geo   # CHECK: TEMPO geo_export.output_dir
+    manifest: /data/nlahaye/output/Learnergy/INITIAL_TEMPO_GOES_UQ/TEMPO//UQ/geo/geo_products_manifest.json
     model: hist_gradient_boosting
     frames: {mode: scan}                 # one E-W TEMPO scan per frame
     default_logit_sd: 1.0                # used where ensemble q05/q95 bands are missing
@@ -41,7 +41,7 @@ temporal:
   tempo_lookahead_minutes: 5
   carry_forward_max_minutes: 90
   carry_forward_sd_per_hour: 0.5
-  dates: ["CAL_DATE_1", "CAL_DATE_2", "2025-01-11"]   # PILOT: 2-3 "calibration days with both sensors" + 1 holdout day
+  dates: ['2025-01-11', "2024-07-26", "2025-01-13"] # "CAL_DATE_1", "CAL_DATE_2", "2025-01-11"]   # PILOT: 2-3 "calibration days with both sensors" + 1 holdout day
                                                  # (2025-01-11 was holdout for both sensors in the last evaluations)
 
 references:

@@ -14,15 +14,15 @@
 # The temporal search range for both SIT-FUSE and FDCC fire files.
 # All timestamps are interpreted as UTC.
 time_range:
-  start: "2024-07-23T00:00:00Z"
-  end: "2024-07-31T23:59:59Z"
+  start: "2024-07-25T00:00:00Z"
+  end: "2026-08-01T23:59:59Z"
 
 # -----------------------------------------------------------------------------
 # Context-free SIT-FUSE cluster-raster outputs
 # -----------------------------------------------------------------------------
 sit_fuse:
   # Root directory searched recursively for SIT-FUSE GeoTIFF files.
-  directory: /data/nlahaye/output/Learnergy/SF_TEMPO_PARK/
+  directory: /data/nlahaye/output/Learnergy/SF_TEMPO_V04/
 
   patterns:
     # Must contain exactly one capture group holding the scene timestamp.
@@ -59,7 +59,7 @@ sit_fuse:
 # -----------------------------------------------------------------------------
 fdcc_fire:
   # Root directory searched recursively for FDCC fire GeoTIFFs.
-  directory: /home/nlahaye/SIT_FUSE/src/sit_fuse/preprocessing/data_pull/goes_fdcc_out/rasters/
+  directory: /home/nlahaye/SIT_FUSE/src/sit_fuse/preprocessing/data_pull/goes_fdcc_fire/rasters/
 
   patterns:
     # Only files beginning with "fdcc_fire_mask_" are accepted as FDCC fire truth.
@@ -120,7 +120,7 @@ matching:
 # raster is kept as truth_native. The UQ scripts then read it without resampling.
 scene_grid:
   enabled: true
-  truth_dir: /data/nlahaye/output/sitfuse_uq/fire_tempo/fdcc_scene_truth
+  truth_dir: /home/nlahaye/SIT_FUSE/src/sit_fuse/preprocessing/data_pull/goes_fdcc_fire/rasters_truth/
   # pull_goes_abi_fdcc.py mask.mode binary -> [1]; raw / categorical -> FDC
   # fire codes [[10, 15], [30, 35]] (processed, saturated, cloud-contaminated,
   # high / medium / low probability, and their temporally filtered versions)
@@ -130,7 +130,8 @@ scene_grid:
   # (0 = any valid cell). A fire subpixel always makes the pixel fire.
   min_valid_fraction: 0.0
   drop_empty: true               # drop records with no valid FDCC on the scene
-  overwrite: false
+  overwrite: true
+  truth_resampling: bucket_max
 
 # -----------------------------------------------------------------------------
 # Base classifier configuration
@@ -165,7 +166,7 @@ output:
 encoder_split:
   enabled: true
   # SIT-FUSE encoder/cluster training YAML; data.files_train / data.files_test
-  sit_fuse_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/tempo_park_st_bb.yaml
+  sit_fuse_yaml: /home/nlahaye/SIT_FUSE/src/sit_fuse/config/model/tempo_v04_st_bb_2.yaml
   # SIT-FUSE outputs are named basename(files_*[i][0]) + suffix; the longest
   # input basename prefixing the output name wins. key_patterns are a fallback
   # for renamed outputs (TEMPO granule key shown).
@@ -194,7 +195,7 @@ classifier_split:
   # Merge groups that share a reference raster so one reference never spans
   # partitions. With daily references matched by UTC date, evening (00-02Z)
   # scenes use the next day's raster and consecutive days chain into one group.
-  link_shared_truth: false
+  link_shared_truth: true
   min_partition_gap_hours: null      # optional: warn if any partitions are closer than this
   buffer_policy: dev
   holdout_fraction: 0.25            # of eligible (encoder_test, unbuffered) groups
@@ -211,6 +212,7 @@ classifier_split:
     event_windows:
       - {name: park_fire_2024, start: "2024-07-20", end: "2024-08-15"}
       - {name: la_fires_2025,  start: "2025-01-06", end: "2025-01-31"}
+      - {name: oregon_fires_2026,  start: "2026-07-01", end: "2026-08-01"}
     by_product: false               # true for HMS runs with both smoke and fire
     positive_fraction:
       enabled: true                 # reads each truth raster once
@@ -228,7 +230,7 @@ classifier_split:
 # pixels are removed downstream. The stratification positive fraction ignores
 # excluded pixels. Share one list with the UQ config (recommended) ...
 invalid_clusters:
-  from_uq_config: /data/nlahaye/sitfuse_uq/smoke_tempo/uq_config.yaml   # same file passed to simple_classifiers_uq.py
+  from_uq_config:  uq_config.example.fire.yaml
   min_kept_pixels: 1             # drop if fewer non-excluded matched pixels remain
   max_scene_fraction: null       # optional: also drop if the matched-area excluded share exceeds this
   cluster_nodata_values: []      # e.g. [0.0] if .full_geo.tif zero padding should not count as cluster 0
@@ -243,7 +245,7 @@ invalid_clusters:
 #   num_child_classes: 200
 
 head_outputs:
-  directory: /data/nlahaye/output/sitfuse_uq/head_outputs
+  directory:  /data/nlahaye/output/Learnergy/SF_TEMPO_V04/UQ_FIRE/
   suffix: .head_outputs.tif
 
 # Add to the existing `output:` block:

@@ -17,7 +17,7 @@ export: {shards: 8, cpus: 6, gpu: 1}    # 8 head-export jobs, one A100 + 6 cores
 
 sensors:
   tempo:
-    inputs: /data/nlahaye/remoteSensing/RAD_L1_V04_0726        # EDIT: folder with the full TEMPO_RAD_L1_V04_*.tif for 26 July
+    inputs: /data/nlahaye/remoteSensing/RAD_L1_V04        # EDIT: folder with the full TEMPO_RAD_L1_V04_*.tif for 26 July
     pattern: "TEMPO_RAD_L1_V04_*.tif"                          # .RGB.tif / .UV_RGB.tif / head outputs are excluded
 
 pipelines:

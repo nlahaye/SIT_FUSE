@@ -29,7 +29,7 @@ sit_fuse:
 
 # The generator's reference block is named adp_smoke; here it points at VIIRS.
 adp_smoke:
-  directory: /data/nlahaye/viirs_aerdb_out/rasters/
+  directory: /data/nlahaye/remoteSensing/data_pull/viirs_aerdb_out/rasters/
   patterns:
     include_patterns:
       - "(?i)^viirs_smoke_"
