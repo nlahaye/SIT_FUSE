@@ -59,6 +59,12 @@ def pull_day(day, a) -> list[str]:
     if done.exists():
         return sorted(str(p) for p in ddir.glob("*.nc"))
     ddir.mkdir(parents=True, exist_ok=True)
+    for p in list(ddir.glob("partial_*")) + list(ddir.glob("*.part")):   # leftovers of failed attempts
+        if p.is_dir():
+            import shutil
+            shutil.rmtree(p, ignore_errors=True)
+        else:
+            p.unlink(missing_ok=True)
     kw = {"short_name": SHORT_NAME, "temporal": (f"{d:%Y-%m-%d}T00:00:00", f"{d:%Y-%m-%d}T23:59:59"),
           "bounding_box": tuple(a.bbox)}
     if a.version:
@@ -66,9 +72,53 @@ def pull_day(day, a) -> list[str]:
     res = earthaccess.search_data(**kw)
     if a.nrt is False:
         res = [g for g in res if ".NRT." not in str(g.data_links())]
-    files = earthaccess.download(res, str(ddir), threads=1) if res else []
+    files = [download_granule(g, ddir, a.access) for g in res]
     done.write_text(json.dumps({"n": len(files)}))
     return [str(f) for f in files]
+
+
+_S3FS = {}
+
+
+def _in_region() -> bool:
+    import earthaccess
+    st = getattr(earthaccess, "__store__", None)
+    return bool(getattr(st, "in_region", False))
+
+
+def download_granule(g, ddir: Path, access: str = "auto") -> Path:
+    """One granule -> ddir/<name>, written to a sibling .part file and renamed (resume-safe).
+
+    Replaces earthaccess.download: earthaccess < 1.0 copies in-region (direct S3) files with
+    s3fs.get([url], <temp file>), which recent fsspec treats as a directory target and fails with
+    FileExistsError on the temp file. Here direct S3 uses get_file (a file target) and HTTPS streams
+    with the authenticated Earthdata session, so the result is independent of the earthaccess version.
+    """
+    import earthaccess
+    direct = access == "direct" or (access == "auto" and _in_region())
+    links = [u for u in g.data_links(access="direct" if direct else "external") if u.endswith(".nc")]
+    if not links:
+        raise RuntimeError(f"no {'s3' if direct else 'https'} .nc link for {g.data_links()}")
+    url = links[0]
+    dst = ddir / url.rsplit("/", 1)[-1]
+    if dst.exists() and dst.stat().st_size > 0:
+        return dst
+    tmp = dst.with_name(dst.name + ".part")
+    tmp.unlink(missing_ok=True)
+    if direct:
+        if "fs" not in _S3FS:          # one filesystem per process; credentials refresh via earthaccess
+            _S3FS["fs"] = earthaccess.get_s3_filesystem(results=[g])
+        _S3FS["fs"].get_file(url, str(tmp))
+    else:
+        sess = earthaccess.get_requests_https_session()
+        with sess.get(url, stream=True, timeout=600) as r:
+            r.raise_for_status()
+            with open(tmp, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8 << 20):
+                    f.write(chunk)
+    os.replace(tmp, dst)
+    LOG.info("downloaded %s (%.0f MB, %s)", dst.name, dst.stat().st_size / 1e6, "s3" if direct else "https")
+    return dst
 
 
 # ----------------------------------------------------------------------------- grid
@@ -223,6 +273,8 @@ def main(argv=None):
         if name == "pull":
             q.add_argument("--version", default=None, help="collection version (default: latest)")
             q.add_argument("--nrt", action="store_true", help="also accept NRT granules")
+            q.add_argument("--access", choices=("auto", "direct", "https"), default="auto",
+                           help="direct S3 (AWS us-west-2 only), HTTPS, or auto-detect")
         else:
             q.add_argument("--out", required=True)
             q.add_argument("--res", type=float, default=0.01)
